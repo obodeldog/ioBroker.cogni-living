@@ -12,10 +12,8 @@ import TableRow from '@material-ui/core/TableRow';
 import Button from '@material-ui/core/Button';
 import AddIcon from '@material-ui/icons/Add';
 import DeleteIcon from '@material-ui/icons/Delete';
-import ListIcon from '@material-ui/icons/List'; // Das Icon für den Auswahl-Button
+import ListIcon from '@material-ui/icons/List';
 import IconButton from '@material-ui/core/IconButton';
-
-// WICHTIG: Der ioBroker Objekt-Browser Dialog
 import DialogSelectID from '@iobroker/adapter-react/Dialogs/SelectID';
 
 const styles = () => ({
@@ -60,18 +58,13 @@ const styles = () => ({
 class Settings extends React.Component {
     constructor(props) {
         super(props);
-        // WICHTIG: Wir laden die Daten einmalig in den lokalen "state"
         this.state = {
             devices: props.native.devices || [],
-            showSelectId: false, // Ist der Dialog offen?
-            selectIdIndex: -1    // Für welche Zeile suchen wir gerade?
+            showSelectId: false,
+            selectIdIndex: -1
         };
     }
 
-    /**
-     * Aktualisiert sowohl den lokalen State (für die Anzeige)
-     * als auch die ioBroker Konfiguration (zum Speichern)
-     */
     updateDevices(newDevices) {
         this.setState({ devices: newDevices });
         this.props.onChange('devices', newDevices);
@@ -81,6 +74,7 @@ class Settings extends React.Component {
         const devices = JSON.parse(JSON.stringify(this.state.devices));
         devices.push({
             id: '',
+            name: '',
             location: '',
             type: '',
         });
@@ -99,9 +93,6 @@ class Settings extends React.Component {
         this.updateDevices(devices);
     }
 
-    /**
-     * Öffnet den Auswahl-Dialog für eine bestimmte Zeile
-     */
     openSelectIdDialog(index) {
         this.setState({
             showSelectId: true,
@@ -109,15 +100,41 @@ class Settings extends React.Component {
         });
     }
 
-    /**
-     * Wird aufgerufen, wenn im Dialog eine ID ausgewählt wurde
-     */
+    // === HIER IST DIE MAGIE FÜR DEN AUTOMATISCHEN NAMEN ===
     onSelectId(selectedId) {
-        if (selectedId && this.state.selectIdIndex !== -1) {
-            // Wir schreiben die ausgewählte ID in das Textfeld der gemerkten Zeile
-            this.onDeviceChange(this.state.selectIdIndex, 'id', selectedId);
+        const index = this.state.selectIdIndex;
+        if (selectedId && index !== -1) {
+            const devices = JSON.parse(JSON.stringify(this.state.devices));
+            
+            // 1. ID setzen
+            devices[index].id = selectedId;
+
+            // 2. Versuchen, den Namen automatisch zu holen
+            this.props.socket.getObject(selectedId)
+                .then((obj) => {
+                    if (obj && obj.common && obj.common.name) {
+                        let name = obj.common.name;
+                        
+                        // Falls der Name mehrsprachig ist (Objekt), nehmen wir die aktuelle Sprache
+                        if (typeof name === 'object') {
+                            // @ts-ignore
+                            name = name[I18n.getLanguage()] || name.en || name.de || JSON.stringify(name);
+                        }
+                        
+                        // Namen automatisch eintragen
+                        devices[index].name = name;
+                        this.updateDevices(devices);
+                    } else {
+                        // Kein Name gefunden? Wir speichern zumindest die ID
+                        this.updateDevices(devices);
+                    }
+                })
+                .catch((err) => {
+                    // Falls was schief geht (keine Rechte etc.), speichern wir trotzdem die ID
+                    console.error(err);
+                    this.updateDevices(devices);
+                });
         }
-        // Dialog schließen
         this.setState({ showSelectId: false, selectIdIndex: -1 });
     }
 
@@ -125,8 +142,6 @@ class Settings extends React.Component {
         if (!this.state.showSelectId) {
             return null;
         }
-
-        // Die aktuell eingetragene ID als Startwert nehmen (falls vorhanden)
         const currentId = this.state.devices[this.state.selectIdIndex]?.id || '';
 
         return (
@@ -160,6 +175,7 @@ class Settings extends React.Component {
                             <TableHead>
                                 <TableRow>
                                     <TableCell>{I18n.t('table_sensor_id')}</TableCell>
+                                    <TableCell>Name</TableCell>
                                     <TableCell>{I18n.t('table_location')}</TableCell>
                                     <TableCell>{I18n.t('table_type')}</TableCell>
                                     <TableCell style={{ width: '50px' }}>{I18n.t('table_delete')}</TableCell>
@@ -176,16 +192,26 @@ class Settings extends React.Component {
                                                     onChange={(e) =>
                                                         this.onDeviceChange(index, 'id', e.target.value)
                                                     }
-                                                    placeholder="z.B. hm-rpc.0.xxx.STATE"
+                                                    placeholder="hm-rpc.0..."
                                                 />
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => this.openSelectIdDialog(index)}
-                                                    title="Select ID from Object Browser"
+                                                    title="Select ID"
                                                 >
                                                     <ListIcon />
                                                 </IconButton>
                                             </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                className={classes.tableInput}
+                                                value={device.name || ''}
+                                                onChange={(e) =>
+                                                    this.onDeviceChange(index, 'name', e.target.value)
+                                                }
+                                                placeholder="Wird automatisch gefüllt"
+                                            />
                                         </TableCell>
                                         <TableCell>
                                             <TextField
