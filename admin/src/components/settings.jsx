@@ -12,7 +12,11 @@ import TableRow from '@material-ui/core/TableRow';
 import Button from '@material-ui/core/Button';
 import AddIcon from '@material-ui/icons/Add';
 import DeleteIcon from '@material-ui/icons/Delete';
+import ListIcon from '@material-ui/icons/List'; // Das Icon für den Auswahl-Button
 import IconButton from '@material-ui/core/IconButton';
+
+// WICHTIG: Der ioBroker Objekt-Browser Dialog
+import DialogSelectID from '@iobroker/adapter-react/Dialogs/SelectID';
 
 const styles = () => ({
     tableInput: {
@@ -57,9 +61,10 @@ class Settings extends React.Component {
     constructor(props) {
         super(props);
         // WICHTIG: Wir laden die Daten einmalig in den lokalen "state"
-        // Damit ist die Anzeige unabhängig von der Speicher-Geschwindigkeit
         this.state = {
-            devices: props.native.devices || []
+            devices: props.native.devices || [],
+            showSelectId: false, // Ist der Dialog offen?
+            selectIdIndex: -1    // Für welche Zeile suchen wir gerade?
         };
     }
 
@@ -68,15 +73,11 @@ class Settings extends React.Component {
      * als auch die ioBroker Konfiguration (zum Speichern)
      */
     updateDevices(newDevices) {
-        // 1. Sofort lokal anzeigen (damit der Cursor nicht springt)
         this.setState({ devices: newDevices });
-
-        // 2. An ioBroker melden (zum Speichern)
         this.props.onChange('devices', newDevices);
     }
 
     onAddDevice() {
-        // Wir kopieren das Array sicher
         const devices = JSON.parse(JSON.stringify(this.state.devices));
         devices.push({
             id: '',
@@ -98,13 +99,57 @@ class Settings extends React.Component {
         this.updateDevices(devices);
     }
 
+    /**
+     * Öffnet den Auswahl-Dialog für eine bestimmte Zeile
+     */
+    openSelectIdDialog(index) {
+        this.setState({
+            showSelectId: true,
+            selectIdIndex: index
+        });
+    }
+
+    /**
+     * Wird aufgerufen, wenn im Dialog eine ID ausgewählt wurde
+     */
+    onSelectId(selectedId) {
+        if (selectedId && this.state.selectIdIndex !== -1) {
+            // Wir schreiben die ausgewählte ID in das Textfeld der gemerkten Zeile
+            this.onDeviceChange(this.state.selectIdIndex, 'id', selectedId);
+        }
+        // Dialog schließen
+        this.setState({ showSelectId: false, selectIdIndex: -1 });
+    }
+
+    renderSelectIdDialog() {
+        if (!this.state.showSelectId) {
+            return null;
+        }
+
+        // Die aktuell eingetragene ID als Startwert nehmen (falls vorhanden)
+        const currentId = this.state.devices[this.state.selectIdIndex]?.id || '';
+
+        return (
+            <DialogSelectID
+                imagePrefix="../.."
+                dialogName="selectID"
+                themeType={this.props.themeType}
+                socket={this.props.socket}
+                selected={currentId}
+                onClose={() => this.setState({ showSelectId: false })}
+                onOk={(selected) => this.onSelectId(selected)}
+            />
+        );
+    }
+
     render() {
         const { classes } = this.props;
-        // WICHTIG: Wir lesen jetzt aus this.state, nicht mehr aus this.props
         const { devices } = this.state;
 
         return (
             <>
+                {this.renderSelectIdDialog()}
+
                 <Typography variant="h6" gutterBottom>
                     {I18n.t('headline_sensor_config')}
                 </Typography>
@@ -124,14 +169,23 @@ class Settings extends React.Component {
                                 {devices.map((device, index) => (
                                     <TableRow key={index}>
                                         <TableCell>
-                                            <TextField
-                                                className={classes.tableInput}
-                                                value={device.id}
-                                                onChange={(e) =>
-                                                    this.onDeviceChange(index, 'id', e.target.value)
-                                                }
-                                                placeholder="z.B. hm-rpc.0.xxx.STATE"
-                                            />
+                                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                <TextField
+                                                    className={classes.tableInput}
+                                                    value={device.id}
+                                                    onChange={(e) =>
+                                                        this.onDeviceChange(index, 'id', e.target.value)
+                                                    }
+                                                    placeholder="z.B. hm-rpc.0.xxx.STATE"
+                                                />
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => this.openSelectIdDialog(index)}
+                                                    title="Select ID from Object Browser"
+                                                >
+                                                    <ListIcon />
+                                                </IconButton>
+                                            </div>
                                         </TableCell>
                                         <TableCell>
                                             <TextField

@@ -36,7 +36,17 @@ class App extends GenericApp {
 
         return (
             <div className="App">
-                <Settings native={this.state.native} onChange={(attr, value) => this.updateNativeValue(attr, value)} />
+                <Settings
+                    native={this.state.native}
+                    onChange={(attr, value) => this.updateNativeValue(attr, value)}
+                    
+                    // ====== DOPPELTE ABSICHERUNG ======
+                    // Wir nehmen props.socket ODER this.socket.
+                    // Eines von beiden ist garantiert da, wenn loaded=true ist.
+                    socket={this.props.socket || this.socket} 
+                    themeType={this.state.themeType}
+                    // ==================================
+                />
                 {this.renderError()}
                 {this.renderToast()}
                 {this.renderSaveCloseButtons()}
