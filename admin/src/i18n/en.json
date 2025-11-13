@@ -1,5 +1,12 @@
 {
     "cogni-living adapter settings": "Adapter settings for cogni-living",
     "option1": "option1",
-    "option2": "option2"
+    "option2": "option2",
+
+    "headline_sensor_config": "Sensor Configuration for Cogni-Living",
+    "table_sensor_id": "Sensor ID",
+    "table_location": "Location (Room)",
+    "table_type": "Type",
+    "table_delete": "Delete",
+    "btn_add_sensor": "Add Sensor"
 }

@@ -4,8 +4,6 @@
  * Created with @iobroker/create-adapter v3.1.2
  */
 
-// The adapter-core module gives you access to the core ioBroker functions
-// you need to create an adapter
 const utils = require('@iobroker/adapter-core');
 
 class CogniLiving extends utils.Adapter {
@@ -26,14 +24,14 @@ class CogniLiving extends utils.Adapter {
      * Is called when databases are connected and adapter received configuration.
      */
     async onReady() {
-        this.log.info('cogni-living adapter starting... (Live Test Build 1)');
+        this.log.info('cogni-living adapter starting...');
 
-        // 1. Erstelle die Datenpunkte, in die wir unsere Events schreiben wollen
+        // 1. Erstelle den Ausgabe-Datenpunkt
         await this.setObjectNotExistsAsync('events.lastEvent', {
             type: 'state',
             common: {
                 name: 'Last raw event',
-                type: 'string', // KORRIGIERT
+                type: 'string',
                 role: 'json',
                 read: true,
                 write: false,
@@ -41,71 +39,71 @@ class CogniLiving extends utils.Adapter {
             native: {},
         });
 
-        // 2. Abonniere die echten Sensoren
-        // (Diese IDs müssen auf deinem p-iobroker existieren!)
+        // 2. Konfiguration laden
+        const devices = this.config.devices;
 
-        const sensorPraesenz = 'hm-rpc.0.000C1BE9A4F17E.1.PRESENCE_DETECTION_STATE'; // Praesenz EG Treppenhaus
-        const sensorFenster = 'hm-rpc.0.0000DBE9A2A3B1.1.STATE'; // Fenster UG Büro zwei
+        if (!devices || devices.length === 0) {
+            this.log.warn('No sensors configured! Please add sensors in adapter settings.');
+            return;
+        }
 
-        this.log.info(`Subscribing to FOREIGN state: ${sensorPraesenz}`);
-        await this.subscribeForeignStatesAsync(sensorPraesenz);
+        this.log.info(`Found ${devices.length} configured sensors. Subscribing...`);
 
-        this.log.info(`Subscribing to FOREIGN state: ${sensorFenster}`);
-        await this.subscribeForeignStatesAsync(sensorFenster);
-
-        this.log.info('cogni-living adapter ready for LIVE test.');
+        for (const device of devices) {
+            if (device.id) {
+                this.log.info(`Subscribing to: ${device.id} (${device.location || 'no location'})`);
+                await this.subscribeForeignStatesAsync(device.id);
+            }
+        }
     }
 
     /**
-     * Is called when adapter shuts down - callback has to be called under any circumstances!
-     * @param {() => void} callback - Callback function
+     * Is called when adapter shuts down
      */
     onUnload(callback) {
         try {
             callback();
         } catch (error) {
-            this.log.error(`Error during unloading: ${error.message}`);
             callback();
         }
     }
 
     /**
      * Is called if a subscribed state changes
-     *
-     * @param {string} id - State ID
-     * @param {ioBroker.State | null | undefined} state - State object
      */
     onStateChange(id, state) {
         if (state) {
+            // Nur echte Statusmeldungen (ack=true) verarbeiten, keine Befehle
             if (!state.ack) {
-                this.log.debug(`Ignoring command state change for ${id}`);
                 return;
             }
 
-            // DIESE ZEILE WOLLEN WIR IM p-iobroker LOG SEHEN!
-            this.log.warn(`!!!! LIVE STATE CHANGE DETECTED: ID=${id}, Value=${state.val} !!!!`);
+            // Finde heraus, welcher Sensor das war
+            const devices = this.config.devices || [];
+            const deviceConfig = devices.find(d => d.id === id);
+            
+            const location = deviceConfig ? deviceConfig.location : 'unknown';
+            const type = deviceConfig ? deviceConfig.type : 'unknown';
+
+            // Logge das Event (Info-Level)
+            this.log.info(`Event detected: ${location} (${type}) -> ${state.val}`);
 
             const eventObject = {
                 timestamp: state.ts,
                 id: id,
                 value: state.val,
+                location: location,
+                type: type
             };
 
-            // Schreibe das neue Event in unseren Datenpunkt
+            // Schreibe das Event in unseren Datenpunkt
             this.setState('events.lastEvent', { val: JSON.stringify(eventObject), ack: true });
-        } else {
-            this.log.info(`state ${id} deleted`);
         }
     }
 }
 
 if (require.main !== module) {
-    // Export the constructor in compact mode
-    /**
-     * @param {Partial<utils.AdapterOptions>} [options] - Adapter options
-     */
     module.exports = (options) => new CogniLiving(options);
 } else {
-    // otherwise start the instance directly
     new CogniLiving();
 }
