@@ -1,19 +1,24 @@
 import React from 'react';
 import { withStyles } from '@material-ui/core/styles';
-import TextField from '@material-ui/core/TextField';
-import Input from '@material-ui/core/Input';
-import FormHelperText from '@material-ui/core/FormHelperText';
-import FormControl from '@material-ui/core/FormControl';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Checkbox from '@material-ui/core/Checkbox';
+import Typography from '@material-ui/core/Typography';
 import I18n from '@iobroker/adapter-react/i18n';
+import TextField from '@material-ui/core/TextField';
+import Table from '@material-ui/core/Table';
+import TableBody from '@material-ui/core/TableBody';
+import TableCell from '@material-ui/core/TableCell';
+import TableContainer from '@material-ui/core/TableContainer';
+import TableHead from '@material-ui/core/TableHead';
+import TableRow from '@material-ui/core/TableRow';
+import Button from '@material-ui/core/Button';
+import AddIcon from '@material-ui/icons/Add';
+import DeleteIcon from '@material-ui/icons/Delete';
+import IconButton from '@material-ui/core/IconButton';
 
-/**
- * @type {() => Record<string, import("@material-ui/core/styles/withStyles").CreateCSSProperties>}
- */
 const styles = () => ({
+    tableInput: {
+        width: '100%',
+        minWidth: '150px',
+    },
     input: {
         marginTop: 0,
         minWidth: 400,
@@ -41,116 +46,141 @@ const styles = () => ({
         width: 'calc(100% - 370px)',
     },
     controlElement: {
-        //background: "#d2d2d2",
         marginBottom: 5,
+    },
+    tab: {
+        width: '100%',
     },
 });
 
-/**
- * @typedef {object} SettingsProps
- * @property {Record<string, string>} classes
- * @property {Record<string, any>} native
- * @property {(attr: string, value: any) => void} onChange
- */
-
-/**
- * @typedef {object} SettingsState
- * @property {undefined} [dummy] Delete this and add your own state properties here
- */
-
-/**
- * @extends {React.Component<SettingsProps, SettingsState>}
- */
 class Settings extends React.Component {
     constructor(props) {
         super(props);
-        this.state = {};
+        // WICHTIG: Wir laden die Daten einmalig in den lokalen "state"
+        // Damit ist die Anzeige unabhängig von der Speicher-Geschwindigkeit
+        this.state = {
+            devices: props.native.devices || []
+        };
     }
 
     /**
-     * @param {AdminWord} title
-     * @param {string} attr
-     * @param {string} type
+     * Aktualisiert sowohl den lokalen State (für die Anzeige)
+     * als auch die ioBroker Konfiguration (zum Speichern)
      */
-    renderInput(title, attr, type) {
-        return (
-            <TextField
-                label={I18n.t(title)}
-                className={`${this.props.classes.input} ${this.props.classes.controlElement}`}
-                value={this.props.native[attr]}
-                type={type || 'text'}
-                onChange={(e) => this.props.onChange(attr, e.target.value)}
-                margin="normal"
-            />
-        );
+    updateDevices(newDevices) {
+        // 1. Sofort lokal anzeigen (damit der Cursor nicht springt)
+        this.setState({ devices: newDevices });
+
+        // 2. An ioBroker melden (zum Speichern)
+        this.props.onChange('devices', newDevices);
     }
 
-    /**
-     * @param {AdminWord} title
-     * @param {string} attr
-     * @param {{ value: string; title: AdminWord }[]} options
-     * @param {React.CSSProperties} [style]
-     */
-    renderSelect(title, attr, options, style) {
-        return (
-            <FormControl
-                className={`${this.props.classes.input} ${this.props.classes.controlElement}`}
-                style={{
-                    paddingTop: 5,
-                    ...style,
-                }}
-            >
-                <Select
-                    value={this.props.native[attr] || '_'}
-                    onChange={(e) => this.props.onChange(attr, e.target.value === '_' ? '' : e.target.value)}
-                    input={<Input name={attr} id={`${attr}-helper`} />}
-                >
-                    {options.map((item) => (
-                        <MenuItem key={`key-${item.value}`} value={item.value || '_'}>
-                            {I18n.t(item.title)}
-                        </MenuItem>
-                    ))}
-                </Select>
-                <FormHelperText>{I18n.t(title)}</FormHelperText>
-            </FormControl>
-        );
+    onAddDevice() {
+        // Wir kopieren das Array sicher
+        const devices = JSON.parse(JSON.stringify(this.state.devices));
+        devices.push({
+            id: '',
+            location: '',
+            type: '',
+        });
+        this.updateDevices(devices);
     }
 
-    /**
-     * @param {AdminWord} title
-     * @param {string} attr
-     * @param {React.CSSProperties} [style]
-     */
-    renderCheckbox(title, attr, style) {
-        return (
-            <FormControlLabel
-                key={attr}
-                style={{
-                    paddingTop: 5,
-                    ...style,
-                }}
-                className={this.props.classes.controlElement}
-                control={
-                    <Checkbox
-                        checked={this.props.native[attr]}
-                        onChange={() => this.props.onChange(attr, !this.props.native[attr])}
-                        color="primary"
-                    />
-                }
-                label={I18n.t(title)}
-            />
-        );
+    onDeviceChange(index, attr, value) {
+        const devices = JSON.parse(JSON.stringify(this.state.devices));
+        devices[index][attr] = value;
+        this.updateDevices(devices);
+    }
+
+    onDeleteDevice(index) {
+        const devices = JSON.parse(JSON.stringify(this.state.devices));
+        devices.splice(index, 1);
+        this.updateDevices(devices);
     }
 
     render() {
+        const { classes } = this.props;
+        // WICHTIG: Wir lesen jetzt aus this.state, nicht mehr aus this.props
+        const { devices } = this.state;
+
         return (
-            <form className={this.props.classes.tab}>
-                {this.renderCheckbox('option1', 'option1')}
-                <br />
-                {this.renderInput('option2', 'option2', 'text')}
-            </form>
+            <>
+                <Typography variant="h6" gutterBottom>
+                    {I18n.t('headline_sensor_config')}
+                </Typography>
+
+                <form className={classes.tab}>
+                    <TableContainer>
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>{I18n.t('table_sensor_id')}</TableCell>
+                                    <TableCell>{I18n.t('table_location')}</TableCell>
+                                    <TableCell>{I18n.t('table_type')}</TableCell>
+                                    <TableCell style={{ width: '50px' }}>{I18n.t('table_delete')}</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {devices.map((device, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell>
+                                            <TextField
+                                                className={classes.tableInput}
+                                                value={device.id}
+                                                onChange={(e) =>
+                                                    this.onDeviceChange(index, 'id', e.target.value)
+                                                }
+                                                placeholder="z.B. hm-rpc.0.xxx.STATE"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                className={classes.tableInput}
+                                                value={device.location}
+                                                onChange={(e) =>
+                                                    this.onDeviceChange(index, 'location', e.target.value)
+                                                }
+                                                placeholder="z.B. Bad"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                className={classes.tableInput}
+                                                value={device.type}
+                                                onChange={(e) =>
+                                                    this.onDeviceChange(index, 'type', e.target.value)
+                                                }
+                                                placeholder="z.B. Bewegung"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => this.onDeleteDevice(index)}
+                                            >
+                                                <DeleteIcon />
+                                            </IconButton>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<AddIcon />}
+                        style={{ marginTop: '20px' }}
+                        onClick={() => this.onAddDevice()}
+                    >
+                        {I18n.t('btn_add_sensor')}
+                    </Button>
+                </form>
+            </>
         );
     }
 }
 
+// @ts-ignore
 export default withStyles(styles)(Settings);
