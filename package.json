@@ -1,84 +1,75 @@
 {
-  "common": {
-    "name": "cogni-living",
-    "version": "0.1.2",
-    "enabled": true,
-    "news": {
-      "0.1.2": {
-        "en": "Stable release with AI logbook and alert system.",
-        "de": "Stabile Version mit KI-Logbuch und Alarmsystem."
-      },
-      "0.1.1": {
-        "en": "(Sprint 1-8) Added Gemini AI integration, autopilot timer, intelligence filter, alert system, and analysis logbook.",
-        "de": "(Sprint 1-8) Gemini KI-Integration, Autopilot-Timer, Intelligenz-Filter, Alarmsystem und Analyse-Logbuch hinzugefügt."
-      },
-      "0.1.0": {
-        "en": "Stable prototype with AI integration, UI improvements, and dynamic sensor table.",
-        "de": "Stabiler Prototyp mit KI-Integration, UI-Verbesserungen und dynamischer Sensor-Tabelle."
-      },
-      "0.0.1": {
-        "en": "initial release",
-        "de": "Erstveröffentlichung"
-      }
-    },
-    "titleLang": {
-      "en": "Cogni-Living",
-      "de": "Kognitives Leben"
-    },
-    "desc": {
-      "en": "Analyzes behavioral patterns for health, safety & comfort",
-      "de": "Analysiert Verhaltensmuster für Gesundheit, Sicherheit & Komfort"
-    },
-    "authors": [
-      "Marc Jaeger <mj112@gmx.de>"
-    ],
-    "keywords": [
-      "ai",
-      "ki",
-      "behavior",
-      "health",
-      "comfort",
-      "automation",
-      "pattern",
-      "learning",
-      "context",
-      "smart home"
-    ],
-    "licenseInformation": {
-      "type": "free",
-      "license": "MIT"
-    },
-    "platform": "Javascript/Node.js",
-    "icon": "cogni-living.png",
-    "extIcon": "https://raw.githubusercontent.com/obodeldog/ioBroker.cogni-living/main/admin/cogni-living.png",
-    "readme": "https://github.com/obodeldog/ioBroker.cogni-living/blob/main/README.md",
-    "loglevel": "info",
-    "tier": 3,
-    "mode": "daemon",
-    "type": "logic",
-    "compact": false,
-    "connectionType": "cloud",
-    "dataSource": "push",
-    "adminUI": {
-      "config": "materialize"
-    },
-    "eraseOnUpload": true,
-    "dependencies": [
-      {
-        "js-controller": ">=6.0.11"
-      }
-    ],
-    "globalDependencies": [
-      {
-        "admin": ">=7.0.23"
-      }
-    ]
+  "name": "iobroker.cogni-living",
+  "version": "0.1.2",
+  "description": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
+  "author": {
+    "name": "Marc Jaeger",
+    "email": "mj112@gmx.de"
   },
-  "native": {
-    "devices": [],
-    "geminiApiKey": "",
-    "analysisInterval": 15
+  "homepage": "https://github.com/obodeldog/ioBroker.cogni-living",
+  "license": "MIT",
+  "keywords": [
+    "iobroker",
+    "cogni-living",
+    "ai",
+    "ki",
+    "behavior",
+    "health",
+    "comfort",
+    "automation",
+    "pattern",
+    "learning",
+    "context",
+    "smart home"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/obodeldog/ioBroker.cogni-living.git"
   },
-  "objects": [],
-  "instanceObjects": []
+  "dependencies": {
+    "@google/generative-ai": "^0.15.0",
+    "@iobroker/adapter-core": "^3.1.6",
+    "axios": "^1.7.2"
+  },
+  "devDependencies": {
+    "@iobroker/adapter-dev": "^1.3.0",
+    "@iobroker/testing": "^4.1.3",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "prettier": "^3.3.2",
+    "rimraf": "^5.0.7",
+    "typescript": "~5.5.3"
+  },
+  "main": "build/main.js",
+  "files": [
+    "admin/",
+    "build/",
+    "io-package.json",
+    "LICENSE",
+    "README.md",
+    "README_de.md"
+  ],
+  "scripts": {
+    "prebuild": "rimraf admin/build",
+    "build": "build-adapter react",
+    "watch": "build-adapter react --watch",
+    "prebuild:ts": "rimraf build",
+    "build:ts": "tsc -p tsconfig.build.json",
+    "watch:ts": "tsc -p tsconfig.build.json --watch",
+    "test:ts": "mocha -r ts-node/register --timeout 10000 \"{!(node_modules|test)/**/*.test.ts,*.test.ts,test/**/test!(PackageFiles|Startup).ts}\"",
+    "test:package": "mocha test/package --exit",
+    "test:integration": "mocha test/integration --exit",
+    "test": "npm run test:ts && npm run test:package",
+    "check": "tsc --noEmit -p tsconfig.check.json",
+    "lint": "eslint --ext .js,.jsx,.ts,.tsx src/",
+    "translate": "translate-adapter",
+    "release": "release-script"
+  },
+  "bugs": {
+    "url": "https://github.com/obodeldog/ioBroker.cogni-living/issues"
+  },
+  "readmeFilename": "README.md"
 }
