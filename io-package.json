@@ -1,9 +1,13 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "enabled": true,
     "news": {
+      "0.1.3": {
+        "en": "Hotfix: Corrected adapter start file path (cannot find start file)",
+        "de": "Hotfix: Korrektur des Adapter-Startpfads (cannot find start file)"
+      },
       "0.1.2": {
         "en": "Stable release with AI logbook and alert system.",
         "de": "Stabile Version mit KI-Logbuch und Alarmsystem."
