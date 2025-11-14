@@ -6,56 +6,24 @@
     "news": {
       "0.1.1": {
         "en": "(Sprint 1-8) Added Gemini AI integration, autopilot timer, intelligence filter, alert system, and analysis logbook.",
-        "de": "(Sprint 1-8) Gemini KI-Integration, Autopilot-Timer, Intelligenz-Filter, Alarmsystem und Analyse-Logbuch hinzugefügt.",
-        "ru": "(Спринт 1-8) Добавлена интеграция Gemini AI, таймер автопилота, фильтр интеллекта, система оповещения и журнал анализа.",
-        "pt": "(Sprint 1-8) Adicionada integração Gemini AI, temporizador de piloto automático, filtro de inteligência, sistema de alerta e diário de análise.",
-        "nl": "(Sprint 1-8) Gemini AI-integratie, stuurautomaattimer, intelligentiefilter, waarschuwingssysteem en analyselogboek toegevoegd.",
-        "fr": "(Sprint 1-8) Ajout de l'intégration Gemini AI, de la minuterie du pilote automatique, du filtre d'intelligence, du système d'alerte et du journal d'analyse.",
-        "it": "(Sprint 1-8) Aggiunta l'integrazione Gemini AI, il timer del pilota automatico, il filtro dell'intelligenza, il sistema di allarme e il registro delle analisi.",
-        "es": "(Sprint 1-8) Se agregó integración Gemini AI, temporizador de piloto automático, filtro de inteligencia, sistema de alerta y registro de análisis.",
-        "pl": "(Sprint 1-8) Dodano integrację Gemini AI, timer autopilota, filtr inteligencji, system alarmowy i dziennik analiz.",
-        "uk": "(Спринт 1-8) Додано інтеграцію Gemini AI, таймер автопілота, фільтр інтелекту, систему сповіщень та журнал аналізу.",
-        "zh-cn": "（冲刺 1-8）添加了 Gemini AI 集成、自动驾驶计时器、智能过滤器、警报系统和分析日志。"
+        "de": "(Sprint 1-8) Gemini KI-Integration, Autopilot-Timer, Intelligenz-Filter, Alarmsystem und Analyse-Logbuch hinzugefügt."
+      },
+      "0.1.0": {
+        "en": "Stable prototype with AI integration, UI improvements, and dynamic sensor table.",
+        "de": "Stabiler Prototyp mit KI-Integration, UI-Verbesserungen und dynamischer Sensor-Tabelle."
       },
       "0.0.1": {
         "en": "initial release",
-        "de": "Erstveröffentlichung",
-        "ru": "Начальная версия",
-        "pt": "lançamento inicial",
-        "nl": "Eerste uitgave",
-        "fr": "Première version",
-        "it": "Versione iniziale",
-        "es": "Versión inicial",
-        "pl": "Pierwsze wydanie",
-        "uk": "Початкова версія",
-        "zh-cn": "首次出版"
+        "de": "Erstveröffentlichung"
       }
     },
     "titleLang": {
       "en": "Cogni-Living",
-      "de": "Kognitives Leben",
-      "ru": "Познавательная жизнь",
-      "pt": "Vida Cognitiva",
-      "nl": "Cogni-leven",
-      "fr": "Cogni-Vivre",
-      "it": "Cogni-Living",
-      "es": "Cogni-Vivir",
-      "pl": "Życie poznawcze",
-      "uk": "Cogni-Living",
-      "zh-cn": "认知生活"
+      "de": "Kognitives Leben"
     },
     "desc": {
       "en": "Analyzes behavioral patterns for health, safety & comfort",
-      "de": "Analysiert Verhaltensmuster für Gesundheit, Sicherheit & Komfort",
-      "ru": "Анализирует модели поведения для здоровья, безопасности и комфорта",
-      "pt": "Analisa padrões de comportamento para saúde, segurança e conforto",
-      "nl": "Analyseert gedragspatronen voor gezondheid, veiligheid & comfort",
-      "fr": "Analyse les modèles de comportement pour la santé, la sécurité et le confort",
-      "it": "Analizza i modelli comportamentali per la salute, la sicurezza e il comfort",
-      "es": "Analiza patrones de comportamiento para la salud, la seguridad y el confort.",
-      "pl": "Analizuje wzorce zachowań pod kątem zdrowia, bezpieczeństwa i komfortu",
-      "uk": "Аналізує моделі поведінки для здоров'я, безпеки та комфорту",
-      "zh-cn": "分析健康、安全和舒适度的行为模式"
+      "de": "Analysiert Verhaltensmuster für Gesundheit, Sicherheit & Komfort"
     },
     "authors": [
       "Marc Jaeger <mj112@gmx.de>"
