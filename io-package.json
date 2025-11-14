@@ -1,10 +1,14 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "enabled": true,
     "main": "main.js",
     "news": {
+      "0.1.8": {
+        "en": "Refined AI prompt structure for concise, consistent analysis results.",
+        "de": "KI-Prompt-Struktur verfeinert für präzisere und konsistentere Analyse-Ergebnisse."
+      },
       "0.1.7": {
         "en": "Refined AI prompt for more concise and balanced analysis results.",
         "de": "KI-Prompt verfeinert für präzisere und ausgewogenere Analyse-Ergebnisse."
