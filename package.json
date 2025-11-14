@@ -1,9 +1,13 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "enabled": true,
     "news": {
+      "0.1.2": {
+        "en": "Stable release with AI logbook and alert system.",
+        "de": "Stabile Version mit KI-Logbuch und Alarmsystem."
+      },
       "0.1.1": {
         "en": "(Sprint 1-8) Added Gemini AI integration, autopilot timer, intelligence filter, alert system, and analysis logbook.",
         "de": "(Sprint 1-8) Gemini KI-Integration, Autopilot-Timer, Intelligenz-Filter, Alarmsystem und Analyse-Logbuch hinzugefügt."
