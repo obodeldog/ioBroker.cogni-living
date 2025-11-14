@@ -1,9 +1,14 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "enabled": true,
+    "main": "main.js",
     "news": {
+      "0.1.4": {
+        "en": "Hotfix: Added missing 'main' entry in io-package.json (cannot find start file)",
+        "de": "Hotfix: Fehlenden 'main'-Eintrag in io-package.json hinzugefügt (cannot find start file)"
+      },
       "0.1.3": {
         "en": "Hotfix: Corrected adapter start file path (cannot find start file)",
         "de": "Hotfix: Korrektur des Adapter-Startpfads (cannot find start file)"
