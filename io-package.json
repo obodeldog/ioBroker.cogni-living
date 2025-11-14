@@ -1,10 +1,18 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.1.4",
+    "version": "0.1.6",
     "enabled": true,
     "main": "main.js",
     "news": {
+      "0.1.6": {
+        "en": "Hotfix: Final sync of io-package.json and package.json to fix 'cannot find start file'",
+        "de": "Hotfix: Finaler Sync von io-package.json und package.json, um 'cannot find start file' zu beheben"
+      },
+      "0.1.5": {
+        "en": "Hotfix: Corrected file paths in package.json (cannot find start file)",
+        "de": "Hotfix: Korrektur der Dateipfade in package.json (cannot find start file)"
+      },
       "0.1.4": {
         "en": "Hotfix: Added missing 'main' entry in io-package.json (cannot find start file)",
         "de": "Hotfix: Fehlenden 'main'-Eintrag in io-package.json hinzugefügt (cannot find start file)"
