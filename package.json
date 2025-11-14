@@ -43,10 +43,11 @@
     "rimraf": "^5.0.7",
     "typescript": "~5.5.3"
   },
-  "main": "build/main.js",
+  "main": "src/main.js",
   "files": [
     "admin/",
     "build/",
+    "src/",
     "io-package.json",
     "LICENSE",
     "README.md",
