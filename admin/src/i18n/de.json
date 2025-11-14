@@ -1,12 +1,11 @@
 {
-    "cogni-living adapter settings": "Adaptereinstellungen für cogni-living",
-    "option1": "Option 1",
-    "option2": "Option 2",
-
-    "headline_sensor_config": "Sensor-Konfiguration für Cogni-Living",
-    "table_sensor_id": "Sensor-ID",
-    "table_location": "Ort (Raum)",
-    "table_type": "Typ",
-    "table_delete": "Löschen",
-    "btn_add_sensor": "Sensor hinzufügen"
+  "cogni-living adapter settings": "Adapter Einstellungen für cogni-living",
+  "headline_sensor_config": "Sensor-Konfiguration für Cogni-Living",
+  "table_sensor_id": "Sensor ID (Objekt)",
+  "table_location": "Ort (Raum)",
+  "table_type": "Typ",
+  "table_delete": "Löschen",
+  "btn_add_sensor": "Sensor hinzufügen",
+  "gemini_api_key": "Google Gemini API-Schlüssel",
+  "analysis_interval": "Analyse-Intervall (in Minuten)"
 }

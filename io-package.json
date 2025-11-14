@@ -1,95 +1,99 @@
 {
-    "common": {
-        "name": "cogni-living",
-        "version": "0.0.1",
-        "news": {
-            "0.0.1": {
-                "en": "initial release",
-                "de": "Erstveröffentlichung",
-                "ru": "Начальная версия",
-                "pt": "lançamento inicial",
-                "nl": "Eerste uitgave",
-                "fr": "Première version",
-                "it": "Versione iniziale",
-                "es": "Versión inicial",
-                "pl": "Pierwsze wydanie",
-                "uk": "Початкова версія",
-                "zh-cn": "首次出版"
-            }
-        },
-        "titleLang": {
-            "en": "Cogni-Living",
-            "de": "Kognitives Leben",
-            "ru": "Познавательная жизнь",
-            "pt": "Vida Cognitiva",
-            "nl": "Cogni-leven",
-            "fr": "Cogni-Vivre",
-            "it": "Cogni-Living",
-            "es": "Cogni-Vivir",
-            "pl": "Życie poznawcze",
-            "uk": "Cogni-Living",
-            "zh-cn": "认知生活"
-        },
-        "desc": {
-            "en": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
-            "de": "Analysiertes Verhaltensmuster für Gesundheit & Komfort",
-            "ru": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
-            "pt": "Analisador Verhaltensmuster para Gesundheit & Komfort",
-            "nl": "Analist Verhaltensmuster für Gesundheit & Komfort",
-            "fr": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
-            "it": "Analisi dei dati relativi alla salute e al comfort",
-            "es": "Analista de Verhaltensmuster para Gesundheit & Komfort",
-            "pl": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
-            "uk": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
-            "zh-cn": "健康与舒适分析"
-        },
-        "authors": ["Marc Jaeger <mj112@gmx.de>"],
-        "keywords": [
-            "ai",
-            "ki",
-            "behavior",
-            "health",
-            "comfort",
-            "automation",
-            "pattern",
-            "learning",
-            "context",
-            "smart home"
-        ],
-        "licenseInformation": {
-            "type": "free",
-            "license": "MIT"
-        },
-        "platform": "Javascript/Node.js",
-        "icon": "cogni-living.png",
-        "enabled": true,
-        "extIcon": "https://raw.githubusercontent.com/obodeldog/ioBroker.cogni-living/main/admin/cogni-living.png",
-        "readme": "https://github.com/obodeldog/ioBroker.cogni-living/blob/main/README.md",
-        "loglevel": "info",
-        "tier": 3,
-        "mode": "daemon",
-        "type": "logic",
-        "compact": true,
-        "connectionType": "cloud",
-        "dataSource": "push",
-        "adminUI": {
-            "config": "materialize"
-        },
-        "eraseOnUpload": true,
-        "dependencies": [
-            {
-                "js-controller": ">=6.0.11"
-            }
-        ],
-        "globalDependencies": [
-            {
-                "admin": ">=7.0.23"
-            }
-        ]
+  "common": {
+    "name": "cogni-living",
+    "version": "0.0.1",
+    "enabled": true,
+    "news": {
+      "0.0.1": {
+        "en": "initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "lançamento inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Première version",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Pierwsze wydanie",
+        "uk": "Початкова версія",
+        "zh-cn": "首次出版"
+      }
     },
-    "native": {
-        "devices": []
+    "titleLang": {
+      "en": "Cogni-Living",
+      "de": "Kognitives Leben",
+      "ru": "Познавательная жизнь",
+      "pt": "Vida Cognitiva",
+      "nl": "Cogni-leven",
+      "fr": "Cogni-Vivre",
+      "it": "Cogni-Living",
+      "es": "Cogni-Vivir",
+      "pl": "Życie poznawcze",
+      "uk": "Cogni-Living",
+      "zh-cn": "认知生活"
     },
-    "objects": [],
-    "instanceObjects": []
+    "desc": {
+      "en": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
+      "de": "Analysiertes Verhaltensmuster für Gesundheit & Komfort",
+      "ru": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
+      "pt": "Analisador Verhaltensmuster para Gesundheit & Komfort",
+      "nl": "Analist Verhaltensmuster für Gesundheit & Komfort",
+      "fr": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
+      "it": "Analisi dei dati relativi alla salute e al comfort",
+      "es": "Analista de Verhaltensmuster para Gesundheit & Komfort",
+      "pl": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
+      "uk": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
+      "zh-cn": "健康与舒适分析"
+    },
+    "authors": [
+      "Marc Jaeger <mj112@gmx.de>"
+    ],
+    "keywords": [
+      "ai",
+      "ki",
+      "behavior",
+      "health",
+      "comfort",
+      "automation",
+      "pattern",
+      "learning",
+      "context",
+      "smart home"
+    ],
+    "licenseInformation": {
+      "type": "free",
+      "license": "MIT"
+    },
+    "platform": "Javascript/Node.js",
+    "icon": "cogni-living.png",
+    "extIcon": "https://raw.githubusercontent.com/obodeldog/ioBroker.cogni-living/main/admin/cogni-living.png",
+    "readme": "https://github.com/obodeldog/ioBroker.cogni-living/blob/main/README.md",
+    "loglevel": "info",
+    "tier": 3,
+    "mode": "daemon",
+    "type": "logic",
+    "compact": false,
+    "connectionType": "cloud",
+    "dataSource": "push",
+    "adminUI": {
+      "config": "materialize"
+    },
+    "eraseOnUpload": true,
+    "dependencies": [
+      {
+        "js-controller": ">=6.0.11"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=7.0.23"
+      }
+    ]
+  },
+  "native": {
+    "devices": [],
+    "geminiApiKey": "",
+    "analysisInterval": 15
+  },
+  "objects": [],
+  "instanceObjects": []
 }
