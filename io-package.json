@@ -1,10 +1,14 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "enabled": true,
     "main": "main.js",
     "news": {
+      "0.1.7": {
+        "en": "Refined AI prompt for more concise and balanced analysis results.",
+        "de": "KI-Prompt verfeinert für präzisere und ausgewogenere Analyse-Ergebnisse."
+      },
       "0.1.6": {
         "en": "Hotfix: Final sync of io-package.json and package.json to fix 'cannot find start file'",
         "de": "Hotfix: Finaler Sync von io-package.json und package.json, um 'cannot find start file' zu beheben"
