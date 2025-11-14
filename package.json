@@ -33,6 +33,7 @@
     "node": ">= 20"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@iobroker/adapter-core": "^3.3.2"
   },
   "devDependencies": {

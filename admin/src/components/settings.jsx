@@ -3,6 +3,7 @@ import { withStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import I18n from '@iobroker/adapter-react/i18n';
 import TextField from '@material-ui/core/TextField';
+import InputLabel from '@material-ui/core/InputLabel';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
@@ -16,10 +17,21 @@ import ListIcon from '@material-ui/icons/List';
 import IconButton from '@material-ui/core/IconButton';
 import DialogSelectID from '@iobroker/adapter-react/Dialogs/SelectID';
 
+// (Die 'styles' Sektion bleibt unverändert, ich kürze sie hier ab)
 const styles = () => ({
     tableInput: {
         width: '100%',
         minWidth: '150px',
+    },
+    apiKeyInput: {
+        width: '100%',
+        maxWidth: '600px',
+        marginBottom: '20px',
+    },
+    // NEU: Style für das Intervall-Feld
+    intervalInput: {
+        width: '150px',
+        marginBottom: '20px',
     },
     input: {
         marginTop: 0,
@@ -59,12 +71,22 @@ class Settings extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
+            // Wir laden jetzt ALLE nativen Einstellungen in den State
             devices: props.native.devices || [],
+            geminiApiKey: props.native.geminiApiKey || '',
+            analysisInterval: props.native.analysisInterval || 15, // Neu
             showSelectId: false,
             selectIdIndex: -1
         };
     }
 
+    // Diese Funktion aktualisiert jetzt JEDEN nativen Wert
+    updateNativeValue(attr, value) {
+        this.setState({ [attr]: value });
+        this.props.onChange(attr, value);
+    }
+
+    // Diese Funktion ist speziell für die TABELLE (die ein Array ist)
     updateDevices(newDevices) {
         this.setState({ devices: newDevices });
         this.props.onChange('devices', newDevices);
@@ -100,38 +122,27 @@ class Settings extends React.Component {
         });
     }
 
-    // === HIER IST DIE MAGIE FÜR DEN AUTOMATISCHEN NAMEN ===
     onSelectId(selectedId) {
         const index = this.state.selectIdIndex;
         if (selectedId && index !== -1) {
             const devices = JSON.parse(JSON.stringify(this.state.devices));
-            
-            // 1. ID setzen
             devices[index].id = selectedId;
-
-            // 2. Versuchen, den Namen automatisch zu holen
             this.props.socket.getObject(selectedId)
                 .then((obj) => {
                     if (obj && obj.common && obj.common.name) {
                         let name = obj.common.name;
-                        
-                        // Falls der Name mehrsprachig ist (Objekt), nehmen wir die aktuelle Sprache
                         if (typeof name === 'object') {
                             // @ts-ignore
                             name = name[I18n.getLanguage()] || name.en || name.de || JSON.stringify(name);
                         }
-                        
-                        // Namen automatisch eintragen
                         devices[index].name = name;
                         this.updateDevices(devices);
                     } else {
-                        // Kein Name gefunden? Wir speichern zumindest die ID
                         this.updateDevices(devices);
                     }
                 })
-                .catch((err) => {
-                    // Falls was schief geht (keine Rechte etc.), speichern wir trotzdem die ID
-                    console.error(err);
+                .catch((e) => {
+                    console.error(e);
                     this.updateDevices(devices);
                 });
         }
@@ -159,18 +170,45 @@ class Settings extends React.Component {
 
     render() {
         const { classes } = this.props;
-        const { devices } = this.state;
+        // Wir holen alle Werte aus dem State
+        const { devices, geminiApiKey, analysisInterval } = this.state;
 
         return (
             <>
                 {this.renderSelectIdDialog()}
 
-                <Typography variant="h6" gutterBottom>
-                    {I18n.t('headline_sensor_config')}
-                </Typography>
-
                 <form className={classes.tab}>
+                    
+                    {/* === API Key Feld === */}
+                    <InputLabel>{I18n.t('gemini_api_key')}</InputLabel>
+                    <TextField
+                        className={classes.apiKeyInput}
+                        value={geminiApiKey}
+                        type="password"
+                        onChange={(e) =>
+                            this.updateNativeValue('geminiApiKey', e.target.value)
+                        }
+                    />
+                    
+                    {/* === NEUES Intervall Feld === */}
+                    <InputLabel>{I18n.t('analysis_interval')}</InputLabel>
+                    <TextField
+                        className={classes.intervalInput}
+                        value={analysisInterval}
+                        type="number" // Akzeptiert nur Zahlen
+                        inputProps={{ min: 1 }} // Mindestens 1 Minute
+                        onChange={(e) =>
+                            this.updateNativeValue('analysisInterval', parseInt(e.target.value, 10) || 1)
+                        }
+                    />
+                    {/* ========================= */}
+
+                    <Typography variant="h6" gutterBottom style={{marginTop: '20px'}}>
+                        {I18n.t('headline_sensor_config')}
+                    </Typography>
+
                     <TableContainer>
+                        {/* (Der Rest der Tabelle bleibt exakt gleich) */}
                         <Table size="small">
                             <TableHead>
                                 <TableRow>
