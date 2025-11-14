@@ -52,13 +52,22 @@ The adapter creates the following states under `cogni-living.0`:
 * **`analysis.trigger`**: A button (boolean) to manually trigger an AI analysis.
 * **`analysis.lastPrompt`**: The exact text (system prompt + event data) that was last sent to the AI.
 * **`analysis.lastResult`**: The text response/analysis received from Gemini.
+* **`analysis.isAlert`**: A boolean (true/false) alarm state, triggered if the AI response contains keywords like "WARNUNG" or "INAKTIVITÄT".
+* **`analysis.analysisHistory`**: A JSON array logbook of the last 100 AI analysis results.
+* **`analysis.history_debug_XX`**: The 5 most recent analysis results as human-readable text.
 
 ---
 
 ## Changelog
 
+### 0.1.2 (2025-11-14)
+* (stable) Stable release with AI logbook and alert system.
+
+### 0.1.1 (2025-11-14)
+* (Sprint 1-8) Added Gemini AI integration, autopilot timer, intelligence filter, alert system, and analysis logbook.
+
 ### 0.1.0 (2025-11-14)
-* (Sprint 1-7) Added Gemini AI integration, autopilot timer, and intelligence filter
+* (Sprint 1-7) Added base AI integration, UI improvements (Select-ID), and auto-name fetching.
 
 ### 0.0.1 (2025-11-13)
 * (initial release) Adapter created
