@@ -60,6 +60,21 @@ Der Adapter erstellt folgende Datenpunkte unter `cogni-living.0`:
 
 ## Changelog
 
+### 0.1.7 (2025-11-14)
+* (stabil) KI-Prompt verfeinert für präzisere und ausgewogenere Analyse-Ergebnisse.
+
+### 0.1.6 (2025-11-14)
+* (hotfix) Finaler Sync von io-package.json und package.json, um 'cannot find start file' zu beheben
+
+### 0.1.5 (2025-11-14)
+* (hotfix) Korrektur der Dateipfade in package.json (cannot find start file)
+
+### 0.1.4 (2025-11-14)
+* (hotfix) Fehlenden 'main'-Eintrag in io-package.json hinzugefügt (cannot find start file)
+
+### 0.1.3 (2025-11-14)
+* (hotfix) Korrektur des Adapter-Startpfads (cannot find start file)
+
 ### 0.1.2 (2025-11-14)
 * (stabil) Stabile Version mit KI-Logbuch und Alarmsystem.
 

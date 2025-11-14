@@ -3,13 +3,12 @@
 const utils = require('@iobroker/adapter-core');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const HISTORY_MAX_SIZE = 50; // Für Sensor-Events
-const DEBUG_HISTORY_COUNT = 5; // Für Sensor-Events
+const HISTORY_MAX_SIZE = 50; 
+const DEBUG_HISTORY_COUNT = 5; 
 const GEMINI_MODEL = 'models/gemini-flash-latest';
 
-// === NEUE KONSTANTEN FÜR DAS LOGBUCH ===
-const ANALYSIS_HISTORY_MAX_SIZE = 100; // Wir merken uns die letzten 100 Analysen
-const DEBUG_ANALYSIS_HISTORY_COUNT = 5; // Die 5 letzten Analysen lesbar anzeigen
+const ANALYSIS_HISTORY_MAX_SIZE = 100; 
+const DEBUG_ANALYSIS_HISTORY_COUNT = 5; 
 
 const ALERT_KEYWORDS = [
     'WARNUNG', 'ACHTUNG', 'PROBLEM', 'STÖRUNG',
@@ -24,8 +23,8 @@ class CogniLiving extends utils.Adapter {
             name: 'cogni-living',
         });
 
-        this.eventHistory = [];    // Gedächtnis für Sensor-Events
-        this.analysisHistory = []; // NEU: Gedächtnis für KI-Antworten ("Logbuch")
+        this.eventHistory = [];    
+        this.analysisHistory = []; 
         
         this.genAI = null;        
         this.geminiModel = null;  
@@ -38,7 +37,7 @@ class CogniLiving extends utils.Adapter {
 
     async onReady() {
         // === EINDEUTIGE VERSIONSNUMMER ===
-        this.log.error('--- CODE-VERSION: 1900_LOGBOOK ---');
+        this.log.error('--- CODE-VERSION: 1930_MIXED_PROMPT ---');
         // ===================================
 
         this.log.info('cogni-living adapter starting (Sprint 8: Alert System + Logbook)');
@@ -57,22 +56,17 @@ class CogniLiving extends utils.Adapter {
         }
 
         // === 2. DATENPUNKTE ERSTELLEN ===
-        
-        // --- Sensor-Event-Datenpunkte ---
+        // (Alle Datenpunkte bleiben gleich)
         await this.setObjectNotExistsAsync('events.lastEvent', { type: 'state', common: { name: 'Last raw event', type: 'string', role: 'json', read: true, write: false }, native: {} });
         await this.setObjectNotExistsAsync('events.history', { type: 'state', common: { name: 'Event History (JSON Array)', type: 'string', role: 'json', read: true, write: false }, native: {} });
         for (let i = 0; i < DEBUG_HISTORY_COUNT; i++) {
             const idIndex = i.toString().padStart(2, '0');
             await this.setObjectNotExistsAsync(`events.history_debug_${idIndex}`, { type: 'state', common: { name: `History Event ${idIndex}`, type: 'string', role: 'text', read: true, write: false }, native: {} });
         }
-
-        // --- KI-Analyse-Datenpunkte ---
         await this.setObjectNotExistsAsync('analysis.trigger', { type: 'state', common: { name: 'Trigger Analysis', type: 'boolean', role: 'button', read: true, write: true, def: false }, native: {} });
         await this.setObjectNotExistsAsync('analysis.lastPrompt', { type: 'state', common: { name: 'Last Prompt sent to AI', type: 'string', role: 'text', read: true, write: false }, native: {} });
         await this.setObjectNotExistsAsync('analysis.lastResult', { type: 'state', common: { name: 'Last Result from AI', type: 'string', role: 'text', read: true, write: false }, native: {} });
         await this.setObjectNotExistsAsync('analysis.isAlert', { type: 'state', common: { name: 'AI Alert Status', type: 'boolean', role: 'indicator.alarm', read: true, write: false, def: false }, native: {} });
-
-        // --- NEUE KI-LOGBUCH-DATENPUNKTE ---
         await this.setObjectNotExistsAsync('analysis.analysisHistory', {
             type: 'state',
             common: { name: 'Analysis Logbook (JSON Array)', type: 'string', role: 'json', read: true, write: false, def: '[]' },
@@ -87,8 +81,7 @@ class CogniLiving extends utils.Adapter {
             });
         }
 
-        // === 3. GEDÄCHTNIS LADEN (WICHTIG!) ===
-        // Lädt das Logbuch aus dem Datenpunkt, damit es Neustarts überlebt
+        // === 3. GEDÄCHTNIS LADEN ===
         try {
             const historyState = await this.getStateAsync('analysis.analysisHistory');
             if (historyState && historyState.val) {
@@ -157,6 +150,7 @@ class CogniLiving extends utils.Adapter {
     }
 
     onStateChange(id, state) {
+        // ... (Diese Funktion bleibt unverändert) ...
         if (!state) return; 
         if (state.ack) {
             // @ts-ignore
@@ -177,6 +171,7 @@ class CogniLiving extends utils.Adapter {
     }
 
     async processSensorEvent(id, state, deviceConfig) {
+        // ... (Diese Funktion bleibt unverändert) ...
         const location = deviceConfig.location || 'unknown';
         const type = deviceConfig.type || 'unknown';
         const name = deviceConfig.name || 'unknown';
@@ -185,7 +180,7 @@ class CogniLiving extends utils.Adapter {
         this.eventHistory.unshift(eventObject);
         if (this.eventHistory.length > HISTORY_MAX_SIZE) { this.eventHistory.pop(); }
         await this.setStateAsync('events.history', { val: JSON.stringify(this.eventHistory), ack: true });
-        await this._updateDebugSensorHistoryStates(); // (Name der Helferfunktion präzisiert)
+        await this._updateDebugSensorHistoryStates(); 
     }
 
     async runGeminiAnalysis() {
@@ -200,12 +195,16 @@ class CogniLiving extends utils.Adapter {
             return;
         }
 
+        // === 1. DER "MITTELWEG"-PROMPT ===
         const systemPrompt = `
-            Du bist "Cogni-Living", ein fortschrittlicher Smart-Home-Assistent mit zwei Rollen:
-            1.  **Aktivitäts-Assistent:** Achte auf ungewöhnliche Abweichungen von täglichen Routinen...
-            2.  **Komfort-Assistent:** Suche nach wiederkehrenden Mustern...
-            Analysiere die folgenden Sensor-Ereignisse...
+            ANALYSEAUFTRAG:
+            Analysiere die folgenden Sensor-Ereignisse.
+            Antworte AUSSCHLIESSLICH im folgenden Format (keine Begrüßung, kein Fließtext):
+
+            **Aktivität:** [Deine detaillierte Einschätzung in 1-2 Sätzen. Nutze 'WARNUNG' bei Problemen.]
+            **Komfort:** [Deine detaillierte Einschätzung in 1-2 Sätzen.]
         `;
+        
         const dataPrompt = JSON.stringify(this.eventHistory, null, 2);
         const fullPrompt = systemPrompt + "\n\nHier sind die Daten:\n" + dataPrompt;
         await this.setStateAsync('analysis.lastPrompt', { val: fullPrompt, ack: true });
@@ -217,12 +216,14 @@ class CogniLiving extends utils.Adapter {
                 generationConfig: { maxOutputTokens: 2048 },
             });
             const response = await result.response;
-            const aiText = response.text();
+            
+            // Wir behalten die Bereinigung bei, falls die KI doch Markdown schickt
+            const aiText = response.text().trim(); // .trim() entfernt Leerzeilen am Anfang/Ende
             
             this.log.info(`AI Response received: ${aiText}`);
             await this.setStateAsync('analysis.lastResult', { val: aiText, ack: true });
 
-            // === ALARM-PARSER & LOGBUCH ===
+            // === ALARM-PARSER ===
             let alertFound = false;
             const upperCaseAiText = aiText.toUpperCase(); 
             for (const keyword of ALERT_KEYWORDS) {
@@ -240,14 +241,13 @@ class CogniLiving extends utils.Adapter {
                 await this.setStateAsync('analysis.isAlert', { val: false, ack: true });
             }
             
-            // --- NEU: Antwort dem Logbuch hinzufügen ---
+            // --- Logbuch hinzufügen ---
             const logEntry = {
                 timestamp: Date.now(),
                 text: aiText,
                 alert: alertFound
             };
             await this.updateAnalysisHistory(logEntry);
-            // ------------------------------------
 
         } catch (error) {
             this.log.error(`Error calling Gemini AI: ${error.message}`);
@@ -273,43 +273,24 @@ class CogniLiving extends utils.Adapter {
         }
     }
 
-    // --- NEUE HELFERFUNKTIONEN FÜR ANALYSE-LOGBUCH ---
-    
-    /**
-     * Fügt einen neuen Logbucheintrag hinzu und speichert das Logbuch
-     * @param {object} logEntry Das neue Analyse-Objekt
-     */
+    // --- Helferfunktionen für ANALYSE-LOGBUCH ---
     async updateAnalysisHistory(logEntry) {
-        // Neuen Eintrag vorne anfügen
         this.analysisHistory.unshift(logEntry);
-        
-        // Logbuch kürzen, wenn es zu lang wird
         if (this.analysisHistory.length > ANALYSIS_HISTORY_MAX_SIZE) {
             this.analysisHistory.pop();
         }
-        
-        // Das volle JSON-Array in den Datenpunkt schreiben
         await this.setStateAsync('analysis.analysisHistory', { val: JSON.stringify(this.analysisHistory), ack: true });
-        
-        // Die lesbaren Debug-Zeilen aktualisieren
         await this._updateDebugAnalysisHistoryStates();
     }
     
-    /**
-     * Formatiert einen Logbucheintrag lesbar (z.B. "18:30 - WARNUNG: ...")
-     * @param {object} logEntry
-     */
     _formatAnalysisForHistory(logEntry) {
         const time = new Date(logEntry.timestamp).toLocaleString('de-DE'); // Datum + Zeit
         const prefix = logEntry.alert ? '[ALARM] ' : '[Info] ';
-        // Wir nehmen nur die ersten 100 Zeichen der Antwort für die Kurzübersicht
-        const shortText = logEntry.text.substring(0, 100).replace(/\n/g, ' '); // Zeilenumbrüche entfernen
-        return `${time} - ${prefix}${shortText}...`;
+        // Wir ersetzen Zeilenumbrüche durch " | " für eine bessere Lesbarkeit in der DP-Liste
+        const shortText = logEntry.text.replace(/\n/g, ' | '); 
+        return `${time} - ${prefix}${shortText}`;
     }
 
-    /**
-     * Schreibt die 5 neuesten Logbucheinträge in die Debug-Datenpunkte
-     */
     async _updateDebugAnalysisHistoryStates() {
         for (let i = 0; i < DEBUG_ANALYSIS_HISTORY_COUNT; i++) {
             const idIndex = i.toString().padStart(2, '0');

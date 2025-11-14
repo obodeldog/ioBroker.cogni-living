@@ -9,7 +9,13 @@ import Settings from './components/settings';
  * @type {(_theme: import("@material-ui/core/styles").Theme) => import("@material-ui/styles").StyleRules}
  */
 const styles = (_theme) => ({
-    root: {},
+    root: {
+        width: '100%',
+        height: '100%',
+        overflow: 'auto',
+        padding: '20px', 
+        boxSizing: 'border-box', 
+    },
 });
 
 class App extends GenericApp {
@@ -34,18 +40,18 @@ class App extends GenericApp {
             return super.render();
         }
 
+        // === HIER IST DER FIX ===
+        // Wir sagen dem Linter, er soll diese Zeile ignorieren
+        // @ts-ignore
+        const { classes } = this.props;
+
         return (
-            <div className="App">
+            <div className={classes.root}>
                 <Settings
                     native={this.state.native}
                     onChange={(attr, value) => this.updateNativeValue(attr, value)}
-                    
-                    // ====== DOPPELTE ABSICHERUNG ======
-                    // Wir nehmen props.socket ODER this.socket.
-                    // Eines von beiden ist garantiert da, wenn loaded=true ist.
                     socket={this.props.socket || this.socket} 
                     themeType={this.state.themeType}
-                    // ==================================
                 />
                 {this.renderError()}
                 {this.renderToast()}
