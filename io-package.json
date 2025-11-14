@@ -1,61 +1,33 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.1.0",
+    "version": "0.1.2",
     "enabled": true,
     "news": {
+      "0.1.2": {
+        "en": "Stable release with AI logbook and alert system.",
+        "de": "Stabile Version mit KI-Logbuch und Alarmsystem."
+      },
+      "0.1.1": {
+        "en": "(Sprint 1-8) Added Gemini AI integration, autopilot timer, intelligence filter, alert system, and analysis logbook.",
+        "de": "(Sprint 1-8) Gemini KI-Integration, Autopilot-Timer, Intelligenz-Filter, Alarmsystem und Analyse-Logbuch hinzugefügt."
+      },
       "0.1.0": {
-        "en": "(Sprint 1-7) Added Gemini AI integration, autopilot timer, and intelligence filter",
-        "de": "(Sprint 1-7) Gemini KI-Integration, Autopilot-Timer und Intelligenz-Filter hinzugefügt",
-        "ru": "(Sprint 1-7) Добавлена интеграция Gemini AI, таймер автопилота и интеллектуальный фильтр.",
-        "pt": "(Sprint 1-7) Adicionada integração Gemini AI, temporizador de piloto automático e filtro de inteligência",
-        "nl": "(Sprint 1-7) Gemini AI-integratie, stuurautomaattimer en intelligentiefilter toegevoegd",
-        "fr": "(Sprint 1-7) Ajout de l'intégration Gemini AI, de la minuterie de pilote automatique et du filtre d'intelligence",
-        "it": "(Sprint 1-7) Aggiunta l'integrazione Gemini AI, il timer del pilota automatico e il filtro di intelligenza",
-        "es": "(Sprint 1-7) Se agregó integración Gemini AI, temporizador de piloto automático y filtro de inteligencia.",
-        "pl": "(Sprint 1-7) Dodano integrację Gemini AI, timer autopilota i filtr inteligencji",
-        "uk": "(Sprint 1-7) Додано інтеграцію Gemini AI, таймер автопілота та фільтр інтелекту",
-        "zh-cn": "（冲刺 1-7）添加了 Gemini AI 集成、自动驾驶计时器和智能过滤器"
+        "en": "Stable prototype with AI integration, UI improvements, and dynamic sensor table.",
+        "de": "Stabiler Prototyp mit KI-Integration, UI-Verbesserungen und dynamischer Sensor-Tabelle."
       },
       "0.0.1": {
         "en": "initial release",
-        "de": "Erstveröffentlichung",
-        "ru": "Начальная версия",
-        "pt": "lançamento inicial",
-        "nl": "Eerste uitgave",
-        "fr": "Première version",
-        "it": "Versione iniziale",
-        "es": "Versión inicial",
-        "pl": "Pierwsze wydanie",
-        "uk": "Початкова версія",
-        "zh-cn": "首次出版"
+        "de": "Erstveröffentlichung"
       }
     },
     "titleLang": {
       "en": "Cogni-Living",
-      "de": "Kognitives Leben",
-      "ru": "Познавательная жизнь",
-      "pt": "Vida Cognitiva",
-      "nl": "Cogni-leven",
-      "fr": "Cogni-Vivre",
-      "it": "Cogni-Living",
-      "es": "Cogni-Vivir",
-      "pl": "Życie poznawcze",
-      "uk": "Cogni-Living",
-      "zh-cn": "认知生活"
+      "de": "Kognitives Leben"
     },
     "desc": {
-      "en": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
-      "de": "Analysiertes Verhaltensmuster für Gesundheit & Komfort",
-      "ru": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
-      "pt": "Analisador Verhaltensmuster para Gesundheit & Komfort",
-      "nl": "Analist Verhaltensmuster für Gesundheit & Komfort",
-      "fr": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
-      "it": "Analisi dei dati relativi alla salute e al comfort",
-      "es": "Analista de Verhaltensmuster para Gesundheit & Komfort",
-      "pl": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
-      "uk": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
-      "zh-cn": "健康与舒适分析"
+      "en": "Analyzes behavioral patterns for health, safety & comfort",
+      "de": "Analysiert Verhaltensmuster für Gesundheit, Sicherheit & Komfort"
     },
     "authors": [
       "Marc Jaeger <mj112@gmx.de>"
