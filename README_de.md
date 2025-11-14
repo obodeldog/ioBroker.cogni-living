@@ -52,13 +52,22 @@ Der Adapter erstellt folgende Datenpunkte unter `cogni-living.0`:
 * **`analysis.trigger`**: Ein Knopf (boolean), um eine KI-Analyse manuell anzustoßen.
 * **`analysis.lastPrompt`**: Der genaue Text (System-Prompt + Event-Daten), der zuletzt an die KI gesendet wurde.
 * **`analysis.lastResult`**: Die textliche Antwort/Analyse, die von Gemini zurückkam.
+* **`analysis.isAlert`**: Ein Boolean (true/false) Alarm-Status, der ausgelöst wird, wenn die KI-Antwort Schlüsselwörter wie "WARNUNG" oder "INAKTIVITÄT" enthält.
+* **`analysis.analysisHistory`**: Ein JSON-Array Logbuch der letzten 100 KI-Analyseergebnisse.
+* **`analysis.history_debug_XX`**: Die 5 letzten Analyseergebnisse als einfach lesbarer Text.
 
 ---
 
 ## Changelog
 
+### 0.1.2 (2025-11-14)
+* (stabil) Stabile Version mit KI-Logbuch und Alarmsystem.
+
+### 0.1.1 (2025-11-14)
+* (Sprint 1-8) Gemini KI-Integration, Autopilot-Timer, Intelligenz-Filter, Alarmsystem und Analyse-Logbuch hinzugefügt.
+
 ### 0.1.0 (2025-11-14)
-* (Sprint 1-7) Gemini KI-Integration, Autopilot-Timer und Intelligenz-Filter hinzugefügt
+* (Sprint 1-7) Basis KI-Integration, UI-Verbesserungen (Select-ID) und autom. Namensabruf hinzugefügt.
 
 ### 0.0.1 (2025-11-13)
 * (initial release) Erstveröffentlichung
