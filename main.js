@@ -3,6 +3,7 @@
 const utils = require('@iobroker/adapter-core');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+// --- Globale Konstanten ---
 const HISTORY_MAX_SIZE = 50; 
 const DEBUG_HISTORY_COUNT = 5; 
 const GEMINI_MODEL = 'models/gemini-flash-latest';
@@ -14,6 +15,8 @@ const ALERT_KEYWORDS = [
     'WARNUNG', 'ACHTUNG', 'PROBLEM', 'STÖRUNG',
     'INAKTIVITÄT', 'ABWEICHUNG', 'NOTFALL', 'STURZ'
 ];
+// --- Ende Globale Konstanten ---
+
 
 class CogniLiving extends utils.Adapter {
     
@@ -23,12 +26,13 @@ class CogniLiving extends utils.Adapter {
             name: 'cogni-living',
         });
 
-        this.eventHistory = [];    
-        this.analysisHistory = []; 
+        // --- Interne Variablen initialisieren (WICHTIG für den Linter) ---
+        this.eventHistory = [];    // Gedächtnis für Sensor-Events
+        this.analysisHistory = []; // Logbuch für KI-Antworten
         
         this.genAI = null;        
         this.geminiModel = null;  
-        this.analysisTimer = null; 
+        this.analysisTimer = null; // Platzhalter für den Autopilot-Timer
 
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
@@ -36,11 +40,10 @@ class CogniLiving extends utils.Adapter {
     }
 
     async onReady() {
-        // === EINDEUTIGE VERSIONSNUMMER ===
-        this.log.error('--- CODE-VERSION: 1930_MIXED_PROMPT ---');
-        // ===================================
-
+        // --- CODE-VERSION: 22:15 UHR ---
+        this.log.error('--- CODE-VERSION: 2215_FINAL_LOGIC ---');
         this.log.info('cogni-living adapter starting (Sprint 8: Alert System + Logbook)');
+        // -------------------------------
 
         // === 1. KI INITIALISIERUNG ===
         if (this.config.geminiApiKey) {
@@ -56,7 +59,6 @@ class CogniLiving extends utils.Adapter {
         }
 
         // === 2. DATENPUNKTE ERSTELLEN ===
-        // (Alle Datenpunkte bleiben gleich)
         await this.setObjectNotExistsAsync('events.lastEvent', { type: 'state', common: { name: 'Last raw event', type: 'string', role: 'json', read: true, write: false }, native: {} });
         await this.setObjectNotExistsAsync('events.history', { type: 'state', common: { name: 'Event History (JSON Array)', type: 'string', role: 'json', read: true, write: false }, native: {} });
         for (let i = 0; i < DEBUG_HISTORY_COUNT; i++) {
@@ -81,7 +83,7 @@ class CogniLiving extends utils.Adapter {
             });
         }
 
-        // === 3. GEDÄCHTNIS LADEN ===
+        // === 3. GEDÄCHTNIS LADEN (Aus Datenpunkt in RAM) ===
         try {
             const historyState = await this.getStateAsync('analysis.analysisHistory');
             if (historyState && historyState.val) {
@@ -103,7 +105,8 @@ class CogniLiving extends utils.Adapter {
             this.log.info(`Found ${devices.length} configured sensors. Subscribing...`);
             for (const device of devices) {
                 if (device.id) {
-                    await this.subscribeForeignStatesAsync(device.id);
+                    // WICHTIG: Abonnieren nur bei WERTÄNDERUNG ('ne' = not equal), um unnötige Status-Updates zu filtern
+                    await this.subscribeForeignStatesAsync(device.id, { change: 'ne' });
                 }
             }
         }
@@ -115,6 +118,7 @@ class CogniLiving extends utils.Adapter {
 
         if (intervalMilliseconds > 0) {
             this.log.info(`Starting Autopilot: Analysis will run every ${intervalMinutes} minutes.`);
+            
             this.analysisTimer = setInterval(() => {
                 // Filter-Logik
                 if (this.eventHistory.length === 0) {
@@ -125,7 +129,7 @@ class CogniLiving extends utils.Adapter {
                 const lastEventTime = this.eventHistory[0].timestamp;
                 if (now - lastEventTime > intervalMilliseconds) {
                     this.log.info('Autopilot: Skipping analysis, no new events in the last interval.');
-                    this.setState('analysis.isAlert', { val: false, ack: true }); // Alarm zurücksetzen
+                    this.setState('analysis.isAlert', { val: false, ack: true });
                     return; 
                 }
                 this.log.info('Autopilot triggering scheduled AI analysis (Filter passed)...');
@@ -150,8 +154,8 @@ class CogniLiving extends utils.Adapter {
     }
 
     onStateChange(id, state) {
-        // ... (Diese Funktion bleibt unverändert) ...
         if (!state) return; 
+
         if (state.ack) {
             // @ts-ignore
             const deviceConfig = (this.config.devices || []).find(d => d.id === id);
@@ -160,6 +164,7 @@ class CogniLiving extends utils.Adapter {
             }
             return; 
         }
+
         if (!state.ack) {
             if (id === `${this.namespace}.analysis.trigger` && state.val === true) {
                 this.log.info('Manual AI analysis triggered by user...');
@@ -171,11 +176,11 @@ class CogniLiving extends utils.Adapter {
     }
 
     async processSensorEvent(id, state, deviceConfig) {
-        // ... (Diese Funktion bleibt unverändert) ...
         const location = deviceConfig.location || 'unknown';
         const type = deviceConfig.type || 'unknown';
         const name = deviceConfig.name || 'unknown';
         const eventObject = { timestamp: state.ts, id: id, name: name, value: state.val, location: location, type: type };
+
         await this.setStateAsync('events.lastEvent', { val: JSON.stringify(eventObject), ack: true });
         this.eventHistory.unshift(eventObject);
         if (this.eventHistory.length > HISTORY_MAX_SIZE) { this.eventHistory.pop(); }
@@ -195,7 +200,7 @@ class CogniLiving extends utils.Adapter {
             return;
         }
 
-        // === 1. DER "MITTELWEG"-PROMPT ===
+        // === 1. Prompt bauen (Der "Mittelweg") ===
         const systemPrompt = `
             ANALYSEAUFTRAG:
             Analysiere die folgenden Sensor-Ereignisse.
@@ -204,11 +209,11 @@ class CogniLiving extends utils.Adapter {
             **Aktivität:** [Deine detaillierte Einschätzung in 1-2 Sätzen. Nutze 'WARNUNG' bei Problemen.]
             **Komfort:** [Deine detaillierte Einschätzung in 1-2 Sätzen.]
         `;
-        
         const dataPrompt = JSON.stringify(this.eventHistory, null, 2);
         const fullPrompt = systemPrompt + "\n\nHier sind die Daten:\n" + dataPrompt;
         await this.setStateAsync('analysis.lastPrompt', { val: fullPrompt, ack: true });
         
+        // === 2. Die KI anrufen ===
         try {
             this.log.info(`Sending prompt to Gemini AI model: ${GEMINI_MODEL}...`);
             const result = await this.geminiModel.generateContent({
@@ -217,8 +222,7 @@ class CogniLiving extends utils.Adapter {
             });
             const response = await result.response;
             
-            // Wir behalten die Bereinigung bei, falls die KI doch Markdown schickt
-            const aiText = response.text().trim(); // .trim() entfernt Leerzeilen am Anfang/Ende
+            const aiText = response.text().trim(); 
             
             this.log.info(`AI Response received: ${aiText}`);
             await this.setStateAsync('analysis.lastResult', { val: aiText, ack: true });
@@ -284,9 +288,8 @@ class CogniLiving extends utils.Adapter {
     }
     
     _formatAnalysisForHistory(logEntry) {
-        const time = new Date(logEntry.timestamp).toLocaleString('de-DE'); // Datum + Zeit
+        const time = new Date(logEntry.timestamp).toLocaleString('de-DE'); 
         const prefix = logEntry.alert ? '[ALARM] ' : '[Info] ';
-        // Wir ersetzen Zeilenumbrüche durch " | " für eine bessere Lesbarkeit in der DP-Liste
         const shortText = logEntry.text.replace(/\n/g, ' | '); 
         return `${time} - ${prefix}${shortText}`;
     }

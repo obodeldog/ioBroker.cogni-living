@@ -60,8 +60,11 @@ The adapter creates the following states under `cogni-living.0`:
 
 ## Changelog
 
+### 0.1.8 (2025-11-14)
+* (stable) Refined AI prompt structure for concise, consistent analysis results.
+
 ### 0.1.7 (2025-11-14)
-* (stable) Refined AI prompt for more concise and balanced analysis results.
+* (hotfix) Refined AI prompt for more concise and balanced analysis results.
 
 ### 0.1.6 (2025-11-14)
 * (hotfix) Final sync of io-package.json and package.json to fix 'cannot find start file'
