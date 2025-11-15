@@ -16,77 +16,41 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import ListIcon from '@material-ui/icons/List';
 import IconButton from '@material-ui/core/IconButton';
 import DialogSelectID from '@iobroker/adapter-react/Dialogs/SelectID';
+import Checkbox from '@material-ui/core/Checkbox';
+import Tooltip from '@material-ui/core/Tooltip';
 
-// (Die 'styles' Sektion bleibt unverändert, ich kürze sie hier ab)
 const styles = () => ({
-    tableInput: {
-        width: '100%',
-        minWidth: '150px',
-    },
-    apiKeyInput: {
-        width: '100%',
-        maxWidth: '600px',
-        marginBottom: '20px',
-    },
-    // NEU: Style für das Intervall-Feld
-    intervalInput: {
-        width: '150px',
-        marginBottom: '20px',
-    },
-    input: {
-        marginTop: 0,
-        minWidth: 400,
-    },
-    button: {
-        marginRight: 20,
-    },
-    card: {
-        maxWidth: 345,
-        textAlign: 'center',
-    },
-    media: {
-        height: 180,
-    },
-    column: {
-        display: 'inline-block',
-        verticalAlign: 'top',
-        marginRight: 20,
-    },
-    columnLogo: {
-        width: 350,
-        marginRight: 0,
-    },
-    columnSettings: {
-        width: 'calc(100% - 370px)',
-    },
-    controlElement: {
-        marginBottom: 5,
-    },
-    tab: {
-        width: '100%',
-    },
+    tableInput: { width: '100%', minWidth: '150px' },
+    apiKeyInput: { width: '100%', maxWidth: '600px', marginBottom: '20px' },
+    intervalInput: { width: '150px', marginBottom: '20px' },
+    input: { marginTop: 0, minWidth: 400 },
+    button: { marginRight: 20 },
+    card: { maxWidth: 345, textAlign: 'center' },
+    media: { height: 180 },
+    column: { display: 'inline-block', verticalAlign: 'top', marginRight: 20 },
+    columnLogo: { width: 350, marginRight: 0 },
+    columnSettings: { width: 'calc(100% - 370px)' },
+    controlElement: { marginBottom: 5 },
+    tab: { width: '100%' },
 });
 
 class Settings extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            // Wir laden jetzt ALLE nativen Einstellungen in den State
             devices: props.native.devices || [],
             geminiApiKey: props.native.geminiApiKey || '',
-            analysisInterval: props.native.analysisInterval || 15, // Neu
+            analysisInterval: props.native.analysisInterval || 15,
             showSelectId: false,
             selectIdIndex: -1
         };
     }
 
-    // Diese Funktion aktualisiert jetzt JEDEN nativen Wert
     updateNativeValue(attr, value) {
         this.setState({ [attr]: value });
         this.props.onChange(attr, value);
     }
 
-    // Diese Funktion ist speziell für die TABELLE (die ein Array ist)
     updateDevices(newDevices) {
         this.setState({ devices: newDevices });
         this.props.onChange('devices', newDevices);
@@ -99,6 +63,7 @@ class Settings extends React.Component {
             name: '',
             location: '',
             type: '',
+            logDuplicates: false // Standardwert für neue Sensoren
         });
         this.updateDevices(devices);
     }
@@ -116,10 +81,7 @@ class Settings extends React.Component {
     }
 
     openSelectIdDialog(index) {
-        this.setState({
-            showSelectId: true,
-            selectIdIndex: index
-        });
+        this.setState({ showSelectId: true, selectIdIndex: index });
     }
 
     onSelectId(selectedId) {
@@ -150,11 +112,8 @@ class Settings extends React.Component {
     }
 
     renderSelectIdDialog() {
-        if (!this.state.showSelectId) {
-            return null;
-        }
+        if (!this.state.showSelectId) { return null; }
         const currentId = this.state.devices[this.state.selectIdIndex]?.id || '';
-
         return (
             <DialogSelectID
                 imagePrefix="../.."
@@ -170,7 +129,6 @@ class Settings extends React.Component {
 
     render() {
         const { classes } = this.props;
-        // Wir holen alle Werte aus dem State
         const { devices, geminiApiKey, analysisInterval } = this.state;
 
         return (
@@ -179,36 +137,27 @@ class Settings extends React.Component {
 
                 <form className={classes.tab}>
                     
-                    {/* === API Key Feld === */}
                     <InputLabel>{I18n.t('gemini_api_key')}</InputLabel>
                     <TextField
                         className={classes.apiKeyInput}
                         value={geminiApiKey}
                         type="password"
-                        onChange={(e) =>
-                            this.updateNativeValue('geminiApiKey', e.target.value)
-                        }
+                        onChange={(e) => this.updateNativeValue('geminiApiKey', e.target.value)}
                     />
-                    
-                    {/* === NEUES Intervall Feld === */}
                     <InputLabel>{I18n.t('analysis_interval')}</InputLabel>
                     <TextField
                         className={classes.intervalInput}
                         value={analysisInterval}
-                        type="number" // Akzeptiert nur Zahlen
-                        inputProps={{ min: 1 }} // Mindestens 1 Minute
-                        onChange={(e) =>
-                            this.updateNativeValue('analysisInterval', parseInt(e.target.value, 10) || 1)
-                        }
+                        type="number"
+                        inputProps={{ min: 1 }}
+                        onChange={(e) => this.updateNativeValue('analysisInterval', parseInt(e.target.value, 10) || 1)}
                     />
-                    {/* ========================= */}
-
+                    
                     <Typography variant="h6" gutterBottom style={{marginTop: '20px'}}>
                         {I18n.t('headline_sensor_config')}
                     </Typography>
 
                     <TableContainer>
-                        {/* (Der Rest der Tabelle bleibt exakt gleich) */}
                         <Table size="small">
                             <TableHead>
                                 <TableRow>
@@ -216,6 +165,7 @@ class Settings extends React.Component {
                                     <TableCell>Name</TableCell>
                                     <TableCell>{I18n.t('table_location')}</TableCell>
                                     <TableCell>{I18n.t('table_type')}</TableCell>
+                                    <TableCell style={{ width: '50px' }}>{I18n.t('table_log_duplicates')}</TableCell>
                                     <TableCell style={{ width: '50px' }}>{I18n.t('table_delete')}</TableCell>
                                 </TableRow>
                             </TableHead>
@@ -227,9 +177,7 @@ class Settings extends React.Component {
                                                 <TextField
                                                     className={classes.tableInput}
                                                     value={device.id}
-                                                    onChange={(e) =>
-                                                        this.onDeviceChange(index, 'id', e.target.value)
-                                                    }
+                                                    onChange={(e) => this.onDeviceChange(index, 'id', e.target.value)}
                                                     placeholder="hm-rpc.0..."
                                                 />
                                                 <IconButton
@@ -245,9 +193,7 @@ class Settings extends React.Component {
                                             <TextField
                                                 className={classes.tableInput}
                                                 value={device.name || ''}
-                                                onChange={(e) =>
-                                                    this.onDeviceChange(index, 'name', e.target.value)
-                                                }
+                                                onChange={(e) => this.onDeviceChange(index, 'name', e.target.value)}
                                                 placeholder="Wird automatisch gefüllt"
                                             />
                                         </TableCell>
@@ -255,9 +201,7 @@ class Settings extends React.Component {
                                             <TextField
                                                 className={classes.tableInput}
                                                 value={device.location}
-                                                onChange={(e) =>
-                                                    this.onDeviceChange(index, 'location', e.target.value)
-                                                }
+                                                onChange={(e) => this.onDeviceChange(index, 'location', e.target.value)}
                                                 placeholder="z.B. Bad"
                                             />
                                         </TableCell>
@@ -265,11 +209,20 @@ class Settings extends React.Component {
                                             <TextField
                                                 className={classes.tableInput}
                                                 value={device.type}
-                                                onChange={(e) =>
-                                                    this.onDeviceChange(index, 'type', e.target.value)
-                                                }
+                                                onChange={(e) => this.onDeviceChange(index, 'type', e.target.value)}
                                                 placeholder="z.B. Bewegung"
                                             />
+                                        </TableCell>
+                                        {/* --- HIER IST DIE NEUE CHECKBOX --- */}
+                                        <TableCell align="center">
+                                            <Tooltip title={I18n.t('table_log_duplicates_tooltip')}>
+                                                <Checkbox
+                                                    checked={device.logDuplicates || false}
+                                                    onChange={(e) =>
+                                                        this.onDeviceChange(index, 'logDuplicates', e.target.checked)
+                                                    }
+                                                />
+                                            </Tooltip>
                                         </TableCell>
                                         <TableCell>
                                             <IconButton
