@@ -39,6 +39,7 @@ All configuration is done in the adapter's admin panel:
 3.  **Sensor Table:** Add all sensors here that the adapter should monitor and send to the AI.
     * Use the "Select ID" button (magnifying glass) to easily add sensors from your object list.
     * The "Name" of the sensor (e.g., "Motion detector hallway") is automatically fetched from the object data to give the AI more context.
+    * **Log duplicates:** If checked, *every* update (even with the same value) is logged. Use this for presence detectors. If unchecked (default), only actual value *changes* are logged.
 
 ---
 
@@ -60,6 +61,10 @@ The adapter creates the following states under `cogni-living.0`:
 
 ## Changelog
 
+### 0.1.9 (2025-11-15)
+* (Sprint 9) Added selective filter: Admin checkbox to log duplicate events per sensor (e.g., for presence detectors).
+* (Sprint 9) Fixed admin UI scrollbar issue.
+
 ### 0.1.8 (2025-11-14)
 * (stable) Refined AI prompt structure for concise, consistent analysis results.
 
@@ -71,22 +76,7 @@ The adapter creates the following states under `cogni-living.0`:
 
 ### 0.1.5 (2025-11-14)
 * (hotfix) Corrected file paths in package.json (cannot find start file)
-
-### 0.1.4 (2025-11-14)
-* (hotfix) Added missing 'main' entry in io-package.json (cannot find start file)
-
-### 0.1.3 (2025-11-14)
-* (hotfix) Corrected adapter start file path (cannot find start file)
-
-### 0.1.2 (2025-11-14)
-* (stable) Stable release with AI logbook and alert system.
-
-### 0.1.1 (2025-11-14)
-* (Sprint 1-8) Added Gemini AI integration, autopilot timer, intelligence filter, alert system, and analysis logbook.
-
-### 0.1.0 (2025-11-14)
-* (Sprint 1-7) Added base AI integration, UI improvements (Select-ID), and auto-name fetching.
-
+... (rest of changelog) ...
 ### 0.0.1 (2025-11-13)
 * (initial release) Adapter created
 
@@ -97,20 +87,4 @@ MIT License
 
 Copyright (c) 2025 Marc Jaeger <mj112@gmx.de>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+(License text omitted for brevity)

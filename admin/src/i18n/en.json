@@ -7,5 +7,7 @@
   "table_delete": "Delete",
   "btn_add_sensor": "Add Sensor",
   "gemini_api_key": "Google Gemini API Key",
-  "analysis_interval": "Analysis Interval (in minutes)"
+  "analysis_interval": "Analysis Interval (in minutes)",
+  "table_log_duplicates": "Log duplicates",
+  "table_log_duplicates_tooltip": "If checked, EVERY update from this sensor is logged, even if the value has not changed (e.g., for presence detectors)."
 }
