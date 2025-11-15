@@ -1,10 +1,18 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.1.8",
+    "version": "0.1.10",
     "enabled": true,
     "main": "main.js",
     "news": {
+      "0.1.10": {
+        "en": "CRITICAL FIX: Corrected sensor subscription logic (change: any) for the selective filter.",
+        "de": "KRITISCHER FIX: Sensor-Abonnement-Logik (change: any) für den selektiven Filter korrigiert."
+      },
+      "0.1.9": {
+        "en": "Added selective filter (log duplicates) and fixed Admin UI scrollbar issue.",
+        "de": "Selektiven Filter (Duplikate loggen) hinzugefügt und Scrollbar-Problem in der Admin-UI behoben."
+      },
       "0.1.8": {
         "en": "Refined AI prompt structure for concise, consistent analysis results.",
         "de": "KI-Prompt-Struktur verfeinert für präzisere und konsistentere Analyse-Ergebnisse."

@@ -1,4 +1,5 @@
 ![Logo](admin/cogni-living.png)
+
 # ioBroker.cogni-living
 
 [![Test and Release](https://github.com/obodeldog/ioBroker.cogni-living/workflows/Test%20and%20Release/badge.svg)](https://github.com/obodeldog/ioBroker.cogni-living/actions/workflows/test-and-release.yml)
@@ -33,40 +34,42 @@ You can create one for free (for testing purposes) at the **[Google AI Studio](h
 ## ⚙️ Configuration
 
 All configuration is done in the adapter's admin panel:
-
 1.  **Google Gemini API Key:** Paste your personal `AIza...` API key from Google here.
 2.  **Analysis Interval (in minutes):** Defines how often the "Autopilot" automatically sends the collected data to the AI for analysis (e.g., every `15` minutes).
 3.  **Sensor Table:** Add all sensors here that the adapter should monitor and send to the AI.
-    * Use the "Select ID" button (magnifying glass) to easily add sensors from your object list.
-    * The "Name" of the sensor (e.g., "Motion detector hallway") is automatically fetched from the object data to give the AI more context.
-    * **Log duplicates:** If checked, *every* update (even with the same value) is logged. Use this for presence detectors. If unchecked (default), only actual value *changes* are logged.
+    *   Use the "Select ID" button (magnifying glass) to easily add sensors from your object list.
+    *   The "Name" of the sensor (e.g., "Motion detector hallway") is automatically fetched from the object data to give the AI more context.
+    *   **Log duplicates:** If checked, *every* update (even with the same value) is logged. Use this for presence detectors. If unchecked (default), only actual value *changes* are logged (based on the adapter's memory).
 
 ---
 
 ## 📊 States created by the adapter
 
 The adapter creates the following states under `cogni-living.0`:
-
-* **`events.lastEvent`**: The last recorded sensor event in JSON format.
-* **`events.history`**: The adapter's "short-term memory" (JSON array of the last 50 events).
-* **`events.history_debug_XX`**: The last 5 events as human-readable text (e.g., "18:30:05 - Motion detector hallway (Hallway) -> true").
-* **`analysis.trigger`**: A button (boolean) to manually trigger an AI analysis.
-* **`analysis.lastPrompt`**: The exact text (system prompt + event data) that was last sent to the AI.
-* **`analysis.lastResult`**: The text response/analysis received from Gemini.
-* **`analysis.isAlert`**: A boolean (true/false) alarm state, triggered if the AI response contains keywords like "WARNUNG" or "INAKTIVITÄT".
-* **`analysis.analysisHistory`**: A JSON array logbook of the last 100 AI analysis results.
-* **`analysis.history_debug_XX`**: The 5 most recent analysis results as human-readable text.
+*   **`events.lastEvent`**: The last recorded sensor event in JSON format.
+*   **`events.history`**: The adapter's "short-term memory" (JSON array of the last 50 events).
+*   **`events.history_debug_XX`**: The last 5 events as human-readable text (e.g., "18:30:05 - Motion detector hallway (Hallway) -> true").
+*   **`analysis.trigger`**: A button (boolean) to manually trigger an AI analysis.
+*   **`analysis.lastPrompt`**: The exact text (system prompt + event data) that was last sent to the AI.
+*   **`analysis.lastResult`**: The text response/analysis received from Gemini.
+*   **`analysis.isAlert`**: A boolean (true/false) alarm state, triggered if the AI response contains keywords like "WARNUNG" or "INAKTIVITÄT".
+*   **`analysis.analysisHistory`**: A JSON array logbook of the last 100 AI analysis results.
+*   **`analysis.history_debug_XX`**: The 5 most recent analysis results as human-readable text.
 
 ---
 
 ## Changelog
 
+### 0.1.10 (2025-11-15)
+* (Marc Jaeger) CRITICAL FIX: Corrected sensor subscription logic (`change: 'any'`) to ensure the selective filter works correctly.
+* (Marc Jaeger) Cleanup: Removed temporary debug logs and standardized version logging.
+
 ### 0.1.9 (2025-11-15)
-* (Sprint 9) Added selective filter: Admin checkbox to log duplicate events per sensor (e.g., for presence detectors).
-* (Sprint 9) Fixed admin UI scrollbar issue.
+* (Marc Jaeger) Added selective filter: Admin checkbox to log duplicate events per sensor (e.g., for presence detectors).
+* (Marc Jaeger) Fixed scrollbar issue in the Admin interface.
 
 ### 0.1.8 (2025-11-14)
-* (stable) Refined AI prompt structure for concise, consistent analysis results.
+* (Marc Jaeger) Refined AI prompt structure for concise, consistent analysis results.
 
 ### 0.1.7 (2025-11-14)
 * (hotfix) Refined AI prompt for more concise and balanced analysis results.
@@ -76,7 +79,22 @@ The adapter creates the following states under `cogni-living.0`:
 
 ### 0.1.5 (2025-11-14)
 * (hotfix) Corrected file paths in package.json (cannot find start file)
-... (rest of changelog) ...
+
+### 0.1.4 (2025-11-14)
+* (hotfix) Added missing 'main' entry in io-package.json (cannot find start file)
+
+### 0.1.3 (2025-11-14)
+* (hotfix) Corrected adapter start file path (cannot find start file)
+
+### 0.1.2 (2025-11-14)
+* (stable) Stable release with AI logbook and alert system.
+
+### 0.1.1 (2025-11-14)
+* (Marc Jaeger) Added Gemini AI integration, autopilot timer, intelligence filter, alert system, and analysis logbook.
+
+### 0.1.0 (2025-11-14)
+* (Marc Jaeger) Added base AI integration, UI improvements (Select-ID), and auto-name fetching.
+
 ### 0.0.1 (2025-11-13)
 * (initial release) Adapter created
 
@@ -87,4 +105,20 @@ MIT License
 
 Copyright (c) 2025 Marc Jaeger <mj112@gmx.de>
 
-(License text omitted for brevity)
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
