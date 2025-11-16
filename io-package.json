@@ -1,53 +1,33 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.1.10",
+    "version": "0.1.14",
     "enabled": true,
     "main": "main.js",
     "news": {
+      "0.1.14": {
+        "en": "Major Migration: Admin interface migrated to Material-UI v5 and TypeScript (adapter-react-v5). Fixed API test logic.",
+        "de": "Große Migration: Admin-Oberfläche auf Material-UI v5 und TypeScript (adapter-react-v5) migriert. API-Testlogik korrigiert."
+      },
+      "0.1.12": {
+        "en": "AI Contextual Awareness: Added Persona selection and Living Context description in settings.",
+        "de": "KI Kontextbewusstsein: Persona-Auswahl und Beschreibung des Wohnkontextes in den Einstellungen hinzugefügt."
+      },
+      "0.1.11": {
+        "en": "Major Stability Improvement: Switched AI communication to JSON mode.",
+        "de": "Große Stabilitätsverbesserung: KI-Kommunikation auf JSON-Modus umgestellt."
+      },
       "0.1.10": {
-        "en": "CRITICAL FIX: Corrected sensor subscription logic (change: any) for the selective filter.",
-        "de": "KRITISCHER FIX: Sensor-Abonnement-Logik (change: any) für den selektiven Filter korrigiert."
+        "en": "CRITICAL FIX: Corrected sensor subscription logic (change: any).",
+        "de": "KRITISCHER FIX: Sensor-Abonnement-Logik (change: any) korrigiert."
       },
       "0.1.9": {
         "en": "Added selective filter (log duplicates) and fixed Admin UI scrollbar issue.",
         "de": "Selektiven Filter (Duplikate loggen) hinzugefügt und Scrollbar-Problem in der Admin-UI behoben."
       },
       "0.1.8": {
-        "en": "Refined AI prompt structure for concise, consistent analysis results.",
-        "de": "KI-Prompt-Struktur verfeinert für präzisere und konsistentere Analyse-Ergebnisse."
-      },
-      "0.1.7": {
-        "en": "Refined AI prompt for more concise and balanced analysis results.",
-        "de": "KI-Prompt verfeinert für präzisere und ausgewogenere Analyse-Ergebnisse."
-      },
-      "0.1.6": {
-        "en": "Hotfix: Final sync of io-package.json and package.json to fix 'cannot find start file'",
-        "de": "Hotfix: Finaler Sync von io-package.json und package.json, um 'cannot find start file' zu beheben"
-      },
-      "0.1.5": {
-        "en": "Hotfix: Corrected file paths in package.json (cannot find start file)",
-        "de": "Hotfix: Korrektur der Dateipfade in package.json (cannot find start file)"
-      },
-      "0.1.4": {
-        "en": "Hotfix: Added missing 'main' entry in io-package.json (cannot find start file)",
-        "de": "Hotfix: Fehlenden 'main'-Eintrag in io-package.json hinzugefügt (cannot find start file)"
-      },
-      "0.1.3": {
-        "en": "Hotfix: Corrected adapter start file path (cannot find start file)",
-        "de": "Hotfix: Korrektur des Adapter-Startpfads (cannot find start file)"
-      },
-      "0.1.2": {
-        "en": "Stable release with AI logbook and alert system.",
-        "de": "Stabile Version mit KI-Logbuch und Alarmsystem."
-      },
-      "0.1.1": {
-        "en": "(Sprint 1-8) Added Gemini AI integration, autopilot timer, intelligence filter, alert system, and analysis logbook.",
-        "de": "(Sprint 1-8) Gemini KI-Integration, Autopilot-Timer, Intelligenz-Filter, Alarmsystem und Analyse-Logbuch hinzugefügt."
-      },
-      "0.1.0": {
-        "en": "Stable prototype with AI integration, UI improvements, and dynamic sensor table.",
-        "de": "Stabiler Prototyp mit KI-Integration, UI-Verbesserungen und dynamischer Sensor-Tabelle."
+        "en": "Refined AI prompt structure.",
+        "de": "KI-Prompt-Struktur verfeinert."
       },
       "0.0.1": {
         "en": "initial release",
@@ -93,7 +73,7 @@
     "connectionType": "cloud",
     "dataSource": "push",
     "adminUI": {
-      "config": "materialize"
+      "config": "json"
     },
     "eraseOnUpload": true,
     "dependencies": [
@@ -110,7 +90,9 @@
   "native": {
     "devices": [],
     "geminiApiKey": "",
-    "analysisInterval": 15
+    "analysisInterval": 15,
+    "aiPersona": "generic",
+    "livingContext": ""
   },
   "objects": [],
   "instanceObjects": []
