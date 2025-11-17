@@ -71,7 +71,8 @@
         "connectionType": "cloud",
         "dataSource": "push",
         "adminUI": {
-            "config": "html"
+            "config": "html",
+            "message": true
         },
         "eraseOnUpload": true,
         "dependencies": [
