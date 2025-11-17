@@ -2,16 +2,34 @@ import React from 'react';
 
 // MUI v5 Core Imports
 import {
-    Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select,
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField,
-    Tooltip, Typography, Snackbar, Alert, Box, Paper
+    Button,
+    Checkbox,
+    CircularProgress,
+    FormControl,
+    IconButton,
+    InputLabel,
+    MenuItem,
+    Select,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    TextField,
+    Tooltip,
+    Typography,
+    Snackbar,
+    Alert,
+    Box,
+    Paper,
 } from '@mui/material';
 import type { AlertColor } from '@mui/material';
 
 // MUI v5 Icons
-import {Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon } from '@mui/icons-material';
 // ioBroker specific imports (v5)
-import { I18n, DialogSelectID, type IobTheme  } from '@iobroker/adapter-react-v5';
+import { I18n, DialogSelectID, type IobTheme } from '@iobroker/adapter-react-v5';
 // Wichtig für TypeScript: Importiere Connection für den Socket-Typ
 import type { Connection } from '@iobroker/socket-client';
 // Wichtig für TypeScript: Importiere AlertColor für Snackbar
@@ -49,8 +67,7 @@ interface SettingsState {
     snackbarSeverity: AlertColor;
 }
 
-
-class Settings extends React.Component<SettingsProps, SettingsState> {
+export default class Settings extends React.Component<SettingsProps, SettingsState> {
     constructor(props: SettingsProps) {
         super(props);
         this.state = {
@@ -90,7 +107,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
             name: '',
             location: '',
             type: '',
-            logDuplicates: false
+            logDuplicates: false,
         });
         this.updateDevices(devices);
     }
@@ -116,8 +133,9 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
         if (selectedId && index !== -1) {
             const devices = JSON.parse(JSON.stringify(this.state.devices));
             devices[index].id = selectedId;
-            this.props.socket.getObject(selectedId)
-                .then((obj) => {
+            this.props.socket
+                .getObject(selectedId)
+                .then(obj => {
                     if (obj && obj.common && obj.common.name) {
                         let name: any = obj.common.name;
                         if (typeof name === 'object') {
@@ -130,7 +148,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                         this.updateDevices(devices);
                     }
                 })
-                .catch((e) => {
+                .catch(e => {
                     console.error(e);
                     this.updateDevices(devices);
                 });
@@ -139,7 +157,9 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
     }
 
     renderSelectIdDialog() {
-        if (!this.state.showSelectId) { return null; }
+        if (!this.state.showSelectId) {
+            return null;
+        }
         const currentId = this.state.devices[this.state.selectIdIndex]?.id || '';
         return (
             <DialogSelectID
@@ -151,7 +171,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                 selected={currentId}
                 onClose={() => this.setState({ showSelectId: false })}
                 // TypeScript benötigt hier 'as string'
-                onOk={(selected) => this.onSelectId(selected as string)}
+                onOk={selected => this.onSelectId(selected as string)}
             />
         );
     }
@@ -166,12 +186,9 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
         this.setState({ isTestingApi: true });
 
         // Sende Nachricht an Backend
-        this.props.socket.sendTo(
-            `${this.props.adapterName}.${this.props.instance}`,
-            'testApiKey',
-            { apiKey: apiKey },
-        ).then(
-            (response: any) => {
+        this.props.socket
+            .sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testApiKey', { apiKey: apiKey })
+            .then((response: any) => {
                 this.setState({ isTestingApi: false });
 
                 if (response && response.success) {
@@ -180,8 +197,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                     const errorMessage = response ? response.message : 'Unknown error';
                     this.showSnackbar(`${I18n.t('msg_connection_failed')}: ${errorMessage}`, 'error');
                 }
-            }
-        );
+            });
     }
 
     // Verwende den korrekten Typ AlertColor
@@ -201,14 +217,13 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
         this.setState({ snackbarOpen: false });
     };
 
-
     render() {
         const { devices, geminiApiKey, analysisInterval, aiPersona, livingContext, isTestingApi } = this.state;
 
         // Definiere Styles mittels 'sx' Prop (MUI v5)
         const sxConfigSection = {
             mb: 4, // Margin Bottom
-            p: 2,  // Padding
+            p: 2, // Padding
             // Nutze Theme-Variablen für Konsistenz (Dynamischer Zugriff auf das Theme)
             border: (theme: any) => `1px solid ${theme.palette.divider}`,
             borderRadius: 1,
@@ -224,18 +239,32 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                     autoHideDuration={8000}
                     onClose={this.handleSnackbarClose}
                 >
-                    <Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity} sx={{ width: '100%' }}>
+                    <Alert
+                        onClose={this.handleSnackbarClose}
+                        severity={this.state.snackbarSeverity}
+                        sx={{ width: '100%' }}
+                    >
                         {this.state.snackbarMessage}
                     </Alert>
                 </Snackbar>
 
                 {/* Verwende Box als Formular-Container */}
-                <Box component="form" sx={{ width: '100%' }}>
-
+                <Box
+                    component="form"
+                    sx={{ width: '100%' }}
+                >
                     {/* === Sektion 1: KI-Einstellungen & Autopilot === */}
-                    <Typography variant="h6" gutterBottom>{I18n.t('headline_ai_settings')}</Typography>
+                    <Typography
+                        variant="h6"
+                        gutterBottom
+                    >
+                        {I18n.t('headline_ai_settings')}
+                    </Typography>
                     <Box sx={sxConfigSection}>
-                        <FormControl fullWidth margin="normal">
+                        <FormControl
+                            fullWidth
+                            margin="normal"
+                        >
                             {/* Flexbox für Key Input und Button */}
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                 <TextField
@@ -243,7 +272,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                                     label={I18n.t('gemini_api_key')}
                                     value={geminiApiKey}
                                     type="password"
-                                    onChange={(e) => this.updateNativeValue('geminiApiKey', e.target.value)}
+                                    onChange={e => this.updateNativeValue('geminiApiKey', e.target.value)}
                                     disabled={isTestingApi}
                                     variant="outlined"
                                     size="small"
@@ -268,7 +297,9 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                                 value={analysisInterval}
                                 type="number"
                                 inputProps={{ min: 1 }}
-                                onChange={(e) => this.updateNativeValue('analysisInterval', parseInt(e.target.value, 10) || 1)}
+                                onChange={e =>
+                                    this.updateNativeValue('analysisInterval', parseInt(e.target.value, 10) || 1)
+                                }
                                 variant="outlined"
                                 size="small"
                             />
@@ -276,16 +307,26 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                     </Box>
 
                     {/* === Sektion 2: Wohnkontext & Persona === */}
-                    <Typography variant="h6" gutterBottom>{I18n.t('headline_living_context')}</Typography>
+                    <Typography
+                        variant="h6"
+                        gutterBottom
+                    >
+                        {I18n.t('headline_living_context')}
+                    </Typography>
                     <Box sx={sxConfigSection}>
                         {/* Select benötigt das Label doppelt (für InputLabel und Select) in MUI v5 */}
-                        <FormControl margin="normal" sx={{ minWidth: '350px' }} size="small" variant="outlined">
+                        <FormControl
+                            margin="normal"
+                            sx={{ minWidth: '350px' }}
+                            size="small"
+                            variant="outlined"
+                        >
                             <InputLabel id="persona-label">{I18n.t('ai_persona')}</InputLabel>
                             <Select
                                 labelId="persona-label"
                                 label={I18n.t('ai_persona')}
                                 value={aiPersona}
-                                onChange={(e) => this.updateNativeValue('aiPersona', e.target.value)}
+                                onChange={e => this.updateNativeValue('aiPersona', e.target.value)}
                             >
                                 <MenuItem value="generic">{I18n.t('persona_generic')}</MenuItem>
                                 <MenuItem value="senior_aal">{I18n.t('persona_senior_aal')}</MenuItem>
@@ -295,14 +336,17 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                             </Select>
                         </FormControl>
 
-                        <FormControl fullWidth margin="normal">
+                        <FormControl
+                            fullWidth
+                            margin="normal"
+                        >
                             <TextField
                                 sx={{ maxWidth: '800px' }}
                                 label={I18n.t('living_context_details')}
                                 multiline
                                 rows={3}
                                 value={livingContext}
-                                onChange={(e) => this.updateNativeValue('livingContext', e.target.value)}
+                                onChange={e => this.updateNativeValue('livingContext', e.target.value)}
                                 helperText={`${I18n.t('living_context_helper')} (${livingContext.length}/200)`}
                                 inputProps={{ maxLength: 200 }}
                                 variant="outlined"
@@ -310,9 +354,11 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                         </FormControl>
                     </Box>
 
-
                     {/* === Sektion 3: Sensor Konfiguration === */}
-                    <Typography variant="h6" gutterBottom>
+                    <Typography
+                        variant="h6"
+                        gutterBottom
+                    >
                         {I18n.t('headline_sensor_config')}
                     </Typography>
 
@@ -337,7 +383,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                                                 <TextField
                                                     sx={{ width: '100%', minWidth: '150px' }}
                                                     value={device.id}
-                                                    onChange={(e) => this.onDeviceChange(index, 'id', e.target.value)}
+                                                    onChange={e => this.onDeviceChange(index, 'id', e.target.value)}
                                                     placeholder="hm-rpc.0..."
                                                     variant="standard"
                                                 />
@@ -354,7 +400,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                                             <TextField
                                                 sx={{ width: '100%', minWidth: '150px' }}
                                                 value={device.name || ''}
-                                                onChange={(e) => this.onDeviceChange(index, 'name', e.target.value)}
+                                                onChange={e => this.onDeviceChange(index, 'name', e.target.value)}
                                                 // TypeScript benötigt 'as string' für Placeholder/Tooltip
                                                 placeholder={I18n.t('Wird automatisch gefüllt') as string}
                                                 variant="standard"
@@ -364,7 +410,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                                             <TextField
                                                 sx={{ width: '100%', minWidth: '150px' }}
                                                 value={device.location}
-                                                onChange={(e) => this.onDeviceChange(index, 'location', e.target.value)}
+                                                onChange={e => this.onDeviceChange(index, 'location', e.target.value)}
                                                 placeholder={I18n.t('z.B. Bad') as string}
                                                 variant="standard"
                                             />
@@ -373,7 +419,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                                             <TextField
                                                 sx={{ width: '100%', minWidth: '150px' }}
                                                 value={device.type}
-                                                onChange={(e) => this.onDeviceChange(index, 'type', e.target.value)}
+                                                onChange={e => this.onDeviceChange(index, 'type', e.target.value)}
                                                 placeholder={I18n.t('z.B. Bewegung') as string}
                                                 variant="standard"
                                             />
@@ -382,7 +428,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                                             <Tooltip title={I18n.t('table_log_duplicates_tooltip') || ''}>
                                                 <Checkbox
                                                     checked={device.logDuplicates || false}
-                                                    onChange={(e) =>
+                                                    onChange={e =>
                                                         this.onDeviceChange(index, 'logDuplicates', e.target.checked)
                                                     }
                                                 />
@@ -416,5 +462,3 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
         );
     }
 }
-
-export default Settings;
