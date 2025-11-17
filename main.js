@@ -10,16 +10,17 @@ const ANALYSIS_HISTORY_MAX_SIZE = 100;
 const DEBUG_ANALYSIS_HISTORY_COUNT = 5;
 
 const PERSONA_MAPPING = {
-    'generic': "Analyze balanced for health, safety, and comfort.",
-    'senior_aal': "PRIORITY: Health and Safety for seniors (AAL). Detect inactivity, potential falls (inferred), unusual night activity. Comfort is secondary.",
-    'family': "Focus on family routines, child safety, and general household management. Expect high activity levels.",
-    'single_comfort': "Focus on maximizing comfort, automation efficiency, and energy saving for a single resident. Activity patterns are flexible.",
-    'security': "PRIORITY: Security. Detect intrusions, unusual presence when residents are away, or malfunctions indicating a security risk."
+    generic: 'Analyze balanced for health, safety, and comfort.',
+    senior_aal:
+        'PRIORITY: Health and Safety for seniors (AAL). Detect inactivity, potential falls (inferred), unusual night activity. Comfort is secondary.',
+    family: 'Focus on family routines, child safety, and general household management. Expect high activity levels.',
+    single_comfort:
+        'Focus on maximizing comfort, automation efficiency, and energy saving for a single resident. Activity patterns are flexible.',
+    security:
+        'PRIORITY: Security. Detect intrusions, unusual presence when residents are away, or malfunctions indicating a security risk.',
 };
 
-
 class CogniLiving extends utils.Adapter {
-
     constructor(options) {
         super({
             ...options,
@@ -48,7 +49,7 @@ class CogniLiving extends utils.Adapter {
                 this.genAI = new GoogleGenerativeAI(this.config.geminiApiKey);
                 this.geminiModel = this.genAI.getGenerativeModel({
                     model: GEMINI_MODEL,
-                    generationConfig: { responseMimeType: "application/json" }
+                    generationConfig: { responseMimeType: 'application/json' },
                 });
                 this.log.info(`Gemini AI client initialized (JSON Mode) for model: ${GEMINI_MODEL}`);
             } catch (error) {
@@ -63,27 +64,84 @@ class CogniLiving extends utils.Adapter {
         const context = this.config.livingContext || '(Not defined)';
         this.log.info(`AI Configuration Loaded. Persona: ${persona}. Context Details: ${context}`);
 
-
         // === 2. DATENPUNKTE ERSTELLEN ===
-        await this.setObjectNotExistsAsync('events.lastEvent', { type: 'state', common: { name: 'Last raw event', type: 'string', role: 'json', read: true, write: false }, native: {} });
-        await this.setObjectNotExistsAsync('events.history', { type: 'state', common: { name: 'Event History (JSON Array)', type: 'string', role: 'json', read: true, write: false }, native: {} });
+        await this.setObjectNotExistsAsync('events.lastEvent', {
+            type: 'state',
+            common: { name: 'Last raw event', type: 'string', role: 'json', read: true, write: false },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('events.history', {
+            type: 'state',
+            common: { name: 'Event History (JSON Array)', type: 'string', role: 'json', read: true, write: false },
+            native: {},
+        });
         for (let i = 0; i < DEBUG_HISTORY_COUNT; i++) {
             const idIndex = i.toString().padStart(2, '0');
-            await this.setObjectNotExistsAsync(`events.history_debug_${idIndex}`, { type: 'state', common: { name: `History Event ${idIndex}`, type: 'string', role: 'text', read: true, write: false }, native: {} });
+            await this.setObjectNotExistsAsync(`events.history_debug_${idIndex}`, {
+                type: 'state',
+                common: { name: `History Event ${idIndex}`, type: 'string', role: 'text', read: true, write: false },
+                native: {},
+            });
         }
-        await this.setObjectNotExistsAsync('analysis.trigger', { type: 'state', common: { name: 'Trigger Analysis', type: 'boolean', role: 'button', read: true, write: true, def: false }, native: {} });
-        await this.setObjectNotExistsAsync('analysis.lastPrompt', { type: 'state', common: { name: 'Last Prompt sent to AI', type: 'string', role: 'text', read: true, write: false }, native: {} });
-        await this.setObjectNotExistsAsync('analysis.lastResult', { type: 'state', common: { name: 'Last Result from AI (JSON)', type: 'string', role: 'json', read: true, write: false }, native: {} });
-        await this.setObjectNotExistsAsync('analysis.isAlert', { type: 'state', common: { name: 'AI Alert Status', type: 'boolean', role: 'indicator.alarm', read: true, write: false, def: false }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.trigger', {
+            type: 'state',
+            common: { name: 'Trigger Analysis', type: 'boolean', role: 'button', read: true, write: true, def: false },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('analysis.lastPrompt', {
+            type: 'state',
+            common: { name: 'Last Prompt sent to AI', type: 'string', role: 'text', read: true, write: false },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('analysis.lastResult', {
+            type: 'state',
+            common: { name: 'Last Result from AI (JSON)', type: 'string', role: 'json', read: true, write: false },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('analysis.isAlert', {
+            type: 'state',
+            common: {
+                name: 'AI Alert Status',
+                type: 'boolean',
+                role: 'indicator.alarm',
+                read: true,
+                write: false,
+                def: false,
+            },
+            native: {},
+        });
 
-        await this.setObjectNotExistsAsync('analysis.activitySummary', { type: 'state', common: { name: 'Activity Summary', type: 'string', role: 'text', read: true, write: false }, native: {} });
-        await this.setObjectNotExistsAsync('analysis.comfortSummary', { type: 'state', common: { name: 'Comfort Summary', type: 'string', role: 'text', read: true, write: false }, native: {} });
-        await this.setObjectNotExistsAsync('analysis.comfortSuggestion', { type: 'state', common: { name: 'Comfort Suggestion', type: 'string', role: 'text', read: true, write: false }, native: {} });
-        await this.setObjectNotExistsAsync('analysis.alertReason', { type: 'state', common: { name: 'Alert Reason', type: 'string', role: 'text.alarm', read: true, write: false }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.activitySummary', {
+            type: 'state',
+            common: { name: 'Activity Summary', type: 'string', role: 'text', read: true, write: false },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('analysis.comfortSummary', {
+            type: 'state',
+            common: { name: 'Comfort Summary', type: 'string', role: 'text', read: true, write: false },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('analysis.comfortSuggestion', {
+            type: 'state',
+            common: { name: 'Comfort Suggestion', type: 'string', role: 'text', read: true, write: false },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('analysis.alertReason', {
+            type: 'state',
+            common: { name: 'Alert Reason', type: 'string', role: 'text.alarm', read: true, write: false },
+            native: {},
+        });
 
         await this.setObjectNotExistsAsync('analysis.analysisHistory', {
             type: 'state',
-            common: { name: 'Analysis Logbook (JSON Array)', type: 'string', role: 'json', read: true, write: false, def: '[]' },
+            common: {
+                name: 'Analysis Logbook (JSON Array)',
+                type: 'string',
+                role: 'json',
+                read: true,
+                write: false,
+                def: '[]',
+            },
             native: {},
         });
         for (let i = 0; i < DEBUG_ANALYSIS_HISTORY_COUNT; i++) {
@@ -123,7 +181,10 @@ class CogniLiving extends utils.Adapter {
         }
 
         // === 5. AUTOPILOT-TIMER STARTEN (MIT FILTER) ===
-        if (this.analysisTimer) { clearInterval(this.analysisTimer); this.analysisTimer = null; }
+        if (this.analysisTimer) {
+            clearInterval(this.analysisTimer);
+            this.analysisTimer = null;
+        }
         const intervalMinutes = this.config.analysisInterval || 15;
         const intervalMilliseconds = intervalMinutes * 60 * 1000;
         if (intervalMilliseconds > 0) {
@@ -143,7 +204,9 @@ class CogniLiving extends utils.Adapter {
                     return;
                 }
                 this.log.info('Autopilot triggering scheduled AI analysis (Filter passed)...');
-                this.runGeminiAnalysis().catch(e => this.log.error(`Error during scheduled Gemini analysis: ${e.message}`));
+                this.runGeminiAnalysis().catch(e =>
+                    this.log.error(`Error during scheduled Gemini analysis: ${e.message}`),
+                );
             }, intervalMilliseconds);
         } else {
             this.log.warn('Analysis interval is set to 0. Autopilot disabled.');
@@ -164,14 +227,16 @@ class CogniLiving extends utils.Adapter {
                 clearInterval(this.analysisTimer);
                 this.analysisTimer = null;
             }
-            callback();
-        } catch (error) {
-            callback();
+        } catch {
+            // ignore
         }
+        callback();
     }
 
     onStateChange(id, state) {
-        if (!state) return;
+        if (!state) {
+            return;
+        }
 
         // --- B) Befehl (ack=false) ---
         if (!state.ack) {
@@ -184,38 +249,45 @@ class CogniLiving extends utils.Adapter {
         }
 
         // --- A) Sensor-Event (ack=true) ---
-        // @ts-ignore
         const deviceConfig = (this.config.devices || []).find(d => d.id === id);
         if (!deviceConfig) {
-             return;
+            return;
         }
 
         // 2. === SELEKTIVER FILTER ===
-        // @ts-ignore
         if (!deviceConfig.logDuplicates) {
             const lastEventForThisId = this.eventHistory.find(event => event.id === id);
             if (lastEventForThisId && lastEventForThisId.value === state.val) {
-                 this.log.debug(`Ignoring redundant state update for ${id} (Value: ${state.val})`);
-                 return;
+                this.log.debug(`Ignoring redundant state update for ${id} (Value: ${state.val})`);
+                return;
             }
         }
 
-        this.processSensorEvent(id, state, deviceConfig)
-            .catch(e => this.log.error(`Error processing sensor event: ${e.message}`));
+        this.processSensorEvent(id, state, deviceConfig).catch(e =>
+            this.log.error(`Error processing sensor event: ${e.message}`),
+        );
     }
 
     async processSensorEvent(id, state, deviceConfig) {
         const location = deviceConfig.location || 'unknown';
         const type = deviceConfig.type || 'unknown';
         const name = deviceConfig.name || 'unknown';
-        const eventObject = { timestamp: state.ts, id: id, name: name, value: state.val, location: location, type: type };
+        const eventObject = {
+            timestamp: state.ts,
+            id: id,
+            name: name,
+            value: state.val,
+            location: location,
+            type: type,
+        };
         await this.setStateAsync('events.lastEvent', { val: JSON.stringify(eventObject), ack: true });
         this.eventHistory.unshift(eventObject);
-        if (this.eventHistory.length > HISTORY_MAX_SIZE) { this.eventHistory.pop(); }
+        if (this.eventHistory.length > HISTORY_MAX_SIZE) {
+            this.eventHistory.pop();
+        }
         await this.setStateAsync('events.history', { val: JSON.stringify(this.eventHistory), ack: true });
         await this._updateDebugSensorHistoryStates();
     }
-
 
     /**
      * Handler für Nachrichten von der Admin-UI
@@ -229,7 +301,14 @@ class CogniLiving extends utils.Adapter {
 
                 if (!apiKey) {
                     // Antwort an die UI senden (Fehler)
-                    if (obj.callback) this.sendTo(obj.from, obj.command, { success: false, message: 'API Key is empty' }, obj.callback);
+                    if (obj.callback) {
+                        this.sendTo(
+                            obj.from,
+                            obj.command,
+                            { success: false, message: 'API Key is empty' },
+                            obj.callback,
+                        );
+                    }
                     return;
                 }
 
@@ -238,35 +317,33 @@ class CogniLiving extends utils.Adapter {
                 this.log.info(`API Key test result: ${result.success ? 'Success' : 'Failed'} - ${result.message}`);
 
                 // Antwort an die UI senden (Erfolg oder Fehlerdetails)
-                if (obj.callback) this.sendTo(obj.from, obj.command, result, obj.callback);
+                if (obj.callback) {
+                    this.sendTo(obj.from, obj.command, result, obj.callback);
+                }
             }
         }
     }
 
     /**
      * Testet die Verbindung zur Gemini API.
-     * FIX (v0.1.14): Korrekte Handhabung des asynchronen Iterators von listModels().
      */
     async testGeminiConnection(apiKey) {
         try {
             const testGenAI = new GoogleGenerativeAI(apiKey);
+            const model = testGenAI.getGenerativeModel({ model: 'models/gemini-flash-latest' });
 
-            this.log.debug('Attempting listModels() call to validate API Key...');
+            this.log.debug('Attempting a simple generateContent call to validate API Key...');
 
-            // listModels() gibt ein AsyncIterable zurück. Wir müssen .next() aufrufen,
-            // um die API-Anfrage auszulösen und den Schlüssel zu validieren.
-            const models = testGenAI.listModels();
-            const firstModel = await models.next();
+            // Sende einen einfachen Text, um die API-Konnektivität zu testen.
+            const result = await model.generateContent('hello');
+            const response = await result.response;
 
-            // Wenn wir ein Ergebnis erhalten (done ist false), ist der Key gültig.
-            // @ts-ignore (TypeScript erkennt das Ergebnis nicht immer korrekt)
-            if (firstModel.done === false && firstModel.value) {
-                 return { success: true, message: 'Connection successful! API Key is valid.' };
-            } else {
-                // Sollte selten passieren, aber falls die Liste leer ist
-                return { success: false, message: 'Connection successful, but no models found.' };
+            // Wenn wir eine Antwort erhalten, ist der Schlüssel gültig.
+            if (response && response.text()) {
+                return { success: true, message: 'Connection successful! API Key is valid.' };
             }
-
+            // Sollte nicht passieren, aber als Fallback
+            return { success: false, message: 'Connection test failed: Received an empty response.' };
         } catch (error) {
             let errorMessage = error.message || 'Unknown error';
 
@@ -275,7 +352,11 @@ class CogniLiving extends utils.Adapter {
                 errorMessage = 'API key not valid. Please check the key.';
             } else if (errorMessage.includes('403') || errorMessage.includes('PermissionDenied')) {
                 errorMessage = 'Permission Denied (403). Check if Gemini API is enabled for this key.';
-            } else if (errorMessage.includes('network error') || errorMessage.includes('ENOTFOUND') || errorMessage.includes('fetch failed')) {
+            } else if (
+                errorMessage.includes('network error') ||
+                errorMessage.includes('ENOTFOUND') ||
+                errorMessage.includes('fetch failed')
+            ) {
                 errorMessage = 'Network error. Could not connect to Google servers.';
             }
 
@@ -283,7 +364,6 @@ class CogniLiving extends utils.Adapter {
             return { success: false, message: `Connection failed: ${errorMessage}` };
         }
     }
-
 
     // (runGeminiAnalysis und alle Helper-Funktionen - unverändert, hier zur Vollständigkeit)
     async runGeminiAnalysis() {
@@ -330,7 +410,7 @@ class CogniLiving extends utils.Adapter {
             }
         `;
         const dataPrompt = JSON.stringify(this.eventHistory, null, 2);
-        const fullPrompt = systemPrompt + "\n\nSENSOR DATA:\n" + dataPrompt;
+        const fullPrompt = `${systemPrompt}\n\nSENSOR DATA:\n${dataPrompt}`;
         await this.setStateAsync('analysis.lastPrompt', { val: fullPrompt, ack: true });
 
         try {
@@ -345,28 +425,55 @@ class CogniLiving extends utils.Adapter {
                 const rawText = response.text();
                 this.log.debug(`AI Response received (raw text): ${rawText}`);
 
-                const cleanText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                const cleanText = rawText
+                    .replace(/```json/g, '')
+                    .replace(/```/g, '')
+                    .trim();
                 analysisResult = JSON.parse(cleanText);
-
             } catch (parseError) {
-                this.log.error(`Failed to parse AI response as JSON: ${parseError.message}. Raw response: ${response.text()}`);
-                await this.setStateAsync('analysis.lastResult', { val: `{"error": "Invalid JSON received", "details": "${parseError.message}"}`, ack: true });
+                this.log.error(
+                    `Failed to parse AI response as JSON: ${parseError.message}. Raw response: ${response.text()}`,
+                );
+                await this.setStateAsync('analysis.lastResult', {
+                    val: `{"error": "Invalid JSON received", "details": "${parseError.message}"}`,
+                    ack: true,
+                });
                 await this.setStateAsync('analysis.isAlert', { val: true, ack: true });
                 return;
             }
 
             // --- JSON VALIDIERUNG UND VERARBEITUNG ---
-            if (analysisResult && analysisResult.activity && analysisResult.comfort && typeof analysisResult.activity.isAlert === 'boolean') {
+            if (
+                analysisResult &&
+                analysisResult.activity &&
+                analysisResult.comfort &&
+                typeof analysisResult.activity.isAlert === 'boolean'
+            ) {
                 this.log.info('AI analysis successfully parsed as JSON.');
 
                 // Ergebnis speichern (JSON)
-                await this.setStateAsync('analysis.lastResult', { val: JSON.stringify(analysisResult, null, 2), ack: true });
+                await this.setStateAsync('analysis.lastResult', {
+                    val: JSON.stringify(analysisResult, null, 2),
+                    ack: true,
+                });
 
                 // Dedizierte States aktualisieren
-                await this.setStateAsync('analysis.activitySummary', { val: analysisResult.activity.summary || 'N/A', ack: true });
-                await this.setStateAsync('analysis.comfortSummary', { val: analysisResult.comfort.summary || 'N/A', ack: true });
-                await this.setStateAsync('analysis.comfortSuggestion', { val: analysisResult.comfort.suggestion || '', ack: true });
-                await this.setStateAsync('analysis.alertReason', { val: analysisResult.activity.alertReason || '', ack: true });
+                await this.setStateAsync('analysis.activitySummary', {
+                    val: analysisResult.activity.summary || 'N/A',
+                    ack: true,
+                });
+                await this.setStateAsync('analysis.comfortSummary', {
+                    val: analysisResult.comfort.summary || 'N/A',
+                    ack: true,
+                });
+                await this.setStateAsync('analysis.comfortSuggestion', {
+                    val: analysisResult.comfort.suggestion || '',
+                    ack: true,
+                });
+                await this.setStateAsync('analysis.alertReason', {
+                    val: analysisResult.activity.alertReason || '',
+                    ack: true,
+                });
 
                 const alertFound = analysisResult.activity.isAlert;
 
@@ -381,21 +488,27 @@ class CogniLiving extends utils.Adapter {
                 // Logbuch aktualisieren
                 const logEntry = {
                     timestamp: Date.now(),
-                    analysis: analysisResult
+                    analysis: analysisResult,
                 };
                 await this.updateAnalysisHistory(logEntry);
-
             } else {
                 // Fehler: JSON Struktur fehlt
-                this.log.error(`AI response JSON structure is invalid. Missing required fields. Received: ${JSON.stringify(analysisResult)}`);
-                await this.setStateAsync('analysis.lastResult', { val: `{"error": "Invalid JSON structure", "received": ${JSON.stringify(analysisResult)}}`, ack: true });
+                this.log.error(
+                    `AI response JSON structure is invalid. Missing required fields. Received: ${JSON.stringify(analysisResult)}`,
+                );
+                await this.setStateAsync('analysis.lastResult', {
+                    val: `{"error": "Invalid JSON structure", "received": ${JSON.stringify(analysisResult)}}`,
+                    ack: true,
+                });
                 await this.setStateAsync('analysis.isAlert', { val: true, ack: true });
             }
-
         } catch (error) {
             // Fehler: API-Aufruf fehlgeschlagen
             this.log.error(`Error calling Gemini AI: ${error.message}`);
-            await this.setStateAsync('analysis.lastResult', { val: `{"error": "API Call failed", "details": "${error.message}"}`, ack: true });
+            await this.setStateAsync('analysis.lastResult', {
+                val: `{"error": "API Call failed", "details": "${error.message}"}`,
+                ack: true,
+            });
         }
     }
 
@@ -441,7 +554,7 @@ class CogniLiving extends utils.Adapter {
                 summary = analysis.activity.summary || 'Analysis successful';
             }
 
-            const shortSummary = summary.length > 100 ? summary.substring(0, 100) + '...' : summary;
+            const shortSummary = summary.length > 100 ? `${summary.substring(0, 100)}...` : summary;
             return `${time} - ${prefix}${shortSummary}`;
         }
 
@@ -471,7 +584,7 @@ class CogniLiving extends utils.Adapter {
 }
 
 if (require.main !== module) {
-    module.exports = (options) => new CogniLiving(options);
+    module.exports = options => new CogniLiving(options);
 } else {
     new CogniLiving();
 }

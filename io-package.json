@@ -70,9 +70,9 @@
         "compact": false,
         "connectionType": "cloud",
         "dataSource": "push",
+        "messagebox": true,
         "adminUI": {
-            "config": "html",
-            "message": true
+            "config": "html"
         },
         "eraseOnUpload": true,
         "dependencies": [
