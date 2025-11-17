@@ -48,11 +48,11 @@ export default class App extends GenericApp {
         };
 
         // COMMENT IT!!!
-        extendedProps.socket = {
-            protocol: 'http:',
-            host: '192.168.100.61',
-            port: 8081,
-        };
+        // extendedProps.socket = {
+        //     protocol: 'http:',
+        //     host: '192.168.100.61',
+        //     port: 8081,
+        // };
 
         super(props, extendedProps);
     }
@@ -84,7 +84,8 @@ export default class App extends GenericApp {
                             display: 'flex',
                             flexDirection: 'column',
                             boxSizing: 'border-box',
-                            bgcolor: 'background.default', // Nutzt der Theme-Hintergrund
+                            //bgcolor: 'background.default', // Nutzt der Theme-Hintergrund
+                            bgcolor: 'green', // Nutzt der Theme-Hintergrund
                             color: this.state.themeType === 'dark' ? '#FFF' : '#000',
                         }}
                     >
