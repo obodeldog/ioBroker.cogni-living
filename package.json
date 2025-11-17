@@ -1,82 +1,83 @@
 {
-  "name": "iobroker.cogni-living",
-  "version": "0.1.14",
-  "description": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
-  "author": {
-    "name": "Marc Jaeger",
-    "email": "mj112@gmx.de"
-  },
-  "homepage": "https://github.com/obodeldog/ioBroker.cogni-living",
-  "license": "MIT",
-  "keywords": [
-    "iobroker",
-    "cogni-living",
-    "ai",
-    "ki",
-    "behavior",
-    "health",
-    "comfort",
-    "automation",
-    "pattern",
-    "learning",
-    "context",
-    "smart home"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/obodeldog/ioBroker.cogni-living.git"
-  },
-  "dependencies": {
-    "@google/generative-ai": "^0.15.0",
-    "@iobroker/adapter-core": "^3.1.6",
-    "axios": "^1.7.2"
-  },
-  "backup":{
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.11.5"
-  },
-  "devDependencies": {
-    "@iobroker/adapter-react-v5": "^8.0.13",
-    "@iobroker/eslint-config": "2.2.0",
-    "@iobroker/build-tools": "2.0.15",
-    "@iobroker/testing": "^5.2.2",
-    "@iobroker/dev-server": "0.8.0",
-    "@mui/icons-material": "^6.5.0",
-    "@mui/material": "^6.5.0",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "rimraf": "^6.1.0",
-    "typescript": "~5.9.3"
-  },
-  "main": "main.js",
-  "files": [
-    "admin/",
-    "build/",
-    "main.js",
-    "io-package.json",
-    "LICENSE",
-    "README.md",
-    "README_de.md"
-  ],
-  "scripts": {
-    "prebuild": "rimraf admin/build",
-    "build:react": "node tasks",
-    "dev-run": "dev-server run",
-    "build": "npm run build:react",
-    "watch": "npm run watch:react",
-    "test:js": "mocha --config test/mocharc.custom.json \"{!(node_modules|test)/**/*.test.js,*.test.js,test/**/test!(PackageFiles|Startup).js}\"",
-    "test:package": "mocha test/package --exit",
-    "test:integration": "mocha test/integration --exit",
-    "test": "npm run test:js && npm run test:package",
-    "check": "tsc --noEmit",
-    "lint": "eslint --ext .js,.jsx,.ts,.tsx admin/src/",
-    "translate": "translate-adapter",
-    "release": "release-script"
-  },
-  "bugs": {
-    "url": "https://github.com/obodeldog/ioBroker.cogni-living/issues"
-  },
-  "readmeFilename": "README.md"
+    "name": "iobroker.cogni-living",
+    "version": "0.1.14",
+    "description": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
+    "author": {
+        "name": "Marc Jaeger",
+        "email": "mj112@gmx.de"
+    },
+    "homepage": "https://github.com/obodeldog/ioBroker.cogni-living",
+    "license": "MIT",
+    "keywords": [
+        "iobroker",
+        "cogni-living",
+        "ai",
+        "ki",
+        "behavior",
+        "health",
+        "comfort",
+        "automation",
+        "pattern",
+        "learning",
+        "context",
+        "smart home"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/obodeldog/ioBroker.cogni-living.git"
+    },
+    "dependencies": {
+        "@google/generative-ai": "^0.15.0",
+        "@iobroker/adapter-core": "^3.1.6",
+        "axios": "^1.7.2"
+    },
+    "backup": {
+        "@emotion/react": "^11.14.0",
+        "@emotion/styled": "^11.11.5"
+    },
+    "devDependencies": {
+        "@iobroker/adapter-react-v5": "^8.0.13",
+        "@iobroker/eslint-config": "2.2.0",
+        "@iobroker/build-tools": "2.0.15",
+        "@iobroker/testing": "^5.2.2",
+        "@iobroker/dev-server": "0.8.0",
+        "@mui/icons-material": "^6.5.0",
+        "@mui/material": "^6.5.0",
+        "@types/react": "^18.3.3",
+        "@types/react-dom": "^18.3.0",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "rimraf": "^6.1.0",
+        "typescript": "~5.9.3"
+    },
+    "main": "main.js",
+    "files": [
+        "admin/",
+        "build/",
+        "main.js",
+        "io-package.json",
+        "LICENSE",
+        "README.md",
+        "README_de.md"
+    ],
+    "scripts": {
+        "prebuild": "rimraf admin/build",
+        "build:react": "node tasks",
+        "dev-run": "dev-server run",
+        "dev-watch": "dev-server watch",
+        "build": "npm run build:react",
+        "watch": "npm run watch:react",
+        "test:js": "mocha --config test/mocharc.custom.json \"{!(node_modules|test)/**/*.test.js,*.test.js,test/**/test!(PackageFiles|Startup).js}\"",
+        "test:package": "mocha test/package --exit",
+        "test:integration": "mocha test/integration --exit",
+        "test": "npm run test:js && npm run test:package",
+        "check": "tsc --noEmit",
+        "lint": "eslint --ext .js,.jsx,.ts,.tsx admin/src/",
+        "translate": "translate-adapter",
+        "release": "release-script"
+    },
+    "bugs": {
+        "url": "https://github.com/obodeldog/ioBroker.cogni-living/issues"
+    },
+    "readmeFilename": "README.md"
 }

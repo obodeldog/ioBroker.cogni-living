@@ -1,99 +1,97 @@
 {
-  "common": {
-    "name": "cogni-living",
-    "version": "0.1.14",
-    "enabled": true,
-    "main": "main.js",
-    "news": {
-      "0.1.14": {
-        "en": "Major Migration: Admin interface migrated to Material-UI v5 and TypeScript (adapter-react-v5). Fixed API test logic.",
-        "de": "Große Migration: Admin-Oberfläche auf Material-UI v5 und TypeScript (adapter-react-v5) migriert. API-Testlogik korrigiert."
-      },
-      "0.1.12": {
-        "en": "AI Contextual Awareness: Added Persona selection and Living Context description in settings.",
-        "de": "KI Kontextbewusstsein: Persona-Auswahl und Beschreibung des Wohnkontextes in den Einstellungen hinzugefügt."
-      },
-      "0.1.11": {
-        "en": "Major Stability Improvement: Switched AI communication to JSON mode.",
-        "de": "Große Stabilitätsverbesserung: KI-Kommunikation auf JSON-Modus umgestellt."
-      },
-      "0.1.10": {
-        "en": "CRITICAL FIX: Corrected sensor subscription logic (change: any).",
-        "de": "KRITISCHER FIX: Sensor-Abonnement-Logik (change: any) korrigiert."
-      },
-      "0.1.9": {
-        "en": "Added selective filter (log duplicates) and fixed Admin UI scrollbar issue.",
-        "de": "Selektiven Filter (Duplikate loggen) hinzugefügt und Scrollbar-Problem in der Admin-UI behoben."
-      },
-      "0.1.8": {
-        "en": "Refined AI prompt structure.",
-        "de": "KI-Prompt-Struktur verfeinert."
-      },
-      "0.0.1": {
-        "en": "initial release",
-        "de": "Erstveröffentlichung"
-      }
+    "common": {
+        "name": "cogni-living",
+        "version": "0.1.14",
+        "enabled": true,
+        "main": "main.js",
+        "news": {
+            "0.1.14": {
+                "en": "Major Migration: Admin interface migrated to Material-UI v5 and TypeScript (adapter-react-v5). Fixed API test logic.",
+                "de": "Große Migration: Admin-Oberfläche auf Material-UI v5 und TypeScript (adapter-react-v5) migriert. API-Testlogik korrigiert."
+            },
+            "0.1.12": {
+                "en": "AI Contextual Awareness: Added Persona selection and Living Context description in settings.",
+                "de": "KI Kontextbewusstsein: Persona-Auswahl und Beschreibung des Wohnkontextes in den Einstellungen hinzugefügt."
+            },
+            "0.1.11": {
+                "en": "Major Stability Improvement: Switched AI communication to JSON mode.",
+                "de": "Große Stabilitätsverbesserung: KI-Kommunikation auf JSON-Modus umgestellt."
+            },
+            "0.1.10": {
+                "en": "CRITICAL FIX: Corrected sensor subscription logic (change: any).",
+                "de": "KRITISCHER FIX: Sensor-Abonnement-Logik (change: any) korrigiert."
+            },
+            "0.1.9": {
+                "en": "Added selective filter (log duplicates) and fixed Admin UI scrollbar issue.",
+                "de": "Selektiven Filter (Duplikate loggen) hinzugefügt und Scrollbar-Problem in der Admin-UI behoben."
+            },
+            "0.1.8": {
+                "en": "Refined AI prompt structure.",
+                "de": "KI-Prompt-Struktur verfeinert."
+            },
+            "0.0.1": {
+                "en": "initial release",
+                "de": "Erstveröffentlichung"
+            }
+        },
+        "titleLang": {
+            "en": "Cogni-Living",
+            "de": "Kognitives Leben"
+        },
+        "desc": {
+            "en": "Analyzes behavioral patterns for health, safety & comfort",
+            "de": "Analysiert Verhaltensmuster für Gesundheit, Sicherheit & Komfort"
+        },
+        "authors": ["Marc Jaeger <mj112@gmx.de>"],
+        "keywords": [
+            "ai",
+            "ki",
+            "behavior",
+            "health",
+            "comfort",
+            "automation",
+            "pattern",
+            "learning",
+            "context",
+            "smart home"
+        ],
+        "licenseInformation": {
+            "type": "free",
+            "license": "MIT"
+        },
+        "platform": "Javascript/Node.js",
+        "icon": "cogni-living.png",
+        "extIcon": "https://raw.githubusercontent.com/obodeldog/ioBroker.cogni-living/main/admin/cogni-living.png",
+        "readme": "https://github.com/obodeldog/ioBroker.cogni-living/blob/main/README.md",
+        "loglevel": "info",
+        "tier": 3,
+        "mode": "daemon",
+        "type": "logic",
+        "compact": false,
+        "connectionType": "cloud",
+        "dataSource": "push",
+        "adminUI": {
+            "config": "html"
+        },
+        "eraseOnUpload": true,
+        "dependencies": [
+            {
+                "js-controller": ">=6.0.11"
+            }
+        ],
+        "globalDependencies": [
+            {
+                "admin": ">=7.0.23"
+            }
+        ]
     },
-    "titleLang": {
-      "en": "Cogni-Living",
-      "de": "Kognitives Leben"
+    "native": {
+        "devices": [],
+        "geminiApiKey": "",
+        "analysisInterval": 15,
+        "aiPersona": "generic",
+        "livingContext": ""
     },
-    "desc": {
-      "en": "Analyzes behavioral patterns for health, safety & comfort",
-      "de": "Analysiert Verhaltensmuster für Gesundheit, Sicherheit & Komfort"
-    },
-    "authors": [
-      "Marc Jaeger <mj112@gmx.de>"
-    ],
-    "keywords": [
-      "ai",
-      "ki",
-      "behavior",
-      "health",
-      "comfort",
-      "automation",
-      "pattern",
-      "learning",
-      "context",
-      "smart home"
-    ],
-    "licenseInformation": {
-      "type": "free",
-      "license": "MIT"
-    },
-    "platform": "Javascript/Node.js",
-    "icon": "cogni-living.png",
-    "extIcon": "https://raw.githubusercontent.com/obodeldog/ioBroker.cogni-living/main/admin/cogni-living.png",
-    "readme": "https://github.com/obodeldog/ioBroker.cogni-living/blob/main/README.md",
-    "loglevel": "info",
-    "tier": 3,
-    "mode": "daemon",
-    "type": "logic",
-    "compact": false,
-    "connectionType": "cloud",
-    "dataSource": "push",
-    "adminUI": {
-      "config": "json"
-    },
-    "eraseOnUpload": true,
-    "dependencies": [
-      {
-        "js-controller": ">=6.0.11"
-      }
-    ],
-    "globalDependencies": [
-      {
-        "admin": ">=7.0.23"
-      }
-    ]
-  },
-  "native": {
-    "devices": [],
-    "geminiApiKey": "",
-    "analysisInterval": 15,
-    "aiPersona": "generic",
-    "livingContext": ""
-  },
-  "objects": [],
-  "instanceObjects": []
+    "objects": [],
+    "instanceObjects": []
 }

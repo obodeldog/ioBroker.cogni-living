@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 import React from 'react';
 import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles';
 
@@ -6,7 +5,13 @@ import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles';
 import { Box } from '@mui/material';
 
 // Wichtig: Imports von adapter-react-v5 und TypeScript-Typen
-import { GenericApp, type GenericAppProps, type GenericAppSettings, type ThemeType, Loader } from '@iobroker/adapter-react-v5';
+import {
+    GenericApp,
+    type GenericAppProps,
+    type GenericAppSettings,
+    type ThemeType,
+    Loader,
+} from '@iobroker/adapter-react-v5';
 import Settings from './components/settings';
 
 import enLang from './i18n/en.json';
@@ -21,7 +26,7 @@ import plLang from './i18n/pl.json';
 import ukLang from './i18n/uk.json';
 import zhCnLang from './i18n/zh-cn.json';
 
-class App extends GenericApp {
+export default class App extends GenericApp {
     constructor(props: GenericAppProps) {
         const extendedProps: GenericAppSettings = {
             ...props,
@@ -41,6 +46,15 @@ class App extends GenericApp {
                 'zh-cn': zhCnLang,
             },
         };
+
+        // COMMENT IT!!!
+        /*
+        extendedProps.socket = {
+            protocol: 'http:',
+            host: '192.168.100.61',
+            port: 8081,
+        };*/
+
         super(props, extendedProps);
     }
 
@@ -50,7 +64,7 @@ class App extends GenericApp {
 
     render() {
         if (!this.state.loaded) {
-           return (
+            return (
                 <StyledEngineProvider injectFirst>
                     <ThemeProvider theme={this.state.theme}>
                         <Loader themeType={this.state.themeType} />
@@ -63,56 +77,54 @@ class App extends GenericApp {
         return (
             <StyledEngineProvider injectFirst>
                 <ThemeProvider theme={this.state.theme}>
-            <Box
-                sx={{
-                    width: '100%',
-                    height: '100%',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxSizing: 'border-box',
-                    bgcolor: 'background.default', // Nutzt das Theme-Hintergrund
-                    color: this.state.themeType === 'dark' ? '#FFF' : '#000',
-                }}
-            >
-                {/* Content Area (Scrollable) */}
-                <Box
-                    sx={{
-                        flexGrow: 1,
-                        overflow: 'auto',
-                        p: 3, // Padding (p: 3 entspricht ca. 24px)
-                    }}
-                >
-                    <Settings
-                        native={this.state.native}
-                        onChange={(attr, value) => this.updateNativeValue(attr, value)}
-                        // Wichtig: Socket und themeType korrekt durchreichen (mit Type Cast)
-                        socket={this.socket}
-                        themeType={this.state.themeType as ThemeType}
-                        // Weitere benötigte Props für Settings (TypeScript)
-                        adapterName="cogni-living"
-                        instance={this.instance}
-                        theme={this.state.theme}
-                    />
-                </Box>
+                    <Box
+                        sx={{
+                            width: '100%',
+                            height: '100%',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            boxSizing: 'border-box',
+                            bgcolor: 'background.default', // Nutzt das Theme-Hintergrund
+                            color: this.state.themeType === 'dark' ? '#FFF' : '#000',
+                        }}
+                    >
+                        {/* Content Area (Scrollable) */}
+                        <Box
+                            sx={{
+                                flexGrow: 1,
+                                overflow: 'auto',
+                                p: 3, // Padding (p: 3 entspricht ca. 24px)
+                            }}
+                        >
+                            <Settings
+                                native={this.state.native}
+                                onChange={(attr, value) => this.updateNativeValue(attr, value)}
+                                // Wichtig: Socket und themeType korrekt durchreichen (mit Type Cast)
+                                socket={this.socket}
+                                themeType={this.state.themeType as ThemeType}
+                                // Weitere benötigte Props für Settings (TypeScript)
+                                adapterName="cogni-living"
+                                instance={this.instance}
+                                theme={this.state.theme}
+                            />
+                        </Box>
 
-                {/* Footer Area (Fixed) */}
-                <Box
-                    sx={{
-                        flexShrink: 0,
-                        p: 2,
-                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-                    }}
-                >
-                    {this.renderError()}
-                    {this.renderToast()}
-                    {this.renderSaveCloseButtons()}
-                </Box>
-            </Box>
-            </ThemeProvider>
+                        {/* Footer Area (Fixed) */}
+                        <Box
+                            sx={{
+                                flexShrink: 0,
+                                p: 2,
+                                borderTop: theme => `1px solid ${theme.palette.divider}`,
+                            }}
+                        >
+                            {this.renderError()}
+                            {this.renderToast()}
+                            {this.renderSaveCloseButtons()}
+                        </Box>
+                    </Box>
+                </ThemeProvider>
             </StyledEngineProvider>
         );
     }
 }
-
-export default App;
