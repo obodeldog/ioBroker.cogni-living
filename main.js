@@ -3,11 +3,16 @@ const utils = require('@iobroker/adapter-core');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Globale Konstanten
-const HISTORY_MAX_SIZE = 50;
+const HISTORY_MAX_SIZE = 50; // STM (Short Term Memory)
 const DEBUG_HISTORY_COUNT = 5;
 const GEMINI_MODEL = 'models/gemini-flash-latest';
 const ANALYSIS_HISTORY_MAX_SIZE = 100;
 const DEBUG_ANALYSIS_HISTORY_COUNT = 5;
+
+// === SPRINT 14 START: LTM Konstanten ===
+const RAW_LOG_MAX_SIZE = 1500; // LTM (Long Term Memory) - Max Rohereignisse (ca. 1-2 Tage)
+const LTM_DP_RAW_LOG = 'LTM.rawEventLog'; // Datenpunktname für Raw Log
+// === SPRINT 14 END ===
 
 const PERSONA_MAPPING = {
     generic: 'Analyze balanced for health, safety, and comfort.',
@@ -26,11 +31,20 @@ class CogniLiving extends utils.Adapter {
             ...options,
             name: 'cogni-living',
         });
-        this.eventHistory = [];
+        this.eventHistory = []; // STM
         this.analysisHistory = [];
         this.genAI = null;
         this.geminiModel = null;
         this.analysisTimer = null;
+
+        // === SPRINT 14 START: LTM Initialisierung ===
+        /**
+         * LTM - Speicher für Rohdaten-Events. FIFO-Queue (First In, First Out).
+         * @type {Array<object>}
+         */
+        this.rawEventLog = []; // LTM
+        // === SPRINT 14 END ===
+
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
         this.on('unload', this.onUnload.bind(this));
@@ -38,12 +52,12 @@ class CogniLiving extends utils.Adapter {
         this.on('message', this.onMessage.bind(this));
     }
 
-    // (onReady, resetAnalysisStates, onUnload, onStateChange, processSensorEvent - unverändert, hier zur Vollständigkeit)
     async onReady() {
         const adapterVersion = this.version || 'unknown';
         this.log.info(`cogni-living adapter starting (v${adapterVersion})`);
 
         // === 1. KI INITIALISIERUNG (JSON MODE) ===
+        // ... (Unverändert)
         if (this.config.geminiApiKey) {
             try {
                 this.genAI = new GoogleGenerativeAI(this.config.geminiApiKey);
@@ -64,7 +78,9 @@ class CogniLiving extends utils.Adapter {
         const context = this.config.livingContext || '(Not defined)';
         this.log.info(`AI Configuration Loaded. Persona: ${persona}. Context Details: ${context}`);
 
-        // === 2. DATENPUNKTE ERSTELLEN ===
+        // === 2. DATENPUNKTE ERSTELLEN (STM & Analysis) ===
+        // Hinweis: LTM Datenpunkte werden in checkLtmObjects verwaltet.
+        // ... (Alle setObjectNotExistsAsync Aufrufe bleiben unverändert)
         await this.setObjectNotExistsAsync('events.lastEvent', {
             type: 'state',
             common: { name: 'Last raw event', type: 'string', role: 'json', read: true, write: false },
@@ -154,6 +170,8 @@ class CogniLiving extends utils.Adapter {
         }
 
         // === 3. GEDÄCHTNIS LADEN ===
+
+        // 3a. Analyse-Logbuch (Analysis History) laden
         try {
             const historyState = await this.getStateAsync('analysis.analysisHistory');
             if (historyState && historyState.val) {
@@ -166,7 +184,17 @@ class CogniLiving extends utils.Adapter {
             this.analysisHistory = [];
         }
 
+        // === SPRINT 14 START: LTM Laden ===
+        // 3b. LTM (Long Term Memory) laden
+        // Stelle sicher, dass die LTM Objekte existieren und aktuell sind (Robustheit)
+        await this.checkLtmObjects();
+        // Lade LTM-Daten (bevor States abonniert werden)
+        await this.loadRawEventLog();
+        // === SPRINT 14 END ===
+
+
         // === 4. STATES ABONNIEREN ===
+        // ... (Unverändert)
         this.subscribeStates('analysis.trigger');
         const devices = this.config.devices;
         if (!devices || devices.length === 0) {
@@ -181,6 +209,7 @@ class CogniLiving extends utils.Adapter {
         }
 
         // === 5. AUTOPILOT-TIMER STARTEN (MIT FILTER) ===
+        // ... (Unverändert)
         if (this.analysisTimer) {
             clearInterval(this.analysisTimer);
             this.analysisTimer = null;
@@ -196,6 +225,7 @@ class CogniLiving extends utils.Adapter {
                     return;
                 }
                 const now = Date.now();
+                // eventHistory nutzt unshift, daher ist das neueste Event an Index 0
                 const lastEventTime = this.eventHistory[0].timestamp;
                 if (now - lastEventTime > intervalMilliseconds) {
                     this.log.info('Autopilot: Skipping analysis, no new events in the last interval.');
@@ -213,7 +243,112 @@ class CogniLiving extends utils.Adapter {
         }
     }
 
+    // ======================================================================
+    // === SPRINT 14 START: LTM Management Funktionen ===
+    // ======================================================================
+
+    /**
+     * Stellt sicher, dass die LTM-Datenpunkte existieren und aktualisiert sie bei Bedarf.
+     * Wir nutzen extendObjectAsync für Robustheit, falls sich Definitionen ändern.
+     */
+    async checkLtmObjects() {
+        // Kanal LTM
+        await this.extendObjectAsync('LTM', {
+            type: 'channel',
+            common: {
+                name: 'Long Term Memory (LTM)',
+            },
+            native: {},
+        });
+        // Datenpunkt rawEventLog
+        await this.extendObjectAsync(LTM_DP_RAW_LOG, {
+            type: 'state',
+            common: {
+                // Dynamischer Name basierend auf der Konstante
+                'name': `Raw Event Log (Max ${RAW_LOG_MAX_SIZE} events)`,
+                'type': 'string',
+                'role': 'json',
+                'read': true,
+                'write': false,
+                'desc': 'Stores the raw sensor events for LTM processing before compression.'
+            },
+            native: {},
+        });
+        // Hinweis: Weitere LTM Objekte (z.B. DailyDigests) kommen in Sprint 15 hinzu.
+    }
+
+    /**
+     * Lädt das Rohereignisprotokoll (LTM) aus dem ioBroker-Datenpunkt in den Arbeitsspeicher.
+     */
+    async loadRawEventLog() {
+        try {
+            const state = await this.getStateAsync(LTM_DP_RAW_LOG);
+            if (state && state.val && typeof state.val === 'string') {
+                // Versuche das JSON zu parsen
+                const data = JSON.parse(state.val);
+
+                if (Array.isArray(data)) {
+                    this.rawEventLog = data;
+                    this.log.info(`LTM: Raw Event Log geladen (${this.rawEventLog.length} Einträge).`);
+
+                    // Größe prüfen, falls das Limit sich seit dem letzten Lauf geändert hat
+                    if (this.rawEventLog.length > RAW_LOG_MAX_SIZE) {
+                        const excess = this.rawEventLog.length - RAW_LOG_MAX_SIZE;
+                        this.rawEventLog.splice(0, excess); // Entferne älteste Einträge (FIFO)
+                        this.log.info(`LTM: Raw Event Log wurde auf das aktuelle Limit (${RAW_LOG_MAX_SIZE}) gekürzt.`);
+                        // Speichere das gekürzte Log zurück
+                        await this.saveRawEventLog();
+                    }
+
+                } else {
+                    // Daten sind kein Array
+                    throw new Error('Datenpunkt enthält ungültige Daten (kein Array).');
+                }
+            } else {
+                this.log.info('LTM: Raw Event Log nicht gefunden oder leer. Starte mit leerem Log.');
+                this.rawEventLog = [];
+            }
+        } catch (error) {
+            this.log.error(`LTM: Fehler beim Laden oder Parsen des Raw Event Logs: ${error.message}. Starte mit leerem Log.`);
+            this.rawEventLog = [];
+            // Korrupten State bereinigen
+            try {
+                await this.setStateAsync(LTM_DP_RAW_LOG, { val: JSON.stringify(this.rawEventLog), ack: true });
+            } catch (e) {
+                this.log.error(`LTM: Konnte korrupten State nicht bereinigen: ${e.message}`);
+            }
+        }
+    }
+
+    /**
+     * Speichert das aktuelle Rohereignisprotokoll (LTM) vom Arbeitsspeicher in den ioBroker-Datenpunkt.
+     * Limitiert die Größe vor dem Speichern (FIFO).
+     */
+    async saveRawEventLog() {
+        // 1. Limit prüfen und kürzen (älteste Einträge entfernen)
+        if (this.rawEventLog.length > RAW_LOG_MAX_SIZE) {
+            const excess = this.rawEventLog.length - RAW_LOG_MAX_SIZE;
+            // Entfernt 'excess' Elemente ab Index 0 (die ältesten, da wir push verwenden)
+            this.rawEventLog.splice(0, excess);
+        }
+
+        // 2. Speichern
+        try {
+            const data = JSON.stringify(this.rawEventLog);
+            // Setze ack=true, da der Adapter der Eigentümer ist
+            await this.setStateAsync(LTM_DP_RAW_LOG, { val: data, ack: true });
+        } catch (error) {
+            this.log.error(`LTM: Fehler beim Speichern des Raw Event Logs: ${error.message}`);
+        }
+    }
+
+    // ======================================================================
+    // === SPRINT 14 END: LTM Management Funktionen ===
+    // ======================================================================
+
+
     async resetAnalysisStates() {
+        // ... (Unverändert)
         await this.setStateAsync('analysis.activitySummary', { val: 'No recent activity.', ack: true });
         await this.setStateAsync('analysis.comfortSummary', { val: '', ack: true });
         await this.setStateAsync('analysis.comfortSuggestion', { val: '', ack: true });
@@ -221,6 +356,7 @@ class CogniLiving extends utils.Adapter {
     }
 
     onUnload(callback) {
+        // ... (Unverändert)
         try {
             if (this.analysisTimer) {
                 this.log.info('Stopping Autopilot timer...');
@@ -255,6 +391,8 @@ class CogniLiving extends utils.Adapter {
         }
 
         // 2. === SELEKTIVER FILTER ===
+        // Dieser Filter prüft das STM (eventHistory). Wenn ein Event hier blockiert wird (return),
+        // wird es auch nicht im LTM gespeichert, da processSensorEvent nicht aufgerufen wird.
         if (!deviceConfig.logDuplicates) {
             const lastEventForThisId = this.eventHistory.find(event => event.id === id);
             if (lastEventForThisId && lastEventForThisId.value === state.val) {
@@ -268,31 +406,65 @@ class CogniLiving extends utils.Adapter {
         );
     }
 
+    /**
+     * Verarbeitet ein eingehendes Sensorereignis, fügt es dem STM und LTM hinzu.
+     */
     async processSensorEvent(id, state, deviceConfig) {
         const location = deviceConfig.location || 'unknown';
         const type = deviceConfig.type || 'unknown';
         const name = deviceConfig.name || 'unknown';
-        const eventObject = {
-            timestamp: state.ts,
+
+        // === 1. STM (Short Term Memory) Verarbeitung ===
+        const eventObjectSTM = {
+            timestamp: state.ts, // Unix-Timestamp
             id: id,
             name: name,
             value: state.val,
             location: location,
             type: type,
         };
-        await this.setStateAsync('events.lastEvent', { val: JSON.stringify(eventObject), ack: true });
-        this.eventHistory.unshift(eventObject);
+
+        // Letztes Event aktualisieren
+        await this.setStateAsync('events.lastEvent', { val: JSON.stringify(eventObjectSTM), ack: true });
+
+        // Zum STM hinzufügen (Neuestes vorne - für die Analyse-Reihenfolge)
+        this.eventHistory.unshift(eventObjectSTM);
         if (this.eventHistory.length > HISTORY_MAX_SIZE) {
             this.eventHistory.pop();
         }
+
+        // STM States aktualisieren
         await this.setStateAsync('events.history', { val: JSON.stringify(this.eventHistory), ack: true });
         await this._updateDebugSensorHistoryStates();
+
+
+        // === 2. LTM (Long Term Memory) Verarbeitung (Sprint 14) ===
+
+        // LTM Event-Objekt (Optimiert für KI-Verarbeitung und Langzeitspeicherung)
+        const eventObjectLTM = {
+            // ISO Zeit für bessere Lesbarkeit im Log und für die KI (wichtig für Tages-Kompression)
+            timestamp: new Date(state.ts).toISOString(),
+            sensorName: name,
+            location: location,
+            // type: type, // Type ist für LTM weniger relevant als Location/Name
+            value: state.val
+        };
+
+        // Zum LTM Raw Log hinzufügen (Neuestes hinten - FIFO)
+        this.rawEventLog.push(eventObjectLTM);
+
+        // LTM persistent speichern (und Limitierung durchführen)
+        // Wir speichern nach jedem Event, um Datenverlust bei Neustart/Absturz zu minimieren.
+        await this.saveRawEventLog();
+
+        this.log.debug(`Event processed. STM Count: ${this.eventHistory.length}, LTM Count: ${this.rawEventLog.length}`);
     }
 
     /**
      * Handler für Nachrichten von der Admin-UI
      */
     async onMessage(obj) {
+        // ... (Keine Änderungen in onMessage) ...
         if (typeof obj === 'object' && obj.message) {
             // Prüfe auf den spezifischen Befehl 'testApiKey'
             if (obj.command === 'testApiKey') {
@@ -328,6 +500,7 @@ class CogniLiving extends utils.Adapter {
      * Testet die Verbindung zur Gemini API.
      */
     async testGeminiConnection(apiKey) {
+        // ... (Keine Änderungen in testGeminiConnection) ...
         try {
             const testGenAI = new GoogleGenerativeAI(apiKey);
             const model = testGenAI.getGenerativeModel({ model: 'models/gemini-flash-latest' });
@@ -365,8 +538,9 @@ class CogniLiving extends utils.Adapter {
         }
     }
 
-    // (runGeminiAnalysis und alle Helper-Funktionen - unverändert, hier zur Vollständigkeit)
+    // (runGeminiAnalysis und alle Helper-Funktionen - unverändert)
     async runGeminiAnalysis() {
+        // ... (Keine Änderungen in runGeminiAnalysis - analysiert weiterhin das STM) ...
         if (!this.geminiModel) {
             this.log.warn('Gemini AI is not initialized. Analysis aborted.');
             await this.setStateAsync('analysis.lastResult', { val: '{"error": "AI not initialized"}', ack: true });
@@ -513,6 +687,7 @@ class CogniLiving extends utils.Adapter {
     }
 
     _formatEventForHistory(event) {
+        // ... (Keine Änderungen in Helper-Funktionen) ...
         const time = new Date(event.timestamp).toLocaleTimeString('de-DE');
         return `${time} - ${event.name} (${event.location}) -> ${event.value}`;
     }

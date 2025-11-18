@@ -1,10 +1,14 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.1.14",
+        "version": "0.1.15",
         "enabled": true,
         "main": "main.js",
         "news": {
+            "0.1.15": {
+                "en": "LTM Implementation (Part 1): Added persistent Raw Event Log (1500 events) for long-term memory processing.",
+                "de": "LTM Implementierung (Teil 1): Persistentes Rohdaten-Ereignisprotokoll (1500 Ereignisse) für die Langzeitgedächtnisverarbeitung hinzugefügt."
+            },
             "0.1.14": {
                 "en": "Major Migration: Admin interface migrated to Material-UI v5 and TypeScript (adapter-react-v5). Fixed API test logic.",
                 "de": "Große Migration: Admin-Oberfläche auf Material-UI v5 und TypeScript (adapter-react-v5) migriert. API-Testlogik korrigiert."
@@ -94,5 +98,27 @@
         "livingContext": ""
     },
     "objects": [],
-    "instanceObjects": []
+    "instanceObjects": [
+        {
+            "_id": "LTM",
+            "type": "channel",
+            "common": {
+                "name": "Long Term Memory (LTM)"
+            },
+            "native": {}
+        },
+        {
+            "_id": "LTM.rawEventLog",
+            "type": "state",
+            "common": {
+                "name": "Raw Event Log (LTM)",
+                "type": "string",
+                "role": "json",
+                "read": true,
+                "write": false,
+                "desc": "Stores the raw sensor events for LTM processing before compression."
+            },
+            "native": {}
+        }
+    ]
 }
