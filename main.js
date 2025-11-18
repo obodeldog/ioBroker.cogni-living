@@ -14,15 +14,16 @@ const RAW_LOG_MAX_SIZE = 1500; // LTM (Long Term Memory) - Max Rohereignisse (ca
 const LTM_DP_RAW_LOG = 'LTM.rawEventLog'; // Datenpunktname für Raw Log
 // === SPRINT 14 END ===
 
+// PATCH 14.1: Persona Mapping auf Deutsch aktualisiert, da wir Deutsch jetzt im Prompt erzwingen.
 const PERSONA_MAPPING = {
-    generic: 'Analyze balanced for health, safety, and comfort.',
+    generic: 'Analysiere ausgewogen auf Gesundheit, Sicherheit und Komfort.',
     senior_aal:
-        'PRIORITY: Health and Safety for seniors (AAL). Detect inactivity, potential falls (inferred), unusual night activity. Comfort is secondary.',
-    family: 'Focus on family routines, child safety, and general household management. Expect high activity levels.',
+        'PRIORITÄT: Gesundheit und Sicherheit für Senioren (AAL). Erkenne Inaktivität, potenzielle Stürze (indirekt), ungewöhnliche nächtliche Aktivität. Komfort ist sekundär.',
+    family: 'Fokus auf Familienroutinen, Kindersicherheit und allgemeines Haushaltsmanagement. Erwarte hohe Aktivitätsniveaus.',
     single_comfort:
-        'Focus on maximizing comfort, automation efficiency, and energy saving for a single resident. Activity patterns are flexible.',
+        'Fokus auf Maximierung von Komfort, Automatisierungseffizienz und Energieeinsparung für einen einzelnen Bewohner. Aktivitätsmuster sind flexibel.',
     security:
-        'PRIORITY: Security. Detect intrusions, unusual presence when residents are away, or malfunctions indicating a security risk.',
+        'PRIORITÄT: Sicherheit. Erkenne Eindringlinge, ungewöhnliche Anwesenheit bei Abwesenheit der Bewohner oder Fehlfunktionen, die auf ein Sicherheitsrisiko hindeuten.',
 };
 
 class CogniLiving extends utils.Adapter {
@@ -44,6 +45,15 @@ class CogniLiving extends utils.Adapter {
          */
         this.rawEventLog = []; // LTM
         // === SPRINT 14 END ===
+
+        // === PATCH 14.1 START: State Tracking ===
+        /**
+         * Speichert den letzten bekannten Wert jedes Sensors, um Duplikate zuverlässig zu filtern.
+         * Key: Sensor ID, Value: der letzte Wert.
+         * @type {Record<string, any>}
+         */
+        this.sensorLastValues = {};
+        // === PATCH 14.1 END ===
 
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
@@ -79,7 +89,6 @@ class CogniLiving extends utils.Adapter {
         this.log.info(`AI Configuration Loaded. Persona: ${persona}. Context Details: ${context}`);
 
         // === 2. DATENPUNKTE ERSTELLEN (STM & Analysis) ===
-        // Hinweis: LTM Datenpunkte werden in checkLtmObjects verwaltet.
         // ... (Alle setObjectNotExistsAsync Aufrufe bleiben unverändert)
         await this.setObjectNotExistsAsync('events.lastEvent', {
             type: 'state',
@@ -184,28 +193,41 @@ class CogniLiving extends utils.Adapter {
             this.analysisHistory = [];
         }
 
-        // === SPRINT 14 START: LTM Laden ===
         // 3b. LTM (Long Term Memory) laden
-        // Stelle sicher, dass die LTM Objekte existieren und aktuell sind (Robustheit)
         await this.checkLtmObjects();
-        // Lade LTM-Daten (bevor States abonniert werden)
         await this.loadRawEventLog();
-        // === SPRINT 14 END ===
 
 
-        // === 4. STATES ABONNIEREN ===
-        // ... (Unverändert)
+        // === 4. STATES ABONNIEREN & INITIALISIEREN (PATCH 14.1) ===
         this.subscribeStates('analysis.trigger');
         const devices = this.config.devices;
         if (!devices || devices.length === 0) {
             this.log.warn('No sensors configured!');
         } else {
-            this.log.info(`Found ${devices.length} configured sensors. Subscribing...`);
+            // PATCH 14.1: Initialisiere this.sensorLastValues beim Start
+            this.log.info(`Found ${devices.length} configured sensors. Subscribing and initializing last values...`);
             for (const device of devices) {
                 if (device.id) {
                     await this.subscribeForeignStatesAsync(device.id);
+
+                    // Lese den aktuellen Zustand aus, um den Duplikatfilter korrekt zu starten
+                    try {
+                        const currentState = await this.getForeignStateAsync(device.id);
+                        // Prüfe auf gültigen Wert (nicht undefined/null)
+                        if (currentState && currentState.val !== undefined && currentState.val !== null) {
+                            this.sensorLastValues[device.id] = currentState.val;
+                        } else {
+                            // Initialisiere mit einem Sentinel-Wert (leeres Objekt), wenn kein Zustand existiert.
+                            // Dadurch wird der erste eingehende Wert (egal ob true, 0 oder null) immer geloggt, da {} !== Wert.
+                            this.sensorLastValues[device.id] = {};
+                        }
+                    } catch (error) {
+                        this.log.warn(`Could not fetch initial state for ${device.id}: ${error.message}`);
+                        this.sensorLastValues[device.id] = {};
+                    }
                 }
             }
+            this.log.debug(`Initialization of sensor last values complete.`);
         }
 
         // === 5. AUTOPILOT-TIMER STARTEN (MIT FILTER) ===
@@ -281,6 +303,7 @@ class CogniLiving extends utils.Adapter {
      * Lädt das Rohereignisprotokoll (LTM) aus dem ioBroker-Datenpunkt in den Arbeitsspeicher.
      */
     async loadRawEventLog() {
+        // ... (Unverändert von Sprint 14)
         try {
             const state = await this.getStateAsync(LTM_DP_RAW_LOG);
             if (state && state.val && typeof state.val === 'string') {
@@ -325,6 +348,7 @@ class CogniLiving extends utils.Adapter {
      * Limitiert die Größe vor dem Speichern (FIFO).
      */
     async saveRawEventLog() {
+        // ... (Unverändert von Sprint 14)
         // 1. Limit prüfen und kürzen (älteste Einträge entfernen)
         if (this.rawEventLog.length > RAW_LOG_MAX_SIZE) {
             const excess = this.rawEventLog.length - RAW_LOG_MAX_SIZE;
@@ -387,20 +411,30 @@ class CogniLiving extends utils.Adapter {
         // --- A) Sensor-Event (ack=true) ---
         const deviceConfig = (this.config.devices || []).find(d => d.id === id);
         if (!deviceConfig) {
+            // PATCH 14.1: Robustheit - Wenn ein Sensor entfernt wurde, aber noch im Tracker ist
+            if (this.sensorLastValues.hasOwnProperty(id)) {
+                // Entferne ihn aus dem Tracker
+                delete this.sensorLastValues[id];
+            }
             return;
         }
 
-        // 2. === SELEKTIVER FILTER ===
-        // Dieser Filter prüft das STM (eventHistory). Wenn ein Event hier blockiert wird (return),
-        // wird es auch nicht im LTM gespeichert, da processSensorEvent nicht aufgerufen wird.
+        // 2. === SELEKTIVER FILTER (PATCH 14.1) ===
         if (!deviceConfig.logDuplicates) {
-            const lastEventForThisId = this.eventHistory.find(event => event.id === id);
-            if (lastEventForThisId && lastEventForThisId.value === state.val) {
-                this.log.debug(`Ignoring redundant state update for ${id} (Value: ${state.val})`);
-                return;
+            // Prüfe gegen den unabhängigen Tracker für den letzten Wert
+            // Wir müssen prüfen, ob der Key existiert (Robustheit).
+            if (this.sensorLastValues.hasOwnProperty(id)) {
+                const lastValue = this.sensorLastValues[id];
+
+                // Vergleiche aktuellen Wert (state.val) mit dem letzten bekannten Wert (lastValue)
+                if (lastValue === state.val) {
+                    this.log.debug(`Ignoring redundant state update for ${id} (Value: ${state.val})`);
+                    return;
+                }
             }
         }
 
+        // Wenn der Filter passiert wird, verarbeite das Event
         this.processSensorEvent(id, state, deviceConfig).catch(e =>
             this.log.error(`Error processing sensor event: ${e.message}`),
         );
@@ -413,6 +447,11 @@ class CogniLiving extends utils.Adapter {
         const location = deviceConfig.location || 'unknown';
         const type = deviceConfig.type || 'unknown';
         const name = deviceConfig.name || 'unknown';
+
+        // === 0. Update Last Value (PATCH 14.1) ===
+        // Wichtig: Dies muss passieren, damit der Tracker aktuell ist für das nächste Event.
+        this.sensorLastValues[id] = state.val;
+
 
         // === 1. STM (Short Term Memory) Verarbeitung ===
         const eventObjectSTM = {
@@ -446,7 +485,6 @@ class CogniLiving extends utils.Adapter {
             timestamp: new Date(state.ts).toISOString(),
             sensorName: name,
             location: location,
-            // type: type, // Type ist für LTM weniger relevant als Location/Name
             value: state.val
         };
 
@@ -454,17 +492,16 @@ class CogniLiving extends utils.Adapter {
         this.rawEventLog.push(eventObjectLTM);
 
         // LTM persistent speichern (und Limitierung durchführen)
-        // Wir speichern nach jedem Event, um Datenverlust bei Neustart/Absturz zu minimieren.
         await this.saveRawEventLog();
 
-        this.log.debug(`Event processed. STM Count: ${this.eventHistory.length}, LTM Count: ${this.rawEventLog.length}`);
+        this.log.debug(`Event processed for ${id} (Value: ${state.val}). STM Count: ${this.eventHistory.length}, LTM Count: ${this.rawEventLog.length}`);
     }
 
     /**
      * Handler für Nachrichten von der Admin-UI
      */
     async onMessage(obj) {
-        // ... (Keine Änderungen in onMessage) ...
+        // ... (Keine Änderungen)
         if (typeof obj === 'object' && obj.message) {
             // Prüfe auf den spezifischen Befehl 'testApiKey'
             if (obj.command === 'testApiKey') {
@@ -500,7 +537,7 @@ class CogniLiving extends utils.Adapter {
      * Testet die Verbindung zur Gemini API.
      */
     async testGeminiConnection(apiKey) {
-        // ... (Keine Änderungen in testGeminiConnection) ...
+        // ... (Keine Änderungen)
         try {
             const testGenAI = new GoogleGenerativeAI(apiKey);
             const model = testGenAI.getGenerativeModel({ model: 'models/gemini-flash-latest' });
@@ -538,9 +575,8 @@ class CogniLiving extends utils.Adapter {
         }
     }
 
-    // (runGeminiAnalysis und alle Helper-Funktionen - unverändert)
+    // (runGeminiAnalysis - Aktualisiert mit Sprach-Fix und deutschem Kontext/Persona)
     async runGeminiAnalysis() {
-        // ... (Keine Änderungen in runGeminiAnalysis - analysiert weiterhin das STM) ...
         if (!this.geminiModel) {
             this.log.warn('Gemini AI is not initialized. Analysis aborted.');
             await this.setStateAsync('analysis.lastResult', { val: '{"error": "AI not initialized"}', ack: true });
@@ -556,30 +592,32 @@ class CogniLiving extends utils.Adapter {
         // --- KONTEXT UND PERSONA LADEN ---
         const personaKey = this.config.aiPersona || 'generic';
         const personaInstruction = PERSONA_MAPPING[personaKey] || PERSONA_MAPPING['generic'];
-        const livingContext = (this.config.livingContext || 'No specific details provided.').substring(0, 200);
+        // PATCH 14.1: Kontext auf Deutsch, wenn leer.
+        const livingContext = (this.config.livingContext || 'Keine spezifischen Details angegeben.').substring(0, 200);
 
-        // --- JSON PROMPT MIT KONTEXT ---
+        // --- JSON PROMPT MIT KONTEXT (PATCH 14.1: SPRACH-FIX) ---
         const systemPrompt = `
-            ROLE: Smart Home Analyst.
-            TASK: Analyze the provided sensor events based on the defined CONTEXT and PERSONA.
-            FORMAT: Respond with a JSON object ONLY. NO PROSE. NO MARKDOWN outside strings.
+            ROLLE: Smart Home Analyst.
+            AUFGABE: Analysiere die bereitgestellten Sensorereignisse basierend auf dem definierten KONTEXT und der PERSONA.
+            SPRACHE: Antworte ausschließlich auf Deutsch (DE).
+            FORMAT: Antworte NUR mit einem JSON-Objekt. KEIN Prosatext. KEIN Markdown außerhalb von Strings.
 
-            CONTEXT (Living Situation Details):
+            KONTEXT (Details zur Wohnsituation):
             ${livingContext}
 
-            PERSONA (Analysis Focus Instructions):
+            PERSONA (Anweisungen zum Analysefokus):
             ${personaInstruction}
 
             JSON SCHEMA:
             {
               "activity": {
-                "summary": "string (Detailed assessment 1-2 sentences, considering CONTEXT/PERSONA)",
-                "isAlert": false, // boolean (TRUE only if situation is critical based on CONTEXT/PERSONA)
-                "alertReason": "" // string (Reason if isAlert=true, else empty string)
+                "summary": "string (Detaillierte Bewertung 1-2 Sätze, unter Berücksichtigung von KONTEXT/PERSONA)",
+                "isAlert": false, // boolean (TRUE nur, wenn die Situation basierend auf KONTEXT/PERSONA kritisch ist)
+                "alertReason": "" // string (Grund, wenn isAlert=true, sonst leerer String)
               },
               "comfort": {
-                "summary": "string (Detailed assessment 1-2 sentences)",
-                "suggestion": "string" // Proactive automation suggestion (1 sentence) or empty string
+                "summary": "string (Detaillierte Bewertung 1-2 Sätze)",
+                "suggestion": "string" // Proaktiver Automatisierungsvorschlag (1 Satz) oder leerer String
               }
             }
         `;
@@ -617,6 +655,7 @@ class CogniLiving extends utils.Adapter {
             }
 
             // --- JSON VALIDIERUNG UND VERARBEITUNG ---
+            // ... (Unverändert)
             if (
                 analysisResult &&
                 analysisResult.activity &&
@@ -679,15 +718,17 @@ class CogniLiving extends utils.Adapter {
         } catch (error) {
             // Fehler: API-Aufruf fehlgeschlagen
             this.log.error(`Error calling Gemini AI: ${error.message}`);
+            // Patch 14.1: Stelle sicher, dass die Fehlermeldung korrekt im JSON gespeichert wird (Escape quotes)
+            const errorMessage = (error.message || 'Unknown error').replace(/"/g, '\\"');
             await this.setStateAsync('analysis.lastResult', {
-                val: `{"error": "API Call failed", "details": "${error.message}"}`,
+                val: `{"error": "API Call failed", "details": "${errorMessage}"}`,
                 ack: true,
             });
         }
     }
 
+    // (Helper functions bleiben unverändert)
     _formatEventForHistory(event) {
-        // ... (Keine Änderungen in Helper-Funktionen) ...
         const time = new Date(event.timestamp).toLocaleTimeString('de-DE');
         return `${time} - ${event.name} (${event.location}) -> ${event.value}`;
     }

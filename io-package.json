@@ -1,10 +1,14 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.1.15",
+        "version": "0.1.15-p1",
         "enabled": true,
         "main": "main.js",
         "news": {
+            "0.1.15-p1": {
+                "en": "CRITICAL FIX: Corrected duplicate filter logic (independent tracking). Fixed AI language inconsistency (forced German).",
+                "de": "KRITISCHER FIX: Logik des Duplikatfilters korrigiert (unabhängiges Tracking). KI-Sprachinkonsistenz behoben (Deutsch erzwungen)."
+            },
             "0.1.15": {
                 "en": "LTM Implementation (Part 1): Added persistent Raw Event Log (1500 events) for long-term memory processing.",
                 "de": "LTM Implementierung (Teil 1): Persistentes Rohdaten-Ereignisprotokoll (1500 Ereignisse) für die Langzeitgedächtnisverarbeitung hinzugefügt."
