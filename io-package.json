@@ -6,8 +6,8 @@
         "main": "main.js",
         "news": {
             "0.1.17": {
-                "en": "Cogni-Engine (LTM Part 3): AI Analysis now uses Daily Digests as Baseline (if >= 7 days available). Added 'deviationFromBaseline' state to detect anomalies.",
-                "de": "Cogni-Engine (LTM Teil 3): KI-Analyse nutzt nun Daily Digests als Baseline (wenn >= 7 Tage vorhanden). State 'deviationFromBaseline' hinzugefügt, um Anomalien zu erkennen."
+                "en": "Cogni-Engine (LTM Part 3): AI Analysis now uses Baseline comparison. Added 'deviationFromBaseline'. Learning phase is configurable. Added System Mode (Context Override) and Baseline Status indicator.",
+                "de": "Cogni-Engine (LTM Teil 3): KI-Analyse nutzt nun Baseline-Vergleich. 'deviationFromBaseline' hinzugefügt. Lernphase ist konfigurierbar. System-Modus (Context Override) und Baseline-Statusindikator hinzugefügt."
             },
             "0.1.16": {
                 "en": "LTM Implementation (Part 2): Added Scheduler (03:00 AM) and AI-driven Daily Digests. Raw logs are now compressed into summaries. Added manual trigger.",
@@ -32,6 +32,22 @@
             "0.1.11": {
                 "en": "Major Stability Improvement: Switched AI communication to JSON mode.",
                 "de": "Große Stabilitätsverbesserung: KI-Kommunikation auf JSON-Modus umgestellt."
+            },
+            "0.1.10": {
+                "en": "CRITICAL FIX: Corrected sensor subscription logic (change: any).",
+                "de": "KRITISCHER FIX: Sensor-Abonnement-Logik (change: any) korrigiert."
+            },
+            "0.1.9": {
+                "en": "Added selective filter (log duplicates) and fixed Admin UI scrollbar issue.",
+                "de": "Selektiven Filter (Duplikate loggen) hinzugefügt und Scrollbar-Problem in der Admin-UI behoben."
+            },
+            "0.1.8": {
+                "en": "Refined AI prompt structure.",
+                "de": "KI-Prompt-Struktur verfeinert."
+            },
+            "0.0.1": {
+                "en": "initial release",
+                "de": "Erstveröffentlichung"
             }
         },
         "titleLang": {
@@ -91,7 +107,8 @@
         "geminiApiKey": "",
         "analysisInterval": 15,
         "aiPersona": "generic",
-        "livingContext": ""
+        "livingContext": "",
+        "minDaysForBaseline": 7
     },
     "objects": [],
     "instanceObjects": [
@@ -111,8 +128,7 @@
                 "type": "string",
                 "role": "json",
                 "read": true,
-                "write": false,
-                "desc": "Stores the raw sensor events for LTM processing before compression."
+                "write": false
             },
             "native": {}
         },
@@ -124,8 +140,7 @@
                 "type": "string",
                 "role": "json",
                 "read": true,
-                "write": false,
-                "desc": "Stores the compressed AI summaries of daily activity (the Baseline)."
+                "write": false
             },
             "native": {}
         },
@@ -137,8 +152,19 @@
                 "type": "string",
                 "role": "text",
                 "read": true,
-                "write": false,
-                "desc": "Status of the last LTM compression run."
+                "write": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "LTM.baselineStatus",
+            "type": "state",
+            "common": {
+                "name": "Baseline Learning Status",
+                "type": "string",
+                "role": "text",
+                "read": true,
+                "write": false
             },
             "native": {}
         },
@@ -151,8 +177,35 @@
                 "role": "button",
                 "read": true,
                 "write": true,
-                "def": false,
-                "desc": "Manually triggers the LTM compression process (usually runs at 03:00 AM)."
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "system",
+            "type": "channel",
+            "common": {
+                "name": "System Status & Control"
+            },
+            "native": {}
+        },
+        {
+            "_id": "system.mode",
+            "type": "state",
+            "common": {
+                "name": "System Mode (Context Override)",
+                "type": "string",
+                "role": "state",
+                "read": true,
+                "write": true,
+                "def": "normal",
+                "states": {
+                    "normal": "Normal",
+                    "vacation": "Urlaub (Abwesend)",
+                    "party": "Party (Auto-Reset 04:00)",
+                    "guest": "Gast/Reinigung (Auto-Reset 04:00)"
+                },
+                "desc": "Overrides the context for AI analysis."
             },
             "native": {}
         }

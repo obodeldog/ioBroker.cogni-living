@@ -53,10 +53,12 @@ interface DeviceConfig {
     logDuplicates: boolean;
 }
 
+// SPRINT 16: State erweitert
 interface SettingsState {
     devices: DeviceConfig[];
     geminiApiKey: string;
     analysisInterval: number;
+    minDaysForBaseline: number; // SPRINT 16 NEU
     aiPersona: string;
     livingContext: string;
     showSelectId: boolean;
@@ -74,6 +76,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             devices: props.native.devices || [],
             geminiApiKey: props.native.geminiApiKey || '',
             analysisInterval: props.native.analysisInterval || 15,
+            // SPRINT 16 NEU: Lade Konfiguration (Default 7)
+            minDaysForBaseline: props.native.minDaysForBaseline || 7,
             aiPersona: props.native.aiPersona || 'generic',
             livingContext: props.native.livingContext || '',
             showSelectId: false,
@@ -218,7 +222,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     };
 
     render() {
-        const { devices, geminiApiKey, analysisInterval, aiPersona, livingContext, isTestingApi } = this.state;
+        // SPRINT 16: minDaysForBaseline hinzugefügt
+        const { devices, geminiApiKey, analysisInterval, minDaysForBaseline, aiPersona, livingContext, isTestingApi } = this.state;
 
         // Definiere Styles mittels 'sx' Prop (MUI v5)
         const sxConfigSection = {
@@ -292,7 +297,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
                         <FormControl margin="normal">
                             <TextField
-                                sx={{ width: '200px', mr: 2 }}
+                                sx={{ width: '250px', mr: 2 }}
                                 label={I18n.t('analysis_interval')}
                                 value={analysisInterval}
                                 type="number"
@@ -306,7 +311,33 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         </FormControl>
                     </Box>
 
-                    {/* === Sektion 2: Wohnkontext & Persona === */}
+                    {/* === SPRINT 16 NEU: Sektion 2: LTM Einstellungen === */}
+                    <Typography
+                        variant="h6"
+                        gutterBottom
+                    >
+                        {I18n.t('headline_ltm_settings')}
+                    </Typography>
+                    <Box sx={sxConfigSection}>
+                        <FormControl margin="normal">
+                            <TextField
+                                sx={{ width: '250px', mr: 2 }}
+                                label={I18n.t('min_days_for_baseline')}
+                                value={minDaysForBaseline}
+                                type="number"
+                                inputProps={{ min: 1, max: 30 }}
+                                onChange={e =>
+                                    this.updateNativeValue('minDaysForBaseline', parseInt(e.target.value, 10) || 7)
+                                }
+                                helperText={I18n.t('min_days_for_baseline_helper')}
+                                variant="outlined"
+                                size="small"
+                            />
+                        </FormControl>
+                    </Box>
+
+
+                    {/* === Sektion 3: Wohnkontext & Persona === */}
                     <Typography
                         variant="h6"
                         gutterBottom
@@ -354,7 +385,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         </FormControl>
                     </Box>
 
-                    {/* === Sektion 3: Sensor Konfiguration === */}
+                    {/* === Sektion 4: Sensor Konfiguration === */}
                     <Typography
                         variant="h6"
                         gutterBottom
