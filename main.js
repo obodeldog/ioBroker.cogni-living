@@ -4,26 +4,35 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const schedule = require('node-schedule');
 
 // Globale Konstanten
-const HISTORY_MAX_SIZE = 50; // STM (Short Term Memory)
+const HISTORY_MAX_SIZE = 50; // STM
 const DEBUG_HISTORY_COUNT = 5;
 const GEMINI_MODEL = 'models/gemini-flash-latest';
 const ANALYSIS_HISTORY_MAX_SIZE = 100;
 const DEBUG_ANALYSIS_HISTORY_COUNT = 5;
 
-// === SPRINT 14/15/16: LTM Konstanten ===
+// === LTM Konstanten (Sprints 14, 15, 16) ===
 const RAW_LOG_MAX_SIZE = 1500;
 const LTM_DP_RAW_LOG = 'LTM.rawEventLog';
 const DAILY_DIGEST_MAX_SIZE = 60;
 const LTM_DP_DAILY_DIGESTS = 'LTM.dailyDigests';
 const LTM_DP_STATUS = 'LTM.processingStatus';
 const LTM_DP_TRIGGER_DIGEST = 'LTM.triggerDailyDigest';
+const LTM_DP_BASELINE_STATUS = 'LTM.baselineStatus'; // SPRINT 16
 const LTM_SCHEDULE = '0 3 * * *'; // Täglich um 03:00 Uhr
 const LTM_MIN_EVENTS_FOR_COMPRESSION = 5;
-// SPRINT 16 START
-const MIN_DAYS_FOR_BASELINE = 7; // Mindestens 7 Tage Daten für eine gültige Baseline
-const MAX_DAYS_FOR_BASELINE_PROMPT = 30; // Max 30 Tage in den Prompt laden
-// SPRINT 16 END
-// === SPRINT 14/15/16 END ===
+const MAX_DAYS_FOR_BASELINE_PROMPT = 30; // SPRINT 16
+
+// === System Konstanten (Sprint 16) ===
+const SYSTEM_DP_MODE = 'system.mode';
+const MODE_RESET_SCHEDULE = '0 4 * * *'; // Täglich um 04:00 Uhr
+const SYSTEM_MODES = {
+    NORMAL: 'normal',
+    VACATION: 'vacation',
+    PARTY: 'party',
+    GUEST: 'guest'
+};
+// Modi, die um 04:00 Uhr automatisch zurückgesetzt werden
+const AUTO_RESET_MODES = [SYSTEM_MODES.PARTY, SYSTEM_MODES.GUEST];
 
 
 // Persona Mapping (Deutsch)
@@ -54,9 +63,13 @@ class CogniLiving extends utils.Adapter {
         this.rawEventLog = []; // LTM Raw
         this.dailyDigests = []; // LTM Compressed (Baseline)
         this.ltmJob = null;
+        this.modeResetJob = null; // SPRINT 16
 
         // State Tracking
         this.sensorLastValues = {};
+
+        // System Status (Sprint 16)
+        this.currentSystemMode = SYSTEM_MODES.NORMAL;
 
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
@@ -68,8 +81,19 @@ class CogniLiving extends utils.Adapter {
         const adapterVersion = this.version || 'unknown';
         this.log.info(`cogni-living adapter starting (v${adapterVersion})`);
 
+        // SPRINT 16: Validierung der Konfiguration
+        // Stelle sicher, dass der Wert existiert und gültig ist (1-30 Tage).
+        if (!this.config.minDaysForBaseline || this.config.minDaysForBaseline < 1 || this.config.minDaysForBaseline > 30) {
+            // Logge Warnung nur, wenn ein Wert existierte, aber ungültig war.
+            if (this.config.minDaysForBaseline) {
+                this.log.warn(`Configuration invalid: minDaysForBaseline must be 1-30. Found: ${this.config.minDaysForBaseline}. Using default: 7.`);
+            }
+            this.config.minDaysForBaseline = 7; // Setze Default
+        }
+        this.log.info(`LTM Configuration: Learning phase duration set to ${this.config.minDaysForBaseline} days.`);
+
+
         // === 1. KI INITIALISIERUNG (JSON MODE) ===
-        // ... (Unverändert)
         if (this.config.geminiApiKey) {
             try {
                 this.genAI = new GoogleGenerativeAI(this.config.geminiApiKey);
@@ -91,7 +115,14 @@ class CogniLiving extends utils.Adapter {
         const context = this.config.livingContext || '(Not defined)';
         this.log.info(`AI Configuration Loaded. Persona: ${persona}. Context Details: ${context}`);
 
-        // === 2. DATENPUNKTE ERSTELLEN (STM & Analysis) ===
+
+        // === 2. DATENPUNKTE ERSTELLEN & LADEN ===
+
+        // 2a. System Objekte (Sprint 16)
+        await this.checkSystemObjects();
+        await this.loadSystemMode(); // Lade aktuellen Modus
+
+        // 2b. Event & Analysis Objekte
         await this.setObjectNotExistsAsync('events.lastEvent', {
             type: 'state',
             common: { name: 'Last raw event', type: 'string', role: 'json', read: true, write: false },
@@ -144,24 +175,24 @@ class CogniLiving extends utils.Adapter {
             native: {},
         });
 
-        // SPRINT 16 START: Neuer Datenpunkt
+        // SPRINT 16 START: Neuer Datenpunkt Deviation
         await this.setObjectNotExistsAsync('analysis.deviationFromBaseline', {
             type: 'state',
             common: {
                 name: 'Deviation from Baseline (LTM)',
                 type: 'string',
-                role: 'text',
+                role: 'state', // Geändert von text zu state für Dropdown-Nutzung
                 read: true,
                 write: false,
                 def: 'N/A (Learning)',
-                // States für bessere Visualisierung in ioBroker
+                // States für bessere Visualisierung in ioBroker (Übersetzt)
                 states: {
-                    "N/A (Learning)": "N/A (Learning Phase)",
-                    "N/A (No Activity)": "N/A (No Activity)",
-                    "none": "None (Normal)",
-                    "slight": "Slight",
-                    "significant": "Significant",
-                    "critical": "Critical"
+                    "N/A (Learning)": "N/A (Lernphase)",
+                    "N/A (No Activity)": "N/A (Keine Aktivität)",
+                    "none": "Keine (Normal)",
+                    "slight": "Geringfügig",
+                    "significant": "Signifikant",
+                    "critical": "Kritisch"
                 }
             },
             native: {},
@@ -208,7 +239,6 @@ class CogniLiving extends utils.Adapter {
         // === 3. GEDÄCHTNIS LADEN ===
 
         // 3a. Analyse-Logbuch (Analysis History) laden
-        // ... (Unverändert)
         try {
             const historyState = await this.getStateAsync('analysis.analysisHistory');
             if (historyState && historyState.val) {
@@ -221,16 +251,17 @@ class CogniLiving extends utils.Adapter {
             this.analysisHistory = [];
         }
 
-        // 3b. LTM (Long Term Memory) laden (Sprint 14/15)
+        // 3b. LTM (Long Term Memory) laden
         await this.checkLtmObjects();
         await this.loadRawEventLog();
-        await this.loadDailyDigests();
+        await this.loadDailyDigests(); // Lädt Digests und aktualisiert Baseline Status
 
 
         // === 4. STATES ABONNIEREN & INITIALISIEREN ===
-        // ... (Unverändert)
         this.subscribeStates('analysis.trigger');
         this.subscribeStates(LTM_DP_TRIGGER_DIGEST);
+        // SPRINT 16: Abonniere System Mode Änderungen
+        this.subscribeStates(SYSTEM_DP_MODE);
 
         const devices = this.config.devices;
         if (!devices || devices.length === 0) {
@@ -296,14 +327,126 @@ class CogniLiving extends utils.Adapter {
             this.log.warn('Analysis interval is set to 0. Autopilot disabled.');
         }
 
-        // 5b. LTM Scheduler (Sprint 15)
+        // 5b. LTM Scheduler
         this.setupLtmScheduler();
+
+        // 5c. Mode Reset Scheduler (SPRINT 16)
+        this.setupModeResetScheduler();
     }
 
     // ======================================================================
-    // === LTM Management Funktionen (Sprints 14, 15) ===
-    // (Keine Änderungen in diesen Funktionen in Sprint 16)
+    // === SPRINT 16: System Mode Management ===
     // ======================================================================
+
+    async checkSystemObjects() {
+        // Kanal System
+        await this.extendObjectAsync('system', {
+            type: 'channel',
+            common: {
+                name: 'System Status & Control',
+            },
+            native: {},
+        });
+
+        // Datenpunkt System Mode
+        await this.extendObjectAsync(SYSTEM_DP_MODE, {
+            type: 'state',
+            common: {
+                name: 'System Mode (Context Override)',
+                type: 'string',
+                role: 'state',
+                read: true,
+                write: true, // Erlaubt dem Nutzer das Ändern (VIS/Skripte)
+                def: SYSTEM_MODES.NORMAL,
+                states: {
+                    [SYSTEM_MODES.NORMAL]: "Normal",
+                    [SYSTEM_MODES.VACATION]: "Urlaub (Abwesend)",
+                    [SYSTEM_MODES.PARTY]: "Party (Auto-Reset 04:00)",
+                    [SYSTEM_MODES.GUEST]: "Gast/Reinigung (Auto-Reset 04:00)"
+                }
+            },
+            native: {},
+        });
+    }
+
+    /**
+     * Lädt den aktuellen Systemmodus aus dem Datenpunkt.
+     */
+    async loadSystemMode() {
+        try {
+            const state = await this.getStateAsync(SYSTEM_DP_MODE);
+            if (state && state.val && typeof state.val === 'string') {
+                // Prüfe, ob der Wert gültig ist
+                if (Object.values(SYSTEM_MODES).includes(state.val)) {
+                    this.currentSystemMode = state.val;
+                } else {
+                    this.log.warn(`Invalid system mode found in state: ${state.val}. Resetting to NORMAL.`);
+                    this.currentSystemMode = SYSTEM_MODES.NORMAL;
+                    await this.setStateAsync(SYSTEM_DP_MODE, { val: this.currentSystemMode, ack: true });
+                }
+            } else {
+                // Wenn State nicht existiert oder leer ist, setze Standard
+                this.currentSystemMode = SYSTEM_MODES.NORMAL;
+                // Stelle sicher, dass der State korrekt initialisiert wird, falls er fehlte
+                if (!state || state.val === null || state.val === undefined) {
+                    await this.setStateAsync(SYSTEM_DP_MODE, { val: this.currentSystemMode, ack: true });
+                }
+            }
+        } catch (error) {
+            this.log.error(`Error loading system mode: ${error.message}. Defaulting to NORMAL.`);
+            this.currentSystemMode = SYSTEM_MODES.NORMAL;
+        }
+        this.log.info(`Current System Mode: ${this.currentSystemMode}`);
+    }
+
+    /**
+     * Richtet den Scheduler für das Zurücksetzen des System-Modus ein (04:00 Uhr).
+     */
+    setupModeResetScheduler() {
+        if (this.modeResetJob) {
+            this.modeResetJob.cancel();
+        }
+
+        this.log.info(`Setting up System Mode Reset Scheduler (Cron: ${MODE_RESET_SCHEDULE}).`);
+
+        this.modeResetJob = schedule.scheduleJob(MODE_RESET_SCHEDULE, async () => {
+            this.log.info('System Mode Reset Scheduler triggered.');
+
+            // Lade den Modus neu (sollte synchron sein, aber sicher ist sicher)
+            await this.loadSystemMode();
+
+            if (AUTO_RESET_MODES.includes(this.currentSystemMode)) {
+                this.log.info(`Auto-resetting System Mode from ${this.currentSystemMode} to NORMAL.`);
+                // Setze den State. Wir setzen ack=false, um zu signalisieren, dass es eine "Aktion" war (wie ein Button-Druck).
+                // onStateChange wird dies verarbeiten.
+                await this.setStateAsync(SYSTEM_DP_MODE, { val: SYSTEM_MODES.NORMAL, ack: false });
+            } else {
+                this.log.info(`System Mode is '${this.currentSystemMode}'. No reset needed.`);
+            }
+        });
+    }
+
+
+    // ======================================================================
+    // === LTM Management Funktionen (Sprints 14, 15, 16) ===
+    // ======================================================================
+
+    // SPRINT 16: Helper für Baseline Status
+    async updateBaselineStatus() {
+        // Lese Konfiguration für die benötigte Dauer
+        const requiredDays = this.config.minDaysForBaseline || 7;
+        const currentDays = this.dailyDigests.length;
+        let statusMessage = '';
+
+        if (currentDays >= requiredDays) {
+            statusMessage = `Aktiv (Datenbasis: ${currentDays} Tage)`;
+        } else {
+            statusMessage = `Lernphase (${currentDays}/${requiredDays} Tage)`;
+        }
+
+        await this.setStateAsync(LTM_DP_BASELINE_STATUS, { val: statusMessage, ack: true });
+    }
+
 
     async checkLtmObjects() {
         // Kanal LTM
@@ -370,6 +513,19 @@ class CogniLiving extends utils.Adapter {
             },
             native: {},
         });
+
+        // SPRINT 16 NEU: Baseline Status
+        await this.extendObjectAsync(LTM_DP_BASELINE_STATUS, {
+            type: 'state',
+            common: {
+                'name': 'Baseline Learning Status',
+                'type': 'string',
+                'role': 'text',
+                'read': true,
+                'write': false,
+            },
+            native: {},
+        });
     }
 
     async loadRawEventLog() {
@@ -430,6 +586,7 @@ class CogniLiving extends utils.Adapter {
         }
     }
 
+    // loadDailyDigests (Aktualisiert für Sprint 16)
     async loadDailyDigests() {
         try {
             const state = await this.getStateAsync(LTM_DP_DAILY_DIGESTS);
@@ -444,7 +601,8 @@ class CogniLiving extends utils.Adapter {
                         const excess = this.dailyDigests.length - DAILY_DIGEST_MAX_SIZE;
                         this.dailyDigests.splice(0, excess);
                         this.log.info(`LTM: Daily Digests wurden auf das aktuelle Limit (${DAILY_DIGEST_MAX_SIZE}) gekürzt.`);
-                        await this.saveDailyDigests();
+                        // Wir setzen updateStatus auf false, da wir es nach dem Try/Catch Block sowieso aufrufen.
+                        await this.saveDailyDigests(false);
                     }
                 } else {
                     throw new Error('Datenpunkt enthält ungültige Daten (kein Array).');
@@ -462,9 +620,15 @@ class CogniLiving extends utils.Adapter {
                 this.log.error(`LTM: Konnte korrupten State (Digests) nicht bereinigen: ${e.message}`);
             }
         }
+        // SPRINT 16: Status aktualisieren, nachdem Daten geladen wurden
+        await this.updateBaselineStatus();
     }
 
-    async saveDailyDigests() {
+    /**
+     * Speichert die Daily Digests (LTM Compressed) in den ioBroker-Datenpunkt.
+     * @param {boolean} updateStatus - Ob der Baseline-Status ebenfalls aktualisiert werden soll (Standard: true).
+     */
+    async saveDailyDigests(updateStatus = true) {
         // 1. Limit prüfen und kürzen
         if (this.dailyDigests.length > DAILY_DIGEST_MAX_SIZE) {
             const excess = this.dailyDigests.length - DAILY_DIGEST_MAX_SIZE;
@@ -477,6 +641,11 @@ class CogniLiving extends utils.Adapter {
             await this.setStateAsync(LTM_DP_DAILY_DIGESTS, { val: data, ack: true });
         } catch (error) {
             this.log.error(`LTM: Fehler beim Speichern der Daily Digests: ${error.message}`);
+        }
+
+        // SPRINT 16: Status aktualisieren
+        if (updateStatus) {
+            await this.updateBaselineStatus();
         }
     }
 
@@ -533,6 +702,12 @@ class CogniLiving extends utils.Adapter {
         const personaInstruction = PERSONA_MAPPING[personaKey] || PERSONA_MAPPING['generic'];
         const livingContext = (this.config.livingContext || 'Keine spezifischen Details angegeben.').substring(0, 200);
 
+        // SPRINT 16: Hinweis zum System-Modus, damit die KI weiß, wenn der Tag "unnormal" war.
+        let modeNote = '';
+        if (this.currentSystemMode !== SYSTEM_MODES.NORMAL) {
+            modeNote = `\nHINWEIS: Das System befand sich während dieses Zeitraums im Modus '${this.currentSystemMode}'. Berücksichtige dies bei der Zusammenfassung.`;
+        }
+
         const systemPrompt = `
             ROLLE: Data Compression Agent (Langzeitgedächtnis).
             AUFGABE: Komprimiere die bereitgestellten rohen Sensor-Events in eine prägnante Zusammenfassung des Zeitraums (ca. 1 Tag).
@@ -541,6 +716,7 @@ class CogniLiving extends utils.Adapter {
 
             KONTEXT (Details zur Wohnsituation):
             ${livingContext}
+            ${modeNote}
 
             PERSONA (Analysefokus - Beeinflusst die Interpretation der Daten):
             ${personaInstruction}
@@ -578,8 +754,7 @@ class CogniLiving extends utils.Adapter {
         } catch (error) {
             this.log.error(`LTM Compression failed during AI call or JSON parsing: ${error.message}`);
             await this.setStateAsync(LTM_DP_STATUS, { val: `Error: AI/JSON failure - ${error.message}`, ack: true });
-            // WICHTIG: Bei Fehler brechen wir ab, ABER wir löschen die Rohdaten NICHT.
-            // So kann der Prozess beim nächsten Lauf (oder manuell) wiederholt werden.
+            // Bei Fehler abbrechen, Daten nicht löschen.
             return;
         }
 
@@ -591,22 +766,19 @@ class CogniLiving extends utils.Adapter {
                 timestamp: new Date().toISOString(), // Zeitpunkt der Kompression
                 eventCount: eventCount,
                 summary: compressionResult.summary,
-                activityLevel: compressionResult.activityLevel
+                activityLevel: compressionResult.activityLevel,
+                systemMode: this.currentSystemMode // SPRINT 16: Speichere den Modus des Tages
             };
 
             // Zum Speicher hinzufügen (Neuestes hinten - FIFO)
             this.dailyDigests.push(digestEntry);
-            await this.saveDailyDigests();
+            await this.saveDailyDigests(); // true (default) -> aktualisiert Baseline Status
 
             // 6. Rohdaten bereinigen
-            // Wir entfernen die erfolgreich komprimierten Daten aus dem this.rawEventLog.
-
             // Robuste Methode: Entferne die ersten 'eventCount' Elemente.
-            // Dies stellt sicher, dass Events, die während der KI-Verarbeitung ankamen, erhalten bleiben.
             if (this.rawEventLog.length >= eventCount) {
                 this.rawEventLog.splice(0, eventCount);
             } else {
-                // Sollte nicht passieren, aber zur Sicherheit:
                 this.log.warn("LTM: Mismatch between compressed data count and rawEventLog length. Clearing entire log.");
                 this.rawEventLog = [];
             }
@@ -618,7 +790,6 @@ class CogniLiving extends utils.Adapter {
         } else {
             this.log.error(`LTM Compression failed: Invalid JSON structure received from AI. Received: ${JSON.stringify(compressionResult)}`);
             await this.setStateAsync(LTM_DP_STATUS, { val: 'Error: Invalid JSON structure.', ack: true });
-            // Auch hier: Rohdaten nicht löschen, um Wiederholung zu ermöglichen.
         }
 
         this.log.info('=== LTM Compression Process Finished ===');
@@ -631,7 +802,7 @@ class CogniLiving extends utils.Adapter {
 
     async resetAnalysisStates() {
         await this.setStateAsync('analysis.activitySummary', { val: 'No recent activity.', ack: true });
-        // SPRINT 16 NEU: Setze Deviation zurück
+        // SPRINT 16: Setze Deviation zurück
         await this.setStateAsync('analysis.deviationFromBaseline', { val: 'N/A (No Activity)', ack: true });
         await this.setStateAsync('analysis.comfortSummary', { val: '', ack: true });
         await this.setStateAsync('analysis.comfortSuggestion', { val: '', ack: true });
@@ -639,7 +810,6 @@ class CogniLiving extends utils.Adapter {
     }
 
     onUnload(callback) {
-        // ... (Unverändert von Sprint 15)
         try {
             // Autopilot Timer stoppen
             if (this.analysisTimer) {
@@ -648,11 +818,18 @@ class CogniLiving extends utils.Adapter {
                 this.analysisTimer = null;
             }
 
-            // Scheduler Cleanup
+            // LTM Scheduler Cleanup
             if (this.ltmJob) {
                 this.log.info('Cancelling LTM Scheduler...');
                 this.ltmJob.cancel();
                 this.ltmJob = null;
+            }
+
+            // SPRINT 16: Mode Reset Scheduler Cleanup
+            if (this.modeResetJob) {
+                this.log.info('Cancelling Mode Reset Scheduler...');
+                this.modeResetJob.cancel();
+                this.modeResetJob = null;
             }
 
         } catch (e) {
@@ -662,10 +839,30 @@ class CogniLiving extends utils.Adapter {
     }
 
     onStateChange(id, state) {
-        // ... (Unverändert von Sprint 15)
         if (!state) {
             return;
         }
+
+        // SPRINT 16: Handle System Mode Changes (ack=false ODER ack=true)
+        if (id === `${this.namespace}.${SYSTEM_DP_MODE}`) {
+            if (state.val && Object.values(SYSTEM_MODES).includes(state.val)) {
+                if (this.currentSystemMode !== state.val) {
+                    // Logge die Quelle der Änderung (Adapter intern oder User/Script)
+                    this.log.info(`System Mode changed to: ${state.val} (Source: ${state.ack ? 'Adapter/Internal' : 'User/Script'})`);
+                    this.currentSystemMode = state.val;
+                    // Bestätige die Änderung, falls sie nicht vom Adapter selbst kam (ack=false)
+                    if (!state.ack) {
+                        this.setState(id, { val: this.currentSystemMode, ack: true });
+                    }
+                }
+            } else if (!state.ack) {
+                // Wenn ein ungültiger Wert vom Nutzer gesetzt wurde (ack=false), korrigiere ihn
+                this.log.warn(`Invalid System Mode requested: ${state.val}. Reverting to current mode.`);
+                this.setState(id, { val: this.currentSystemMode, ack: true });
+            }
+            return;
+        }
+
 
         // --- B) Befehl (ack=false) ---
         if (!state.ack) {
@@ -716,7 +913,6 @@ class CogniLiving extends utils.Adapter {
     }
 
     async processSensorEvent(id, state, deviceConfig) {
-        // ... (Unverändert von Patch 14.1/Sprint 15)
         const location = deviceConfig.location || 'unknown';
         const type = deviceConfig.type || 'unknown';
         const name = deviceConfig.name || 'unknown';
@@ -769,7 +965,6 @@ class CogniLiving extends utils.Adapter {
     }
 
     async onMessage(obj) {
-        // ... (Unverändert)
         if (typeof obj === 'object' && obj.message) {
             // Prüfe auf den spezifischen Befehl 'testApiKey'
             if (obj.command === 'testApiKey') {
@@ -802,7 +997,6 @@ class CogniLiving extends utils.Adapter {
     }
 
     async testGeminiConnection(apiKey) {
-        // ... (Unverändert)
         try {
             const testGenAI = new GoogleGenerativeAI(apiKey);
             const model = testGenAI.getGenerativeModel({ model: 'models/gemini-flash-latest' });
@@ -842,11 +1036,12 @@ class CogniLiving extends utils.Adapter {
 
 
     // ======================================================================
-    // === SPRINT 16 START: Cogni-Engine (runGeminiAnalysis Upgrade) ===
+    // === SPRINT 16: Cogni-Engine (runGeminiAnalysis Upgrade) ===
     // ======================================================================
 
     /**
-     * Führt die KI-Analyse durch, indem STM (aktuelle Daten) mit LTM (Baseline) verglichen wird.
+     * Führt die KI-Analyse durch, indem STM (aktuelle Daten) mit LTM (Baseline) verglichen wird,
+     * unter Berücksichtigung des aktuellen System-Modus.
      */
     async runGeminiAnalysis() {
         if (!this.geminiModel) {
@@ -861,20 +1056,44 @@ class CogniLiving extends utils.Adapter {
             return;
         }
 
-        // --- 1. KONTEXT UND PERSONA LADEN ---
+        // --- 1. KONTEXT, PERSONA UND SYSTEM-MODUS LADEN ---
         const personaKey = this.config.aiPersona || 'generic';
         const personaInstruction = PERSONA_MAPPING[personaKey] || PERSONA_MAPPING['generic'];
         const livingContext = (this.config.livingContext || 'Keine spezifischen Details angegeben.').substring(0, 200);
+
+        // SPRINT 16: System Mode Integration
+        let systemModeInstruction = '';
+        switch (this.currentSystemMode) {
+            case SYSTEM_MODES.VACATION:
+                systemModeInstruction = "ACHTUNG: System im URLAUBSMODUS. Bewohner sind abwesend. Jede signifikante Aktivität ist als potenzielle Sicherheitsbedrohung zu werten. 'isAlert' sollte hoch priorisiert werden.";
+                break;
+            case SYSTEM_MODES.PARTY:
+                systemModeInstruction = "HINWEIS: System im PARTYMODUS. Hohe Aktivität und ungewöhnliche Zeiten sind erwartet. Die Toleranz für Abweichungen ist stark erhöht. Nur echte Notfälle sollten 'isAlert' auslösen.";
+                break;
+            case SYSTEM_MODES.GUEST:
+                systemModeInstruction = "HINWEIS: GÄSTE oder REINIGUNGSPERSONAL anwesend. Abweichungen von der normalen Routine sind erwartet. Die Toleranz für Abweichungen ist erhöht.";
+                break;
+            case SYSTEM_MODES.NORMAL:
+            default:
+                systemModeInstruction = "System im NORMALMODUS.";
+                break;
+        }
+
 
         // --- 2. BASELINE (LTM) VORBEREITEN (SPRINT 16) ---
         let baselinePromptSection = '';
         let taskInstruction = '';
         const digestCount = this.dailyDigests.length;
-        const useBaseline = digestCount >= MIN_DAYS_FOR_BASELINE;
+        // SPRINT 16: Nutze Konfigurationswert
+        const minDaysRequired = this.config.minDaysForBaseline || 7;
+
+        // Baseline wird nur genutzt, wenn genug Daten vorhanden UND der Modus 'normal' oder 'guest' ist.
+        // Bei 'party' oder 'vacation' ist die Baseline irrelevant.
+        const useBaseline = digestCount >= minDaysRequired && (this.currentSystemMode === SYSTEM_MODES.NORMAL || this.currentSystemMode === SYSTEM_MODES.GUEST);
 
         if (useBaseline) {
             // Baseline ist bereit -> Aktiviere Vergleichsmodus
-            this.log.info(`LTM Baseline established (${digestCount} days). Activating deviation detection.`);
+            this.log.info(`LTM Baseline established (${digestCount} days). Activating deviation detection. Mode: ${this.currentSystemMode}.`);
 
             // Hole die relevanten Digests (die neuesten X Tage).
             // dailyDigests ist FIFO (Ältestes zuerst, Index 0). Wir wollen die neuesten, also slice(-N) und reverse().
@@ -886,7 +1105,9 @@ class CogniLiving extends utils.Adapter {
             const baselineData = relevantDigests.map(d => {
                 // Nutze lokales Datum für bessere Lesbarkeit im Prompt
                 const date = new Date(d.timestamp).toLocaleDateString('de-DE');
-                return `[${date} | Aktivität: ${d.activityLevel}]: ${d.summary}`;
+                // Füge Modus hinzu, wenn bekannt und nicht normal (damit die KI weiß, dass dieser Tag evtl. ein Ausreißer war)
+                const modeSuffix = (d.systemMode && d.systemMode !== SYSTEM_MODES.NORMAL) ? ` | Modus: ${d.systemMode}` : '';
+                return `[${date} | Aktivität: ${d.activityLevel}${modeSuffix}]: ${d.summary}`;
             }).join('\n');
 
             baselinePromptSection = `
@@ -894,16 +1115,16 @@ BASELINE (Gelerntes Normalverhalten - Zusammenfassungen der letzten ${relevantDi
 ${baselineData}
             `;
 
-            taskInstruction = `Analysiere die AKTUELLEN SENSORDATEN und vergleiche sie mit der BASELINE. Der Fokus liegt auf der Erkennung signifikanter Abweichungen (bzgl. Timing, Intensität, Ort) vom Normalverhalten. Bewerte diese Abweichung in 'deviationFromBaseline'.`;
+            taskInstruction = `Analysiere die AKTUELLEN SENSORDATEN und vergleiche sie mit der BASELINE unter Berücksichtigung des SYSTEM-MODUS. Der Fokus liegt auf der Erkennung signifikanter Abweichungen vom Normalverhalten (Timing, Intensität, Ort), die NICHT durch den aktuellen System-Modus erklärt werden können. Bewerte diese Abweichung in 'deviationFromBaseline'.`;
 
         } else {
-            // Nicht genug Daten -> Lernphase
-            this.log.info(`LTM Learning Phase (${digestCount}/${MIN_DAYS_FOR_BASELINE} days). Deviation detection inactive.`);
+            // Nicht genug Daten oder Modus deaktiviert Baseline
+            this.log.info(`LTM Deviation detection inactive. Reason: Learning Phase (${digestCount}/${minDaysRequired} days) OR System Mode (${this.currentSystemMode}).`);
 
             baselinePromptSection = `
-BASELINE STATUS: Lernphase. Noch nicht genügend Daten für eine Baseline vorhanden.
+BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert).
             `;
-            taskInstruction = `Analysiere die bereitgestellten AKTUELLEN SENSORDATEN basierend auf dem definierten KONTEXT und der PERSONA. Bewerte 'deviationFromBaseline' immer mit 'N/A (Learning)'.`;
+            taskInstruction = `Analysiere die AKTUELLEN SENSORDATEN basierend auf KONTEXT, PERSONA und SYSTEM-MODUS. Ein Baseline-Vergleich findet NICHT statt. Bewerte 'deviationFromBaseline' immer mit 'N/A (Learning)'.`;
         }
 
 
@@ -913,10 +1134,13 @@ BASELINE STATUS: Lernphase. Noch nicht genügend Daten für eine Baseline vorhan
             SPRACHE: Antworte ausschließlich auf Deutsch (DE).
             FORMAT: Antworte NUR mit einem JSON-Objekt.
 
+            SYSTEM-MODUS (Aktueller Betriebsmodus & Handlungsanweisung - HÖCHSTE PRIORITÄT):
+            ${systemModeInstruction}
+
             KONTEXT (Details zur Wohnsituation):
             ${livingContext}
 
-            PERSONA (Anweisungen zum Analysefokus):
+            PERSONA (Genereller Analysefokus):
             ${personaInstruction}
 
             ${baselinePromptSection}
@@ -927,9 +1151,9 @@ BASELINE STATUS: Lernphase. Noch nicht genügend Daten für eine Baseline vorhan
             JSON SCHEMA (MUSS eingehalten werden):
             {
               "activity": {
-                "summary": "string (Detaillierte Bewertung 1-2 Sätze. Beschreibe die aktuelle Aktivität UND wie sie sich zur Baseline verhält.)",
+                "summary": "string (Detaillierte Bewertung 1-2 Sätze. Beschreibe Aktivität, wie sie sich zur Baseline verhält UND beziehe den System-Modus ein.)",
                 "deviationFromBaseline": "string (MUSS eines sein von: 'N/A (Learning)', 'none', 'slight', 'significant', 'critical')",
-                "isAlert": false, // boolean (TRUE nur, wenn deviation='critical' ODER die Situation akut gefährlich ist)
+                "isAlert": false, // boolean (TRUE nur, wenn deviation='critical' ODER die Situation akut gefährlich ist, unter Beachtung des SYSTEM-MODUS)
                 "alertReason": "" // string (Grund wenn isAlert=true, sonst leerer String)
               },
               "comfort": {
@@ -996,7 +1220,7 @@ BASELINE STATUS: Lernphase. Noch nicht genügend Daten für eine Baseline vorhan
                     ack: true,
                 });
 
-                // SPRINT 16 NEU: Deviation State aktualisieren
+                // SPRINT 16: Deviation State aktualisieren
                 const deviation = analysisResult.activity.deviationFromBaseline;
                 await this.setStateAsync('analysis.deviationFromBaseline', {
                     val: deviation,
@@ -1019,10 +1243,10 @@ BASELINE STATUS: Lernphase. Noch nicht genügend Daten für eine Baseline vorhan
                 const alertFound = analysisResult.activity.isAlert;
 
                 if (alertFound) {
-                    this.log.warn(`>>> AI ALERT DETECTED! Deviation: ${deviation}. Reason: ${analysisResult.activity.alertReason || 'N/A'} <<<`);
+                    this.log.warn(`>>> AI ALERT DETECTED! Mode: ${this.currentSystemMode}. Deviation: ${deviation}. Reason: ${analysisResult.activity.alertReason || 'N/A'} <<<`);
                     await this.setStateAsync('analysis.isAlert', { val: true, ack: true });
                 } else {
-                    this.log.info(`AI analysis complete. Deviation: ${deviation}. No alert conditions found.`);
+                    this.log.info(`AI analysis complete. Mode: ${this.currentSystemMode}. Deviation: ${deviation}. No alert conditions found.`);
                     await this.setStateAsync('analysis.isAlert', { val: false, ack: true });
                 }
 
@@ -1030,7 +1254,8 @@ BASELINE STATUS: Lernphase. Noch nicht genügend Daten für eine Baseline vorhan
                 const logEntry = {
                     timestamp: Date.now(),
                     analysis: analysisResult,
-                    usedBaseline: useBaseline // SPRINT 16: Speichern, ob Baseline genutzt wurde
+                    usedBaseline: useBaseline, // SPRINT 16: Speichern, ob Baseline genutzt wurde
+                    systemMode: this.currentSystemMode // SPRINT 16: Speichere den Modus der Analyse
                 };
                 await this.updateAnalysisHistory(logEntry);
             } else {
@@ -1086,7 +1311,7 @@ BASELINE STATUS: Lernphase. Noch nicht genügend Daten für eine Baseline vorhan
         await this._updateDebugAnalysisHistoryStates();
     }
 
-    // SPRINT 16 Update: Zeige Deviation im Logbuch
+    // SPRINT 16 Update: Zeige Deviation und System Mode im Logbuch
     _formatAnalysisForHistory(logEntry) {
         const time = new Date(logEntry.timestamp).toLocaleString('de-DE');
 
@@ -1095,9 +1320,12 @@ BASELINE STATUS: Lernphase. Noch nicht genügend Daten für eine Baseline vorhan
             const analysis = logEntry.analysis;
             const isAlert = analysis.activity.isAlert === true;
 
-            // SPRINT 16: Zeige Abweichung im Prefix
+            // Zeige Abweichung und Modus im Prefix
             const deviation = analysis.activity.deviationFromBaseline || 'N/A';
-            const prefix = isAlert ? `[ALARM | Dev: ${deviation}] ` : `[Info | Dev: ${deviation}] `;
+            // Zeige Modus nur, wenn nicht Normal
+            const modeSuffix = (logEntry.systemMode && logEntry.systemMode !== SYSTEM_MODES.NORMAL) ? ` | Mode: ${logEntry.systemMode}` : '';
+
+            const prefix = isAlert ? `[ALARM | Dev: ${deviation}${modeSuffix}] ` : `[Info | Dev: ${deviation}${modeSuffix}] `;
 
 
             let summary = '';
@@ -1107,7 +1335,8 @@ BASELINE STATUS: Lernphase. Noch nicht genügend Daten für eine Baseline vorhan
                 summary = analysis.activity.summary || 'Analysis successful';
             }
 
-            const shortSummary = summary.length > 80 ? `${summary.substring(0, 80)}...` : summary;
+            // Kürzen, um Platz für den längeren Prefix zu schaffen (von 80 auf 70 reduziert)
+            const shortSummary = summary.length > 70 ? `${summary.substring(0, 70)}...` : summary;
             return `${time} - ${prefix}${shortSummary}`;
         }
 
