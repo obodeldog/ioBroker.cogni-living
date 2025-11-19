@@ -1,10 +1,14 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.1.17",
+        "version": "0.1.18",
         "enabled": true,
         "main": "main.js",
         "news": {
+            "0.1.18": {
+                "en": "Proactive Comfort Assistant: AI now actively searches for automation patterns and suggests actions in new 'analysis.automation' datapoints. Updated analysis log format.",
+                "de": "Proaktiver Komfort-Assistent: Die KI sucht nun aktiv nach Automatisierungsmustern und schlägt Aktionen in neuen 'analysis.automation' Datenpunkten vor. Analyse-Logformat aktualisiert."
+            },
             "0.1.17": {
                 "en": "Cogni-Engine (LTM Part 3): AI Analysis now uses Baseline comparison. Added 'deviationFromBaseline'. Learning phase is configurable. Added System Mode (Context Override) and Baseline Status indicator.",
                 "de": "Cogni-Engine (LTM Teil 3): KI-Analyse nutzt nun Baseline-Vergleich. 'deviationFromBaseline' hinzugefügt. Lernphase ist konfigurierbar. System-Modus (Context Override) und Baseline-Statusindikator hinzugefügt."
@@ -206,6 +210,51 @@
                     "guest": "Gast/Reinigung (Auto-Reset 04:00)"
                 },
                 "desc": "Overrides the context for AI analysis."
+            },
+            "native": {}
+        },
+        {
+            "_id": "analysis.automation",
+            "type": "channel",
+            "common": {
+                "name": "Automation Proposals (AI)"
+            },
+            "native": {}
+        },
+        {
+            "_id": "analysis.automation.patternDetected",
+            "type": "state",
+            "common": {
+                "name": "Pattern Detected",
+                "type": "boolean",
+                "role": "indicator",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "analysis.automation.description",
+            "type": "state",
+            "common": {
+                "name": "Pattern Description",
+                "type": "string",
+                "role": "text",
+                "read": true,
+                "write": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "analysis.automation.suggestedAction",
+            "type": "state",
+            "common": {
+                "name": "Suggested Action",
+                "type": "string",
+                "role": "text",
+                "read": true,
+                "write": false
             },
             "native": {}
         }

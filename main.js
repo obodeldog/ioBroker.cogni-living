@@ -215,6 +215,34 @@ class CogniLiving extends utils.Adapter {
             native: {},
         });
 
+        // === SPRINT 17 START: Automation Proposal ===
+        // Kanal analysis.automation
+        await this.extendObjectAsync('analysis.automation', {
+            type: 'channel',
+            common: {
+                name: 'Automation Proposals (AI)',
+            },
+            native: {},
+        });
+
+        await this.setObjectNotExistsAsync('analysis.automation.patternDetected', {
+            type: 'state',
+            common: { name: 'Pattern Detected', type: 'boolean', role: 'indicator', read: true, write: false, def: false },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('analysis.automation.description', {
+            type: 'state',
+            common: { name: 'Pattern Description', type: 'string', role: 'text', read: true, write: false },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('analysis.automation.suggestedAction', {
+            type: 'state',
+            common: { name: 'Suggested Action', type: 'string', role: 'text', read: true, write: false },
+            native: {},
+        });
+        // === SPRINT 17 END ===
+
+
         await this.setObjectNotExistsAsync('analysis.analysisHistory', {
             type: 'state',
             common: {
@@ -800,6 +828,7 @@ class CogniLiving extends utils.Adapter {
     // === System Funktionen ===
     // ======================================================================
 
+    // SPRINT 17: resetAnalysisStates erweitert
     async resetAnalysisStates() {
         await this.setStateAsync('analysis.activitySummary', { val: 'No recent activity.', ack: true });
         // SPRINT 16: Setze Deviation zurück
@@ -807,6 +836,11 @@ class CogniLiving extends utils.Adapter {
         await this.setStateAsync('analysis.comfortSummary', { val: '', ack: true });
         await this.setStateAsync('analysis.comfortSuggestion', { val: '', ack: true });
         await this.setStateAsync('analysis.alertReason', { val: '', ack: true });
+
+        // SPRINT 17: Setze Automation Proposal zurück
+        await this.setStateAsync('analysis.automation.patternDetected', { val: false, ack: true });
+        await this.setStateAsync('analysis.automation.description', { val: '', ack: true });
+        await this.setStateAsync('analysis.automation.suggestedAction', { val: '', ack: true });
     }
 
     onUnload(callback) {
@@ -1036,12 +1070,12 @@ class CogniLiving extends utils.Adapter {
 
 
     // ======================================================================
-    // === SPRINT 16: Cogni-Engine (runGeminiAnalysis Upgrade) ===
+    // === SPRINT 16/17: Cogni-Engine (runGeminiAnalysis Upgrade) ===
     // ======================================================================
 
     /**
      * Führt die KI-Analyse durch, indem STM (aktuelle Daten) mit LTM (Baseline) verglichen wird,
-     * unter Berücksichtigung des aktuellen System-Modus.
+     * unter Berücksichtigung des aktuellen System-Modus, und sucht nach Automatisierungsmustern.
      */
     async runGeminiAnalysis() {
         if (!this.geminiModel) {
@@ -1082,7 +1116,7 @@ class CogniLiving extends utils.Adapter {
 
         // --- 2. BASELINE (LTM) VORBEREITEN (SPRINT 16) ---
         let baselinePromptSection = '';
-        let taskInstruction = '';
+        let taskInstructionActivity = ''; // SPRINT 17: Split Task Instruction
         const digestCount = this.dailyDigests.length;
         // SPRINT 16: Nutze Konfigurationswert
         const minDaysRequired = this.config.minDaysForBaseline || 7;
@@ -1115,7 +1149,7 @@ BASELINE (Gelerntes Normalverhalten - Zusammenfassungen der letzten ${relevantDi
 ${baselineData}
             `;
 
-            taskInstruction = `Analysiere die AKTUELLEN SENSORDATEN und vergleiche sie mit der BASELINE unter Berücksichtigung des SYSTEM-MODUS. Der Fokus liegt auf der Erkennung signifikanter Abweichungen vom Normalverhalten (Timing, Intensität, Ort), die NICHT durch den aktuellen System-Modus erklärt werden können. Bewerte diese Abweichung in 'deviationFromBaseline'.`;
+            taskInstructionActivity = `1. AKTIVITÄT & ABWEICHUNG: Analysiere die AKTUELLEN SENSORDATEN und vergleiche sie mit der BASELINE unter Berücksichtigung des SYSTEM-MODUS. Fokus auf signifikante Abweichungen (Timing, Intensität, Ort), die NICHT durch den Modus erklärt werden können. Bewerte dies in 'activity.deviationFromBaseline'.`;
 
         } else {
             // Nicht genug Daten oder Modus deaktiviert Baseline
@@ -1124,11 +1158,15 @@ ${baselineData}
             baselinePromptSection = `
 BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert).
             `;
-            taskInstruction = `Analysiere die AKTUELLEN SENSORDATEN basierend auf KONTEXT, PERSONA und SYSTEM-MODUS. Ein Baseline-Vergleich findet NICHT statt. Bewerte 'deviationFromBaseline' immer mit 'N/A (Learning)'.`;
+            taskInstructionActivity = `1. AKTIVITÄT: Analysiere die AKTUELLEN SENSORDATEN basierend auf KONTEXT, PERSONA und SYSTEM-MODUS. Ein Baseline-Vergleich findet NICHT statt. Bewerte 'activity.deviationFromBaseline' immer mit 'N/A (Learning)'.`;
         }
+
+        // SPRINT 17: Task Instruction für Automation
+        const taskInstructionAutomation = `2. AUTOMATISIERUNGSMUSTER: Suche explizit nach klaren, wiederkehrenden Mustern in den AKTUELLEN SENSORDATEN (und der BASELINE, falls aktiv), die sich für eine Automatisierung eignen (z.B. "Immer wenn Sensor X auslöst, wird kurz darauf Sensor Y bedient"). Wenn ein klares Muster erkannt wird, setze 'comfort.automationProposal.patternDetected' auf TRUE und beschreibe es präzise. Andernfalls setze es auf FALSE.`;
 
 
         // --- 3. SYSTEM PROMPT ZUSAMMENSTELLEN (Dynamisch) ---
+        // SPRINT 17: Schema aktualisiert
         const systemPrompt = `
             ROLLE: Smart Home Analyst (Cogni-Engine).
             SPRACHE: Antworte ausschließlich auf Deutsch (DE).
@@ -1146,7 +1184,8 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
             ${baselinePromptSection}
 
             AUFGABE:
-            ${taskInstruction}
+            ${taskInstructionActivity}
+            ${taskInstructionAutomation}
 
             JSON SCHEMA (MUSS eingehalten werden):
             {
@@ -1158,7 +1197,12 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
               },
               "comfort": {
                 "summary": "string (Detaillierte Bewertung 1-2 Sätze)",
-                "suggestion": "string" // Proaktiver Automatisierungsvorschlag (1 Satz) oder leerer String
+                "suggestion": "string", // Genereller Vorschlag (1 Satz) oder leerer String
+                "automationProposal": {
+                    "patternDetected": false, // boolean (TRUE wenn ein klares, automatisierbares Muster erkannt wurde)
+                    "description": "", // string (Beschreibung des erkannten Musters, wenn patternDetected=true)
+                    "suggestedAction": "" // string (Konkreter Vorschlag für eine ioBroker-Automatisierung, wenn patternDetected=true)
+                }
               }
             }
         `;
@@ -1198,13 +1242,15 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
             }
 
             // --- 5. JSON VALIDIERUNG UND VERARBEITUNG ---
-            // SPRINT 16: Validierung erweitert um 'deviationFromBaseline'
+            // SPRINT 17: Validierung erweitert um 'automationProposal' und dessen 'patternDetected'
             if (
                 analysisResult &&
                 analysisResult.activity &&
                 analysisResult.comfort &&
+                analysisResult.comfort.automationProposal && // SPRINT 17 NEU
                 typeof analysisResult.activity.isAlert === 'boolean' &&
-                typeof analysisResult.activity.deviationFromBaseline === 'string'
+                typeof analysisResult.activity.deviationFromBaseline === 'string' &&
+                typeof analysisResult.comfort.automationProposal.patternDetected === 'boolean' // SPRINT 17 NEU
             ) {
                 this.log.info('AI analysis successfully parsed as JSON.');
 
@@ -1240,6 +1286,27 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
                     ack: true,
                 });
 
+                // SPRINT 17: Automation Proposal States aktualisieren
+                const automation = analysisResult.comfort.automationProposal;
+                await this.setStateAsync('analysis.automation.patternDetected', {
+                    val: automation.patternDetected,
+                    ack: true,
+                });
+                // Stelle sicher, dass die Felder leer sind, wenn kein Pattern erkannt wurde (Defensiv)
+                await this.setStateAsync('analysis.automation.description', {
+                    val: automation.patternDetected ? (automation.description || '') : '',
+                    ack: true,
+                });
+                await this.setStateAsync('analysis.automation.suggestedAction', {
+                    val: automation.patternDetected ? (automation.suggestedAction || '') : '',
+                    ack: true,
+                });
+
+                if (automation.patternDetected) {
+                    this.log.info(`>>> AI Pattern Detected! Description: ${automation.description} <<<`);
+                }
+
+
                 const alertFound = analysisResult.activity.isAlert;
 
                 if (alertFound) {
@@ -1260,8 +1327,9 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
                 await this.updateAnalysisHistory(logEntry);
             } else {
                 // Fehler: JSON Struktur fehlt
+                // SPRINT 17: Fehlermeldung erweitert
                 this.log.error(
-                    `AI response JSON structure is invalid. Missing required fields (check activity, comfort, isAlert or deviationFromBaseline). Received: ${JSON.stringify(analysisResult)}`,
+                    `AI response JSON structure is invalid. Missing required fields (check activity, comfort, isAlert, deviationFromBaseline or automationProposal structure). Received: ${JSON.stringify(analysisResult)}`,
                 );
                 await this.setStateAsync('analysis.lastResult', {
                     val: `{"error": "Invalid JSON structure", "received": ${JSON.stringify(analysisResult)}}`,
@@ -1280,7 +1348,7 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
         }
     }
     // ======================================================================
-    // === SPRINT 16 END: Cogni-Engine ===
+    // === SPRINT 16/17 END: Cogni-Engine ===
     // ======================================================================
 
 
@@ -1311,7 +1379,7 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
         await this._updateDebugAnalysisHistoryStates();
     }
 
-    // SPRINT 16 Update: Zeige Deviation und System Mode im Logbuch
+    // SPRINT 16/17 Update: Zeige Deviation, System Mode und Pattern im Logbuch
     _formatAnalysisForHistory(logEntry) {
         const time = new Date(logEntry.timestamp).toLocaleString('de-DE');
 
@@ -1320,18 +1388,33 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
             const analysis = logEntry.analysis;
             const isAlert = analysis.activity.isAlert === true;
 
+            // SPRINT 17: Pattern Detection Flag
+            const isPattern = (analysis.comfort && analysis.comfort.automationProposal && analysis.comfort.automationProposal.patternDetected === true);
+
             // Zeige Abweichung und Modus im Prefix
             const deviation = analysis.activity.deviationFromBaseline || 'N/A';
             // Zeige Modus nur, wenn nicht Normal
             const modeSuffix = (logEntry.systemMode && logEntry.systemMode !== SYSTEM_MODES.NORMAL) ? ` | Mode: ${logEntry.systemMode}` : '';
 
-            const prefix = isAlert ? `[ALARM | Dev: ${deviation}${modeSuffix}] ` : `[Info | Dev: ${deviation}${modeSuffix}] `;
+            // SPRINT 17: Prefix angepasst
+            let prefixType = '[Info]';
+            if (isAlert) {
+                prefixType = '[ALARM]';
+            } else if (isPattern) {
+                prefixType = '[Muster erkannt]';
+            }
+
+            const prefix = `${prefixType} (Dev: ${deviation}${modeSuffix}) `;
 
 
             let summary = '';
+            // Priorisiere Alarm > Pattern > Summary
             if (isAlert && analysis.activity.alertReason) {
                 summary = analysis.activity.alertReason;
-            } else {
+            } else if (isPattern && analysis.comfort.automationProposal.description) {
+                summary = analysis.comfort.automationProposal.description;
+            }
+            else {
                 summary = analysis.activity.summary || 'Analysis successful';
             }
 
