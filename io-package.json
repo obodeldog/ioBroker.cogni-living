@@ -1,10 +1,14 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.1.16",
+        "version": "0.1.17",
         "enabled": true,
         "main": "main.js",
         "news": {
+            "0.1.17": {
+                "en": "Cogni-Engine (LTM Part 3): AI Analysis now uses Daily Digests as Baseline (if >= 7 days available). Added 'deviationFromBaseline' state to detect anomalies.",
+                "de": "Cogni-Engine (LTM Teil 3): KI-Analyse nutzt nun Daily Digests als Baseline (wenn >= 7 Tage vorhanden). State 'deviationFromBaseline' hinzugefügt, um Anomalien zu erkennen."
+            },
             "0.1.16": {
                 "en": "LTM Implementation (Part 2): Added Scheduler (03:00 AM) and AI-driven Daily Digests. Raw logs are now compressed into summaries. Added manual trigger.",
                 "de": "LTM Implementierung (Teil 2): Scheduler (03:00 Uhr) und KI-gesteuerte Tageszusammenfassungen (Daily Digests) hinzugefügt. Rohdaten werden nun komprimiert. Manueller Trigger hinzugefügt."
@@ -28,22 +32,6 @@
             "0.1.11": {
                 "en": "Major Stability Improvement: Switched AI communication to JSON mode.",
                 "de": "Große Stabilitätsverbesserung: KI-Kommunikation auf JSON-Modus umgestellt."
-            },
-            "0.1.10": {
-                "en": "CRITICAL FIX: Corrected sensor subscription logic (change: any).",
-                "de": "KRITISCHER FIX: Sensor-Abonnement-Logik (change: any) korrigiert."
-            },
-            "0.1.9": {
-                "en": "Added selective filter (log duplicates) and fixed Admin UI scrollbar issue.",
-                "de": "Selektiven Filter (Duplikate loggen) hinzugefügt und Scrollbar-Problem in der Admin-UI behoben."
-            },
-            "0.1.8": {
-                "en": "Refined AI prompt structure.",
-                "de": "KI-Prompt-Struktur verfeinert."
-            },
-            "0.0.1": {
-                "en": "initial release",
-                "de": "Erstveröffentlichung"
             }
         },
         "titleLang": {
