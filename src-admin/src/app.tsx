@@ -84,8 +84,7 @@ export default class App extends GenericApp {
                             display: 'flex',
                             flexDirection: 'column',
                             boxSizing: 'border-box',
-                            //bgcolor: 'background.default', // Nutzt der Theme-Hintergrund
-                            bgcolor: 'green', // Nutzt der Theme-Hintergrund
+                            bgcolor: 'background.default', // Nutzt der Theme-Hintergrund
                             color: this.state.themeType === 'dark' ? '#FFF' : '#000',
                         }}
                     >
