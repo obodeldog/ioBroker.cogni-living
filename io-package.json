@@ -1,10 +1,14 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.1.15-p1",
+        "version": "0.1.16",
         "enabled": true,
         "main": "main.js",
         "news": {
+            "0.1.16": {
+                "en": "LTM Implementation (Part 2): Added Scheduler (03:00 AM) and AI-driven Daily Digests. Raw logs are now compressed into summaries. Added manual trigger.",
+                "de": "LTM Implementierung (Teil 2): Scheduler (03:00 Uhr) und KI-gesteuerte Tageszusammenfassungen (Daily Digests) hinzugefügt. Rohdaten werden nun komprimiert. Manueller Trigger hinzugefügt."
+            },
             "0.1.15-p1": {
                 "en": "CRITICAL FIX: Corrected duplicate filter logic (independent tracking). Fixed AI language inconsistency (forced German).",
                 "de": "KRITISCHER FIX: Logik des Duplikatfilters korrigiert (unabhängiges Tracking). KI-Sprachinkonsistenz behoben (Deutsch erzwungen)."
@@ -121,6 +125,46 @@
                 "read": true,
                 "write": false,
                 "desc": "Stores the raw sensor events for LTM processing before compression."
+            },
+            "native": {}
+        },
+        {
+            "_id": "LTM.dailyDigests",
+            "type": "state",
+            "common": {
+                "name": "Daily Digests (LTM)",
+                "type": "string",
+                "role": "json",
+                "read": true,
+                "write": false,
+                "desc": "Stores the compressed AI summaries of daily activity (the Baseline)."
+            },
+            "native": {}
+        },
+        {
+            "_id": "LTM.processingStatus",
+            "type": "state",
+            "common": {
+                "name": "LTM Processing Status",
+                "type": "string",
+                "role": "text",
+                "read": true,
+                "write": false,
+                "desc": "Status of the last LTM compression run."
+            },
+            "native": {}
+        },
+        {
+            "_id": "LTM.triggerDailyDigest",
+            "type": "state",
+            "common": {
+                "name": "Trigger Daily Digest Creation (Manual)",
+                "type": "boolean",
+                "role": "button",
+                "read": true,
+                "write": true,
+                "def": false,
+                "desc": "Manually triggers the LTM compression process (usually runs at 03:00 AM)."
             },
             "native": {}
         }

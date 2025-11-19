@@ -1,6 +1,9 @@
 'use strict';
 const utils = require('@iobroker/adapter-core');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+// === SPRINT 15 START: Import ===
+const schedule = require('node-schedule');
+// === SPRINT 15 END ===
 
 // Globale Konstanten
 const HISTORY_MAX_SIZE = 50; // STM (Short Term Memory)
@@ -9,12 +12,21 @@ const GEMINI_MODEL = 'models/gemini-flash-latest';
 const ANALYSIS_HISTORY_MAX_SIZE = 100;
 const DEBUG_ANALYSIS_HISTORY_COUNT = 5;
 
-// === SPRINT 14 START: LTM Konstanten ===
-const RAW_LOG_MAX_SIZE = 1500; // LTM (Long Term Memory) - Max Rohereignisse (ca. 1-2 Tage)
-const LTM_DP_RAW_LOG = 'LTM.rawEventLog'; // Datenpunktname für Raw Log
-// === SPRINT 14 END ===
+// === SPRINT 14/15: LTM Konstanten ===
+const RAW_LOG_MAX_SIZE = 1500; // LTM - Max Rohereignisse (ca. 1-2 Tage)
+const LTM_DP_RAW_LOG = 'LTM.rawEventLog';
+// SPRINT 15 START
+const DAILY_DIGEST_MAX_SIZE = 60; // LTM - Max komprimierte Tages-Digests (Baseline)
+const LTM_DP_DAILY_DIGESTS = 'LTM.dailyDigests';
+const LTM_DP_STATUS = 'LTM.processingStatus';
+const LTM_DP_TRIGGER_DIGEST = 'LTM.triggerDailyDigest';
+const LTM_SCHEDULE = '0 3 * * *'; // Täglich um 03:00 Uhr
+const LTM_MIN_EVENTS_FOR_COMPRESSION = 5; // Mindestanzahl Events, bevor Kompression startet
+// SPRINT 15 END
+// === SPRINT 14/15 END ===
 
-// PATCH 14.1: Persona Mapping auf Deutsch aktualisiert, da wir Deutsch jetzt im Prompt erzwingen.
+
+// Persona Mapping (Deutsch)
 const PERSONA_MAPPING = {
     generic: 'Analysiere ausgewogen auf Gesundheit, Sicherheit und Komfort.',
     senior_aal:
@@ -38,22 +50,32 @@ class CogniLiving extends utils.Adapter {
         this.geminiModel = null;
         this.analysisTimer = null;
 
-        // === SPRINT 14 START: LTM Initialisierung ===
+        // === SPRINT 14/15 START: LTM Initialisierung ===
         /**
-         * LTM - Speicher für Rohdaten-Events. FIFO-Queue (First In, First Out).
+         * LTM - Speicher für Rohdaten-Events. FIFO.
          * @type {Array<object>}
          */
-        this.rawEventLog = []; // LTM
-        // === SPRINT 14 END ===
+        this.rawEventLog = []; // LTM Raw
 
-        // === PATCH 14.1 START: State Tracking ===
         /**
-         * Speichert den letzten bekannten Wert jedes Sensors, um Duplikate zuverlässig zu filtern.
-         * Key: Sensor ID, Value: der letzte Wert.
+         * LTM - Speicher für komprimierte Tageszusammenfassungen (Baseline). FIFO.
+         * @type {Array<object>}
+         */
+        this.dailyDigests = []; // LTM Compressed
+
+        /**
+         * Scheduler Job für LTM Verarbeitung
+         * @type {schedule.Job | null}
+         */
+        this.ltmJob = null;
+        // === SPRINT 14/15 END ===
+
+        // State Tracking (Patch 14.1)
+        /**
+         * Speichert den letzten bekannten Wert jedes Sensors.
          * @type {Record<string, any>}
          */
         this.sensorLastValues = {};
-        // === PATCH 14.1 END ===
 
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
@@ -67,10 +89,10 @@ class CogniLiving extends utils.Adapter {
         this.log.info(`cogni-living adapter starting (v${adapterVersion})`);
 
         // === 1. KI INITIALISIERUNG (JSON MODE) ===
-        // ... (Unverändert)
         if (this.config.geminiApiKey) {
             try {
                 this.genAI = new GoogleGenerativeAI(this.config.geminiApiKey);
+                // Wir nutzen das gleiche Modell für Analyse und Kompression
                 this.geminiModel = this.genAI.getGenerativeModel({
                     model: GEMINI_MODEL,
                     generationConfig: { responseMimeType: 'application/json' },
@@ -193,18 +215,22 @@ class CogniLiving extends utils.Adapter {
             this.analysisHistory = [];
         }
 
-        // 3b. LTM (Long Term Memory) laden
+        // 3b. LTM (Long Term Memory) laden (Sprint 14/15)
         await this.checkLtmObjects();
         await this.loadRawEventLog();
+        await this.loadDailyDigests(); // SPRINT 15
 
 
-        // === 4. STATES ABONNIEREN & INITIALISIEREN (PATCH 14.1) ===
+        // === 4. STATES ABONNIEREN & INITIALISIEREN ===
         this.subscribeStates('analysis.trigger');
+        // SPRINT 15 NEU: Abonniere LTM Trigger
+        this.subscribeStates(LTM_DP_TRIGGER_DIGEST);
+
         const devices = this.config.devices;
         if (!devices || devices.length === 0) {
             this.log.warn('No sensors configured!');
         } else {
-            // PATCH 14.1: Initialisiere this.sensorLastValues beim Start
+            // Initialisiere this.sensorLastValues beim Start (Patch 14.1)
             this.log.info(`Found ${devices.length} configured sensors. Subscribing and initializing last values...`);
             for (const device of devices) {
                 if (device.id) {
@@ -218,7 +244,6 @@ class CogniLiving extends utils.Adapter {
                             this.sensorLastValues[device.id] = currentState.val;
                         } else {
                             // Initialisiere mit einem Sentinel-Wert (leeres Objekt), wenn kein Zustand existiert.
-                            // Dadurch wird der erste eingehende Wert (egal ob true, 0 oder null) immer geloggt, da {} !== Wert.
                             this.sensorLastValues[device.id] = {};
                         }
                     } catch (error) {
@@ -230,8 +255,9 @@ class CogniLiving extends utils.Adapter {
             this.log.debug(`Initialization of sensor last values complete.`);
         }
 
-        // === 5. AUTOPILOT-TIMER STARTEN (MIT FILTER) ===
-        // ... (Unverändert)
+        // === 5. TIMER & SCHEDULER STARTEN ===
+
+        // 5a. Autopilot-Timer (STM Analyse)
         if (this.analysisTimer) {
             clearInterval(this.analysisTimer);
             this.analysisTimer = null;
@@ -263,15 +289,17 @@ class CogniLiving extends utils.Adapter {
         } else {
             this.log.warn('Analysis interval is set to 0. Autopilot disabled.');
         }
+
+        // 5b. LTM Scheduler (Sprint 15)
+        this.setupLtmScheduler();
     }
 
     // ======================================================================
-    // === SPRINT 14 START: LTM Management Funktionen ===
+    // === SPRINT 14/15: LTM Management Funktionen ===
     // ======================================================================
 
     /**
      * Stellt sicher, dass die LTM-Datenpunkte existieren und aktualisiert sie bei Bedarf.
-     * Wir nutzen extendObjectAsync für Robustheit, falls sich Definitionen ändern.
      */
     async checkLtmObjects() {
         // Kanal LTM
@@ -282,7 +310,7 @@ class CogniLiving extends utils.Adapter {
             },
             native: {},
         });
-        // Datenpunkt rawEventLog
+        // Datenpunkt rawEventLog (Sprint 14)
         await this.extendObjectAsync(LTM_DP_RAW_LOG, {
             type: 'state',
             common: {
@@ -296,11 +324,54 @@ class CogniLiving extends utils.Adapter {
             },
             native: {},
         });
-        // Hinweis: Weitere LTM Objekte (z.B. DailyDigests) kommen in Sprint 15 hinzu.
+
+        // SPRINT 15 START
+        // Datenpunkt dailyDigests (Sprint 15)
+        await this.extendObjectAsync(LTM_DP_DAILY_DIGESTS, {
+            type: 'state',
+            common: {
+                // Dynamischer Name basierend auf der Konstante
+                'name': `Daily Digests (Baseline, Max ${DAILY_DIGEST_MAX_SIZE} days)`,
+                'type': 'string',
+                'role': 'json',
+                'read': true,
+                'write': false,
+                'desc': 'Stores the compressed AI summaries of daily activity (the Baseline).'
+            },
+            native: {},
+        });
+
+        // Datenpunkt processingStatus (Sprint 15)
+        await this.extendObjectAsync(LTM_DP_STATUS, {
+            type: 'state',
+            common: {
+                'name': 'LTM Processing Status',
+                'type': 'string',
+                'role': 'text',
+                'read': true,
+                'write': false,
+            },
+            native: {},
+        });
+
+        // Manueller Trigger (Sprint 15)
+        await this.extendObjectAsync(LTM_DP_TRIGGER_DIGEST, {
+            type: 'state',
+            common: {
+                "name": "Trigger Daily Digest Creation (Manual)",
+                "type": "boolean",
+                "role": "button",
+                "read": true,
+                "write": true,
+                "def": false
+            },
+            native: {},
+        });
+        // SPRINT 15 END
     }
 
     /**
-     * Lädt das Rohereignisprotokoll (LTM) aus dem ioBroker-Datenpunkt in den Arbeitsspeicher.
+     * Lädt das Rohereignisprotokoll (LTM Raw) aus dem DP in den Arbeitsspeicher.
      */
     async loadRawEventLog() {
         // ... (Unverändert von Sprint 14)
@@ -344,8 +415,7 @@ class CogniLiving extends utils.Adapter {
     }
 
     /**
-     * Speichert das aktuelle Rohereignisprotokoll (LTM) vom Arbeitsspeicher in den ioBroker-Datenpunkt.
-     * Limitiert die Größe vor dem Speichern (FIFO).
+     * Speichert das aktuelle Rohereignisprotokoll (LTM Raw) in den ioBroker-Datenpunkt.
      */
     async saveRawEventLog() {
         // ... (Unverändert von Sprint 14)
@@ -367,7 +437,220 @@ class CogniLiving extends utils.Adapter {
     }
 
     // ======================================================================
-    // === SPRINT 14 END: LTM Management Funktionen ===
+    // === SPRINT 15 START: Daily Digest & Scheduler Funktionen ===
+    // ======================================================================
+
+    /**
+     * Lädt die Daily Digests (LTM Compressed) aus dem DP in den Arbeitsspeicher.
+     */
+    async loadDailyDigests() {
+        try {
+            const state = await this.getStateAsync(LTM_DP_DAILY_DIGESTS);
+            if (state && state.val && typeof state.val === 'string') {
+                const data = JSON.parse(state.val);
+                if (Array.isArray(data)) {
+                    this.dailyDigests = data;
+                    this.log.info(`LTM: Daily Digests geladen (${this.dailyDigests.length} Tage).`);
+
+                    // Größe prüfen (ähnlich wie bei RawLog)
+                    if (this.dailyDigests.length > DAILY_DIGEST_MAX_SIZE) {
+                        const excess = this.dailyDigests.length - DAILY_DIGEST_MAX_SIZE;
+                        this.dailyDigests.splice(0, excess);
+                        this.log.info(`LTM: Daily Digests wurden auf das aktuelle Limit (${DAILY_DIGEST_MAX_SIZE}) gekürzt.`);
+                        await this.saveDailyDigests();
+                    }
+                } else {
+                    throw new Error('Datenpunkt enthält ungültige Daten (kein Array).');
+                }
+            } else {
+                this.log.info('LTM: Daily Digests nicht gefunden. Starte mit leerer Baseline.');
+                this.dailyDigests = [];
+            }
+        } catch (error) {
+            this.log.error(`LTM: Fehler beim Laden der Daily Digests: ${error.message}. Starte mit leerer Baseline.`);
+            this.dailyDigests = [];
+            try {
+                await this.setStateAsync(LTM_DP_DAILY_DIGESTS, { val: JSON.stringify(this.dailyDigests), ack: true });
+            } catch (e) {
+                this.log.error(`LTM: Konnte korrupten State (Digests) nicht bereinigen: ${e.message}`);
+            }
+        }
+    }
+
+    /**
+     * Speichert die Daily Digests (LTM Compressed) in den ioBroker-Datenpunkt.
+     */
+    async saveDailyDigests() {
+        // 1. Limit prüfen und kürzen
+        if (this.dailyDigests.length > DAILY_DIGEST_MAX_SIZE) {
+            const excess = this.dailyDigests.length - DAILY_DIGEST_MAX_SIZE;
+            this.dailyDigests.splice(0, excess);
+        }
+
+        // 2. Speichern
+        try {
+            const data = JSON.stringify(this.dailyDigests);
+            await this.setStateAsync(LTM_DP_DAILY_DIGESTS, { val: data, ack: true });
+        } catch (error) {
+            this.log.error(`LTM: Fehler beim Speichern der Daily Digests: ${error.message}`);
+        }
+    }
+
+    /**
+     * Richtet den Scheduler für die nächtliche LTM-Verarbeitung ein.
+     */
+    setupLtmScheduler() {
+        if (this.ltmJob) {
+            this.log.info('LTM Scheduler already running. Cancelling existing job before rescheduling.');
+            this.ltmJob.cancel();
+        }
+
+        this.log.info(`LTM: Setting up Scheduler for Daily Digest creation (Cron: ${LTM_SCHEDULE}).`);
+
+        this.ltmJob = schedule.scheduleJob(LTM_SCHEDULE, () => {
+            this.log.info('LTM Scheduler triggered: Starting createDailyDigest...');
+            this.createDailyDigest().catch(error => {
+                this.log.error(`LTM Scheduler: Error during createDailyDigest execution: ${error.message}`);
+            });
+        });
+
+        if (this.ltmJob) {
+            const nextInvocation = this.ltmJob.nextInvocation();
+            this.log.info(`LTM Scheduler set up successfully. Next run: ${nextInvocation ? nextInvocation.toString() : 'N/A'}`);
+        } else {
+            this.log.error('LTM: Failed to set up Scheduler.');
+        }
+    }
+
+    /**
+     * Die Hauptfunktion für die LTM-Kompression. Wird vom Scheduler oder manuell aufgerufen.
+     * Komprimiert rawEventLog zu einem Daily Digest mittels KI.
+     */
+    async createDailyDigest() {
+        this.log.info('=== LTM Compression Process Started ===');
+        // Nutze toLocaleString für bessere Lesbarkeit im Status
+        await this.setStateAsync(LTM_DP_STATUS, { val: `Processing started at ${new Date().toLocaleString()}`, ack: true });
+
+        // 1. Voraussetzungen prüfen
+        if (!this.geminiModel) {
+            this.log.warn('LTM Compression aborted: Gemini AI is not initialized.');
+            await this.setStateAsync(LTM_DP_STATUS, { val: 'Error: AI not initialized.', ack: true });
+            return;
+        }
+
+        if (this.rawEventLog.length < LTM_MIN_EVENTS_FOR_COMPRESSION) {
+            this.log.info(`LTM Compression skipped: Not enough data (${this.rawEventLog.length} events, minimum is ${LTM_MIN_EVENTS_FOR_COMPRESSION}).`);
+            await this.setStateAsync(LTM_DP_STATUS, { val: `Skipped: Not enough data (${this.rawEventLog.length} events).`, ack: true });
+
+            // WICHTIG: Wir leeren das Log hier NICHT, damit die wenigen Events für den nächsten Tag erhalten bleiben und dann verarbeitet werden.
+            return;
+        }
+
+        // 2. Daten vorbereiten
+        // Wir kopieren die Daten, falls während der Verarbeitung neue Events reinkommen.
+        const dataToCompress = JSON.parse(JSON.stringify(this.rawEventLog));
+        const eventCount = dataToCompress.length;
+
+        // 3. KI Prompt erstellen (Data Compression Agent)
+        const personaKey = this.config.aiPersona || 'generic';
+        const personaInstruction = PERSONA_MAPPING[personaKey] || PERSONA_MAPPING['generic'];
+        const livingContext = (this.config.livingContext || 'Keine spezifischen Details angegeben.').substring(0, 200);
+
+        const systemPrompt = `
+            ROLLE: Data Compression Agent (Langzeitgedächtnis).
+            AUFGABE: Komprimiere die bereitgestellten rohen Sensor-Events in eine prägnante Zusammenfassung des Zeitraums (ca. 1 Tag).
+            SPRACHE: Antworte ausschließlich auf Deutsch (DE).
+            FORMAT: Antworte NUR mit einem JSON-Objekt.
+
+            KONTEXT (Details zur Wohnsituation):
+            ${livingContext}
+
+            PERSONA (Analysefokus - Beeinflusst die Interpretation der Daten):
+            ${personaInstruction}
+
+            ANWEISUNGEN:
+            1. Analysiere die chronologische Abfolge der Events.
+            2. Identifiziere Hauptaktivitäten, Routinen (Schlaf, Essen, Verlassen/Ankommen) und Ruhephasen.
+            3. Fasse dies in 'summary' zusammen (Fokus auf das Gesamtbild, nicht auf einzelne Sensorwerte).
+            4. Bewerte das allgemeine Aktivitätsniveau des Zeitraums in 'activityLevel'.
+
+            JSON SCHEMA:
+            {
+              "summary": "string (Zusammenfassung des Tagesablaufs, 3-5 Sätze. Beschreibe Routinen und signifikante Ereignisse.)",
+              "activityLevel": "string (Eines von: 'sehr niedrig', 'niedrig', 'normal', 'hoch', 'sehr hoch')"
+            }
+        `;
+
+        const dataPrompt = JSON.stringify(dataToCompress, null, 2);
+        const fullPrompt = `${systemPrompt}\n\nROHE SENSOR-EVENTS (JSON Array):\n${dataPrompt}`;
+
+        // 4. KI Aufruf
+        let compressionResult = null;
+        try {
+            this.log.info(`LTM: Sending ${eventCount} events to Gemini AI for compression...`);
+            await this.setStateAsync(LTM_DP_STATUS, { val: `Compressing ${eventCount} events...`, ack: true });
+
+            const result = await this.geminiModel.generateContent(fullPrompt);
+            const response = await result.response;
+
+            // Robustes Parsing
+            const rawText = response.text();
+            const cleanText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+            compressionResult = JSON.parse(cleanText);
+
+        } catch (error) {
+            this.log.error(`LTM Compression failed during AI call or JSON parsing: ${error.message}`);
+            await this.setStateAsync(LTM_DP_STATUS, { val: `Error: AI/JSON failure - ${error.message}`, ack: true });
+            // WICHTIG: Bei Fehler brechen wir ab, ABER wir löschen die Rohdaten NICHT.
+            // So kann der Prozess beim nächsten Lauf (oder manuell) wiederholt werden.
+            return;
+        }
+
+        // 5. Ergebnis validieren und speichern
+        if (compressionResult && compressionResult.summary && compressionResult.activityLevel) {
+            this.log.info(`LTM: Compression successful. Summary: ${compressionResult.summary}`);
+
+            const digestEntry = {
+                timestamp: new Date().toISOString(), // Zeitpunkt der Kompression
+                eventCount: eventCount,
+                summary: compressionResult.summary,
+                activityLevel: compressionResult.activityLevel
+            };
+
+            // Zum Speicher hinzufügen (Neuestes hinten - FIFO)
+            this.dailyDigests.push(digestEntry);
+            await this.saveDailyDigests();
+
+            // 6. Rohdaten bereinigen
+            // Wir entfernen die erfolgreich komprimierten Daten aus dem this.rawEventLog.
+
+            // Robuste Methode: Entferne die ersten 'eventCount' Elemente.
+            // Dies stellt sicher, dass Events, die während der KI-Verarbeitung ankamen, erhalten bleiben.
+            if (this.rawEventLog.length >= eventCount) {
+                this.rawEventLog.splice(0, eventCount);
+            } else {
+                // Sollte nicht passieren, aber zur Sicherheit:
+                this.log.warn("LTM: Mismatch between compressed data count and rawEventLog length. Clearing entire log.");
+                this.rawEventLog = [];
+            }
+
+            await this.saveRawEventLog();
+            this.log.info(`LTM: Cleaned up rawEventLog. Remaining events: ${this.rawEventLog.length}.`);
+            await this.setStateAsync(LTM_DP_STATUS, { val: `Success: Compressed ${eventCount} events at ${new Date().toLocaleString()}`, ack: true });
+
+        } else {
+            this.log.error(`LTM Compression failed: Invalid JSON structure received from AI. Received: ${JSON.stringify(compressionResult)}`);
+            await this.setStateAsync(LTM_DP_STATUS, { val: 'Error: Invalid JSON structure.', ack: true });
+            // Auch hier: Rohdaten nicht löschen, um Wiederholung zu ermöglichen.
+        }
+
+        this.log.info('=== LTM Compression Process Finished ===');
+    }
+
+    // === SPRINT 15 END: Daily Digest & Scheduler Funktionen ===
+
+    // ======================================================================
+    // === ENDE LTM Management Funktionen ===
     // ======================================================================
 
 
@@ -380,15 +663,24 @@ class CogniLiving extends utils.Adapter {
     }
 
     onUnload(callback) {
-        // ... (Unverändert)
         try {
+            // Autopilot Timer stoppen
             if (this.analysisTimer) {
                 this.log.info('Stopping Autopilot timer...');
                 clearInterval(this.analysisTimer);
                 this.analysisTimer = null;
             }
-        } catch {
-            // ignore
+
+            // === SPRINT 15 START: Scheduler Cleanup ===
+            if (this.ltmJob) {
+                this.log.info('Cancelling LTM Scheduler...');
+                this.ltmJob.cancel();
+                this.ltmJob = null;
+            }
+            // === SPRINT 15 END ===
+
+        } catch (e) {
+            this.log.error(`Error during unload: ${e.message}`);
         }
         callback();
     }
@@ -400,10 +692,20 @@ class CogniLiving extends utils.Adapter {
 
         // --- B) Befehl (ack=false) ---
         if (!state.ack) {
+            // STM Analyse Trigger
             if (id === `${this.namespace}.analysis.trigger` && state.val === true) {
                 this.log.info('Manual AI analysis triggered by user...');
                 this.setState(id, { val: false, ack: true });
                 this.runGeminiAnalysis().catch(e => this.log.error(`Error running Gemini analysis: ${e.message}`));
+                return;
+            }
+
+            // SPRINT 15 NEU: LTM Digest Trigger
+            if (id === `${this.namespace}.${LTM_DP_TRIGGER_DIGEST}` && state.val === true) {
+                this.log.info('Manual LTM Daily Digest creation triggered by user...');
+                this.setState(id, { val: false, ack: true }); // Button zurücksetzen
+                this.createDailyDigest().catch(e => this.log.error(`Error running manual Daily Digest creation: ${e.message}`));
+                return;
             }
             return;
         }
@@ -411,9 +713,8 @@ class CogniLiving extends utils.Adapter {
         // --- A) Sensor-Event (ack=true) ---
         const deviceConfig = (this.config.devices || []).find(d => d.id === id);
         if (!deviceConfig) {
-            // PATCH 14.1: Robustheit - Wenn ein Sensor entfernt wurde, aber noch im Tracker ist
+            // PATCH 14.1: Robustheit
             if (this.sensorLastValues.hasOwnProperty(id)) {
-                // Entferne ihn aus dem Tracker
                 delete this.sensorLastValues[id];
             }
             return;
@@ -421,12 +722,9 @@ class CogniLiving extends utils.Adapter {
 
         // 2. === SELEKTIVER FILTER (PATCH 14.1) ===
         if (!deviceConfig.logDuplicates) {
-            // Prüfe gegen den unabhängigen Tracker für den letzten Wert
-            // Wir müssen prüfen, ob der Key existiert (Robustheit).
             if (this.sensorLastValues.hasOwnProperty(id)) {
                 const lastValue = this.sensorLastValues[id];
 
-                // Vergleiche aktuellen Wert (state.val) mit dem letzten bekannten Wert (lastValue)
                 if (lastValue === state.val) {
                     this.log.debug(`Ignoring redundant state update for ${id} (Value: ${state.val})`);
                     return;
@@ -444,6 +742,7 @@ class CogniLiving extends utils.Adapter {
      * Verarbeitet ein eingehendes Sensorereignis, fügt es dem STM und LTM hinzu.
      */
     async processSensorEvent(id, state, deviceConfig) {
+        // ... (Unverändert von Patch 14.1)
         const location = deviceConfig.location || 'unknown';
         const type = deviceConfig.type || 'unknown';
         const name = deviceConfig.name || 'unknown';
@@ -501,7 +800,7 @@ class CogniLiving extends utils.Adapter {
      * Handler für Nachrichten von der Admin-UI
      */
     async onMessage(obj) {
-        // ... (Keine Änderungen)
+        // ... (Unverändert)
         if (typeof obj === 'object' && obj.message) {
             // Prüfe auf den spezifischen Befehl 'testApiKey'
             if (obj.command === 'testApiKey') {
@@ -537,7 +836,7 @@ class CogniLiving extends utils.Adapter {
      * Testet die Verbindung zur Gemini API.
      */
     async testGeminiConnection(apiKey) {
-        // ... (Keine Änderungen)
+        // ... (Unverändert)
         try {
             const testGenAI = new GoogleGenerativeAI(apiKey);
             const model = testGenAI.getGenerativeModel({ model: 'models/gemini-flash-latest' });
@@ -575,7 +874,7 @@ class CogniLiving extends utils.Adapter {
         }
     }
 
-    // (runGeminiAnalysis - Aktualisiert mit Sprach-Fix und deutschem Kontext/Persona)
+    // (runGeminiAnalysis - Unverändert von Patch 14.1. In Sprint 16 wird diese Funktion erweitert)
     async runGeminiAnalysis() {
         if (!this.geminiModel) {
             this.log.warn('Gemini AI is not initialized. Analysis aborted.');
@@ -592,7 +891,6 @@ class CogniLiving extends utils.Adapter {
         // --- KONTEXT UND PERSONA LADEN ---
         const personaKey = this.config.aiPersona || 'generic';
         const personaInstruction = PERSONA_MAPPING[personaKey] || PERSONA_MAPPING['generic'];
-        // PATCH 14.1: Kontext auf Deutsch, wenn leer.
         const livingContext = (this.config.livingContext || 'Keine spezifischen Details angegeben.').substring(0, 200);
 
         // --- JSON PROMPT MIT KONTEXT (PATCH 14.1: SPRACH-FIX) ---
