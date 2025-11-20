@@ -1,25 +1,21 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.1.19",
+        "version": "0.1.20",
         "enabled": true,
         "main": "main.js",
         "news": {
+            "0.1.20": {
+                "en": "Notification System: Added support for sending alerts (isAlert=true) via Telegram, Pushover, Email, WhatsApp (CMB), and Signal (CMA). Implemented anti-spam logic (notify only on new alert).",
+                "de": "Benachrichtigungssystem: Unterstützung für das Senden von Alarmen (isAlert=true) via Telegram, Pushover, E-Mail, WhatsApp (CMB) und Signal (CMA) hinzugefügt. Anti-Spam-Logik implementiert (Benachrichtigung nur bei neuem Alarm)."
+            },
             "0.1.19": {
-                "en": "Licensing Preparation (Freemium): Introduced license key check (simulation). LTM features (Baseline, Digests, Automation Proposals) are now marked as 'Pro' and disabled in 'Free' mode.",
-                "de": "Lizenzierungsvorbereitung (Freemium): Lizenzschlüsselprüfung eingeführt (Simulation). LTM-Funktionen (Baseline, Digests, Automatisierungsvorschläge) sind nun als 'Pro' markiert und im 'Free'-Modus deaktiviert."
+                "en": "Licensing Preparation (Freemium): Introduced license key check (simulation). LTM features (Baseline, Digests, Automation Proposals) are now marked as 'Pro' and disabled in 'Free' mode. Fixed Admin UI background.",
+                "de": "Lizenzierungsvorbereitung (Freemium): Lizenzschlüsselprüfung eingeführt (Simulation). LTM-Funktionen (Baseline, Digests, Automatisierungsvorschläge) sind nun als 'Pro' markiert und im 'Free'-Modus deaktiviert. Admin UI Hintergrund korrigiert."
             },
             "0.1.18": {
                 "en": "Proactive Comfort Assistant: AI now actively searches for automation patterns and suggests actions in new 'analysis.automation' datapoints. Updated analysis log format.",
                 "de": "Proaktiver Komfort-Assistent: Die KI sucht nun aktiv nach Automatisierungsmustern und schlägt Aktionen in neuen 'analysis.automation' Datenpunkten vor. Analyse-Logformat aktualisiert."
-            },
-            "0.1.17": {
-                "en": "Cogni-Engine (LTM Part 3): AI Analysis now uses Baseline comparison. Added 'deviationFromBaseline'. Learning phase is configurable. Added System Mode (Context Override) and Baseline Status indicator.",
-                "de": "Cogni-Engine (LTM Teil 3): KI-Analyse nutzt nun Baseline-Vergleich. 'deviationFromBaseline' hinzugefügt. Lernphase ist konfigurierbar. System-Modus (Context Override) und Baseline-Statusindikator hinzugefügt."
-            },
-            "0.1.16": {
-                "en": "LTM Implementation (Part 2): Added Scheduler (03:00 AM) and AI-driven Daily Digests. Raw logs are now compressed into summaries. Added manual trigger.",
-                "de": "LTM Implementierung (Teil 2): Scheduler (03:00 Uhr) und KI-gesteuerte Tageszusammenfassungen (Daily Digests) hinzugefügt. Rohdaten werden nun komprimiert. Manueller Trigger hinzugefügt."
             }
         },
         "titleLang": {
@@ -81,7 +77,22 @@
         "analysisInterval": 15,
         "aiPersona": "generic",
         "livingContext": "",
-        "minDaysForBaseline": 7
+        "minDaysForBaseline": 7,
+        "notifyTelegramEnabled": false,
+        "notifyTelegramInstance": "",
+        "notifyTelegramRecipient": "",
+        "notifyPushoverEnabled": false,
+        "notifyPushoverInstance": "",
+        "notifyPushoverRecipient": "",
+        "notifyEmailEnabled": false,
+        "notifyEmailInstance": "",
+        "notifyEmailRecipient": "",
+        "notifyWhatsappEnabled": false,
+        "notifyWhatsappInstance": "",
+        "notifyWhatsappRecipient": "",
+        "notifySignalEnabled": false,
+        "notifySignalInstance": "",
+        "notifySignalRecipient": ""
     },
     "objects": [],
     "instanceObjects": [

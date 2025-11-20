@@ -1,6 +1,7 @@
 import React from 'react';
 
 // MUI v5 Core Imports
+// SPRINT 19: FormControlLabel, Grid hinzugefügt
 import {
     Button,
     Checkbox,
@@ -23,17 +24,19 @@ import {
     Alert,
     Box,
     Paper,
+    FormControlLabel,
+    Grid,
 } from '@mui/material';
 import type { AlertColor } from '@mui/material';
 
 // MUI v5 Icons
 // SPRINT 18: LockIcon hinzugefügt
-import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon } from '@mui/icons-material';
+// SPRINT 19: NotificationsIcon hinzugefügt
+import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon } from '@mui/icons-material';
 // ioBroker specific imports (v5)
 import { I18n, DialogSelectID, type IobTheme } from '@iobroker/adapter-react-v5';
 // Wichtig für TypeScript: Importiere Connection für den Socket-Typ
 import type { Connection } from '@iobroker/socket-client';
-// Wichtig für TypeScript: Importiere AlertColor für Snackbar
 
 // TypeScript Definitionen für Props und State
 interface SettingsProps {
@@ -54,7 +57,7 @@ interface DeviceConfig {
     logDuplicates: boolean;
 }
 
-// SPRINT 18: State erweitert
+// SPRINT 19: State erweitert
 interface SettingsState {
     devices: DeviceConfig[];
     geminiApiKey: string;
@@ -62,7 +65,28 @@ interface SettingsState {
     minDaysForBaseline: number;
     aiPersona: string;
     livingContext: string;
-    licenseKey: string; // SPRINT 18 NEU
+    licenseKey: string;
+
+    // SPRINT 19: Notification Settings
+    notifyTelegramEnabled: boolean;
+    notifyTelegramInstance: string;
+    notifyTelegramRecipient: string;
+    notifyPushoverEnabled: boolean;
+    notifyPushoverInstance: string;
+    notifyPushoverRecipient: string;
+    notifyEmailEnabled: boolean;
+    notifyEmailInstance: string;
+    notifyEmailRecipient: string;
+    notifyWhatsappEnabled: boolean;
+    notifyWhatsappInstance: string;
+    notifyWhatsappRecipient: string;
+    notifySignalEnabled: boolean;
+    notifySignalInstance: string;
+    notifySignalRecipient: string;
+
+    availableInstances: Record<string, string[]>; // SPRINT 19 NEU
+    isTestingNotification: boolean; // SPRINT 19 NEU
+
     showSelectId: boolean;
     selectIdIndex: number;
     isTestingApi: boolean;
@@ -71,18 +95,45 @@ interface SettingsState {
     snackbarSeverity: AlertColor;
 }
 
+// SPRINT 19 FIX: Spezifische Typen für Notification Keys, um TypeScript-Fehler beim dynamischen Zugriff zu beheben
+type NotificationEnabledKey = 'notifyTelegramEnabled' | 'notifyPushoverEnabled' | 'notifyEmailEnabled' | 'notifyWhatsappEnabled' | 'notifySignalEnabled';
+type NotificationInstanceKey = 'notifyTelegramInstance' | 'notifyPushoverInstance' | 'notifyEmailInstance' | 'notifyWhatsappInstance' | 'notifySignalInstance';
+type NotificationRecipientKey = 'notifyTelegramRecipient' | 'notifyPushoverRecipient' | 'notifyEmailRecipient' | 'notifyWhatsappRecipient' | 'notifySignalRecipient';
+
+
 export default class Settings extends React.Component<SettingsProps, SettingsState> {
     constructor(props: SettingsProps) {
         super(props);
+        const native = props.native;
         this.state = {
-            devices: props.native.devices || [],
-            geminiApiKey: props.native.geminiApiKey || '',
-            analysisInterval: props.native.analysisInterval || 15,
-            minDaysForBaseline: props.native.minDaysForBaseline || 7,
-            aiPersona: props.native.aiPersona || 'generic',
-            livingContext: props.native.livingContext || '',
-            // SPRINT 18 NEU: Lade Lizenzschlüssel
-            licenseKey: props.native.licenseKey || '',
+            devices: native.devices || [],
+            geminiApiKey: native.geminiApiKey || '',
+            analysisInterval: native.analysisInterval || 15,
+            minDaysForBaseline: native.minDaysForBaseline || 7,
+            aiPersona: native.aiPersona || 'generic',
+            livingContext: native.livingContext || '',
+            licenseKey: native.licenseKey || '',
+
+            // SPRINT 19: Lade Notification Settings
+            notifyTelegramEnabled: native.notifyTelegramEnabled || false,
+            notifyTelegramInstance: native.notifyTelegramInstance || '',
+            notifyTelegramRecipient: native.notifyTelegramRecipient || '',
+            notifyPushoverEnabled: native.notifyPushoverEnabled || false,
+            notifyPushoverInstance: native.notifyPushoverInstance || '',
+            notifyPushoverRecipient: native.notifyPushoverRecipient || '',
+            notifyEmailEnabled: native.notifyEmailEnabled || false,
+            notifyEmailInstance: native.notifyEmailInstance || '',
+            notifyEmailRecipient: native.notifyEmailRecipient || '',
+            notifyWhatsappEnabled: native.notifyWhatsappEnabled || false,
+            notifyWhatsappInstance: native.notifyWhatsappInstance || '',
+            notifyWhatsappRecipient: native.notifyWhatsappRecipient || '',
+            notifySignalEnabled: native.notifySignalEnabled || false,
+            notifySignalInstance: native.notifySignalInstance || '',
+            notifySignalRecipient: native.notifySignalRecipient || '',
+
+            availableInstances: {},
+            isTestingNotification: false,
+
             showSelectId: false,
             selectIdIndex: -1,
             isTestingApi: false,
@@ -92,14 +143,40 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         };
     }
 
-    // (Helper functions - updateNativeValue, updateDevices, onAddDevice, etc. - unverändert)
+    // SPRINT 19: Lade verfügbare Instanzen beim Start
+    componentDidMount() {
+        this.fetchAvailableInstances();
+    }
+
+    // SPRINT 19: Funktion zum Laden der Instanzen
+    fetchAvailableInstances() {
+        const adapters = ['telegram', 'pushover', 'email', 'whatsapp-cmb', 'signal-cma'];
+        const instances: Record<string, string[]> = {};
+
+        const promises = adapters.map(adapter =>
+            this.props.socket.getAdapterInstances(adapter)
+                .then(objs => {
+                    instances[adapter] = objs.map(obj => obj._id.replace('system.adapter.', ''));
+                })
+                .catch(e => console.error(`Error fetching instances for ${adapter}:`, e))
+        );
+
+        Promise.all(promises).then(() => {
+            this.setState({ availableInstances: instances });
+        });
+    }
+
+
+    // (Helper functions)
+    // SPRINT 19 FIX: updateNativeValue Typsicherheit verbessert
     updateNativeValue(attr: string, value: any) {
         if (attr === 'livingContext' && typeof value === 'string' && value.length > 200) {
             value = value.substring(0, 200);
         }
-        // TypeScript benötigt 'as any' hier, da es die dynamischen Keys nicht mag
-        this.setState({ [attr]: value } as any);
-        this.props.onChange(attr, value);
+        // Verwende 'as Pick<...>' für bessere Typ-Assertion bei dynamischen Keys in setState
+        this.setState({ [attr]: value } as Pick<SettingsState, keyof SettingsState>, () => {
+            this.props.onChange(attr, value);
+        });
     }
 
     updateDevices(newDevices: DeviceConfig[]) {
@@ -207,6 +284,27 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             });
     }
 
+    // SPRINT 19 NEU: Handler für Test-Benachrichtigung
+    handleTestNotificationClick() {
+        this.setState({ isTestingNotification: true });
+
+        // Sende Nachricht an Backend.
+        this.props.socket
+            .sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testNotification', {})
+            .then((response: any) => {
+                this.setState({ isTestingNotification: false });
+
+                if (response && response.success) {
+                    this.showSnackbar(response.message, 'success');
+                } else {
+                    const errorMessage = response ? response.message : 'Unknown error';
+                    // Nutze neue Übersetzung 'msg_notification_failed'
+                    this.showSnackbar(`${I18n.t('msg_notification_failed')}: ${errorMessage}`, 'warning');
+                }
+            });
+    }
+
+
     // Verwende den korrekten Typ AlertColor
     showSnackbar(message: string, severity: AlertColor) {
         this.setState({
@@ -224,17 +322,91 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         this.setState({ snackbarOpen: false });
     };
 
+    // SPRINT 19: Helper für das Rendern von Notification-Einstellungen (Fixed)
+    renderNotificationSetting(
+        adapterName: string,
+        enabledAttr: NotificationEnabledKey,
+        instanceAttr: NotificationInstanceKey,
+        recipientAttr: NotificationRecipientKey,
+        recipientLabel: string
+    ) {
+        // Der Zugriff ist nun typsicher dank der definierten Keys
+        const enabled = this.state[enabledAttr];
+        const instance = this.state[instanceAttr];
+        const recipient = this.state[recipientAttr];
+
+        // Finde die korrekten Instanzen im State
+        let adapterKey = adapterName;
+        if (adapterName === 'whatsapp') adapterKey = 'whatsapp-cmb';
+        if (adapterName === 'signal') adapterKey = 'signal-cma';
+
+        const instances = this.state.availableInstances[adapterKey] || [];
+
+        return (
+            <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                <Grid item xs={12} sm={3}>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={enabled}
+                                // Kein Cast mehr notwendig
+                                onChange={e => this.updateNativeValue(enabledAttr, e.target.checked)}
+                            />
+                        }
+                        label={I18n.t(`notify_${adapterName}`)}
+                    />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                    <FormControl fullWidth size="small" disabled={!enabled}>
+                        <InputLabel>{I18n.t('notify_instance')}</InputLabel>
+                        <Select
+                            value={instance}
+                            label={I18n.t('notify_instance')}
+                            // Kein Cast mehr notwendig
+                            onChange={e => this.updateNativeValue(instanceAttr, e.target.value)}
+                        >
+                            {instances.length === 0 ? (
+                                <MenuItem value="">{I18n.t('notify_no_instances')}</MenuItem>
+                            ) : (
+                                instances.map(id => (
+                                    <MenuItem key={id} value={id}>{id}</MenuItem>
+                                ))
+                            )}
+                        </Select>
+                    </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={5}>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        label={recipientLabel}
+                        value={recipient}
+                        // Kein Cast mehr notwendig
+                        onChange={e => this.updateNativeValue(recipientAttr, e.target.value)}
+                        disabled={!enabled}
+                        // E-Mail-Empfänger ist Pflicht, wenn E-Mail aktiviert ist
+                        required={adapterName === 'email' && enabled}
+                    />
+                </Grid>
+            </Grid>
+        );
+    }
+
+
     render() {
-        // SPRINT 18: licenseKey hinzugefügt
-        const { devices, geminiApiKey, analysisInterval, minDaysForBaseline, aiPersona, livingContext, licenseKey, isTestingApi } = this.state;
+        // SPRINT 19: isTestingNotification hinzugefügt
+        const { devices, geminiApiKey, analysisInterval, minDaysForBaseline, aiPersona, livingContext, licenseKey, isTestingApi, isTestingNotification } = this.state;
 
         // Definiere Styles mittels 'sx' Prop (MUI v5)
         const sxConfigSection = {
             mb: 4, // Margin Bottom
             p: 2, // Padding
             // Nutze Theme-Variablen für Konsistenz (Dynamischer Zugriff auf das Theme)
-            border: (theme: any) => `1px solid ${theme.palette.divider}`,
+            // SPRINT 18/19 FIX: Verwende das Theme aus den Props
+            border: `1px solid ${this.props.theme.palette.divider}`,
             borderRadius: 1,
+            // Hintergrundfarbe setzen, um Lesbarkeit im Dark/Light Mode sicherzustellen
+            backgroundColor: this.props.theme.palette.background.paper,
         };
 
         return (
@@ -246,6 +418,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     open={this.state.snackbarOpen}
                     autoHideDuration={8000}
                     onClose={this.handleSnackbarClose}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
                 >
                     <Alert
                         onClose={this.handleSnackbarClose}
@@ -261,6 +434,38 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     component="form"
                     sx={{ width: '100%' }}
                 >
+
+                    {/* === SPRINT 19 NEU: Sektion Notifications === */}
+                    <Typography variant="h6" gutterBottom>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <NotificationsIcon />
+                            {I18n.t('headline_notifications')}
+                        </Box>
+                    </Typography>
+                    <Box sx={sxConfigSection}>
+                        <Typography variant="body2" gutterBottom sx={{mb: 3}}>
+                            {I18n.t('notifications_helper')}
+                        </Typography>
+
+                        {/* Die Aufrufe sind nun typsicher */}
+                        {this.renderNotificationSetting('telegram', 'notifyTelegramEnabled', 'notifyTelegramInstance', 'notifyTelegramRecipient', I18n.t('notify_telegram_recipient'))}
+                        {this.renderNotificationSetting('pushover', 'notifyPushoverEnabled', 'notifyPushoverInstance', 'notifyPushoverRecipient', I18n.t('notify_pushover_recipient'))}
+                        {this.renderNotificationSetting('email', 'notifyEmailEnabled', 'notifyEmailInstance', 'notifyEmailRecipient', I18n.t('notify_email_recipient'))}
+                        {this.renderNotificationSetting('whatsapp', 'notifyWhatsappEnabled', 'notifyWhatsappInstance', 'notifyWhatsappRecipient', I18n.t('notify_phone_recipient'))}
+                        {this.renderNotificationSetting('signal', 'notifySignalEnabled', 'notifySignalInstance', 'notifySignalRecipient', I18n.t('notify_phone_recipient'))}
+
+                        <Button
+                            variant="outlined"
+                            color="primary"
+                            sx={{ mt: 2 }}
+                            onClick={() => this.handleTestNotificationClick()}
+                            disabled={isTestingNotification}
+                            startIcon={isTestingNotification ? <CircularProgress size={20} /> : <NotificationsIcon />}
+                        >
+                            {I18n.t('btn_test_notification')}
+                        </Button>
+                    </Box>
+
 
                     {/* === SPRINT 18 NEU: Sektion 0: Lizenzierung === */}
                     <Typography

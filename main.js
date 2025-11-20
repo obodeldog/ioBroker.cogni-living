@@ -74,6 +74,9 @@ class CogniLiving extends utils.Adapter {
         // SPRINT 18: Lizenzstatus
         this.isProVersion = false;
 
+        // SPRINT 19: Alert Tracking (Verhindert Notification Spam)
+        this.lastAlertState = false;
+
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
         this.on('unload', this.onUnload.bind(this));
@@ -101,6 +104,112 @@ class CogniLiving extends utils.Adapter {
 
         // Wenn der Schlüssel nicht leer ist, aber nicht dem Testschlüssel entspricht
         return false;
+    }
+
+    // ======================================================================
+    // === SPRINT 19: Benachrichtigungssystem ===
+    // ======================================================================
+
+    /**
+     * Sendet eine Benachrichtigung über konfigurierte ioBroker-Adapter. (SPRINT 19)
+     * @param {string} message Die zu sendende Nachricht.
+     * @param {boolean} isTest Flag, ob es sich um eine Testnachricht handelt (für UI-Feedback).
+     */
+    async sendNotification(message, isTest = false) {
+        this.log.info(`${isTest ? '[TEST] ' : ''}Attempting to send notification: "${message}"`);
+
+        const config = this.config;
+        let sentCount = 0;
+
+        // 1. Telegram
+        if (config.notifyTelegramEnabled && config.notifyTelegramInstance) {
+            try {
+                const telegramPayload = {
+                    text: message,
+                    // Optional: Nutzer/ChatID, falls konfiguriert
+                    ...(config.notifyTelegramRecipient && { user: config.notifyTelegramRecipient })
+                };
+                await this.sendToAsync(config.notifyTelegramInstance, 'send', telegramPayload);
+                this.log.info(`Notification sent via ${config.notifyTelegramInstance}`);
+                sentCount++;
+            } catch (error) {
+                this.log.error(`Failed to send notification via ${config.notifyTelegramInstance}: ${error.message}`);
+            }
+        }
+
+        // 2. Pushover
+        if (config.notifyPushoverEnabled && config.notifyPushoverInstance) {
+            try {
+                const pushoverPayload = {
+                    message: message,
+                    title: "Cogni-Living Alert",
+                    priority: 1, // High priority
+                    // Optional: Device ID, falls konfiguriert
+                    ...(config.notifyPushoverRecipient && { device: config.notifyPushoverRecipient })
+                };
+                await this.sendToAsync(config.notifyPushoverInstance, 'send', pushoverPayload);
+                this.log.info(`Notification sent via ${config.notifyPushoverInstance}`);
+                sentCount++;
+            } catch (error) {
+                this.log.error(`Failed to send notification via ${config.notifyPushoverInstance}: ${error.message}`);
+            }
+        }
+
+        // 3. E-Mail
+        if (config.notifyEmailEnabled && config.notifyEmailInstance && config.notifyEmailRecipient) {
+            try {
+                const emailPayload = {
+                    text: message,
+                    subject: "Cogni-Living Alert",
+                    to: config.notifyEmailRecipient
+                };
+                await this.sendToAsync(config.notifyEmailInstance, 'send', emailPayload);
+                this.log.info(`Notification sent via ${config.notifyEmailInstance} to ${config.notifyEmailRecipient}`);
+                sentCount++;
+            } catch (error) {
+                this.log.error(`Failed to send notification via ${config.notifyEmailInstance}: ${error.message}`);
+            }
+        }
+
+        // 4. WhatsApp (CMB)
+        if (config.notifyWhatsappEnabled && config.notifyWhatsappInstance) {
+            try {
+                const whatsappPayload = {
+                    text: message,
+                    // Optional: Phone number, falls konfiguriert
+                    ...(config.notifyWhatsappRecipient && { phone: config.notifyWhatsappRecipient })
+                };
+                // Adapter-ID ist meist 'whatsapp-cmb'
+                await this.sendToAsync(config.notifyWhatsappInstance, 'send', whatsappPayload);
+                this.log.info(`Notification sent via ${config.notifyWhatsappInstance}`);
+                sentCount++;
+            } catch (error) {
+                this.log.error(`Failed to send notification via ${config.notifyWhatsappInstance}: ${error.message}`);
+            }
+        }
+
+        // 5. Signal (CMA)
+        if (config.notifySignalEnabled && config.notifySignalInstance) {
+            try {
+                const signalPayload = {
+                    text: message,
+                    // Optional: Phone number, falls konfiguriert
+                    ...(config.notifySignalRecipient && { phone: config.notifySignalRecipient })
+                };
+                // Adapter-ID ist meist 'signal-cma'
+                await this.sendToAsync(config.notifySignalInstance, 'send', signalPayload);
+                this.log.info(`Notification sent via ${config.notifySignalInstance}`);
+                sentCount++;
+            } catch (error) {
+                this.log.error(`Failed to send notification via ${config.notifySignalInstance}: ${error.message}`);
+            }
+        }
+
+        if (sentCount === 0 && !isTest) {
+            // Nur loggen, wenn es kein Test war und nichts gesendet wurde
+            this.log.info("No notification services enabled or configured. Alert triggered but not sent.");
+        }
+        return sentCount; // Rückgabe für Test-Handler
     }
 
 
@@ -215,6 +324,24 @@ class CogniLiving extends utils.Adapter {
             },
             native: {},
         });
+
+        // SPRINT 19: Lade den letzten Alert-Zustand, um State-Changes zu erkennen
+        try {
+            const alertState = await this.getStateAsync('analysis.isAlert');
+            if (alertState && typeof alertState.val === 'boolean') {
+                this.lastAlertState = alertState.val;
+            } else {
+                // Falls der State noch nie gesetzt wurde, initialisiere ihn
+                if (!alertState || alertState.val === null || alertState.val === undefined) {
+                    await this.setStateAsync('analysis.isAlert', { val: false, ack: true });
+                }
+                this.lastAlertState = false;
+            }
+            this.log.info(`Initial Alert State loaded: ${this.lastAlertState ? 'ACTIVE' : 'INACTIVE'}.`);
+        } catch (e) {
+            this.log.warn(`Could not read initial state of analysis.isAlert: ${e.message}. Defaulting to false.`);
+            this.lastAlertState = false;
+        }
 
         await this.setObjectNotExistsAsync('analysis.activitySummary', {
             type: 'state',
@@ -381,9 +508,12 @@ class CogniLiving extends utils.Adapter {
         if (intervalMilliseconds > 0) {
             this.log.info(`Starting Autopilot: Analysis will run every ${intervalMinutes} minutes.`);
             this.analysisTimer = setInterval(() => {
+                // SPRINT 19: Logik aktualisiert für korrektes Alert-Reset bei Inaktivität
                 if (this.eventHistory.length === 0) {
                     this.log.info('Autopilot: Skipping analysis, no events in memory.');
-                    this.resetAnalysisStates();
+                    // Setze Alert-Status zurück
+                    this.setState('analysis.isAlert', { val: false, ack: true });
+                    this.resetAnalysisStates(); // resetAnalysisStates setzt lastAlertState=false
                     return;
                 }
                 const now = Date.now();
@@ -391,8 +521,9 @@ class CogniLiving extends utils.Adapter {
                 const lastEventTime = this.eventHistory[0].timestamp;
                 if (now - lastEventTime > intervalMilliseconds) {
                     this.log.info('Autopilot: Skipping analysis, no new events in the last interval.');
+                    // Setze Alert-Status zurück
                     this.setState('analysis.isAlert', { val: false, ack: true });
-                    this.resetAnalysisStates();
+                    this.resetAnalysisStates(); // resetAnalysisStates setzt lastAlertState=false
                     return;
                 }
                 this.log.info('Autopilot triggering scheduled AI analysis (Filter passed)...');
@@ -414,7 +545,7 @@ class CogniLiving extends utils.Adapter {
     }
 
     // ======================================================================
-    // === SPRINT 16: System Mode Management (Unverändert) ===
+    // === SPRINT 16: System Mode Management (Unverändert zu Sprint 18) ===
     // ======================================================================
 
     async checkSystemObjects() {
@@ -904,7 +1035,7 @@ class CogniLiving extends utils.Adapter {
     // === System Funktionen ===
     // ======================================================================
 
-    // SPRINT 17: resetAnalysisStates erweitert (SPRINT 18: Angepasst)
+    // SPRINT 17: resetAnalysisStates erweitert (SPRINT 18/19: Angepasst)
     async resetAnalysisStates() {
         await this.setStateAsync('analysis.activitySummary', { val: 'No recent activity.', ack: true });
 
@@ -923,6 +1054,10 @@ class CogniLiving extends utils.Adapter {
         const automationResetText = this.isProVersion ? '' : 'N/A (Pro Feature)';
         await this.setStateAsync('analysis.automation.description', { val: automationResetText, ack: true });
         await this.setStateAsync('analysis.automation.suggestedAction', { val: automationResetText, ack: true });
+
+        // SPRINT 19: Stelle sicher, dass der interne Alert-Status zurückgesetzt wird
+        // Dies ist wichtig, wenn der Autopilot wegen Inaktivität abbricht.
+        this.lastAlertState = false;
     }
 
     onUnload(callback) {
@@ -1090,9 +1225,10 @@ class CogniLiving extends utils.Adapter {
         this.log.debug(`Event processed for ${id} (Value: ${state.val}). STM Count: ${this.eventHistory.length}, LTM Count: ${this.rawEventLog.length}`);
     }
 
+    // SPRINT 19: onMessage erweitert für Test-Benachrichtigungen
     async onMessage(obj) {
         if (typeof obj === 'object' && obj.message) {
-            // Prüfe auf den spezifischen Befehl 'testApiKey'
+            // === Befehl: testApiKey ===
             if (obj.command === 'testApiKey') {
                 this.log.info('Received testApiKey request from Admin UI.');
                 const apiKey = obj.message.apiKey;
@@ -1117,6 +1253,35 @@ class CogniLiving extends utils.Adapter {
                 // Antwort an die UI senden (Erfolg oder Fehlerdetails)
                 if (obj.callback) {
                     this.sendTo(obj.from, obj.command, result, obj.callback);
+                }
+            }
+
+            // === SPRINT 19 NEU: Befehl: testNotification ===
+            else if (obj.command === 'testNotification') {
+                this.log.info('Received testNotification request from Admin UI.');
+
+                const testMessage = "[Cogni-Living TEST] Dies ist eine Test-Benachrichtigung.";
+
+                // Nutze die bestehende sendNotification Funktion.
+                try {
+                    const count = await this.sendNotification(testMessage, true);
+
+                    if (count > 0) {
+                        if (obj.callback) {
+                            this.sendTo(obj.from, obj.command, { success: true, message: `Test message sent successfully to ${count} service(s).` }, obj.callback);
+                        }
+                    } else {
+                        // Keine Fehler, aber auch nichts konfiguriert
+                        if (obj.callback) {
+                            this.sendTo(obj.from, obj.command, { success: false, message: 'No notification services enabled or configured correctly.' }, obj.callback);
+                        }
+                    }
+                } catch (error) {
+                    // Genereller Fehler beim Senden
+                    this.log.error(`Error during test notification: ${error.message}`);
+                    if (obj.callback) {
+                        this.sendTo(obj.from, obj.command, { success: false, message: `Failed to send: ${error.message}` }, obj.callback);
+                    }
                 }
             }
         }
@@ -1162,12 +1327,11 @@ class CogniLiving extends utils.Adapter {
 
 
     // ======================================================================
-    // === SPRINT 16/17/18: Cogni-Engine (runGeminiAnalysis Upgrade) ===
+    // === SPRINT 16/17/18/19: Cogni-Engine (runGeminiAnalysis Upgrade) ===
     // ======================================================================
 
     /**
-     * Führt die KI-Analyse durch, indem STM (aktuelle Daten) mit LTM (Baseline) verglichen wird (nur Pro),
-     * unter Berücksichtigung des aktuellen System-Modus, und sucht nach Automatisierungsmustern (nur Pro).
+     * Führt die KI-Analyse durch, verwaltet den Alert-Status und Benachrichtigungen.
      */
     async runGeminiAnalysis() {
         if (!this.geminiModel) {
@@ -1178,7 +1342,9 @@ class CogniLiving extends utils.Adapter {
         if (this.eventHistory.length === 0) {
             this.log.info('Event history is empty. Nothing to analyze.');
             await this.setStateAsync('analysis.lastResult', { val: '{"status": "History is empty"}', ack: true });
-            this.resetAnalysisStates();
+            // SPRINT 19: Sicherstellen, dass Alarm zurückgesetzt wird
+            this.setState('analysis.isAlert', { val: false, ack: true });
+            this.resetAnalysisStates(); // resetAnalysisStates setzt lastAlertState=false
             return;
         }
 
@@ -1329,10 +1495,11 @@ BASELINE STATUS: Inaktiv (Entweder Free-Version, Lernphase oder durch System-Mod
             const response = await result.response;
 
             let analysisResult = null;
+            let rawText = ''; // SPRINT 19: Definiere rawText hier
 
             try {
                 // Robustes Parsing
-                const rawText = response.text();
+                rawText = response.text();
                 this.log.debug(`AI Response received (raw text): ${rawText}`);
 
                 const cleanText = rawText
@@ -1342,13 +1509,16 @@ BASELINE STATUS: Inaktiv (Entweder Free-Version, Lernphase oder durch System-Mod
                 analysisResult = JSON.parse(cleanText);
             } catch (parseError) {
                 this.log.error(
-                    `Failed to parse AI response as JSON: ${parseError.message}. Raw response: ${response.text()}`,
+                    `Failed to parse AI response as JSON: ${parseError.message}. Raw response: ${rawText}`,
                 );
                 await this.setStateAsync('analysis.lastResult', {
                     val: `{"error": "Invalid JSON received", "details": "${parseError.message}"}`,
                     ack: true,
                 });
                 await this.setStateAsync('analysis.isAlert', { val: true, ack: true });
+
+                // SPRINT 19: Auch bei JSON Fehler Alarm-Status tracken
+                this.lastAlertState = true;
                 return;
             }
 
@@ -1391,8 +1561,11 @@ BASELINE STATUS: Inaktiv (Entweder Free-Version, Lernphase oder durch System-Mod
                     val: analysisResult.comfort.suggestion || '',
                     ack: true,
                 });
+
+                // SPRINT 19: Variable für Alert Handling
+                const alertReason = analysisResult.activity.alertReason || '';
                 await this.setStateAsync('analysis.alertReason', {
-                    val: analysisResult.activity.alertReason || '',
+                    val: alertReason,
                     ack: true,
                 });
 
@@ -1434,15 +1607,38 @@ BASELINE STATUS: Inaktiv (Entweder Free-Version, Lernphase oder durch System-Mod
                 }
 
 
+                // === SPRINT 19: Alert Handling und Benachrichtigung ===
                 const alertFound = analysisResult.activity.isAlert;
 
                 if (alertFound) {
-                    this.log.warn(`>>> AI ALERT DETECTED! Mode: ${this.currentSystemMode}. Deviation: ${deviation}. Reason: ${analysisResult.activity.alertReason || 'N/A'} <<<`);
+                    this.log.warn(`>>> AI ALERT DETECTED! Mode: ${this.currentSystemMode}. Deviation: ${deviation}. Reason: ${alertReason || 'N/A'} <<<`);
                     await this.setStateAsync('analysis.isAlert', { val: true, ack: true });
+
+                    // Prüfe, ob der Alarm NEU ist (Statuswechsel von false auf true)
+                    if (!this.lastAlertState) {
+                        this.log.info("New alert detected. Triggering notifications...");
+                        // Formatierung der Nachricht für die Benachrichtigung
+                        const notificationMessage = `🚨 Cogni-Living Alarm: ${alertReason} (Modus: ${this.currentSystemMode}, Abweichung: ${deviation})`;
+                        await this.sendNotification(notificationMessage);
+                    } else {
+                        this.log.info("Alert persists. No new notification sent (Spam protection).");
+                    }
+
                 } else {
                     this.log.info(`AI analysis complete. Mode: ${this.currentSystemMode}. Deviation: ${deviation}. No alert conditions found.`);
                     await this.setStateAsync('analysis.isAlert', { val: false, ack: true });
+
+                    // Prüfe, ob ein vorheriger Alarm behoben wurde
+                    if (this.lastAlertState) {
+                        this.log.info("Previous alert resolved.");
+                        // Optional: Eine "Alles Okay"-Benachrichtigung könnte hier gesendet werden.
+                    }
                 }
+
+                // Aktualisiere den internen Status für den nächsten Durchlauf
+                this.lastAlertState = alertFound;
+                // === SPRINT 19 END ===
+
 
                 // Logbuch aktualisieren
                 const logEntry = {
@@ -1463,6 +1659,8 @@ BASELINE STATUS: Inaktiv (Entweder Free-Version, Lernphase oder durch System-Mod
                     ack: true,
                 });
                 await this.setStateAsync('analysis.isAlert', { val: true, ack: true });
+                // SPRINT 19: Auch bei JSON Fehler Alarm-Status tracken
+                this.lastAlertState = true;
             }
         } catch (error) {
             // Fehler: API-Aufruf fehlgeschlagen
@@ -1472,10 +1670,14 @@ BASELINE STATUS: Inaktiv (Entweder Free-Version, Lernphase oder durch System-Mod
                 val: `{"error": "API Call failed", "details": "${errorMessage}"}`,
                 ack: true,
             });
+            // SPRINT 19: Auch bei API Fehler Alarm-Status tracken
+            await this.setStateAsync('analysis.isAlert', { val: true, ack: true });
+            await this.setStateAsync('analysis.alertReason', { val: `AI connection error: ${error.message}`, ack: true });
+            this.lastAlertState = true;
         }
     }
     // ======================================================================
-    // === SPRINT 16/17/18 END: Cogni-Engine ===
+    // === SPRINT 16/17/18/19 END: Cogni-Engine ===
     // ======================================================================
 
 
