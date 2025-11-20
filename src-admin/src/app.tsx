@@ -1,8 +1,8 @@
 import React from 'react';
 import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles';
 
-// Importiere Box für das Layout von MUI v5
-import { Box } from '@mui/material';
+// Importiere Box und CssBaseline für das Layout von MUI v5
+import { Box, CssBaseline } from '@mui/material';
 
 // Wichtig: Imports von adapter-react-v5 und TypeScript-Typen
 import {
@@ -48,11 +48,7 @@ export default class App extends GenericApp {
         };
 
         // COMMENT IT!!!
-        // extendedProps.socket = {
-        //     protocol: 'http:',
-        //     host: '192.168.100.61',
-        //     port: 8081,
-        // };
+        // extendedProps.socket = { ... };
 
         super(props, extendedProps);
     }
@@ -76,6 +72,8 @@ export default class App extends GenericApp {
         return (
             <StyledEngineProvider injectFirst>
                 <ThemeProvider theme={this.state.theme}>
+                    {/* FIX für Hintergrundfarbe: CssBaseline hinzugefügt, um das Styling zu normalisieren */}
+                    <CssBaseline />
                     <Box
                         sx={{
                             width: '100%',

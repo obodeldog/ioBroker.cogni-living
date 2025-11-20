@@ -27,7 +27,8 @@ import {
 import type { AlertColor } from '@mui/material';
 
 // MUI v5 Icons
-import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon } from '@mui/icons-material';
+// SPRINT 18: LockIcon hinzugefügt
+import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon } from '@mui/icons-material';
 // ioBroker specific imports (v5)
 import { I18n, DialogSelectID, type IobTheme } from '@iobroker/adapter-react-v5';
 // Wichtig für TypeScript: Importiere Connection für den Socket-Typ
@@ -53,14 +54,15 @@ interface DeviceConfig {
     logDuplicates: boolean;
 }
 
-// SPRINT 16: State erweitert
+// SPRINT 18: State erweitert
 interface SettingsState {
     devices: DeviceConfig[];
     geminiApiKey: string;
     analysisInterval: number;
-    minDaysForBaseline: number; // SPRINT 16 NEU
+    minDaysForBaseline: number;
     aiPersona: string;
     livingContext: string;
+    licenseKey: string; // SPRINT 18 NEU
     showSelectId: boolean;
     selectIdIndex: number;
     isTestingApi: boolean;
@@ -76,10 +78,11 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             devices: props.native.devices || [],
             geminiApiKey: props.native.geminiApiKey || '',
             analysisInterval: props.native.analysisInterval || 15,
-            // SPRINT 16 NEU: Lade Konfiguration (Default 7)
             minDaysForBaseline: props.native.minDaysForBaseline || 7,
             aiPersona: props.native.aiPersona || 'generic',
             livingContext: props.native.livingContext || '',
+            // SPRINT 18 NEU: Lade Lizenzschlüssel
+            licenseKey: props.native.licenseKey || '',
             showSelectId: false,
             selectIdIndex: -1,
             isTestingApi: false,
@@ -89,7 +92,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         };
     }
 
-    // (Helper functions - updateNativeValue, updateDevices, onAddDevice, etc. - unverändert, aber TS-konform)
+    // (Helper functions - updateNativeValue, updateDevices, onAddDevice, etc. - unverändert)
     updateNativeValue(attr: string, value: any) {
         if (attr === 'livingContext' && typeof value === 'string' && value.length > 200) {
             value = value.substring(0, 200);
@@ -222,8 +225,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     };
 
     render() {
-        // SPRINT 16: minDaysForBaseline hinzugefügt
-        const { devices, geminiApiKey, analysisInterval, minDaysForBaseline, aiPersona, livingContext, isTestingApi } = this.state;
+        // SPRINT 18: licenseKey hinzugefügt
+        const { devices, geminiApiKey, analysisInterval, minDaysForBaseline, aiPersona, livingContext, licenseKey, isTestingApi } = this.state;
 
         // Definiere Styles mittels 'sx' Prop (MUI v5)
         const sxConfigSection = {
@@ -258,6 +261,37 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     component="form"
                     sx={{ width: '100%' }}
                 >
+
+                    {/* === SPRINT 18 NEU: Sektion 0: Lizenzierung === */}
+                    <Typography
+                        variant="h6"
+                        gutterBottom
+                    >
+                        {I18n.t('headline_licensing')}
+                    </Typography>
+                    <Box sx={sxConfigSection}>
+                        <FormControl
+                            fullWidth
+                            margin="normal"
+                        >
+                            {/* Flexbox für Icon und Input */}
+                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                <LockIcon color="action" sx={{mt: 1}}/> {/* Icon hinzufügen und positionieren */}
+                                <TextField
+                                    sx={{ flexGrow: 1, maxWidth: '600px' }}
+                                    label={I18n.t('license_key')}
+                                    value={licenseKey}
+                                    type="password"
+                                    onChange={e => this.updateNativeValue('licenseKey', e.target.value)}
+                                    helperText={I18n.t('license_key_helper')}
+                                    variant="outlined"
+                                    size="small"
+                                />
+                            </Box>
+                        </FormControl>
+                    </Box>
+
+
                     {/* === Sektion 1: KI-Einstellungen & Autopilot === */}
                     <Typography
                         variant="h6"
