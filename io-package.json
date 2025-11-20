@@ -1,10 +1,14 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.1.18",
+        "version": "0.1.19",
         "enabled": true,
         "main": "main.js",
         "news": {
+            "0.1.19": {
+                "en": "Licensing Preparation (Freemium): Introduced license key check (simulation). LTM features (Baseline, Digests, Automation Proposals) are now marked as 'Pro' and disabled in 'Free' mode.",
+                "de": "Lizenzierungsvorbereitung (Freemium): Lizenzschlüsselprüfung eingeführt (Simulation). LTM-Funktionen (Baseline, Digests, Automatisierungsvorschläge) sind nun als 'Pro' markiert und im 'Free'-Modus deaktiviert."
+            },
             "0.1.18": {
                 "en": "Proactive Comfort Assistant: AI now actively searches for automation patterns and suggests actions in new 'analysis.automation' datapoints. Updated analysis log format.",
                 "de": "Proaktiver Komfort-Assistent: Die KI sucht nun aktiv nach Automatisierungsmustern und schlägt Aktionen in neuen 'analysis.automation' Datenpunkten vor. Analyse-Logformat aktualisiert."
@@ -16,42 +20,6 @@
             "0.1.16": {
                 "en": "LTM Implementation (Part 2): Added Scheduler (03:00 AM) and AI-driven Daily Digests. Raw logs are now compressed into summaries. Added manual trigger.",
                 "de": "LTM Implementierung (Teil 2): Scheduler (03:00 Uhr) und KI-gesteuerte Tageszusammenfassungen (Daily Digests) hinzugefügt. Rohdaten werden nun komprimiert. Manueller Trigger hinzugefügt."
-            },
-            "0.1.15-p1": {
-                "en": "CRITICAL FIX: Corrected duplicate filter logic (independent tracking). Fixed AI language inconsistency (forced German).",
-                "de": "KRITISCHER FIX: Logik des Duplikatfilters korrigiert (unabhängiges Tracking). KI-Sprachinkonsistenz behoben (Deutsch erzwungen)."
-            },
-            "0.1.15": {
-                "en": "LTM Implementation (Part 1): Added persistent Raw Event Log (1500 events) for long-term memory processing.",
-                "de": "LTM Implementierung (Teil 1): Persistentes Rohdaten-Ereignisprotokoll (1500 Ereignisse) für die Langzeitgedächtnisverarbeitung hinzugefügt."
-            },
-            "0.1.14": {
-                "en": "Major Migration: Admin interface migrated to Material-UI v5 and TypeScript (adapter-react-v5). Fixed API test logic.",
-                "de": "Große Migration: Admin-Oberfläche auf Material-UI v5 und TypeScript (adapter-react-v5) migriert. API-Testlogik korrigiert."
-            },
-            "0.1.12": {
-                "en": "AI Contextual Awareness: Added Persona selection and Living Context description in settings.",
-                "de": "KI Kontextbewusstsein: Persona-Auswahl und Beschreibung des Wohnkontextes in den Einstellungen hinzugefügt."
-            },
-            "0.1.11": {
-                "en": "Major Stability Improvement: Switched AI communication to JSON mode.",
-                "de": "Große Stabilitätsverbesserung: KI-Kommunikation auf JSON-Modus umgestellt."
-            },
-            "0.1.10": {
-                "en": "CRITICAL FIX: Corrected sensor subscription logic (change: any).",
-                "de": "KRITISCHER FIX: Sensor-Abonnement-Logik (change: any) korrigiert."
-            },
-            "0.1.9": {
-                "en": "Added selective filter (log duplicates) and fixed Admin UI scrollbar issue.",
-                "de": "Selektiven Filter (Duplikate loggen) hinzugefügt und Scrollbar-Problem in der Admin-UI behoben."
-            },
-            "0.1.8": {
-                "en": "Refined AI prompt structure.",
-                "de": "KI-Prompt-Struktur verfeinert."
-            },
-            "0.0.1": {
-                "en": "initial release",
-                "de": "Erstveröffentlichung"
             }
         },
         "titleLang": {
@@ -109,6 +77,7 @@
     "native": {
         "devices": [],
         "geminiApiKey": "",
+        "licenseKey": "",
         "analysisInterval": 15,
         "aiPersona": "generic",
         "livingContext": "",

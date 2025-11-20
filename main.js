@@ -71,15 +71,59 @@ class CogniLiving extends utils.Adapter {
         // System Status (Sprint 16)
         this.currentSystemMode = SYSTEM_MODES.NORMAL;
 
+        // SPRINT 18: Lizenzstatus
+        this.isProVersion = false;
+
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
         this.on('unload', this.onUnload.bind(this));
         this.on('message', this.onMessage.bind(this));
     }
 
+    // ======================================================================
+    // === SPRINT 18: Lizenz Management ===
+    // ======================================================================
+
+    /**
+     * Überprüft den Lizenzschlüssel. (SPRINT 18)
+     * @param {string} key Der zu prüfende Lizenzschlüssel.
+     * @returns {Promise<boolean>} True, wenn die Lizenz gültig ist (PRO), sonst False (FREE).
+     */
+    async checkLicense(key) {
+        if (!key) {
+            return false;
+        }
+        // SIMULATION: In einer echten Anwendung würde hier ein Aufruf an einen Lizenzserver erfolgen.
+        // Für Entwicklungszwecke akzeptieren wir einen festen Testschlüssel.
+        if (key === "TEST-PRO-KEY") {
+            return true;
+        }
+
+        // Wenn der Schlüssel nicht leer ist, aber nicht dem Testschlüssel entspricht
+        return false;
+    }
+
+
     async onReady() {
         const adapterVersion = this.version || 'unknown';
         this.log.info(`cogni-living adapter starting (v${adapterVersion})`);
+
+        // === 0. LIZENZ PRÜFUNG (SPRINT 18) ===
+        // Dies muss früh geschehen, da es die Initialisierung anderer Features beeinflusst.
+        const licenseKey = this.config.licenseKey || '';
+        this.isProVersion = await this.checkLicense(licenseKey);
+
+        if (this.isProVersion) {
+            this.log.info('✅ License check successful: PRO features enabled (LTM, Baseline, Automation Proposals).');
+        } else {
+            // Prüfe, ob ein Key eingegeben wurde, der ungültig war
+            if (licenseKey && licenseKey.length > 0) {
+                this.log.warn('❌ License check failed: Invalid key provided. Running in FREE mode.');
+            } else {
+                this.log.info('No license key provided: Running in FREE mode. LTM features disabled.');
+            }
+        }
+
 
         // SPRINT 16: Validierung der Konfiguration
         // Stelle sicher, dass der Wert existiert und gültig ist (1-30 Tage).
@@ -90,7 +134,10 @@ class CogniLiving extends utils.Adapter {
             }
             this.config.minDaysForBaseline = 7; // Setze Default
         }
-        this.log.info(`LTM Configuration: Learning phase duration set to ${this.config.minDaysForBaseline} days.`);
+        // SPRINT 18: Logge nur, wenn Pro aktiv ist, da es sonst irrelevant ist.
+        if (this.isProVersion) {
+            this.log.info(`LTM Configuration: Learning phase duration set to ${this.config.minDaysForBaseline} days.`);
+        }
 
 
         // === 1. KI INITIALISIERUNG (JSON MODE) ===
@@ -175,7 +222,7 @@ class CogniLiving extends utils.Adapter {
             native: {},
         });
 
-        // SPRINT 16 START: Neuer Datenpunkt Deviation
+        // SPRINT 16 START: Neuer Datenpunkt Deviation (SPRINT 18: States erweitert)
         await this.setObjectNotExistsAsync('analysis.deviationFromBaseline', {
             type: 'state',
             common: {
@@ -189,6 +236,7 @@ class CogniLiving extends utils.Adapter {
                 states: {
                     "N/A (Learning)": "N/A (Lernphase)",
                     "N/A (No Activity)": "N/A (Keine Aktivität)",
+                    "N/A (Pro Feature)": "N/A (Pro Feature)", // SPRINT 18 NEU
                     "none": "Keine (Normal)",
                     "slight": "Geringfügig",
                     "significant": "Signifikant",
@@ -280,6 +328,7 @@ class CogniLiving extends utils.Adapter {
         }
 
         // 3b. LTM (Long Term Memory) laden
+        // SPRINT 18: LTM wird immer geladen (falls Daten vorhanden sind), aber die Nutzung hängt von der Lizenz ab.
         await this.checkLtmObjects();
         await this.loadRawEventLog();
         await this.loadDailyDigests(); // Lädt Digests und aktualisiert Baseline Status
@@ -356,14 +405,16 @@ class CogniLiving extends utils.Adapter {
         }
 
         // 5b. LTM Scheduler
+        // SPRINT 18: Die Logik zur Prüfung der Lizenz ist nun in setupLtmScheduler.
         this.setupLtmScheduler();
+
 
         // 5c. Mode Reset Scheduler (SPRINT 16)
         this.setupModeResetScheduler();
     }
 
     // ======================================================================
-    // === SPRINT 16: System Mode Management ===
+    // === SPRINT 16: System Mode Management (Unverändert) ===
     // ======================================================================
 
     async checkSystemObjects() {
@@ -456,11 +507,17 @@ class CogniLiving extends utils.Adapter {
 
 
     // ======================================================================
-    // === LTM Management Funktionen (Sprints 14, 15, 16) ===
+    // === LTM Management Funktionen (Sprints 14, 15, 16, 18) ===
     // ======================================================================
 
-    // SPRINT 16: Helper für Baseline Status
+    // SPRINT 16: Helper für Baseline Status (SPRINT 18: Angepasst)
     async updateBaselineStatus() {
+        // SPRINT 18: Wenn nicht PRO, zeige dies an.
+        if (!this.isProVersion) {
+            await this.setStateAsync(LTM_DP_BASELINE_STATUS, { val: 'Deaktiviert (Pro-Feature)', ack: true });
+            return;
+        }
+
         // Lese Konfiguration für die benötigte Dauer
         const requiredDays = this.config.minDaysForBaseline || 7;
         const currentDays = this.dailyDigests.length;
@@ -614,7 +671,7 @@ class CogniLiving extends utils.Adapter {
         }
     }
 
-    // loadDailyDigests (Aktualisiert für Sprint 16)
+    // loadDailyDigests (Aktualisiert für Sprint 16/18)
     async loadDailyDigests() {
         try {
             const state = await this.getStateAsync(LTM_DP_DAILY_DIGESTS);
@@ -648,7 +705,7 @@ class CogniLiving extends utils.Adapter {
                 this.log.error(`LTM: Konnte korrupten State (Digests) nicht bereinigen: ${e.message}`);
             }
         }
-        // SPRINT 16: Status aktualisieren, nachdem Daten geladen wurden
+        // SPRINT 16/18: Status aktualisieren, nachdem Daten geladen wurden (berücksichtigt isProVersion)
         await this.updateBaselineStatus();
     }
 
@@ -671,16 +728,26 @@ class CogniLiving extends utils.Adapter {
             this.log.error(`LTM: Fehler beim Speichern der Daily Digests: ${error.message}`);
         }
 
-        // SPRINT 16: Status aktualisieren
+        // SPRINT 16/18: Status aktualisieren (berücksichtigt isProVersion)
         if (updateStatus) {
             await this.updateBaselineStatus();
         }
     }
 
+    // SPRINT 18: setupLtmScheduler angepasst
     setupLtmScheduler() {
         if (this.ltmJob) {
             this.log.info('LTM Scheduler already running. Cancelling existing job before rescheduling.');
             this.ltmJob.cancel();
+            this.ltmJob = null; // Sicherstellen, dass es null ist
+        }
+
+        // SPRINT 18: Prüfe Lizenzstatus
+        if (!this.isProVersion) {
+            this.log.info('LTM Scheduler disabled (Free Version). Daily Digests will not be created automatically.');
+            // Setze Status für Free User
+            this.setStateAsync(LTM_DP_STATUS, { val: 'Deaktiviert (Pro-Feature).', ack: true });
+            return;
         }
 
         this.log.info(`LTM: Setting up Scheduler for Daily Digest creation (Cron: ${LTM_SCHEDULE}).`);
@@ -696,11 +763,20 @@ class CogniLiving extends utils.Adapter {
             const nextInvocation = this.ltmJob.nextInvocation();
             this.log.info(`LTM Scheduler set up successfully. Next run: ${nextInvocation ? nextInvocation.toString() : 'N/A'}`);
         } else {
+            // Sollte nur passieren, wenn schedule.scheduleJob fehlschlägt, aber isProVersion true ist.
             this.log.error('LTM: Failed to set up Scheduler.');
         }
     }
 
+    // SPRINT 18: createDailyDigest angepasst
     async createDailyDigest() {
+        // SPRINT 18: Zusätzliche Sicherheitsprüfung (sollte durch Scheduler/Trigger bereits abgedeckt sein)
+        if (!this.isProVersion) {
+            this.log.warn('LTM Compression attempt blocked (Free Version).');
+            // Status wurde bereits in setupLtmScheduler oder onStateChange gesetzt.
+            return;
+        }
+
         this.log.info('=== LTM Compression Process Started ===');
         // Nutze toLocaleString für bessere Lesbarkeit im Status
         await this.setStateAsync(LTM_DP_STATUS, { val: `Processing started at ${new Date().toLocaleString()}`, ack: true });
@@ -828,19 +904,25 @@ class CogniLiving extends utils.Adapter {
     // === System Funktionen ===
     // ======================================================================
 
-    // SPRINT 17: resetAnalysisStates erweitert
+    // SPRINT 17: resetAnalysisStates erweitert (SPRINT 18: Angepasst)
     async resetAnalysisStates() {
         await this.setStateAsync('analysis.activitySummary', { val: 'No recent activity.', ack: true });
-        // SPRINT 16: Setze Deviation zurück
-        await this.setStateAsync('analysis.deviationFromBaseline', { val: 'N/A (No Activity)', ack: true });
+
+        // SPRINT 18: Setze Deviation je nach Lizenz
+        const deviationResetValue = this.isProVersion ? 'N/A (No Activity)' : 'N/A (Pro Feature)';
+        await this.setStateAsync('analysis.deviationFromBaseline', { val: deviationResetValue, ack: true });
+
         await this.setStateAsync('analysis.comfortSummary', { val: '', ack: true });
         await this.setStateAsync('analysis.comfortSuggestion', { val: '', ack: true });
         await this.setStateAsync('analysis.alertReason', { val: '', ack: true });
 
         // SPRINT 17: Setze Automation Proposal zurück
         await this.setStateAsync('analysis.automation.patternDetected', { val: false, ack: true });
-        await this.setStateAsync('analysis.automation.description', { val: '', ack: true });
-        await this.setStateAsync('analysis.automation.suggestedAction', { val: '', ack: true });
+
+        // SPRINT 18: Text je nach Lizenz
+        const automationResetText = this.isProVersion ? '' : 'N/A (Pro Feature)';
+        await this.setStateAsync('analysis.automation.description', { val: automationResetText, ack: true });
+        await this.setStateAsync('analysis.automation.suggestedAction', { val: automationResetText, ack: true });
     }
 
     onUnload(callback) {
@@ -872,6 +954,7 @@ class CogniLiving extends utils.Adapter {
         callback();
     }
 
+    // SPRINT 18: onStateChange angepasst für LTM Trigger
     onStateChange(id, state) {
         if (!state) {
             return;
@@ -910,9 +993,17 @@ class CogniLiving extends utils.Adapter {
 
             // LTM Digest Trigger
             if (id === `${this.namespace}.${LTM_DP_TRIGGER_DIGEST}` && state.val === true) {
-                this.log.info('Manual LTM Daily Digest creation triggered by user...');
-                this.setState(id, { val: false, ack: true }); // Button zurücksetzen
-                this.createDailyDigest().catch(e => this.log.error(`Error running manual Daily Digest creation: ${e.message}`));
+                this.setState(id, { val: false, ack: true }); // Button immer zurücksetzen
+
+                // SPRINT 18: Prüfe Lizenzstatus vor Ausführung
+                if (this.isProVersion) {
+                    this.log.info('Manual LTM Daily Digest creation triggered by user...');
+                    this.createDailyDigest().catch(e => this.log.error(`Error running manual Daily Digest creation: ${e.message}`));
+                } else {
+                    this.log.warn('Manual LTM Daily Digest creation blocked (Free Version).');
+                    // Optional: Status-Update im LTM.processingStatus
+                    this.setStateAsync(LTM_DP_STATUS, { val: 'Manueller Trigger blockiert: Pro-Feature.', ack: true });
+                }
                 return;
             }
             return;
@@ -980,6 +1071,7 @@ class CogniLiving extends utils.Adapter {
 
 
         // === 2. LTM (Long Term Memory) Verarbeitung (Sprint 14) ===
+        // SPRINT 18: LTM Raw Log wird immer befüllt, unabhängig von der Lizenz. Nur die Kompression/Nutzung ist Lizenz-abhängig.
 
         // LTM Event-Objekt
         const eventObjectLTM = {
@@ -1070,12 +1162,12 @@ class CogniLiving extends utils.Adapter {
 
 
     // ======================================================================
-    // === SPRINT 16/17: Cogni-Engine (runGeminiAnalysis Upgrade) ===
+    // === SPRINT 16/17/18: Cogni-Engine (runGeminiAnalysis Upgrade) ===
     // ======================================================================
 
     /**
-     * Führt die KI-Analyse durch, indem STM (aktuelle Daten) mit LTM (Baseline) verglichen wird,
-     * unter Berücksichtigung des aktuellen System-Modus, und sucht nach Automatisierungsmustern.
+     * Führt die KI-Analyse durch, indem STM (aktuelle Daten) mit LTM (Baseline) verglichen wird (nur Pro),
+     * unter Berücksichtigung des aktuellen System-Modus, und sucht nach Automatisierungsmustern (nur Pro).
      */
     async runGeminiAnalysis() {
         if (!this.geminiModel) {
@@ -1114,23 +1206,26 @@ class CogniLiving extends utils.Adapter {
         }
 
 
-        // --- 2. BASELINE (LTM) VORBEREITEN (SPRINT 16) ---
+        // --- 2. BASELINE (LTM) VORBEREITEN (SPRINT 16/18) ---
         let baselinePromptSection = '';
         let taskInstructionActivity = ''; // SPRINT 17: Split Task Instruction
+        let taskInstructionAutomation = ''; // SPRINT 18: Initialize
         const digestCount = this.dailyDigests.length;
-        // SPRINT 16: Nutze Konfigurationswert
         const minDaysRequired = this.config.minDaysForBaseline || 7;
 
-        // Baseline wird nur genutzt, wenn genug Daten vorhanden UND der Modus 'normal' oder 'guest' ist.
-        // Bei 'party' oder 'vacation' ist die Baseline irrelevant.
-        const useBaseline = digestCount >= minDaysRequired && (this.currentSystemMode === SYSTEM_MODES.NORMAL || this.currentSystemMode === SYSTEM_MODES.GUEST);
+        // Baseline wird nur genutzt, wenn:
+        // 1. Pro-Version ist aktiv (SPRINT 18)
+        // 2. Genug Daten vorhanden sind (SPRINT 16)
+        // 3. Der Modus 'normal' oder 'guest' ist (SPRINT 16).
+        const useBaseline = this.isProVersion &&
+            digestCount >= minDaysRequired &&
+            (this.currentSystemMode === SYSTEM_MODES.NORMAL || this.currentSystemMode === SYSTEM_MODES.GUEST);
 
         if (useBaseline) {
-            // Baseline ist bereit -> Aktiviere Vergleichsmodus
-            this.log.info(`LTM Baseline established (${digestCount} days). Activating deviation detection. Mode: ${this.currentSystemMode}.`);
+            // Baseline ist bereit -> Aktiviere Vergleichsmodus (Pro)
+            this.log.info(`LTM Baseline established (${digestCount} days). Activating deviation detection (Pro). Mode: ${this.currentSystemMode}.`);
 
             // Hole die relevanten Digests (die neuesten X Tage).
-            // dailyDigests ist FIFO (Ältestes zuerst, Index 0). Wir wollen die neuesten, also slice(-N) und reverse().
             const relevantDigests = this.dailyDigests
                 .slice(-MAX_DAYS_FOR_BASELINE_PROMPT)
                 .reverse(); // Neueste zuerst für die KI
@@ -1139,7 +1234,7 @@ class CogniLiving extends utils.Adapter {
             const baselineData = relevantDigests.map(d => {
                 // Nutze lokales Datum für bessere Lesbarkeit im Prompt
                 const date = new Date(d.timestamp).toLocaleDateString('de-DE');
-                // Füge Modus hinzu, wenn bekannt und nicht normal (damit die KI weiß, dass dieser Tag evtl. ein Ausreißer war)
+                // Füge Modus hinzu, wenn bekannt und nicht normal
                 const modeSuffix = (d.systemMode && d.systemMode !== SYSTEM_MODES.NORMAL) ? ` | Modus: ${d.systemMode}` : '';
                 return `[${date} | Aktivität: ${d.activityLevel}${modeSuffix}]: ${d.summary}`;
             }).join('\n');
@@ -1152,21 +1247,37 @@ ${baselineData}
             taskInstructionActivity = `1. AKTIVITÄT & ABWEICHUNG: Analysiere die AKTUELLEN SENSORDATEN und vergleiche sie mit der BASELINE unter Berücksichtigung des SYSTEM-MODUS. Fokus auf signifikante Abweichungen (Timing, Intensität, Ort), die NICHT durch den Modus erklärt werden können. Bewerte dies in 'activity.deviationFromBaseline'.`;
 
         } else {
-            // Nicht genug Daten oder Modus deaktiviert Baseline
-            this.log.info(`LTM Deviation detection inactive. Reason: Learning Phase (${digestCount}/${minDaysRequired} days) OR System Mode (${this.currentSystemMode}).`);
+            // Nicht genug Daten, Modus deaktiviert Baseline ODER Free-Version (SPRINT 18)
+            let reason = '';
+            if (!this.isProVersion) reason = 'Free Version';
+            else if (digestCount < minDaysRequired) reason = `Learning Phase (${digestCount}/${minDaysRequired} days)`;
+            else reason = `System Mode (${this.currentSystemMode})`;
+
+            this.log.info(`LTM Deviation detection inactive. Reason: ${reason}.`);
 
             baselinePromptSection = `
-BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert).
+BASELINE STATUS: Inaktiv (Entweder Free-Version, Lernphase oder durch System-Modus deaktiviert).
             `;
-            taskInstructionActivity = `1. AKTIVITÄT: Analysiere die AKTUELLEN SENSORDATEN basierend auf KONTEXT, PERSONA und SYSTEM-MODUS. Ein Baseline-Vergleich findet NICHT statt. Bewerte 'activity.deviationFromBaseline' immer mit 'N/A (Learning)'.`;
+
+            // SPRINT 18: Passe Anweisung für 'deviationFromBaseline' an, je nach Lizenz
+            // Wenn Pro aktiv ist, aber Baseline noch lernt/deaktiviert ist -> 'N/A (Learning)'
+            // Wenn Free aktiv ist -> 'N/A (Pro Feature)'
+            const deviationValue = this.isProVersion ? 'N/A (Learning)' : 'N/A (Pro Feature)';
+
+            taskInstructionActivity = `1. AKTIVITÄT: Analysiere die AKTUELLEN SENSORDATEN basierend auf KONTEXT, PERSONA und SYSTEM-MODUS. Ein Baseline-Vergleich findet NICHT statt. Bewerte 'activity.deviationFromBaseline' immer mit '${deviationValue}'.`;
         }
 
-        // SPRINT 17: Task Instruction für Automation
-        const taskInstructionAutomation = `2. AUTOMATISIERUNGSMUSTER: Suche explizit nach klaren, wiederkehrenden Mustern in den AKTUELLEN SENSORDATEN (und der BASELINE, falls aktiv), die sich für eine Automatisierung eignen (z.B. "Immer wenn Sensor X auslöst, wird kurz darauf Sensor Y bedient"). Wenn ein klares Muster erkannt wird, setze 'comfort.automationProposal.patternDetected' auf TRUE und beschreibe es präzise. Andernfalls setze es auf FALSE.`;
+        // SPRINT 17/18: Task Instruction für Automation
+        if (this.isProVersion) {
+            taskInstructionAutomation = `2. AUTOMATISIERUNGSMUSTER (Pro): Suche explizit nach klaren, wiederkehrenden Mustern in den AKTUELLEN SENSORDATEN (und der BASELINE, falls aktiv), die sich für eine Automatisierung eignen (z.B. "Immer wenn Sensor X auslöst, wird kurz darauf Sensor Y bedient"). Wenn ein klares Muster erkannt wird, setze 'comfort.automationProposal.patternDetected' auf TRUE und beschreibe es präzise. Andernfalls setze es auf FALSE.`;
+        } else {
+            // SPRINT 18: Anweisung für Free-Version
+            taskInstructionAutomation = `2. AUTOMATISIERUNGSMUSTER: Funktion deaktiviert (Free-Version). Setze 'comfort.automationProposal.patternDetected' immer auf FALSE und lasse die Felder leer.`;
+        }
 
 
         // --- 3. SYSTEM PROMPT ZUSAMMENSTELLEN (Dynamisch) ---
-        // SPRINT 17: Schema aktualisiert
+        // SPRINT 18: Schema aktualisiert
         const systemPrompt = `
             ROLLE: Smart Home Analyst (Cogni-Engine).
             SPRACHE: Antworte ausschließlich auf Deutsch (DE).
@@ -1190,8 +1301,8 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
             JSON SCHEMA (MUSS eingehalten werden):
             {
               "activity": {
-                "summary": "string (Detaillierte Bewertung 1-2 Sätze. Beschreibe Aktivität, wie sie sich zur Baseline verhält UND beziehe den System-Modus ein.)",
-                "deviationFromBaseline": "string (MUSS eines sein von: 'N/A (Learning)', 'none', 'slight', 'significant', 'critical')",
+                "summary": "string (Detaillierte Bewertung 1-2 Sätze. Beschreibe Aktivität, wie sie sich zur Baseline verhält (falls zutreffend) UND beziehe den System-Modus ein.)",
+                "deviationFromBaseline": "string (MUSS eines sein von: 'N/A (Learning)', 'N/A (Pro Feature)', 'none', 'slight', 'significant', 'critical')",
                 "isAlert": false, // boolean (TRUE nur, wenn deviation='critical' ODER die Situation akut gefährlich ist, unter Beachtung des SYSTEM-MODUS)
                 "alertReason": "" // string (Grund wenn isAlert=true, sonst leerer String)
               },
@@ -1199,7 +1310,7 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
                 "summary": "string (Detaillierte Bewertung 1-2 Sätze)",
                 "suggestion": "string", // Genereller Vorschlag (1 Satz) oder leerer String
                 "automationProposal": {
-                    "patternDetected": false, // boolean (TRUE wenn ein klares, automatisierbares Muster erkannt wurde)
+                    "patternDetected": false, // boolean (TRUE wenn ein klares, automatisierbares Muster erkannt wurde - nur Pro)
                     "description": "", // string (Beschreibung des erkannten Musters, wenn patternDetected=true)
                     "suggestedAction": "" // string (Konkreter Vorschlag für eine ioBroker-Automatisierung, wenn patternDetected=true)
                 }
@@ -1242,15 +1353,14 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
             }
 
             // --- 5. JSON VALIDIERUNG UND VERARBEITUNG ---
-            // SPRINT 17: Validierung erweitert um 'automationProposal' und dessen 'patternDetected'
             if (
                 analysisResult &&
                 analysisResult.activity &&
                 analysisResult.comfort &&
-                analysisResult.comfort.automationProposal && // SPRINT 17 NEU
+                analysisResult.comfort.automationProposal &&
                 typeof analysisResult.activity.isAlert === 'boolean' &&
                 typeof analysisResult.activity.deviationFromBaseline === 'string' &&
-                typeof analysisResult.comfort.automationProposal.patternDetected === 'boolean' // SPRINT 17 NEU
+                typeof analysisResult.comfort.automationProposal.patternDetected === 'boolean'
             ) {
                 this.log.info('AI analysis successfully parsed as JSON.');
 
@@ -1286,23 +1396,40 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
                     ack: true,
                 });
 
-                // SPRINT 17: Automation Proposal States aktualisieren
+                // SPRINT 17/18: Automation Proposal States aktualisieren
                 const automation = analysisResult.comfort.automationProposal;
+
+                // SPRINT 18: Defensives Handling für Free-Version, falls die KI trotz Anweisung ein Pattern meldet
+                const patternDetected = this.isProVersion ? automation.patternDetected : false;
+
                 await this.setStateAsync('analysis.automation.patternDetected', {
-                    val: automation.patternDetected,
-                    ack: true,
-                });
-                // Stelle sicher, dass die Felder leer sind, wenn kein Pattern erkannt wurde (Defensiv)
-                await this.setStateAsync('analysis.automation.description', {
-                    val: automation.patternDetected ? (automation.description || '') : '',
-                    ack: true,
-                });
-                await this.setStateAsync('analysis.automation.suggestedAction', {
-                    val: automation.patternDetected ? (automation.suggestedAction || '') : '',
+                    val: patternDetected,
                     ack: true,
                 });
 
-                if (automation.patternDetected) {
+                let descriptionText = '';
+                let actionText = '';
+
+                if (this.isProVersion) {
+                    // Pro Version: Nutze KI-Ergebnis, stelle aber sicher, dass Felder leer sind, wenn kein Pattern erkannt wurde
+                    descriptionText = patternDetected ? (automation.description || '') : '';
+                    actionText = patternDetected ? (automation.suggestedAction || '') : '';
+                } else {
+                    // Free Version: Setze Standardtext
+                    descriptionText = 'N/A (Pro Feature)';
+                    actionText = 'N/A (Pro Feature)';
+                }
+
+                await this.setStateAsync('analysis.automation.description', {
+                    val: descriptionText,
+                    ack: true,
+                });
+                await this.setStateAsync('analysis.automation.suggestedAction', {
+                    val: actionText,
+                    ack: true,
+                });
+
+                if (patternDetected) {
                     this.log.info(`>>> AI Pattern Detected! Description: ${automation.description} <<<`);
                 }
 
@@ -1322,12 +1449,12 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
                     timestamp: Date.now(),
                     analysis: analysisResult,
                     usedBaseline: useBaseline, // SPRINT 16: Speichern, ob Baseline genutzt wurde
-                    systemMode: this.currentSystemMode // SPRINT 16: Speichere den Modus der Analyse
+                    systemMode: this.currentSystemMode, // SPRINT 16: Speichere den Modus der Analyse
+                    isPro: this.isProVersion // SPRINT 18: Speichere Lizenzstatus der Analyse
                 };
                 await this.updateAnalysisHistory(logEntry);
             } else {
                 // Fehler: JSON Struktur fehlt
-                // SPRINT 17: Fehlermeldung erweitert
                 this.log.error(
                     `AI response JSON structure is invalid. Missing required fields (check activity, comfort, isAlert, deviationFromBaseline or automationProposal structure). Received: ${JSON.stringify(analysisResult)}`,
                 );
@@ -1348,7 +1475,7 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
         }
     }
     // ======================================================================
-    // === SPRINT 16/17 END: Cogni-Engine ===
+    // === SPRINT 16/17/18 END: Cogni-Engine ===
     // ======================================================================
 
 
@@ -1379,7 +1506,7 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
         await this._updateDebugAnalysisHistoryStates();
     }
 
-    // SPRINT 16/17 Update: Zeige Deviation, System Mode und Pattern im Logbuch
+    // SPRINT 16/17/18 Update: Zeige Deviation, System Mode und Pattern im Logbuch
     _formatAnalysisForHistory(logEntry) {
         const time = new Date(logEntry.timestamp).toLocaleString('de-DE');
 
@@ -1388,8 +1515,10 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
             const analysis = logEntry.analysis;
             const isAlert = analysis.activity.isAlert === true;
 
-            // SPRINT 17: Pattern Detection Flag
-            const isPattern = (analysis.comfort && analysis.comfort.automationProposal && analysis.comfort.automationProposal.patternDetected === true);
+            // SPRINT 17/18: Pattern Detection Flag (Prüfe isPro, bevor Pattern angezeigt wird)
+            // Fallback für alte Logs (vor 0.1.19): Wenn isPro undefined ist, nehmen wir an, es war Pro.
+            const isPro = logEntry.isPro === undefined ? true : logEntry.isPro;
+            const isPattern = isPro && (analysis.comfort && analysis.comfort.automationProposal && analysis.comfort.automationProposal.patternDetected === true);
 
             // Zeige Abweichung und Modus im Prefix
             const deviation = analysis.activity.deviationFromBaseline || 'N/A';
@@ -1418,7 +1547,7 @@ BASELINE STATUS: Inaktiv (Entweder Lernphase oder durch System-Modus deaktiviert
                 summary = analysis.activity.summary || 'Analysis successful';
             }
 
-            // Kürzen, um Platz für den längeren Prefix zu schaffen (von 80 auf 70 reduziert)
+            // Kürzen, um Platz für den längeren Prefix zu schaffen
             const shortSummary = summary.length > 70 ? `${summary.substring(0, 70)}...` : summary;
             return `${time} - ${prefix}${shortSummary}`;
         }

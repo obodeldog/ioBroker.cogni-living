@@ -1,7 +1,8 @@
 {
     "cogni-living adapter settings": "Adapter settings for cogni-living",
+    "headline_licensing": "Licensing (Pro Features)",
     "headline_ai_settings": "AI Settings & Autopilot (STM)",
-    "headline_ltm_settings": "Long-Term Memory (LTM) & Baseline",
+    "headline_ltm_settings": "Long-Term Memory (LTM) & Baseline (Pro)",
     "headline_living_context": "Living Context & Persona (For better analysis)",
     "headline_sensor_config": "Sensor Configuration",
     "table_sensor_id": "Sensor ID",
@@ -12,6 +13,8 @@
     "btn_add_sensor": "Add Sensor",
     "gemini_api_key": "Google Gemini API Key",
     "analysis_interval": "Analysis Interval (Minutes)",
+    "license_key": "Pro License Key",
+    "license_key_helper": "Enter your Pro key to unlock LTM features. (Test: TEST-PRO-KEY)",
     "min_days_for_baseline": "Learning Phase Duration (Days)",
     "min_days_for_baseline_helper": "Minimum number of days (Daily Digests) required before the baseline is used for anomaly detection (Default: 7).",
     "table_log_duplicates": "Log duplicates",
