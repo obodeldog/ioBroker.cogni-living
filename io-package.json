@@ -1,10 +1,14 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.1.20",
+        "version": "0.1.21",
         "enabled": true,
         "main": "main.js",
         "news": {
+            "0.1.21": {
+                "en": "Advanced LTM (Dual Baseline): Introduced 'Baseline Drift Analysis' (Pro) to detect gradual behavioral changes by comparing Short-Term (STB) and Long-Term Baselines (LTB). Added new LTM configuration options.",
+                "de": "Erweitertes LTM (Dual Baseline): 'Baseline Drift Analyse' (Pro) eingeführt, um schleichende Verhaltensänderungen durch Vergleich von Kurzzeit- (STB) und Langzeit-Baseline (LTB) zu erkennen. Neue LTM-Konfigurationsoptionen hinzugefügt."
+            },
             "0.1.20": {
                 "en": "Notification System: Added support for sending alerts (isAlert=true) via Telegram, Pushover, Email, WhatsApp (CMB), and Signal (CMA). Implemented anti-spam logic (notify only on new alert).",
                 "de": "Benachrichtigungssystem: Unterstützung für das Senden von Alarmen (isAlert=true) via Telegram, Pushover, E-Mail, WhatsApp (CMB) und Signal (CMA) hinzugefügt. Anti-Spam-Logik implementiert (Benachrichtigung nur bei neuem Alarm)."
@@ -12,10 +16,6 @@
             "0.1.19": {
                 "en": "Licensing Preparation (Freemium): Introduced license key check (simulation). LTM features (Baseline, Digests, Automation Proposals) are now marked as 'Pro' and disabled in 'Free' mode. Fixed Admin UI background.",
                 "de": "Lizenzierungsvorbereitung (Freemium): Lizenzschlüsselprüfung eingeführt (Simulation). LTM-Funktionen (Baseline, Digests, Automatisierungsvorschläge) sind nun als 'Pro' markiert und im 'Free'-Modus deaktiviert. Admin UI Hintergrund korrigiert."
-            },
-            "0.1.18": {
-                "en": "Proactive Comfort Assistant: AI now actively searches for automation patterns and suggests actions in new 'analysis.automation' datapoints. Updated analysis log format.",
-                "de": "Proaktiver Komfort-Assistent: Die KI sucht nun aktiv nach Automatisierungsmustern und schlägt Aktionen in neuen 'analysis.automation' Datenpunkten vor. Analyse-Logformat aktualisiert."
             }
         },
         "titleLang": {
@@ -92,151 +92,12 @@
         "notifyWhatsappRecipient": "",
         "notifySignalEnabled": false,
         "notifySignalInstance": "",
-        "notifySignalRecipient": ""
+        "notifySignalRecipient": "",
+        "ltmStbWindowDays": 14,
+        "ltmLtbWindowDays": 60,
+        "ltmDriftCheckIntervalHours": 24
     },
     "objects": [],
     "instanceObjects": [
-        {
-            "_id": "LTM",
-            "type": "channel",
-            "common": {
-                "name": "Long Term Memory (LTM)"
-            },
-            "native": {}
-        },
-        {
-            "_id": "LTM.rawEventLog",
-            "type": "state",
-            "common": {
-                "name": "Raw Event Log (LTM)",
-                "type": "string",
-                "role": "json",
-                "read": true,
-                "write": false
-            },
-            "native": {}
-        },
-        {
-            "_id": "LTM.dailyDigests",
-            "type": "state",
-            "common": {
-                "name": "Daily Digests (LTM)",
-                "type": "string",
-                "role": "json",
-                "read": true,
-                "write": false
-            },
-            "native": {}
-        },
-        {
-            "_id": "LTM.processingStatus",
-            "type": "state",
-            "common": {
-                "name": "LTM Processing Status",
-                "type": "string",
-                "role": "text",
-                "read": true,
-                "write": false
-            },
-            "native": {}
-        },
-        {
-            "_id": "LTM.baselineStatus",
-            "type": "state",
-            "common": {
-                "name": "Baseline Learning Status",
-                "type": "string",
-                "role": "text",
-                "read": true,
-                "write": false
-            },
-            "native": {}
-        },
-        {
-            "_id": "LTM.triggerDailyDigest",
-            "type": "state",
-            "common": {
-                "name": "Trigger Daily Digest Creation (Manual)",
-                "type": "boolean",
-                "role": "button",
-                "read": true,
-                "write": true,
-                "def": false
-            },
-            "native": {}
-        },
-        {
-            "_id": "system",
-            "type": "channel",
-            "common": {
-                "name": "System Status & Control"
-            },
-            "native": {}
-        },
-        {
-            "_id": "system.mode",
-            "type": "state",
-            "common": {
-                "name": "System Mode (Context Override)",
-                "type": "string",
-                "role": "state",
-                "read": true,
-                "write": true,
-                "def": "normal",
-                "states": {
-                    "normal": "Normal",
-                    "vacation": "Urlaub (Abwesend)",
-                    "party": "Party (Auto-Reset 04:00)",
-                    "guest": "Gast/Reinigung (Auto-Reset 04:00)"
-                },
-                "desc": "Overrides the context for AI analysis."
-            },
-            "native": {}
-        },
-        {
-            "_id": "analysis.automation",
-            "type": "channel",
-            "common": {
-                "name": "Automation Proposals (AI)"
-            },
-            "native": {}
-        },
-        {
-            "_id": "analysis.automation.patternDetected",
-            "type": "state",
-            "common": {
-                "name": "Pattern Detected",
-                "type": "boolean",
-                "role": "indicator",
-                "read": true,
-                "write": false,
-                "def": false
-            },
-            "native": {}
-        },
-        {
-            "_id": "analysis.automation.description",
-            "type": "state",
-            "common": {
-                "name": "Pattern Description",
-                "type": "string",
-                "role": "text",
-                "read": true,
-                "write": false
-            },
-            "native": {}
-        },
-        {
-            "_id": "analysis.automation.suggestedAction",
-            "type": "state",
-            "common": {
-                "name": "Suggested Action",
-                "type": "string",
-                "role": "text",
-                "read": true,
-                "write": false
-            },
-            "native": {}
-        }
     ]
 }

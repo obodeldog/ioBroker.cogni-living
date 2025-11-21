@@ -1,7 +1,6 @@
 import React from 'react';
 
 // MUI v5 Core Imports
-// SPRINT 19: FormControlLabel, Grid hinzugefügt
 import {
     Button,
     Checkbox,
@@ -30,9 +29,8 @@ import {
 import type { AlertColor } from '@mui/material';
 
 // MUI v5 Icons
-// SPRINT 18: LockIcon hinzugefügt
-// SPRINT 19: NotificationsIcon hinzugefügt
-import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon } from '@mui/icons-material';
+// SPRINT 20: MemoryIcon für LTM hinzugefügt
+import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, Memory as MemoryIcon } from '@mui/icons-material';
 // ioBroker specific imports (v5)
 import { I18n, DialogSelectID, type IobTheme } from '@iobroker/adapter-react-v5';
 // Wichtig für TypeScript: Importiere Connection für den Socket-Typ
@@ -57,7 +55,7 @@ interface DeviceConfig {
     logDuplicates: boolean;
 }
 
-// SPRINT 19: State erweitert
+// SPRINT 20: State erweitert
 interface SettingsState {
     devices: DeviceConfig[];
     geminiApiKey: string;
@@ -66,6 +64,11 @@ interface SettingsState {
     aiPersona: string;
     livingContext: string;
     licenseKey: string;
+
+    // SPRINT 20: LTM Dual Baseline Settings
+    ltmStbWindowDays: number;
+    ltmLtbWindowDays: number;
+    ltmDriftCheckIntervalHours: number;
 
     // SPRINT 19: Notification Settings
     notifyTelegramEnabled: boolean;
@@ -84,8 +87,8 @@ interface SettingsState {
     notifySignalInstance: string;
     notifySignalRecipient: string;
 
-    availableInstances: Record<string, string[]>; // SPRINT 19 NEU
-    isTestingNotification: boolean; // SPRINT 19 NEU
+    availableInstances: Record<string, string[]>;
+    isTestingNotification: boolean;
 
     showSelectId: boolean;
     selectIdIndex: number;
@@ -95,7 +98,7 @@ interface SettingsState {
     snackbarSeverity: AlertColor;
 }
 
-// SPRINT 19 FIX: Spezifische Typen für Notification Keys, um TypeScript-Fehler beim dynamischen Zugriff zu beheben
+// SPRINT 19 FIX: Spezifische Typen für Notification Keys
 type NotificationEnabledKey = 'notifyTelegramEnabled' | 'notifyPushoverEnabled' | 'notifyEmailEnabled' | 'notifyWhatsappEnabled' | 'notifySignalEnabled';
 type NotificationInstanceKey = 'notifyTelegramInstance' | 'notifyPushoverInstance' | 'notifyEmailInstance' | 'notifyWhatsappInstance' | 'notifySignalInstance';
 type NotificationRecipientKey = 'notifyTelegramRecipient' | 'notifyPushoverRecipient' | 'notifyEmailRecipient' | 'notifyWhatsappRecipient' | 'notifySignalRecipient';
@@ -113,6 +116,11 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             aiPersona: native.aiPersona || 'generic',
             livingContext: native.livingContext || '',
             licenseKey: native.licenseKey || '',
+
+            // SPRINT 20: Lade LTM Dual Baseline Settings
+            ltmStbWindowDays: native.ltmStbWindowDays || 14,
+            ltmLtbWindowDays: native.ltmLtbWindowDays || 60,
+            ltmDriftCheckIntervalHours: native.ltmDriftCheckIntervalHours || 24,
 
             // SPRINT 19: Lade Notification Settings
             notifyTelegramEnabled: native.notifyTelegramEnabled || false,
@@ -143,12 +151,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         };
     }
 
-    // SPRINT 19: Lade verfügbare Instanzen beim Start
     componentDidMount() {
         this.fetchAvailableInstances();
     }
 
-    // SPRINT 19: Funktion zum Laden der Instanzen
     fetchAvailableInstances() {
         const adapters = ['telegram', 'pushover', 'email', 'whatsapp-cmb', 'signal-cma'];
         const instances: Record<string, string[]> = {};
@@ -168,7 +174,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
 
     // (Helper functions)
-    // SPRINT 19 FIX: updateNativeValue Typsicherheit verbessert
     updateNativeValue(attr: string, value: any) {
         if (attr === 'livingContext' && typeof value === 'string' && value.length > 200) {
             value = value.substring(0, 200);
@@ -284,7 +289,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             });
     }
 
-    // SPRINT 19 NEU: Handler für Test-Benachrichtigung
+    // SPRINT 19: Handler für Test-Benachrichtigung
     handleTestNotificationClick() {
         this.setState({ isTestingNotification: true });
 
@@ -305,7 +310,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     }
 
 
-    // Verwende den korrekten Typ AlertColor
+    // (showSnackbar, handleSnackbarClose unverändert)
     showSnackbar(message: string, severity: AlertColor) {
         this.setState({
             snackbarOpen: true,
@@ -314,7 +319,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         });
     }
 
-    // Korrekte Event-Handler Signatur
     handleSnackbarClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
         if (reason === 'clickaway') {
             return;
@@ -394,15 +398,18 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
 
     render() {
-        // SPRINT 19: isTestingNotification hinzugefügt
-        const { devices, geminiApiKey, analysisInterval, minDaysForBaseline, aiPersona, livingContext, licenseKey, isTestingApi, isTestingNotification } = this.state;
+        // SPRINT 20: Neue LTM States hinzugefügt
+        const {
+            devices, geminiApiKey, analysisInterval, minDaysForBaseline,
+            ltmStbWindowDays, ltmLtbWindowDays, ltmDriftCheckIntervalHours,
+            aiPersona, livingContext, licenseKey, isTestingApi, isTestingNotification
+        } = this.state;
 
         // Definiere Styles mittels 'sx' Prop (MUI v5)
         const sxConfigSection = {
             mb: 4, // Margin Bottom
             p: 2, // Padding
-            // Nutze Theme-Variablen für Konsistenz (Dynamischer Zugriff auf das Theme)
-            // SPRINT 18/19 FIX: Verwende das Theme aus den Props
+            // Nutze Theme-Variablen für Konsistenz
             border: `1px solid ${this.props.theme.palette.divider}`,
             borderRadius: 1,
             // Hintergrundfarbe setzen, um Lesbarkeit im Dark/Light Mode sicherzustellen
@@ -472,7 +479,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         variant="h6"
                         gutterBottom
                     >
-                        {I18n.t('headline_licensing')}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <LockIcon />
+                            {I18n.t('headline_licensing')}
+                        </Box>
                     </Typography>
                     <Box sx={sxConfigSection}>
                         <FormControl
@@ -481,7 +491,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         >
                             {/* Flexbox für Icon und Input */}
                             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                                <LockIcon color="action" sx={{mt: 1}}/> {/* Icon hinzufügen und positionieren */}
                                 <TextField
                                     sx={{ flexGrow: 1, maxWidth: '600px' }}
                                     label={I18n.t('license_key')}
@@ -502,7 +511,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         variant="h6"
                         gutterBottom
                     >
-                        {I18n.t('headline_ai_settings')}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <WifiIcon />
+                            {I18n.t('headline_ai_settings')}
+                        </Box>
                     </Typography>
                     <Box sx={sxConfigSection}>
                         <FormControl
@@ -550,29 +562,80 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         </FormControl>
                     </Box>
 
-                    {/* === SPRINT 16 NEU: Sektion 2: LTM Einstellungen === */}
+                    {/* === SPRINT 20: Sektion 2: LTM Einstellungen (Erweitert) === */}
                     <Typography
                         variant="h6"
                         gutterBottom
                     >
-                        {I18n.t('headline_ltm_settings')}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <MemoryIcon />
+                            {I18n.t('headline_ltm_settings')}
+                        </Box>
                     </Typography>
                     <Box sx={sxConfigSection}>
-                        <FormControl margin="normal">
-                            <TextField
-                                sx={{ width: '250px', mr: 2 }}
-                                label={I18n.t('min_days_for_baseline')}
-                                value={minDaysForBaseline}
-                                type="number"
-                                inputProps={{ min: 1, max: 30 }}
-                                onChange={e =>
-                                    this.updateNativeValue('minDaysForBaseline', parseInt(e.target.value, 10) || 7)
-                                }
-                                helperText={I18n.t('min_days_for_baseline_helper')}
-                                variant="outlined"
-                                size="small"
-                            />
-                        </FormControl>
+                        {/* Grid Layout für bessere Anordnung der LTM Settings */}
+                        <Grid container spacing={3} sx={{pt: 1}}>
+                            <Grid item xs={12} md={6} lg={3}>
+                                <TextField
+                                    fullWidth
+                                    label={I18n.t('min_days_for_baseline')}
+                                    value={minDaysForBaseline}
+                                    type="number"
+                                    inputProps={{ min: 1, max: 30 }}
+                                    onChange={e =>
+                                        this.updateNativeValue('minDaysForBaseline', parseInt(e.target.value, 10) || 7)
+                                    }
+                                    helperText={I18n.t('min_days_for_baseline_helper')}
+                                    variant="outlined"
+                                    size="small"
+                                />
+                            </Grid>
+                            <Grid item xs={12} md={6} lg={3}>
+                                <TextField
+                                    fullWidth
+                                    label={I18n.t('ltm_stb_window_days')}
+                                    value={ltmStbWindowDays}
+                                    type="number"
+                                    inputProps={{ min: 1, max: 30 }}
+                                    onChange={e =>
+                                        this.updateNativeValue('ltmStbWindowDays', parseInt(e.target.value, 10) || 14)
+                                    }
+                                    helperText={I18n.t('ltm_stb_window_days_helper')}
+                                    variant="outlined"
+                                    size="small"
+                                />
+                            </Grid>
+                            <Grid item xs={12} md={6} lg={3}>
+                                <TextField
+                                    fullWidth
+                                    label={I18n.t('ltm_ltb_window_days')}
+                                    value={ltmLtbWindowDays}
+                                    type="number"
+                                    inputProps={{ min: 30, max: 180 }}
+                                    onChange={e =>
+                                        this.updateNativeValue('ltmLtbWindowDays', parseInt(e.target.value, 10) || 60)
+                                    }
+                                    helperText={I18n.t('ltm_ltb_window_days_helper')}
+                                    variant="outlined"
+                                    size="small"
+                                />
+                            </Grid>
+                            <Grid item xs={12} md={6} lg={3}>
+                                <TextField
+                                    fullWidth
+                                    label={I18n.t('ltm_drift_check_interval_hours')}
+                                    value={ltmDriftCheckIntervalHours}
+                                    type="number"
+                                    inputProps={{ min: 1, max: 168 }}
+                                    onChange={e =>
+                                        this.updateNativeValue('ltmDriftCheckIntervalHours', parseInt(e.target.value, 10) || 24)
+                                    }
+                                    helperText={I18n.t('ltm_drift_check_interval_hours_helper')}
+                                    variant="outlined"
+                                    size="small"
+                                />
+                            </Grid>
+                        </Grid>
                     </Box>
 
 
@@ -581,7 +644,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         variant="h6"
                         gutterBottom
                     >
-                        {I18n.t('headline_living_context')}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <ListIcon />
+                            {I18n.t('headline_living_context')}
+                        </Box>
                     </Typography>
                     <Box sx={sxConfigSection}>
                         {/* Select benötigt das Label doppelt (für InputLabel und Select) in MUI v5 */}
@@ -722,7 +788,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         variant="contained"
                         color="primary"
                         startIcon={<AddIcon />}
-                        sx={{ mt: 3 }} // Margin Top
+                        sx={{ mt: 3, mb: 3 }} // Margin Top & Bottom
                         onClick={() => this.onAddDevice()}
                     >
                         {I18n.t('btn_add_sensor')}
