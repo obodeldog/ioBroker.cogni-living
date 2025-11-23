@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.1.22",
+        "version": "0.1.23",
         "enabled": true,
         "main": "main.js",
         "news": {
