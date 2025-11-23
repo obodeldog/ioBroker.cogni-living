@@ -2,17 +2,29 @@ import React from 'react';
 import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles';
 
 // Importiere Box und CssBaseline für das Layout von MUI v5
-import { Box, CssBaseline } from '@mui/material';
+import { Box, CssBaseline, Tabs, Tab } from '@mui/material';
+
+// SPRINT 21: MUI Icons für die Tabs
+import SettingsIcon from '@mui/icons-material/Settings';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 
 // Wichtig: Imports von adapter-react-v5 und TypeScript-Typen
 import {
     GenericApp,
     type GenericAppProps,
     type GenericAppSettings,
+    type GenericAppState, // <--- WICHTIG: Hier GenericAppState importieren
     type ThemeType,
     Loader,
+    I18n,
 } from '@iobroker/adapter-react-v5';
+
+// FIX SPRINT 21: Importiere Connection für Type-Casting
+import type { Connection } from '@iobroker/socket-client';
+
 import Settings from './components/settings';
+// SPRINT 21: Importiere das neue LTM Dashboard
+import LtmDashboard from './tabs/LtmDashboard';
 
 import enLang from './i18n/en.json';
 import deLang from './i18n/de.json';
@@ -26,12 +38,18 @@ import plLang from './i18n/pl.json';
 import ukLang from './i18n/uk.json';
 import zhCnLang from './i18n/zh-cn.json';
 
-export default class App extends GenericApp {
+// SPRINT 21 FIX: AppState muss GenericAppState erweitern (nicht Settings!)
+// Damit erben wir 'loaded', 'theme', 'native' usw. automatisch.
+interface AppState extends GenericAppState {
+    activeTab: number;
+}
+
+export default class App extends GenericApp<GenericAppProps, AppState> {
+
     constructor(props: GenericAppProps) {
         const extendedProps: GenericAppSettings = {
             ...props,
             encryptedFields: [],
-            // Alle Sprachen müssen importiert werden
             translations: {
                 en: enLang,
                 de: deLang,
@@ -47,15 +65,23 @@ export default class App extends GenericApp {
             },
         };
 
-        // COMMENT IT!!!
-        // extendedProps.socket = { ... };
-
         super(props, extendedProps);
+
+        // SPRINT 21 FIX: Initialisiere den aktiven Tab im State
+        // Wir nutzen Object.assign, um unseren Teil des States hinzuzufügen
+        Object.assign(this.state, {
+            activeTab: 0,
+        });
     }
 
     onConnectionReady(): void {
         // executed when connection is ready
     }
+
+    // SPRINT 21: Handler für Tab-Wechsel
+    handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+        this.setState({ activeTab: newValue });
+    };
 
     render() {
         if (!this.state.loaded) {
@@ -68,11 +94,9 @@ export default class App extends GenericApp {
             );
         }
 
-        // Verwende MUI v5 Box und sx Props für das Layout (Scrollbar Fix)
         return (
             <StyledEngineProvider injectFirst>
                 <ThemeProvider theme={this.state.theme}>
-                    {/* FIX für Hintergrundfarbe: CssBaseline hinzugefügt, um das Styling zu normalisieren */}
                     <CssBaseline />
                     <Box
                         sx={{
@@ -82,29 +106,46 @@ export default class App extends GenericApp {
                             display: 'flex',
                             flexDirection: 'column',
                             boxSizing: 'border-box',
-                            bgcolor: 'background.default', // Nutzt der Theme-Hintergrund
+                            backgroundColor: 'background.default',
                             color: this.state.themeType === 'dark' ? '#FFF' : '#000',
                         }}
                     >
+                        {/* SPRINT 21: Tab Navigation */}
+                        <Box sx={{ borderBottom: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}>
+                            <Tabs value={this.state.activeTab} onChange={this.handleTabChange} aria-label="adapter settings tabs">
+                                <Tab icon={<SettingsIcon />} iconPosition="start" label={I18n.t('tab_configuration')} />
+                                <Tab icon={<DashboardIcon />} iconPosition="start" label={I18n.t('tab_ltm_dashboard')} />
+                            </Tabs>
+                        </Box>
+
                         {/* Content Area (Scrollable) */}
                         <Box
                             sx={{
                                 flexGrow: 1,
                                 overflow: 'auto',
-                                p: 3, // Padding (p: 3 entspricht ca. 24px)
                             }}
                         >
-                            <Settings
-                                native={this.state.native}
-                                onChange={(attr, value) => this.updateNativeValue(attr, value)}
-                                // Wichtig: Socket und themeType korrekt durchreichen (mit Type Cast)
-                                socket={this.socket}
-                                themeType={this.state.themeType as ThemeType}
-                                // Weitere benötigte Props für Settings (TypeScript)
-                                adapterName="cogni-living"
-                                instance={this.instance}
-                                theme={this.state.theme}
-                            />
+                            {/* SPRINT 21: Bedingtes Rendering basierend auf dem aktiven Tab */}
+                            {this.state.activeTab === 0 && (
+                                <Settings
+                                    native={this.state.native}
+                                    onChange={(attr, value) => this.updateNativeValue(attr, value)}
+                                    // FIX SPRINT 21: Socket und themeType korrekt durchreichen
+                                    socket={this.socket as Connection}
+                                    themeType={this.state.themeType as ThemeType}
+                                    adapterName={this.adapterName}
+                                    instance={this.instance}
+                                    theme={this.state.theme}
+                                />
+                            )}
+                            {this.state.activeTab === 1 && (
+                                <LtmDashboard
+                                    socket={this.socket as Connection}
+                                    adapterName={this.adapterName}
+                                    instance={this.instance}
+                                    themeType={this.state.themeType as ThemeType}
+                                />
+                            )}
                         </Box>
 
                         {/* Footer Area (Fixed) */}
@@ -112,7 +153,9 @@ export default class App extends GenericApp {
                             sx={{
                                 flexShrink: 0,
                                 p: 2,
-                                borderTop: theme => `1px solid ${theme.palette.divider}`,
+                                borderTop: 1,
+                                borderColor: 'divider',
+                                backgroundColor: 'background.paper',
                             }}
                         >
                             {this.renderError()}

@@ -416,8 +416,9 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             backgroundColor: this.props.theme.palette.background.paper,
         };
 
+        // SPRINT 21: <> durch <Box sx={{ p: 3 }}> ersetzt, um Padding hinzuzufügen, da es aus app.tsx entfernt wurde.
         return (
-            <>
+            <Box sx={{ p: 3 }}>
                 {this.renderSelectIdDialog()}
 
                 {/* Snackbar für Feedback (MUI v5 Alert) */}
@@ -794,7 +795,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         {I18n.t('btn_add_sensor')}
                     </Button>
                 </Box>
-            </>
+            </Box>
         );
     }
 }

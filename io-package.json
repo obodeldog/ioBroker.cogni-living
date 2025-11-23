@@ -1,10 +1,14 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.1.21",
+        "version": "0.1.22",
         "enabled": true,
         "main": "main.js",
         "news": {
+            "0.1.22": {
+                "en": "LTM Visualization (UI): Added 'LTM Dashboard' tab in settings. Visualizes activity history (Daily Digests) using charts and displays Baseline Drift status. Requires 'recharts'.",
+                "de": "LTM Visualisierung (UI): 'LTM Dashboard'-Tab in den Einstellungen hinzugefügt. Visualisiert den Aktivitätsverlauf (Daily Digests) mittels Charts und zeigt den Baseline Drift Status an. Benötigt 'recharts'."
+            },
             "0.1.21": {
                 "en": "Advanced LTM (Dual Baseline): Introduced 'Baseline Drift Analysis' (Pro) to detect gradual behavioral changes by comparing Short-Term (STB) and Long-Term Baselines (LTB). Added new LTM configuration options.",
                 "de": "Erweitertes LTM (Dual Baseline): 'Baseline Drift Analyse' (Pro) eingeführt, um schleichende Verhaltensänderungen durch Vergleich von Kurzzeit- (STB) und Langzeit-Baseline (LTB) zu erkennen. Neue LTM-Konfigurationsoptionen hinzugefügt."
