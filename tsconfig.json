@@ -28,7 +28,7 @@
   "include": [
     "src-admin/src/**/*.ts",
     "src-admin/src/**/*.tsx",
-    "main.js"
+      "src/main.js"
   ],
   "exclude": [
     "node_modules",
