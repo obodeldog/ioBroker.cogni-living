@@ -373,7 +373,9 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </Typography>
                     <List dense sx={{ width: '100%', bgcolor: 'background.paper', maxHeight: 400, overflow: 'auto' }}>
                         {bestMatches.length > 0 && (
-                            <ListSubheader sx={{ bgcolor: '#e3f2fd', fontWeight: 'bold' }}>🏠 Zugeordnet - {bestMatches.length}</ListSubheader>
+                            <ListSubheader sx={{ bgcolor: 'background.paper', color: 'primary.main', fontWeight: 'bold', borderBottom: 1, borderColor: 'divider' }}>
+                                🏠 Zugeordnet - {bestMatches.length}
+                            </ListSubheader>
                         )}
                         {bestMatches.map((device) => {
                             const originalIndex = scannedDevices.findIndex(d => d.id === device.id);
@@ -387,7 +389,9 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             );
                         })}
                         {otherMatches.length > 0 && (
-                            <ListSubheader sx={{ bgcolor: '#f5f5f5', mt: 1 }}>❓ Sonstige - {otherMatches.length}</ListSubheader>
+                            <ListSubheader sx={{ bgcolor: 'background.paper', color: 'text.secondary', mt: 1, borderBottom: 1, borderColor: 'divider' }}>
+                                ❓ Sonstige Kandidaten (Manuelle Prüfung empfohlen) - {otherMatches.length}
+                            </ListSubheader>
                         )}
                         {otherMatches.map((device) => {
                             const originalIndex = scannedDevices.findIndex(d => d.id === device.id);
