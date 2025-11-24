@@ -55,7 +55,9 @@ import {
     Info as InfoIcon,
     DeleteForever as DeleteForeverIcon,
     ExpandMore as ExpandMoreIcon,
-    ExpandLess as ExpandLessIcon
+    ExpandLess as ExpandLessIcon,
+    SelectAll as SelectAllIcon,
+    Deselect as DeselectIcon
 } from '@mui/icons-material';
 
 import { I18n, DialogSelectID, type IobTheme } from '@iobroker/adapter-react-v5';
@@ -84,6 +86,7 @@ interface DeviceConfig {
 interface ScannedDevice extends DeviceConfig {
     selected?: boolean;
     _score?: number;
+    exists?: boolean;
 }
 
 interface ScanFilters {
@@ -302,6 +305,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         return (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={currentId} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />);
     }
 
+    // === SPRINT 23: Smart Auto-Discovery Wizard ===
+
     handleOpenWizard = () => {
         this.setState({ showWizard: true, wizardStep: 0, scannedDevices: [] });
     }
@@ -333,7 +338,18 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         this.showSnackbar('Keine Sensoren gefunden.', 'info');
                         this.setState({ wizardStep: 0 });
                     } else {
-                        const devices = response.devices.map((d: any) => ({ ...d, selected: !!d.location || d._score >= 20 }));
+                        // Existierende erkennen
+                        const existingIds = new Set(this.state.devices.map(d => d.id));
+
+                        const devices = response.devices.map((d: any) => {
+                            const exists = existingIds.has(d.id);
+                            return {
+                                ...d,
+                                exists: exists,
+                                // Default Selektion nur wenn noch nicht existiert
+                                selected: !exists && (!!d.location || d._score >= 20)
+                            };
+                        });
                         this.setState({ scannedDevices: devices, wizardStep: 2 });
                     }
                 } else {
@@ -349,7 +365,22 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     handleToggleScannedDevice = (index: number) => {
         const devices = [...this.state.scannedDevices];
+        if (devices[index].exists) return;
         devices[index].selected = !devices[index].selected;
+        this.setState({ scannedDevices: devices });
+    }
+
+    // NEU: Alles selektieren / deselektieren
+    handleSelectAll = () => {
+        const devices = this.state.scannedDevices.map(d => ({
+            ...d,
+            selected: !d.exists // Nur selektieren, wenn noch nicht in Config
+        }));
+        this.setState({ scannedDevices: devices });
+    }
+
+    handleDeselectAll = () => {
+        const devices = this.state.scannedDevices.map(d => ({ ...d, selected: false }));
         this.setState({ scannedDevices: devices });
     }
 
@@ -360,7 +391,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         let addedCount = 0;
         selected.forEach(newItem => {
             if(!currentDevices.find(d => d.id === newItem.id)) {
-                const { selected, _score, ...deviceConfig } = newItem;
+                const { selected, _score, exists, ...deviceConfig } = newItem;
                 currentDevices.push(deviceConfig);
                 addedCount++;
             }
@@ -385,7 +416,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         <FormControlLabel control={<Checkbox checked={scanFilters.doors} onChange={() => this.handleFilterChange('doors')} />} label="Fenster & Türen" />
                         <FormControlLabel control={<Checkbox checked={scanFilters.lights} onChange={() => this.handleFilterChange('lights')} />} label="Lichter & Schalter" />
 
-                        {/* ENUM SELECTION - DARK MODE FIX */}
                         {availableEnums.length > 0 && (
                             <Box sx={{ mt: 2, mb: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                                 <ListItemButton onClick={() => this.setState({ showEnumList: !showEnumList })}>
@@ -403,7 +433,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                         sx={{
                                             maxHeight: 200,
                                             overflow: 'auto',
-                                            // FIX: Theme-aware background
                                             bgcolor: (theme) => theme.palette.mode === 'dark' ? 'background.default' : '#fafafa',
                                         }}
                                     >
@@ -443,15 +472,17 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         }
 
         if (wizardStep === 2) {
-            const bestMatches = scannedDevices.filter(d => d.location);
-            const otherMatches = scannedDevices.filter(d => !d.location);
+            const bestMatches = scannedDevices.filter(d => d.location && !d.exists);
+            const otherMatches = scannedDevices.filter(d => !d.location && !d.exists);
+            const existingMatches = scannedDevices.filter(d => d.exists);
 
             return (
                 <Box>
                     <Typography variant="subtitle2" sx={{ mb: 1, ml: 2 }}>
-                        {scannedDevices.length} Sensoren gefunden.
+                        {scannedDevices.length} Sensoren gefunden. {existingMatches.length} bereits konfiguriert.
                     </Typography>
                     <List dense sx={{ width: '100%', bgcolor: 'background.paper', maxHeight: 400, overflow: 'auto' }}>
+
                         {bestMatches.length > 0 && (
                             <ListSubheader sx={{ bgcolor: 'background.paper', color: 'primary.main', fontWeight: 'bold', borderBottom: 1, borderColor: 'divider' }}>🏠 Zugeordnet - {bestMatches.length}</ListSubheader>
                         )}
@@ -466,6 +497,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                 </ListItem>
                             );
                         })}
+
                         {otherMatches.length > 0 && (
                             <ListSubheader sx={{ bgcolor: 'background.paper', color: 'text.secondary', mt: 1, borderBottom: 1, borderColor: 'divider' }}>❓ Sonstige - {otherMatches.length}</ListSubheader>
                         )}
@@ -480,6 +512,24 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                 </ListItem>
                             );
                         })}
+
+                        {existingMatches.length > 0 && (
+                            <ListSubheader sx={{ bgcolor: 'background.paper', color: 'success.main', mt: 1, borderBottom: 1, borderColor: 'divider' }}>
+                                <CheckCircleIcon fontSize="small" sx={{verticalAlign: 'middle', mr: 1}}/>
+                                Bereits konfiguriert (Ignoriert) - {existingMatches.length}
+                            </ListSubheader>
+                        )}
+                        {existingMatches.map((device) => (
+                            <ListItem key={device.id} disablePadding divider disabled>
+                                <ListItemButton dense>
+                                    <ListItemIcon><Checkbox edge="start" checked={true} disabled tabIndex={-1} /></ListItemIcon>
+                                    <ListItemText
+                                        primary={device.name || device.id}
+                                        secondary={`${device.type} • ${device.location || '-'} (Bereits hinzugefügt)`}
+                                    />
+                                </ListItemButton>
+                            </ListItem>
+                        ))}
                     </List>
                 </Box>
             );
@@ -499,7 +549,13 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     {wizardStep === 0 && <Button variant="contained" onClick={this.handleStartScan} startIcon={<AutoFixHighIcon />}>Scan Starten</Button>}
                     {wizardStep === 2 && (
                         <>
-                            <Button onClick={() => this.setState({ wizardStep: 0 })}>Zurück zu Filtern</Button>
+                            <Button onClick={() => this.setState({ wizardStep: 0 })}>Zurück</Button>
+                            {/* NEU: Selection Helper */}
+                            <Button onClick={this.handleSelectAll}>Alle</Button>
+                            <Button onClick={this.handleDeselectAll}>Keine</Button>
+
+                            <Box sx={{ flexGrow: 1 }} /> {/* Spacer */}
+
                             <Button variant="contained" onClick={this.handleImportDevices} color="primary">
                                 {this.state.scannedDevices.filter(d => d.selected).length} Importieren
                             </Button>
