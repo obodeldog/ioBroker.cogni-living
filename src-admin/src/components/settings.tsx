@@ -36,7 +36,8 @@ import {
     ListItemIcon,
     LinearProgress,
     ListSubheader,
-    FormGroup
+    FormGroup,
+    Collapse
 } from '@mui/material';
 import type { AlertColor } from '@mui/material';
 
@@ -52,7 +53,9 @@ import {
     AutoFixHigh as AutoFixHighIcon,
     Check as CheckIcon,
     Info as InfoIcon,
-    DeleteForever as DeleteForeverIcon
+    DeleteForever as DeleteForeverIcon,
+    ExpandMore as ExpandMoreIcon,
+    ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 
 import { I18n, DialogSelectID, type IobTheme } from '@iobroker/adapter-react-v5';
@@ -89,6 +92,12 @@ interface ScanFilters {
     lights: boolean;
     temperature: boolean;
     weather: boolean;
+    selectedFunctionIds: string[]; // NEU: IDs der gewählten Enums
+}
+
+interface EnumItem {
+    id: string;
+    name: string;
 }
 
 interface SettingsState {
@@ -128,12 +137,15 @@ interface SettingsState {
     selectIdIndex: number;
     isTestingApi: boolean;
 
-    // SPRINT 23: Wizard & Delete Dialog
+    // SPRINT 23.5: Wizard States
     showWizard: boolean;
     wizardStep: number;
     scanFilters: ScanFilters;
     scannedDevices: ScannedDevice[];
     showDeleteConfirm: boolean;
+
+    availableEnums: EnumItem[]; // Liste aller Funktionen aus ioBroker
+    showEnumList: boolean;      // Toggle für die Enum-Liste im UI
 
     snackbarOpen: boolean;
     snackbarMessage: string;
@@ -193,10 +205,14 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 doors: true,
                 lights: true,
                 temperature: false,
-                weather: false
+                weather: false,
+                selectedFunctionIds: []
             },
             scannedDevices: [],
             showDeleteConfirm: false,
+
+            availableEnums: [],
+            showEnumList: false,
 
             snackbarOpen: false,
             snackbarMessage: '',
@@ -206,6 +222,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     componentDidMount() {
         this.fetchAvailableInstances();
+        this.fetchEnums();
     }
 
     fetchAvailableInstances() {
@@ -219,10 +236,18 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         Promise.all(promises).then(() => { this.setState({ availableInstances: instances }); });
     }
 
+    // Lade Funktionen für den Wizard
+    fetchEnums() {
+        this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'getEnums', {})
+            .then((res: any) => {
+                if(res && res.success && res.enums) {
+                    this.setState({ availableEnums: res.enums });
+                }
+            });
+    }
+
     updateNativeValue(attr: string, value: any) {
-        if (attr === 'livingContext' && typeof value === 'string' && value.length > 1000) {
-            value = value.substring(0, 1000);
-        }
+        if (attr === 'livingContext' && typeof value === 'string' && value.length > 1000) value = value.substring(0, 1000);
         this.setState({ [attr]: value } as Pick<SettingsState, keyof SettingsState>, () => { this.props.onChange(attr, value); });
     }
 
@@ -285,8 +310,20 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     }
 
     handleFilterChange = (key: keyof ScanFilters) => {
+        // @ts-ignore
         this.setState(prevState => ({
             scanFilters: { ...prevState.scanFilters, [key]: !prevState.scanFilters[key] }
+        }));
+    }
+
+    handleEnumToggle = (enumId: string) => {
+        const current = [...this.state.scanFilters.selectedFunctionIds];
+        const index = current.indexOf(enumId);
+        if (index === -1) current.push(enumId);
+        else current.splice(index, 1);
+
+        this.setState(prevState => ({
+            scanFilters: { ...prevState.scanFilters, selectedFunctionIds: current }
         }));
     }
 
@@ -299,7 +336,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         this.showSnackbar('Keine Sensoren gefunden.', 'info');
                         this.setState({ wizardStep: 0 });
                     } else {
-                        const devices = response.devices.map((d: any) => ({ ...d, selected: !!d.location }));
+                        // Vorselektion: Wenn Location da ODER wenn über Enum gefunden (Score >= 20)
+                        const devices = response.devices.map((d: any) => ({ ...d, selected: !!d.location || d._score >= 20 }));
                         this.setState({ scannedDevices: devices, wizardStep: 2 });
                     }
                 } else {
@@ -337,19 +375,44 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     }
 
     renderWizardContent() {
-        const { wizardStep, scanFilters, scannedDevices } = this.state;
+        const { wizardStep, scanFilters, scannedDevices, availableEnums, showEnumList } = this.state;
 
         if (wizardStep === 0) {
             return (
                 <Box sx={{ p: 2 }}>
                     <Typography variant="h6" gutterBottom>Was soll gescannt werden?</Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        Wählen Sie nur die Kategorien, die Sie wirklich überwachen wollen.
+                        Wählen Sie Kategorien oder spezifische ioBroker-Funktionen.
                     </Typography>
                     <FormGroup>
                         <FormControlLabel control={<Checkbox checked={scanFilters.motion} onChange={() => this.handleFilterChange('motion')} />} label="Bewegungsmelder / Präsenz" />
                         <FormControlLabel control={<Checkbox checked={scanFilters.doors} onChange={() => this.handleFilterChange('doors')} />} label="Fenster & Türen" />
                         <FormControlLabel control={<Checkbox checked={scanFilters.lights} onChange={() => this.handleFilterChange('lights')} />} label="Lichter & Schalter" />
+
+                        {/* ENUM SELECTION */}
+                        {availableEnums.length > 0 && (
+                            <Box sx={{ mt: 2, mb: 1, border: '1px solid #ddd', borderRadius: 1 }}>
+                                <ListItemButton onClick={() => this.setState({ showEnumList: !showEnumList })}>
+                                    <ListItemText primary="Spezifische Funktionen (Enums)" secondary={`${scanFilters.selectedFunctionIds.length} ausgewählt`} />
+                                    {showEnumList ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                </ListItemButton>
+                                <Collapse in={showEnumList} timeout="auto" unmountOnExit>
+                                    <List component="div" disablePadding dense sx={{ maxHeight: 200, overflow: 'auto', bgcolor: '#fafafa' }}>
+                                        {availableEnums.map((en) => (
+                                            <ListItem key={en.id} dense disablePadding>
+                                                <ListItemButton onClick={() => this.handleEnumToggle(en.id)}>
+                                                    <ListItemIcon>
+                                                        <Checkbox edge="start" checked={scanFilters.selectedFunctionIds.indexOf(en.id) !== -1} tabIndex={-1} disableRipple />
+                                                    </ListItemIcon>
+                                                    <ListItemText primary={en.name} secondary={en.id} />
+                                                </ListItemButton>
+                                            </ListItem>
+                                        ))}
+                                    </List>
+                                </Collapse>
+                            </Box>
+                        )}
+
                         <Box sx={{ mt: 2, borderTop: '1px solid #eee', pt: 1 }}>
                             <Typography variant="caption" color="text.secondary">Optionale Daten:</Typography>
                             <FormControlLabel control={<Checkbox checked={scanFilters.temperature} onChange={() => this.handleFilterChange('temperature')} />} label="Temperatur / Klima" />
@@ -555,12 +618,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={() => this.onAddDevice()}>{I18n.t('btn_add_sensor')}</Button>
                             <Button variant="outlined" color="secondary" startIcon={<AutoFixHighIcon />} onClick={this.handleOpenWizard}>Auto-Scan (Wizard)</Button>
                         </Box>
-
-                        {/* NEUER BUTTON: Alle Löschen */}
                         {devices.length > 0 && (
-                            <Button variant="text" color="error" startIcon={<DeleteForeverIcon />} onClick={() => this.setState({ showDeleteConfirm: true })}>
-                                Alle Löschen
-                            </Button>
+                            <Button variant="text" color="error" startIcon={<DeleteForeverIcon />} onClick={() => this.setState({ showDeleteConfirm: true })}>Alle Löschen</Button>
                         )}
                     </Box>
                 </Box>
