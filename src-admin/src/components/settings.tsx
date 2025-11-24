@@ -56,8 +56,7 @@ import {
     DeleteForever as DeleteForeverIcon,
     ExpandMore as ExpandMoreIcon,
     ExpandLess as ExpandLessIcon,
-    SelectAll as SelectAllIcon,
-    Deselect as DeselectIcon
+    CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 
 import { I18n, DialogSelectID, type IobTheme } from '@iobroker/adapter-react-v5';
@@ -370,11 +369,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         this.setState({ scannedDevices: devices });
     }
 
-    // NEU: Alles selektieren / deselektieren
     handleSelectAll = () => {
         const devices = this.state.scannedDevices.map(d => ({
             ...d,
-            selected: !d.exists // Nur selektieren, wenn noch nicht in Config
+            selected: !d.exists
         }));
         this.setState({ scannedDevices: devices });
     }
@@ -520,8 +518,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             </ListSubheader>
                         )}
                         {existingMatches.map((device) => (
-                            <ListItem key={device.id} disablePadding divider disabled>
-                                <ListItemButton dense>
+                            <ListItem key={device.id} disablePadding divider>
+                                <ListItemButton dense disabled>
                                     <ListItemIcon><Checkbox edge="start" checked={true} disabled tabIndex={-1} /></ListItemIcon>
                                     <ListItemText
                                         primary={device.name || device.id}
@@ -550,11 +548,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     {wizardStep === 2 && (
                         <>
                             <Button onClick={() => this.setState({ wizardStep: 0 })}>Zurück</Button>
-                            {/* NEU: Selection Helper */}
                             <Button onClick={this.handleSelectAll}>Alle</Button>
                             <Button onClick={this.handleDeselectAll}>Keine</Button>
 
-                            <Box sx={{ flexGrow: 1 }} /> {/* Spacer */}
+                            <Box sx={{ flexGrow: 1 }} />
 
                             <Button variant="contained" onClick={this.handleImportDevices} color="primary">
                                 {this.state.scannedDevices.filter(d => d.selected).length} Importieren
@@ -618,6 +615,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 <Snackbar open={this.state.snackbarOpen} autoHideDuration={8000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity} sx={{ width: '100%' }}>{this.state.snackbarMessage}</Alert></Snackbar>
 
                 <Box component="form" sx={{ width: '100%' }}>
+
+                    {/* === SEKTION NOTIFICATIONS === */}
                     <Typography variant="h6" gutterBottom><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><NotificationsIcon />{I18n.t('headline_notifications')}</Box></Typography>
                     <Box sx={sxConfigSection}>
                         <Typography variant="body2" gutterBottom sx={{mb: 3}}>{I18n.t('notifications_helper')}</Typography>
@@ -629,17 +628,20 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         <Button variant="outlined" color="primary" sx={{ mt: 2 }} onClick={() => this.handleTestNotificationClick()} disabled={isTestingNotification} startIcon={isTestingNotification ? <CircularProgress size={20} /> : <NotificationsIcon />}>{I18n.t('btn_test_notification')}</Button>
                     </Box>
 
+                    {/* === SEKTION LIZENZ === */}
                     <Typography variant="h6" gutterBottom><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><LockIcon />{I18n.t('headline_licensing')}</Box></Typography>
                     <Box sx={sxConfigSection}>
                         <FormControl fullWidth margin="normal"><Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}><TextField sx={{ flexGrow: 1, maxWidth: '600px' }} label={I18n.t('license_key')} value={licenseKey} type="password" onChange={e => this.updateNativeValue('licenseKey', e.target.value)} helperText={I18n.t('license_key_helper')} variant="outlined" size="small" /></Box></FormControl>
                     </Box>
 
+                    {/* === SEKTION KI & AUTOPILOT === */}
                     <Typography variant="h6" gutterBottom><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><WifiIcon />{I18n.t('headline_ai_settings')}</Box></Typography>
                     <Box sx={sxConfigSection}>
                         <FormControl fullWidth margin="normal"><Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}><TextField sx={{ flexGrow: 1, maxWidth: '600px' }} label={I18n.t('gemini_api_key')} value={geminiApiKey} type="password" onChange={e => this.updateNativeValue('geminiApiKey', e.target.value)} disabled={isTestingApi} variant="outlined" size="small" /><Button variant="outlined" color="primary" sx={{ minWidth: '150px' }} onClick={() => this.handleTestApiClick()} disabled={isTestingApi || !geminiApiKey} startIcon={isTestingApi ? <CircularProgress size={20} /> : <WifiIcon />}>{I18n.t('btn_test_connection')}</Button></Box></FormControl>
                         <FormControl margin="normal"><TextField sx={{ width: '250px', mr: 2 }} label={I18n.t('analysis_interval')} value={analysisInterval} type="number" inputProps={{ min: 1 }} onChange={e => this.updateNativeValue('analysisInterval', parseInt(e.target.value, 10) || 1)} variant="outlined" size="small" /></FormControl>
                     </Box>
 
+                    {/* === SEKTION LTM === */}
                     <Typography variant="h6" gutterBottom><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><MemoryIcon />{I18n.t('headline_ltm_settings')}</Box></Typography>
                     <Box sx={sxConfigSection}>
                         <Grid container spacing={3} sx={{pt: 1}}>
@@ -650,6 +652,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         </Grid>
                     </Box>
 
+                    {/* === SEKTION WOHNKONTEXT === */}
                     <Typography variant="h6" gutterBottom><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><ListIcon />{I18n.t('headline_living_context')}</Box></Typography>
                     <Box sx={sxConfigSection}>
                         <FormControl margin="normal" sx={{ minWidth: '350px' }} size="small" variant="outlined"><InputLabel id="persona-label">{I18n.t('ai_persona')}</InputLabel><Select labelId="persona-label" label={I18n.t('ai_persona')} value={aiPersona} onChange={e => this.updateNativeValue('aiPersona', e.target.value)}><MenuItem value="generic">{I18n.t('persona_generic')}</MenuItem><MenuItem value="senior_aal">{I18n.t('persona_senior_aal')}</MenuItem><MenuItem value="family">{I18n.t('persona_family')}</MenuItem><MenuItem value="single_comfort">{I18n.t('persona_single_comfort')}</MenuItem><MenuItem value="security">{I18n.t('persona_security')}</MenuItem></Select></FormControl>
@@ -668,6 +671,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         </FormControl>
                     </Box>
 
+                    {/* === SEKTION SENSOREN (WIZARD) === */}
                     <Typography variant="h6" gutterBottom>{I18n.t('headline_sensor_config')}</Typography>
                     <TableContainer component={Paper}>
                         <Table size="small">
