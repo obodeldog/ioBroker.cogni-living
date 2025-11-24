@@ -92,7 +92,7 @@ interface ScanFilters {
     lights: boolean;
     temperature: boolean;
     weather: boolean;
-    selectedFunctionIds: string[]; // NEU: IDs der gewählten Enums
+    selectedFunctionIds: string[];
 }
 
 interface EnumItem {
@@ -144,8 +144,8 @@ interface SettingsState {
     scannedDevices: ScannedDevice[];
     showDeleteConfirm: boolean;
 
-    availableEnums: EnumItem[]; // Liste aller Funktionen aus ioBroker
-    showEnumList: boolean;      // Toggle für die Enum-Liste im UI
+    availableEnums: EnumItem[];
+    showEnumList: boolean;
 
     snackbarOpen: boolean;
     snackbarMessage: string;
@@ -236,7 +236,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         Promise.all(promises).then(() => { this.setState({ availableInstances: instances }); });
     }
 
-    // Lade Funktionen für den Wizard
     fetchEnums() {
         this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'getEnums', {})
             .then((res: any) => {
@@ -303,8 +302,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         return (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={currentId} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />);
     }
 
-    // === SPRINT 23: Smart Auto-Discovery Wizard ===
-
     handleOpenWizard = () => {
         this.setState({ showWizard: true, wizardStep: 0, scannedDevices: [] });
     }
@@ -336,7 +333,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         this.showSnackbar('Keine Sensoren gefunden.', 'info');
                         this.setState({ wizardStep: 0 });
                     } else {
-                        // Vorselektion: Wenn Location da ODER wenn über Enum gefunden (Score >= 20)
                         const devices = response.devices.map((d: any) => ({ ...d, selected: !!d.location || d._score >= 20 }));
                         this.setState({ scannedDevices: devices, wizardStep: 2 });
                     }
@@ -389,15 +385,28 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         <FormControlLabel control={<Checkbox checked={scanFilters.doors} onChange={() => this.handleFilterChange('doors')} />} label="Fenster & Türen" />
                         <FormControlLabel control={<Checkbox checked={scanFilters.lights} onChange={() => this.handleFilterChange('lights')} />} label="Lichter & Schalter" />
 
-                        {/* ENUM SELECTION */}
+                        {/* ENUM SELECTION - DARK MODE FIX */}
                         {availableEnums.length > 0 && (
-                            <Box sx={{ mt: 2, mb: 1, border: '1px solid #ddd', borderRadius: 1 }}>
+                            <Box sx={{ mt: 2, mb: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                                 <ListItemButton onClick={() => this.setState({ showEnumList: !showEnumList })}>
-                                    <ListItemText primary="Spezifische Funktionen (Enums)" secondary={`${scanFilters.selectedFunctionIds.length} ausgewählt`} />
+                                    <ListItemText
+                                        primary="Spezifische Funktionen (Enums)"
+                                        secondary={`${scanFilters.selectedFunctionIds.length} ausgewählt`}
+                                    />
                                     {showEnumList ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                                 </ListItemButton>
                                 <Collapse in={showEnumList} timeout="auto" unmountOnExit>
-                                    <List component="div" disablePadding dense sx={{ maxHeight: 200, overflow: 'auto', bgcolor: '#fafafa' }}>
+                                    <List
+                                        component="div"
+                                        disablePadding
+                                        dense
+                                        sx={{
+                                            maxHeight: 200,
+                                            overflow: 'auto',
+                                            // FIX: Theme-aware background
+                                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'background.default' : '#fafafa',
+                                        }}
+                                    >
                                         {availableEnums.map((en) => (
                                             <ListItem key={en.id} dense disablePadding>
                                                 <ListItemButton onClick={() => this.handleEnumToggle(en.id)}>
@@ -413,7 +422,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             </Box>
                         )}
 
-                        <Box sx={{ mt: 2, borderTop: '1px solid #eee', pt: 1 }}>
+                        <Box sx={{ mt: 2, borderTop: '1px solid', borderColor: 'divider', pt: 1 }}>
                             <Typography variant="caption" color="text.secondary">Optionale Daten:</Typography>
                             <FormControlLabel control={<Checkbox checked={scanFilters.temperature} onChange={() => this.handleFilterChange('temperature')} />} label="Temperatur / Klima" />
                             <FormControlLabel control={<Checkbox checked={scanFilters.weather} onChange={() => this.handleFilterChange('weather')} color="warning" />} label="Wetterdaten (Alle Adapter)" />
@@ -553,8 +562,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 <Snackbar open={this.state.snackbarOpen} autoHideDuration={8000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity} sx={{ width: '100%' }}>{this.state.snackbarMessage}</Alert></Snackbar>
 
                 <Box component="form" sx={{ width: '100%' }}>
-
-                    {/* ... (Notifications, Lizenz, KI, LTM, Kontext - alles gleich) ... */}
                     <Typography variant="h6" gutterBottom><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><NotificationsIcon />{I18n.t('headline_notifications')}</Box></Typography>
                     <Box sx={sxConfigSection}>
                         <Typography variant="body2" gutterBottom sx={{mb: 3}}>{I18n.t('notifications_helper')}</Typography>
