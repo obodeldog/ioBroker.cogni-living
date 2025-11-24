@@ -51,11 +51,13 @@ import {
     Memory as MemoryIcon,
     AutoFixHigh as AutoFixHighIcon,
     Check as CheckIcon,
-    FilterList as FilterIcon
+    Info as InfoIcon
 } from '@mui/icons-material';
 
 import { I18n, DialogSelectID, type IobTheme } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
+
+// --- INTERFACES ---
 
 interface SettingsProps {
     native: Record<string, any>;
@@ -101,6 +103,7 @@ interface SettingsState {
     ltmLtbWindowDays: number;
     ltmDriftCheckIntervalHours: number;
 
+    // Notification Settings
     notifyTelegramEnabled: boolean;
     notifyTelegramInstance: string;
     notifyTelegramRecipient: string;
@@ -126,7 +129,7 @@ interface SettingsState {
 
     // SPRINT 23: Wizard States
     showWizard: boolean;
-    wizardStep: number; // 0=Filter, 1=Scanning, 2=Results
+    wizardStep: number;
     scanFilters: ScanFilters;
     scannedDevices: ScannedDevice[];
 
@@ -187,8 +190,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 motion: true,
                 doors: true,
                 lights: true,
-                temperature: false, // Default OFF (Spam)
-                weather: false      // Default OFF (Spam)
+                temperature: false,
+                weather: false
             },
             scannedDevices: [],
 
@@ -214,7 +217,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     }
 
     updateNativeValue(attr: string, value: any) {
-        if (attr === 'livingContext' && typeof value === 'string' && value.length > 200) value = value.substring(0, 200);
+        // SPRINT 24: Limit auf 1000 erhöht
+        if (attr === 'livingContext' && typeof value === 'string' && value.length > 1000) {
+            value = value.substring(0, 1000);
+        }
         this.setState({ [attr]: value } as Pick<SettingsState, keyof SettingsState>, () => { this.props.onChange(attr, value); });
     }
 
@@ -278,7 +284,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     handleStartScan = () => {
         this.setState({ wizardStep: 1 }); // Loading
-        // Sende Filter an Backend
         this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'scanDevices', this.state.scanFilters)
             .then((response: any) => {
                 if(response && response.success && Array.isArray(response.devices)) {
@@ -286,13 +291,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         this.showSnackbar('Keine Sensoren gefunden.', 'info');
                         this.setState({ wizardStep: 0 });
                     } else {
-                        // SMART SELECTION:
-                        // Nur Geräte mit erkanntem Ort (location) ODER hohem Score werden vorselektiert.
-                        // Das verhindert, dass der User 1000 Checkboxen deaktivieren muss.
-                        const devices = response.devices.map((d: any) => ({
-                            ...d,
-                            selected: !!d.location // Nur wenn Raum erkannt wurde -> true
-                        }));
+                        const devices = response.devices.map((d: any) => ({ ...d, selected: !!d.location }));
                         this.setState({ scannedDevices: devices, wizardStep: 2 });
                     }
                 } else {
@@ -332,21 +331,19 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     renderWizardContent() {
         const { wizardStep, scanFilters, scannedDevices } = this.state;
 
-        // 1. Filter Phase
         if (wizardStep === 0) {
             return (
                 <Box sx={{ p: 2 }}>
                     <Typography variant="h6" gutterBottom>Was soll gescannt werden?</Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                         Wählen Sie nur die Kategorien, die Sie wirklich überwachen wollen.
-                        Wetterdaten werden standardmäßig ignoriert, um Kosten zu sparen.
                     </Typography>
                     <FormGroup>
                         <FormControlLabel control={<Checkbox checked={scanFilters.motion} onChange={() => this.handleFilterChange('motion')} />} label="Bewegungsmelder / Präsenz" />
                         <FormControlLabel control={<Checkbox checked={scanFilters.doors} onChange={() => this.handleFilterChange('doors')} />} label="Fenster & Türen" />
                         <FormControlLabel control={<Checkbox checked={scanFilters.lights} onChange={() => this.handleFilterChange('lights')} />} label="Lichter & Schalter" />
                         <Box sx={{ mt: 2, borderTop: '1px solid #eee', pt: 1 }}>
-                            <Typography variant="caption" color="text.secondary">Optionale Daten (Können viele Datenpunkte erzeugen):</Typography>
+                            <Typography variant="caption" color="text.secondary">Optionale Daten:</Typography>
                             <FormControlLabel control={<Checkbox checked={scanFilters.temperature} onChange={() => this.handleFilterChange('temperature')} />} label="Temperatur / Klima" />
                             <FormControlLabel control={<Checkbox checked={scanFilters.weather} onChange={() => this.handleFilterChange('weather')} color="warning" />} label="Wetterdaten (Alle Adapter)" />
                         </Box>
@@ -355,38 +352,30 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             );
         }
 
-        // 2. Loading Phase
         if (wizardStep === 1) {
             return (
                 <Box sx={{ width: '100%', mt: 4, mb: 4, textAlign: 'center' }}>
                     <LinearProgress />
                     <Typography variant="h6" sx={{ mt: 2 }}>Suche Sensoren...</Typography>
-                    <Typography variant="body2" color="text.secondary">Filtert irrelevante System-Datenpunkte.</Typography>
+                    <Typography variant="body2" color="text.secondary">Filtert irrelevante Datenpunkte.</Typography>
                 </Box>
             );
         }
 
-        // 3. Results Phase
         if (wizardStep === 2) {
-            // Teile die Liste in "Gute Treffer" (mit Raum) und "Andere"
             const bestMatches = scannedDevices.filter(d => d.location);
             const otherMatches = scannedDevices.filter(d => !d.location);
 
             return (
                 <Box>
                     <Typography variant="subtitle2" sx={{ mb: 1, ml: 2 }}>
-                        {scannedDevices.length} Sensoren gefunden. Beste Treffer wurden vorselektiert.
+                        {scannedDevices.length} Sensoren gefunden.
                     </Typography>
                     <List dense sx={{ width: '100%', bgcolor: 'background.paper', maxHeight: 400, overflow: 'auto' }}>
-
-                        {/* Sektion: Beste Treffer */}
                         {bestMatches.length > 0 && (
-                            <ListSubheader sx={{ bgcolor: '#e3f2fd', fontWeight: 'bold' }}>
-                                🏠 Zugeordnet (Raum erkannt) - {bestMatches.length}
-                            </ListSubheader>
+                            <ListSubheader sx={{ bgcolor: '#e3f2fd', fontWeight: 'bold' }}>🏠 Zugeordnet - {bestMatches.length}</ListSubheader>
                         )}
                         {bestMatches.map((device) => {
-                            // Finde den Index im Original-Array für den Toggle
                             const originalIndex = scannedDevices.findIndex(d => d.id === device.id);
                             return (
                                 <ListItem key={device.id} disablePadding divider>
@@ -397,12 +386,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                 </ListItem>
                             );
                         })}
-
-                        {/* Sektion: Andere */}
                         {otherMatches.length > 0 && (
-                            <ListSubheader sx={{ bgcolor: '#f5f5f5', mt: 1 }}>
-                                ❓ Sonstige Kandidaten (Manuelle Prüfung empfohlen) - {otherMatches.length}
-                            </ListSubheader>
+                            <ListSubheader sx={{ bgcolor: '#f5f5f5', mt: 1 }}>❓ Sonstige - {otherMatches.length}</ListSubheader>
                         )}
                         {otherMatches.map((device) => {
                             const originalIndex = scannedDevices.findIndex(d => d.id === device.id);
@@ -513,10 +498,31 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         </Grid>
                     </Box>
 
+                    {/* === SEKTION WOHNKONTEXT === */}
                     <Typography variant="h6" gutterBottom><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><ListIcon />{I18n.t('headline_living_context')}</Box></Typography>
                     <Box sx={sxConfigSection}>
                         <FormControl margin="normal" sx={{ minWidth: '350px' }} size="small" variant="outlined"><InputLabel id="persona-label">{I18n.t('ai_persona')}</InputLabel><Select labelId="persona-label" label={I18n.t('ai_persona')} value={aiPersona} onChange={e => this.updateNativeValue('aiPersona', e.target.value)}><MenuItem value="generic">{I18n.t('persona_generic')}</MenuItem><MenuItem value="senior_aal">{I18n.t('persona_senior_aal')}</MenuItem><MenuItem value="family">{I18n.t('persona_family')}</MenuItem><MenuItem value="single_comfort">{I18n.t('persona_single_comfort')}</MenuItem><MenuItem value="security">{I18n.t('persona_security')}</MenuItem></Select></FormControl>
-                        <FormControl fullWidth margin="normal"><TextField sx={{ maxWidth: '800px' }} label={I18n.t('living_context_details')} multiline rows={3} value={livingContext} onChange={e => this.updateNativeValue('livingContext', e.target.value)} helperText={`${I18n.t('living_context_helper')} (${livingContext.length}/200)`} inputProps={{ maxLength: 200 }} variant="outlined" /></FormControl>
+                        <FormControl fullWidth margin="normal">
+                            <TextField
+                                sx={{ maxWidth: '800px' }}
+                                label={I18n.t('living_context_details')}
+                                multiline
+                                rows={6}
+                                value={livingContext}
+                                onChange={e => this.updateNativeValue('livingContext', e.target.value)}
+                                helperText={
+                                    <span>
+                                        {`${I18n.t('living_context_helper')} (${livingContext.length}/1000)`}
+                                        <br/>
+                                        <span style={{fontStyle: 'italic', color: '#ffa726'}}>
+                                            Hinweis: Änderungen am Kontext werden nur für zukünftige Analysen wirksam (ab dem nächsten Daily Digest).
+                                        </span>
+                                    </span>
+                                }
+                                inputProps={{ maxLength: 1000 }}
+                                variant="outlined"
+                            />
+                        </FormControl>
                     </Box>
 
                     <Typography variant="h6" gutterBottom>{I18n.t('headline_sensor_config')}</Typography>

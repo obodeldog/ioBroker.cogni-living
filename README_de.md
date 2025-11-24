@@ -2,123 +2,112 @@
 
 # ioBroker.cogni-living
 
-[![Test and Release](https://github.com/obodeldog/ioBroker.cogni-living/workflows/Test%20and%20Release/badge.svg)](https://github.com/obodeldog/ioBroker.cogni-living/actions/workflows/test-and-release.yml)
-[![NPM](https://nodei.co/npm/iobroker.cogni-living.png?downloads=true)](https://nodei.co/npm/iobroker.cogni-living/)
-
-**[Click here for the English manual (Zur englischen Anleitung)](README.md)**
+**KI-gestützte Verhaltensanalyse für Gesundheit, Sicherheit & Komfort.**
 
 ---
 
-## 🧠 cogni-living Adapter für ioBroker
+## 📖 Über diesen Adapter
 
-**Analysiert Verhaltensmuster für Gesundheit, Sicherheit & Komfort**
+**Cogni-Living** verwandelt Ihr Smart Home von einem passiven System in einen intelligenten, mitdenkenden Assistenten. Anstatt mühsam hunderte von Regeln zu programmieren ("Wenn Bewegung, dann Licht"), nutzt dieser Adapter modernste künstliche Intelligenz (**Google Gemini**), um die Daten Ihrer Sensoren zu verstehen und zu interpretieren.
 
-Dieser Adapter ist ein intelligenter Assistent, der ausgewählte Sensor-Daten (wie Bewegungsmelder, Fensterkontakte etc.) aus Ihrem ioBroker sammelt und in einem konfigurierbaren Intervall mittels Google Gemini (KI) analysiert.
-
-Der Adapter "lernt", indem er die Sensordaten nicht nur isoliert betrachtet, sondern im Kontext seines "Kurzzeitgedächtnisses" (der letzten 50 Events) analysiert.
-
-Das Ziel ist die Erkennung von zwei Hauptkategorien:
-1.  **Aktivitäts-Assistent:** Erkennt ungewöhnliche Abweichungen von der Norm (z.B. lange Inaktivität am Morgen, untypische nächtliche Aktivität), die auf ein Problem hindeuten könnten.
-2.  **Komfort-Assistent:** Identifiziert wiederkehrende Muster (z.B. "Jeden Morgen um 07:00 Uhr geht das Licht im Flur an, dann in der Küche"), um proaktive Automatisierungen zu ermöglichen.
+Besonders geeignet für:
+* **Ambient Assisted Living (AAL):** Sorgenfreies Wohnen im Alter durch intelligente Überwachung von Routinen.
+* **Sicherheit:** Erkennung von Anomalien, die klassischen Alarmanlagen entgehen.
+* **Gesundheits-Monitoring:** Erkennung schleichender Verhaltensänderungen (z.B. verringerte Mobilität).
 
 ---
 
-## ⚠️ Voraussetzungen
+## ⚙️ Funktionsweise
 
-Für die Nutzung dieses Adapters ist ein **gültiger Google Gemini API Key** zwingend erforderlich.
+Der Adapter arbeitet mit einem Zwei-Stufen-Gedächtnis-Modell, ähnlich dem menschlichen Gehirn:
 
-Sie können diesen im **[Google AI Studio](https://aistudio.google.com/)** kostenlos für Testzwecke erstellen.
+### 1. Das Kurzzeitgedächtnis (STM - Short-Term Memory)
+Der "Autopilot" überwacht die letzten 50 Ereignisse in Echtzeit.
+* **Beispiel:** Es ist 3 Uhr nachts, die Haustür geht auf, aber niemand ist im Flur? -> **Alarm.**
+* **Beispiel:** Der Bewohner ist im Bad gestürzt und bewegt sich seit 30 Minuten nicht? -> **Alarm.**
 
----
-
-## ⚙️ Konfiguration
-
-Die gesamte Konfiguration findet im Admin-Bereich des Adapters statt:
-1.  **Google Gemini API-Schlüssel:** Fügen Sie hier Ihren persönlichen `AIza...` API-Schlüssel von Google ein.
-2.  **Analyse-Intervall (in Minuten):** Legt fest, wie oft der "Autopilot" die gesammelten Daten automatisch zur Analyse an die KI sendet (z.B. alle `15` Minuten).
-3.  **Sensor-Tabelle:** Fügen Sie hier alle Sensoren hinzu, die der Adapter überwachen und an die KI senden soll.
-    *   Nutzen Sie den "Auswählen"-Knopf (Lupe), um Sensoren einfach aus Ihrer Objektliste hinzuzufügen.
-    *   Der "Name" des Sensors (z.B. "Bewegungsmelder Flur") wird automatisch aus den Objektdaten übernommen, um der KI mehr Kontext zu geben.
-    *   **Gleiche Werte loggen:** Wenn aktiviert, wird *jedes* Update (auch mit gleichem Wert) geloggt. Nutzen Sie dies für Präsenzmelder. Wenn deaktiviert (Standard), werden nur tatsächliche Wert-*Änderungen* geloggt (basierend auf dem Adapter-Gedächtnis).
+### 2. Das Langzeitgedächtnis (LTM - Long-Term Memory) [Pro Feature]
+Jede Nacht erstellt die KI eine Zusammenfassung ("Daily Digest") des Tages und lernt daraus die normalen Gewohnheiten der Bewohner.
+* **Baseline-Learning:** Nach ca. 7-14 Tagen weiß das System, wann Sie normalerweise aufstehen, wie oft Sie kochen oder wann Sie das Haus verlassen.
+* **Drift-Analyse:** Ein spezieller Algorithmus vergleicht das Verhalten der letzten 2 Wochen mit dem Langzeit-Durchschnitt. So werden schleichende Veränderungen erkannt (z.B. "Bewohner verlässt das Haus viel seltener als früher" oder "Schlafphasen verschieben sich").
 
 ---
 
-## 📊 Vom Adapter erstellte Datenpunkte
+## 🚀 Features im Detail
 
-Der Adapter erstellt folgende Datenpunkte unter `cogni-living.0`:
-*   **`events.lastEvent`**: Das zuletzt erfasste Sensor-Ereignis im JSON-Format.
-*   **`events.history`**: Das "Kurzzeitgedächtnis" des Adapters (JSON-Array der letzten 50 Events).
-*   **`events.history_debug_XX`**: Die 5 letzten Events als einfach lesbarer Text (z.B. "18:30:05 - Bewegungsmelder Flur (Flur) -> true").
-*   **`analysis.trigger`**: Ein Knopf (boolean), um eine KI-Analyse manuell anzustoßen.
-*   **`analysis.lastPrompt`**: Der genaue Text (System-Prompt + Event-Daten), der zuletzt an die KI gesendet wurde.
-*   **`analysis.lastResult`**: Die textliche Antwort/Analyse, die von Gemini zurückkam.
-*   **`analysis.isAlert`**: Ein Boolean (true/false) Alarm-Status, der ausgelöst wird, wenn die KI-Antwort Schlüsselwörter wie "WARNUNG" oder "INAKTIVITÄT" enthält.
-*   **`analysis.analysisHistory`**: Ein JSON-Array Logbuch der letzten 100 KI-Analyseergebnisse.
-*   **`analysis.history_debug_XX`**: Die 5 letzten Analyseergebnisse als einfach lesbarer Text.
+### 🪄 Auto-Discovery Wizard
+Keine komplizierte Konfiguration mehr! Der integrierte Wizard scannt Ihre gesamte ioBroker-Installation und findet automatisch relevante Sensoren (Licht, Bewegung, Fenster, Türen, Thermostate). Sie müssen nur noch auswählen, was überwacht werden soll.
 
----
+### 📊 LTM Dashboard
+Visualisieren Sie das Verhalten direkt im Admin-Bereich.
+* Balkendiagramme zeigen das Aktivitätsniveau pro Tag.
+* Detaillierte Text-Zusammenfassungen erklären den Tagesablauf.
+* Die Drift-Anzeige warnt vor langfristigen negativen Trends.
 
-## Changelog
-
-### 0.1.10 (2025-11-15)
-* (Marc Jaeger) KRITISCHER FIX: Sensor-Abonnement-Logik (`change: 'any'`) korrigiert, damit der selektive Filter korrekt funktioniert.
-* (Marc Jaeger) Cleanup: Temporäre Debug-Logs entfernt und Versions-Logging standardisiert.
-
-### 0.1.9 (2025-11-15)
-* (Marc Jaeger) Selektiver Filter hinzugefügt: Admin-Checkbox, um doppelte Events pro Sensor zu loggen (z.B. für Präsenzmelder).
-* (Marc Jaeger) Scrollbar-Problem in der Admin-Oberfläche behoben.
-
-### 0.1.8 (2025-11-14)
-* (Marc Jaeger) KI-Prompt-Struktur verfeinert für präzisere und konsistentere Analyse-Ergebnisse.
-
-### 0.1.7 (2025-11-14)
-* (hotfix) KI-Prompt verfeinert für präzisere und ausgewogenere Analyse-Ergebnisse.
-
-### 0.1.6 (2025-11-14)
-* (hotfix) Finaler Sync von io-package.json und package.json, um 'cannot find start file' zu beheben
-
-### 0.1.5 (2025-11-14)
-* (hotfix) Korrektur der Dateipfade in package.json (cannot find start file)
-
-### 0.1.4 (2025-11-14)
-* (hotfix) Fehlenden 'main'-Eintrag in io-package.json hinzugefügt (cannot find start file)
-
-### 0.1.3 (2025-11-14)
-* (hotfix) Korrektur des Adapter-Startpfads (cannot find start file)
-
-### 0.1.2 (2025-11-14)
-* (stabil) Stabile Version mit KI-Logbuch und Alarmsystem.
-
-### 0.1.1 (2025-11-14)
-* (Marc Jaeger) Gemini KI-Integration, Autopilot-Timer, Intelligenz-Filter, Alarmsystem und Analyse-Logbuch hinzugefügt.
-
-### 0.1.0 (2025-11-14)
-* (Marc Jaeger) Basis KI-Integration, UI-Verbesserungen (Select-ID) und autom. Namensabruf hinzugefügt.
-
-### 0.0.1 (2025-11-13)
-* (initial release) Erstveröffentlichung
+### 🔔 Intelligente Benachrichtigungen
+Erhalten Sie Warnungen nicht nur als Log-Eintrag, sondern direkt auf Ihr Smartphone. Unterstützt werden:
+* Telegram
+* Pushover
+* E-Mail
+* WhatsApp (via CMB Adapter)
+* Signal (via CMA Adapter)
 
 ---
 
-## License
-MIT License
+## 💎 Free vs. Pro Version
+
+| Feature | Free Version | Pro Version |
+| :--- | :---: | :---: |
+| **STM Echtzeit-Analyse** | ✅ | ✅ |
+| **KI-Kontext (Wetter/Person)** | ✅ | ✅ |
+| **Auto-Discovery Wizard** | ✅ | ✅ |
+| **Benachrichtigungen** | ✅ | ✅ |
+| **Langzeitgedächtnis (LTM)** | ❌ | ✅ |
+| **Daily Digests (Tagesberichte)** | ❌ | ✅ |
+| **Drift-Analyse (Gesundheit)** | ❌ | ✅ |
+| **Automatisierungsvorschläge** | ❌ | ✅ |
+| **LTM Dashboard** | ❌ | ✅ |
+
+> **Hinweis zur Pro-Version:** Für die gewerbliche Nutzung oder den vollen Funktionsumfang benötigen Sie einen Lizenzschlüssel.
+
+---
+
+## 🛠️ Einrichtung in 5 Schritten
+
+1.  **Installation:** Installieren Sie den Adapter über den ioBroker Admin.
+2.  **API-Key:** Besorgen Sie sich einen kostenlosen [Google Gemini API Key](https://aistudio.google.com/app/apikey) und tragen Sie ihn in den Einstellungen ein.
+3.  **Auto-Scan:** Klicken Sie im Tab "Konfiguration" auf **"Auto-Scan (Wizard)"**. Wählen Sie Ihre Sensoren aus und importieren Sie diese.
+4.  **Kontext:** Beschreiben Sie im Feld "Wohnkontext" kurz die Situation (z.B. *"Bewohnerin ist 82 Jahre alt, lebt allein, hat einen Hund."*). Dies hilft der KI enorm, Fehlalarme zu vermeiden.
+5.  **Starten:** Starten Sie die Instanz. Das System beginnt sofort mit der Analyse (STM). Das Langzeitgedächtnis benötigt ca. 7 Tage Lernphase.
+
+---
+
+## 📜 Changelog (Versionshistorie)
+
+### 0.2.0 (2025-11-24)
+* (Marc Jaeger) **Major Release**
+* ✨ **New:** Auto-Discovery Wizard implementiert (automatisches Finden von Sensoren).
+* ✨ **New:** LTM Dashboard zur Visualisierung von Langzeitdaten.
+* ✨ **New:** Lizenzierungssystem und Hardware-Binding eingeführt.
+* 🛠️ **Fix:** Verbesserter "Junk-Filter" ignoriert nun technische Datenpunkte (Skripte, Wetterdaten) zuverlässiger.
+* 🛠️ **Fix:** Kontext-Beschreibung auf 1000 Zeichen erweitert.
+
+### 0.1.22 (2025-11-23)
+* (Marc Jaeger) Einführung der UI-Tabs (Konfiguration / Dashboard).
+* (Marc Jaeger) Code-Obfuskation für Produktions-Builds vorbereitet.
+
+### 0.1.21 (2025-11-21)
+* (Marc Jaeger) Einführung der "Drift Analyse" (Vergleich Kurzzeit- vs. Langzeit-Baseline).
+
+### 0.1.0 - 0.1.20
+* (Marc Jaeger) Initiale Entwicklung der Cogni-Engine (STM & LTM Logik).
+* (Marc Jaeger) Integration der Google Gemini API.
+
+---
+
+## 📄 Lizenz
+
+MIT License (Code-Basis).
+Die Nutzung der Pro-Features unterliegt gesonderten Lizenzbedingungen.
 
 Copyright (c) 2025 Marc Jaeger <mj112@gmx.de>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.

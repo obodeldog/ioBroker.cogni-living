@@ -1,10 +1,14 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.1.23",
+        "version": "0.2.0",
         "enabled": true,
         "main": "main.js",
         "news": {
+            "0.2.0": {
+                "en": "Major Release: Auto-Discovery Wizard for sensors introduced. Added LTM Dashboard UI. Implemented Licensing & Security features. Enhanced Junk-Filter for cleaner setups.",
+                "de": "Major Release: Auto-Discovery Wizard für Sensoren eingeführt. LTM Dashboard UI hinzugefügt. Lizenzierung & Sicherheitsfunktionen implementiert. Verbesserter Junk-Filter für sauberere Einrichtung."
+            },
             "0.1.22": {
                 "en": "LTM Visualization (UI): Added 'LTM Dashboard' tab in settings. Visualizes activity history (Daily Digests) using charts and displays Baseline Drift status. Requires 'recharts'.",
                 "de": "LTM Visualisierung (UI): 'LTM Dashboard'-Tab in den Einstellungen hinzugefügt. Visualisiert den Aktivitätsverlauf (Daily Digests) mittels Charts und zeigt den Baseline Drift Status an. Benötigt 'recharts'."
@@ -12,14 +16,6 @@
             "0.1.21": {
                 "en": "Advanced LTM (Dual Baseline): Introduced 'Baseline Drift Analysis' (Pro) to detect gradual behavioral changes by comparing Short-Term (STB) and Long-Term Baselines (LTB). Added new LTM configuration options.",
                 "de": "Erweitertes LTM (Dual Baseline): 'Baseline Drift Analyse' (Pro) eingeführt, um schleichende Verhaltensänderungen durch Vergleich von Kurzzeit- (STB) und Langzeit-Baseline (LTB) zu erkennen. Neue LTM-Konfigurationsoptionen hinzugefügt."
-            },
-            "0.1.20": {
-                "en": "Notification System: Added support for sending alerts (isAlert=true) via Telegram, Pushover, Email, WhatsApp (CMB), and Signal (CMA). Implemented anti-spam logic (notify only on new alert).",
-                "de": "Benachrichtigungssystem: Unterstützung für das Senden von Alarmen (isAlert=true) via Telegram, Pushover, E-Mail, WhatsApp (CMB) und Signal (CMA) hinzugefügt. Anti-Spam-Logik implementiert (Benachrichtigung nur bei neuem Alarm)."
-            },
-            "0.1.19": {
-                "en": "Licensing Preparation (Freemium): Introduced license key check (simulation). LTM features (Baseline, Digests, Automation Proposals) are now marked as 'Pro' and disabled in 'Free' mode. Fixed Admin UI background.",
-                "de": "Lizenzierungsvorbereitung (Freemium): Lizenzschlüsselprüfung eingeführt (Simulation). LTM-Funktionen (Baseline, Digests, Automatisierungsvorschläge) sind nun als 'Pro' markiert und im 'Free'-Modus deaktiviert. Admin UI Hintergrund korrigiert."
             }
         },
         "titleLang": {
@@ -30,7 +26,9 @@
             "en": "Analyzes behavioral patterns for health, safety & comfort",
             "de": "Analysiert Verhaltensmuster für Gesundheit, Sicherheit & Komfort"
         },
-        "authors": ["Marc Jaeger <mj112@gmx.de>"],
+        "authors": [
+            "Marc Jaeger <mj112@gmx.de>"
+        ],
         "keywords": [
             "ai",
             "ki",
@@ -102,6 +100,5 @@
         "ltmDriftCheckIntervalHours": 24
     },
     "objects": [],
-    "instanceObjects": [
-    ]
+    "instanceObjects": []
 }
