@@ -51,7 +51,8 @@ import {
     Memory as MemoryIcon,
     AutoFixHigh as AutoFixHighIcon,
     Check as CheckIcon,
-    Info as InfoIcon
+    Info as InfoIcon,
+    DeleteForever as DeleteForeverIcon
 } from '@mui/icons-material';
 
 import { I18n, DialogSelectID, type IobTheme } from '@iobroker/adapter-react-v5';
@@ -127,11 +128,12 @@ interface SettingsState {
     selectIdIndex: number;
     isTestingApi: boolean;
 
-    // SPRINT 23: Wizard States
+    // SPRINT 23: Wizard & Delete Dialog
     showWizard: boolean;
     wizardStep: number;
     scanFilters: ScanFilters;
     scannedDevices: ScannedDevice[];
+    showDeleteConfirm: boolean;
 
     snackbarOpen: boolean;
     snackbarMessage: string;
@@ -183,7 +185,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             selectIdIndex: -1,
             isTestingApi: false,
 
-            // SPRINT 23 Wizard Defaults
+            // SPRINT 23 Defaults
             showWizard: false,
             wizardStep: 0,
             scanFilters: {
@@ -194,6 +196,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 weather: false
             },
             scannedDevices: [],
+            showDeleteConfirm: false,
 
             snackbarOpen: false,
             snackbarMessage: '',
@@ -217,7 +220,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     }
 
     updateNativeValue(attr: string, value: any) {
-        // SPRINT 24: Limit auf 1000 erhöht
         if (attr === 'livingContext' && typeof value === 'string' && value.length > 1000) {
             value = value.substring(0, 1000);
         }
@@ -245,6 +247,12 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         const devices = JSON.parse(JSON.stringify(this.state.devices));
         devices.splice(index, 1);
         this.updateDevices(devices);
+    }
+
+    onDeleteAllDevices = () => {
+        this.updateDevices([]);
+        this.setState({ showDeleteConfirm: false });
+        this.showSnackbar('Alle Sensoren gelöscht.', 'info');
     }
 
     openSelectIdDialog(index: number) { this.setState({ showSelectId: true, selectIdIndex: index }); }
@@ -357,7 +365,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 <Box sx={{ width: '100%', mt: 4, mb: 4, textAlign: 'center' }}>
                     <LinearProgress />
                     <Typography variant="h6" sx={{ mt: 2 }}>Suche Sensoren...</Typography>
-                    <Typography variant="body2" color="text.secondary">Filtert irrelevante Datenpunkte.</Typography>
+                    <Typography variant="body2" color="text.secondary">Analysiere ioBroker-Struktur (Räume, Funktionen)...</Typography>
                 </Box>
             );
         }
@@ -373,9 +381,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </Typography>
                     <List dense sx={{ width: '100%', bgcolor: 'background.paper', maxHeight: 400, overflow: 'auto' }}>
                         {bestMatches.length > 0 && (
-                            <ListSubheader sx={{ bgcolor: 'background.paper', color: 'primary.main', fontWeight: 'bold', borderBottom: 1, borderColor: 'divider' }}>
-                                🏠 Zugeordnet - {bestMatches.length}
-                            </ListSubheader>
+                            <ListSubheader sx={{ bgcolor: 'background.paper', color: 'primary.main', fontWeight: 'bold', borderBottom: 1, borderColor: 'divider' }}>🏠 Zugeordnet - {bestMatches.length}</ListSubheader>
                         )}
                         {bestMatches.map((device) => {
                             const originalIndex = scannedDevices.findIndex(d => d.id === device.id);
@@ -389,9 +395,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             );
                         })}
                         {otherMatches.length > 0 && (
-                            <ListSubheader sx={{ bgcolor: 'background.paper', color: 'text.secondary', mt: 1, borderBottom: 1, borderColor: 'divider' }}>
-                                ❓ Sonstige Kandidaten (Manuelle Prüfung empfohlen) - {otherMatches.length}
-                            </ListSubheader>
+                            <ListSubheader sx={{ bgcolor: 'background.paper', color: 'text.secondary', mt: 1, borderBottom: 1, borderColor: 'divider' }}>❓ Sonstige - {otherMatches.length}</ListSubheader>
                         )}
                         {otherMatches.map((device) => {
                             const originalIndex = scannedDevices.findIndex(d => d.id === device.id);
@@ -434,6 +438,21 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         );
     }
 
+    renderDeleteConfirmDialog() {
+        return (
+            <Dialog open={this.state.showDeleteConfirm} onClose={() => this.setState({ showDeleteConfirm: false })}>
+                <DialogTitle>Alle Sensoren löschen?</DialogTitle>
+                <DialogContent>
+                    <Typography>Sind Sie sicher? Dies entfernt alle {this.state.devices.length} konfigurierten Sensoren aus der Liste. Diese Aktion kann nicht rückgängig gemacht werden.</Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => this.setState({ showDeleteConfirm: false })}>Abbrechen</Button>
+                    <Button onClick={this.onDeleteAllDevices} color="error" variant="contained" startIcon={<DeleteForeverIcon />}>Alles Löschen</Button>
+                </DialogActions>
+            </Dialog>
+        );
+    }
+
     handleTestApiClick() {
         if (!this.state.geminiApiKey) return this.showSnackbar(I18n.t('msg_api_key_empty'), 'warning');
         this.setState({ isTestingApi: true });
@@ -467,9 +486,12 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             <Box sx={{ p: 3 }}>
                 {this.renderSelectIdDialog()}
                 {this.renderWizardDialog()}
+                {this.renderDeleteConfirmDialog()}
                 <Snackbar open={this.state.snackbarOpen} autoHideDuration={8000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity} sx={{ width: '100%' }}>{this.state.snackbarMessage}</Alert></Snackbar>
 
                 <Box component="form" sx={{ width: '100%' }}>
+
+                    {/* ... (Notifications, Lizenz, KI, LTM, Kontext - alles gleich) ... */}
                     <Typography variant="h6" gutterBottom><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><NotificationsIcon />{I18n.t('headline_notifications')}</Box></Typography>
                     <Box sx={sxConfigSection}>
                         <Typography variant="body2" gutterBottom sx={{mb: 3}}>{I18n.t('notifications_helper')}</Typography>
@@ -502,7 +524,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         </Grid>
                     </Box>
 
-                    {/* === SEKTION WOHNKONTEXT === */}
                     <Typography variant="h6" gutterBottom><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><ListIcon />{I18n.t('headline_living_context')}</Box></Typography>
                     <Box sx={sxConfigSection}>
                         <FormControl margin="normal" sx={{ minWidth: '350px' }} size="small" variant="outlined"><InputLabel id="persona-label">{I18n.t('ai_persona')}</InputLabel><Select labelId="persona-label" label={I18n.t('ai_persona')} value={aiPersona} onChange={e => this.updateNativeValue('aiPersona', e.target.value)}><MenuItem value="generic">{I18n.t('persona_generic')}</MenuItem><MenuItem value="senior_aal">{I18n.t('persona_senior_aal')}</MenuItem><MenuItem value="family">{I18n.t('persona_family')}</MenuItem><MenuItem value="single_comfort">{I18n.t('persona_single_comfort')}</MenuItem><MenuItem value="security">{I18n.t('persona_security')}</MenuItem></Select></FormControl>
@@ -514,15 +535,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                 rows={6}
                                 value={livingContext}
                                 onChange={e => this.updateNativeValue('livingContext', e.target.value)}
-                                helperText={
-                                    <span>
-                                        {`${I18n.t('living_context_helper')} (${livingContext.length}/1000)`}
-                                        <br/>
-                                        <span style={{fontStyle: 'italic', color: '#ffa726'}}>
-                                            Hinweis: Änderungen am Kontext werden nur für zukünftige Analysen wirksam (ab dem nächsten Daily Digest).
-                                        </span>
-                                    </span>
-                                }
+                                helperText={<span>{`${I18n.t('living_context_helper')} (${livingContext.length}/1000)`}<br/><span style={{fontStyle: 'italic', color: '#ffa726'}}>Hinweis: Änderungen am Kontext werden nur für zukünftige Analysen wirksam (ab dem nächsten Daily Digest).</span></span>}
                                 inputProps={{ maxLength: 1000 }}
                                 variant="outlined"
                             />
@@ -537,9 +550,18 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         </Table>
                     </TableContainer>
 
-                    <Box sx={{ mt: 3, mb: 3, display: 'flex', gap: 2 }}>
-                        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={() => this.onAddDevice()}>{I18n.t('btn_add_sensor')}</Button>
-                        <Button variant="outlined" color="secondary" startIcon={<AutoFixHighIcon />} onClick={this.handleOpenWizard}>Auto-Scan (Wizard)</Button>
+                    <Box sx={{ mt: 3, mb: 3, display: 'flex', gap: 2, justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={() => this.onAddDevice()}>{I18n.t('btn_add_sensor')}</Button>
+                            <Button variant="outlined" color="secondary" startIcon={<AutoFixHighIcon />} onClick={this.handleOpenWizard}>Auto-Scan (Wizard)</Button>
+                        </Box>
+
+                        {/* NEUER BUTTON: Alle Löschen */}
+                        {devices.length > 0 && (
+                            <Button variant="text" color="error" startIcon={<DeleteForeverIcon />} onClick={() => this.setState({ showDeleteConfirm: true })}>
+                                Alle Löschen
+                            </Button>
+                        )}
                     </Box>
                 </Box>
             </Box>
