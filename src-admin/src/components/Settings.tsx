@@ -1,66 +1,16 @@
 import React from 'react';
-
-// MUI v5 Core Imports
-import {
-    Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, ListSubheader, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography
-} from '@mui/material';
+import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, ListSubheader, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography } from '@mui/material';
 import type { AlertColor } from '@mui/material';
-
-// MUI v5 Icons
-import {
-    Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, Memory as MemoryIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, HelpOutline as HelpOutlineIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon
-} from '@mui/icons-material';
-
+import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, Memory as MemoryIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon } from '@mui/icons-material';
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
 
-// --- INTERFACES ---
-
-interface SettingsProps {
-    native: Record<string, any>;
-    onChange: (attr: string, value: any) => void;
-    socket: Connection;
-    themeType: ThemeType; // Wichtig für Dark Mode
-    adapterName: string;
-    instance: number;
-    theme: IobTheme; // Wichtig für Palette
-}
-
+interface SettingsProps { native: Record<string, any>; onChange: (attr: string, value: any) => void; socket: Connection; themeType: ThemeType; adapterName: string; instance: number; theme: IobTheme; }
 interface DeviceConfig { id: string; name: string; location: string; type: string; logDuplicates: boolean; }
 interface ScannedDevice extends DeviceConfig { selected?: boolean; _score?: number; exists?: boolean; }
 interface ScanFilters { motion: boolean; doors: boolean; lights: boolean; temperature: boolean; weather: boolean; selectedFunctionIds: string[]; }
 interface EnumItem { id: string; name: string; }
-
-interface SettingsState {
-    devices: DeviceConfig[];
-    geminiApiKey: string;
-    analysisInterval: number;
-    minDaysForBaseline: number;
-    aiPersona: string;
-    livingContext: string;
-    licenseKey: string;
-
-    ltmStbWindowDays: number;
-    ltmLtbWindowDays: number;
-    ltmDriftCheckIntervalHours: number;
-
-    notifyTelegramEnabled: boolean; notifyTelegramInstance: string; notifyTelegramRecipient: string;
-    notifyPushoverEnabled: boolean; notifyPushoverInstance: string; notifyPushoverRecipient: string;
-    notifyEmailEnabled: boolean; notifyEmailInstance: string; notifyEmailRecipient: string;
-    notifyWhatsappEnabled: boolean; notifyWhatsappInstance: string; notifyWhatsappRecipient: string;
-    notifySignalEnabled: boolean; notifySignalInstance: string; notifySignalRecipient: string;
-
-    availableInstances: Record<string, string[]>;
-    isTestingNotification: boolean;
-
-    showSelectId: boolean; selectIdIndex: number; isTestingApi: boolean;
-    showWizard: boolean; wizardStep: number; scanFilters: ScanFilters; scannedDevices: ScannedDevice[]; showDeleteConfirm: boolean;
-    availableEnums: EnumItem[]; showEnumList: boolean;
-    snackbarOpen: boolean; snackbarMessage: string; snackbarSeverity: AlertColor;
-
-    expandedAccordion: string | false; // State für Accordion
-}
-
+interface SettingsState { devices: DeviceConfig[]; geminiApiKey: string; analysisInterval: number; minDaysForBaseline: number; aiPersona: string; livingContext: string; licenseKey: string; ltmStbWindowDays: number; ltmLtbWindowDays: number; ltmDriftCheckIntervalHours: number; notifyTelegramEnabled: boolean; notifyTelegramInstance: string; notifyTelegramRecipient: string; notifyPushoverEnabled: boolean; notifyPushoverInstance: string; notifyPushoverRecipient: string; notifyEmailEnabled: boolean; notifyEmailInstance: string; notifyEmailRecipient: string; notifyWhatsappEnabled: boolean; notifyWhatsappInstance: string; notifyWhatsappRecipient: string; notifySignalEnabled: boolean; notifySignalInstance: string; notifySignalRecipient: string; availableInstances: Record<string, string[]>; isTestingNotification: boolean; showSelectId: boolean; selectIdIndex: number; isTestingApi: boolean; showWizard: boolean; wizardStep: number; scanFilters: ScanFilters; scannedDevices: ScannedDevice[]; showDeleteConfirm: boolean; availableEnums: EnumItem[]; showEnumList: boolean; snackbarOpen: boolean; snackbarMessage: string; snackbarSeverity: AlertColor; expandedAccordion: string | false; }
 type NotificationEnabledKey = 'notifyTelegramEnabled' | 'notifyPushoverEnabled' | 'notifyEmailEnabled' | 'notifyWhatsappEnabled' | 'notifySignalEnabled';
 type NotificationInstanceKey = 'notifyTelegramInstance' | 'notifyPushoverInstance' | 'notifyEmailInstance' | 'notifyWhatsappInstance' | 'notifySignalInstance';
 type NotificationRecipientKey = 'notifyTelegramRecipient' | 'notifyPushoverRecipient' | 'notifyEmailRecipient' | 'notifyWhatsappRecipient' | 'notifySignalRecipient';
@@ -69,71 +19,20 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     constructor(props: SettingsProps) {
         super(props);
         const native = props.native;
-        this.state = {
-            devices: native.devices || [],
-            geminiApiKey: native.geminiApiKey || '',
-            analysisInterval: native.analysisInterval || 15,
-            minDaysForBaseline: native.minDaysForBaseline || 7,
-            aiPersona: native.aiPersona || 'generic',
-            livingContext: native.livingContext || '',
-            licenseKey: native.licenseKey || '',
-
-            ltmStbWindowDays: native.ltmStbWindowDays || 14,
-            ltmLtbWindowDays: native.ltmLtbWindowDays || 60,
-            ltmDriftCheckIntervalHours: native.ltmDriftCheckIntervalHours || 24,
-
-            notifyTelegramEnabled: native.notifyTelegramEnabled || false, notifyTelegramInstance: native.notifyTelegramInstance || '', notifyTelegramRecipient: native.notifyTelegramRecipient || '',
-            notifyPushoverEnabled: native.notifyPushoverEnabled || false, notifyPushoverInstance: native.notifyPushoverInstance || '', notifyPushoverRecipient: native.notifyPushoverRecipient || '',
-            notifyEmailEnabled: native.notifyEmailEnabled || false, notifyEmailInstance: native.notifyEmailInstance || '', notifyEmailRecipient: native.notifyEmailRecipient || '',
-            notifyWhatsappEnabled: native.notifyWhatsappEnabled || false, notifyWhatsappInstance: native.notifyWhatsappInstance || '', notifyWhatsappRecipient: native.notifyWhatsappRecipient || '',
-            notifySignalEnabled: native.notifySignalEnabled || false, notifySignalInstance: native.notifySignalInstance || '', notifySignalRecipient: native.notifySignalRecipient || '',
-
-            availableInstances: {}, isTestingNotification: false,
-            showSelectId: false, selectIdIndex: -1, isTestingApi: false,
-            showWizard: false, wizardStep: 0,
-            scanFilters: { motion: true, doors: true, lights: true, temperature: false, weather: false, selectedFunctionIds: [] },
-            scannedDevices: [], showDeleteConfirm: false,
-            availableEnums: [], showEnumList: false,
-            snackbarOpen: false, snackbarMessage: '', snackbarSeverity: 'info',
-            expandedAccordion: 'panel1' // Erstes Panel offen
-        };
+        this.state = { devices: native.devices || [], geminiApiKey: native.geminiApiKey || '', analysisInterval: native.analysisInterval || 15, minDaysForBaseline: native.minDaysForBaseline || 7, aiPersona: native.aiPersona || 'generic', livingContext: native.livingContext || '', licenseKey: native.licenseKey || '', ltmStbWindowDays: native.ltmStbWindowDays || 14, ltmLtbWindowDays: native.ltmLtbWindowDays || 60, ltmDriftCheckIntervalHours: native.ltmDriftCheckIntervalHours || 24, notifyTelegramEnabled: native.notifyTelegramEnabled || false, notifyTelegramInstance: native.notifyTelegramInstance || '', notifyTelegramRecipient: native.notifyTelegramRecipient || '', notifyPushoverEnabled: native.notifyPushoverEnabled || false, notifyPushoverInstance: native.notifyPushoverInstance || '', notifyPushoverRecipient: native.notifyPushoverRecipient || '', notifyEmailEnabled: native.notifyEmailEnabled || false, notifyEmailInstance: native.notifyEmailInstance || '', notifyEmailRecipient: native.notifyEmailRecipient || '', notifyWhatsappEnabled: native.notifyWhatsappEnabled || false, notifyWhatsappInstance: native.notifyWhatsappInstance || '', notifyWhatsappRecipient: native.notifyWhatsappRecipient || '', notifySignalEnabled: native.notifySignalEnabled || false, notifySignalInstance: native.notifySignalInstance || '', notifySignalRecipient: native.notifySignalRecipient || '', availableInstances: {}, isTestingNotification: false, showSelectId: false, selectIdIndex: -1, isTestingApi: false, showWizard: false, wizardStep: 0, scanFilters: { motion: true, doors: true, lights: true, temperature: false, weather: false, selectedFunctionIds: [] }, scannedDevices: [], showDeleteConfirm: false, availableEnums: [], showEnumList: false, snackbarOpen: false, snackbarMessage: '', snackbarSeverity: 'info', expandedAccordion: 'panel1' };
     }
-
     componentDidMount() { this.fetchAvailableInstances(); this.fetchEnums(); }
-
-    fetchAvailableInstances() {
-        const adapters = ['telegram', 'pushover', 'email', 'whatsapp-cmb', 'signal-cma'];
-        const instances: Record<string, string[]> = {};
-        const promises = adapters.map(adapter => this.props.socket.getAdapterInstances(adapter).then(objs => { instances[adapter] = objs.map(obj => obj._id.replace('system.adapter.', '')); }).catch(e => console.error(`Error fetching instances for ${adapter}:`, e)));
-        Promise.all(promises).then(() => { this.setState({ availableInstances: instances }); });
-    }
-
+    fetchAvailableInstances() { const adapters = ['telegram', 'pushover', 'email', 'whatsapp-cmb', 'signal-cma']; const instances: Record<string, string[]> = {}; const promises = adapters.map(adapter => this.props.socket.getAdapterInstances(adapter).then(objs => { instances[adapter] = objs.map(obj => obj._id.replace('system.adapter.', '')); }).catch(e => console.error(`Error fetching instances for ${adapter}:`, e))); Promise.all(promises).then(() => { this.setState({ availableInstances: instances }); }); }
     fetchEnums() { this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'getEnums', {}).then((res: any) => { if(res && res.success && res.enums) { this.setState({ availableEnums: res.enums }); } }); }
-
-    updateNativeValue(attr: string, value: any) {
-        if (attr === 'livingContext' && typeof value === 'string' && value.length > 1000) value = value.substring(0, 1000);
-        this.setState({ [attr]: value } as Pick<SettingsState, keyof SettingsState>, () => { this.props.onChange(attr, value); });
-    }
-
+    updateNativeValue(attr: string, value: any) { if (attr === 'livingContext' && typeof value === 'string' && value.length > 1000) value = value.substring(0, 1000); this.setState({ [attr]: value } as Pick<SettingsState, keyof SettingsState>, () => { this.props.onChange(attr, value); }); }
     updateDevices(newDevices: DeviceConfig[]) { this.setState({ devices: newDevices }); this.props.onChange('devices', newDevices); }
     onAddDevice() { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices.push({ id: '', name: '', location: '', type: '', logDuplicates: false }); this.updateDevices(devices); }
     onDeviceChange(index: number, attr: keyof DeviceConfig, value: any) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices[index][attr] = value; this.updateDevices(devices); }
     onDeleteDevice(index: number) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices.splice(index, 1); this.updateDevices(devices); }
     onDeleteAllDevices = () => { this.updateDevices([]); this.setState({ showDeleteConfirm: false }); this.showSnackbar('Alle Sensoren gelöscht.', 'info'); }
-
     openSelectIdDialog(index: number) { this.setState({ showSelectId: true, selectIdIndex: index }); }
-    onSelectId(selectedId?: string) {
-        const index = this.state.selectIdIndex;
-        if (selectedId && index !== -1) {
-            const devices = JSON.parse(JSON.stringify(this.state.devices));
-            devices[index].id = selectedId;
-            this.props.socket.getObject(selectedId).then(obj => { if (obj && obj.common && obj.common.name) { let name: any = obj.common.name; if (typeof name === 'object') name = name[I18n.getLanguage()] || name.en || name.de || JSON.stringify(name); devices[index].name = name as string; this.updateDevices(devices); } else { this.updateDevices(devices); } }).catch(e => { console.error(e); this.updateDevices(devices); });
-        }
-        this.setState({ showSelectId: false, selectIdIndex: -1 });
-    }
+    onSelectId(selectedId?: string) { const index = this.state.selectIdIndex; if (selectedId && index !== -1) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices[index].id = selectedId; this.props.socket.getObject(selectedId).then(obj => { if (obj && obj.common && obj.common.name) { let name: any = obj.common.name; if (typeof name === 'object') name = name[I18n.getLanguage()] || name.en || name.de || JSON.stringify(name); devices[index].name = name as string; this.updateDevices(devices); } else { this.updateDevices(devices); } }).catch(e => { console.error(e); this.updateDevices(devices); }); } this.setState({ showSelectId: false, selectIdIndex: -1 }); }
     renderSelectIdDialog() { if (!this.state.showSelectId) return null; const currentId = this.state.devices[this.state.selectIdIndex]?.id || ''; return (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={currentId} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />); }
-
-    // Wizard Functions
     handleOpenWizard = () => { this.setState({ showWizard: true, wizardStep: 0, scannedDevices: [] }); }
     handleFilterChange = (key: keyof ScanFilters) => { this.setState(prevState => ({ scanFilters: { ...prevState.scanFilters, [key]: !prevState.scanFilters[key] } })); } // @ts-ignore
     handleEnumToggle = (enumId: string) => { const current = [...this.state.scanFilters.selectedFunctionIds]; const index = current.indexOf(enumId); if (index === -1) current.push(enumId); else current.splice(index, 1); this.setState(prevState => ({ scanFilters: { ...prevState.scanFilters, selectedFunctionIds: current } })); }
@@ -142,179 +41,42 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     handleSelectAll = () => { const devices = this.state.scannedDevices.map(d => ({ ...d, selected: !d.exists })); this.setState({ scannedDevices: devices }); }
     handleDeselectAll = () => { const devices = this.state.scannedDevices.map(d => ({ ...d, selected: false })); this.setState({ scannedDevices: devices }); }
     handleImportDevices = () => { const selected = this.state.scannedDevices.filter(d => d.selected); if(selected.length === 0) { this.setState({ showWizard: false }); return; } const currentDevices = [...this.state.devices]; let addedCount = 0; selected.forEach(newItem => { if(!currentDevices.find(d => d.id === newItem.id)) { const { selected, _score, exists, ...deviceConfig } = newItem; currentDevices.push(deviceConfig); addedCount++; } }); this.updateDevices(currentDevices); this.showSnackbar(`${addedCount} Sensoren importiert.`, 'success'); this.setState({ showWizard: false }); }
-
-    // UI Helpers
     handleAccordionChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => { this.setState({ expandedAccordion: isExpanded ? panel : false }); };
     handleTestApiClick() { if (!this.state.geminiApiKey) return this.showSnackbar(I18n.t('msg_api_key_empty'), 'warning'); this.setState({ isTestingApi: true }); this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testApiKey', { apiKey: this.state.geminiApiKey }).then((res: any) => { this.setState({ isTestingApi: false }); this.showSnackbar(res?.success ? res.message : `${I18n.t('msg_connection_failed')}: ${res?.message}`, res?.success ? 'success' : 'error'); }); }
     handleTestNotificationClick() { this.setState({ isTestingNotification: true }); this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testNotification', {}).then((res: any) => { this.setState({ isTestingNotification: false }); this.showSnackbar(res?.success ? res.message : `${I18n.t('msg_notification_failed')}: ${res?.message}`, res?.success ? 'success' : 'warning'); }); }
     showSnackbar(message: string, severity: AlertColor) { this.setState({ snackbarOpen: true, snackbarMessage: message, snackbarSeverity: severity }); }
     handleSnackbarClose = (event?: React.SyntheticEvent | Event, reason?: string) => { if (reason === 'clickaway') return; this.setState({ snackbarOpen: false }); };
-
-    // Render Sub-Components
     renderNotificationSetting(adapterName: string, enabledAttr: NotificationEnabledKey, instanceAttr: NotificationInstanceKey, recipientAttr: NotificationRecipientKey, recipientLabel: string) {
-        const enabled = this.state[enabledAttr]; const instance = this.state[instanceAttr]; const recipient = this.state[recipientAttr];
-        let adapterKey = adapterName === 'whatsapp' ? 'whatsapp-cmb' : adapterName === 'signal' ? 'signal-cma' : adapterName;
-        const instances = this.state.availableInstances[adapterKey] || [];
-        return (
-            <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                <Grid item xs={12} sm={3}><FormControlLabel control={<Checkbox checked={enabled} onChange={e => this.updateNativeValue(enabledAttr, e.target.checked)} />} label={I18n.t(`notify_${adapterName}`)} /></Grid>
-                <Grid item xs={12} sm={4}><FormControl fullWidth size="small" disabled={!enabled}><InputLabel>{I18n.t('notify_instance')}</InputLabel><Select value={instance} label={I18n.t('notify_instance')} onChange={(e: any) => this.updateNativeValue(instanceAttr, e.target.value)}>{instances.length === 0 ? <MenuItem value="">{I18n.t('notify_no_instances')}</MenuItem> : instances.map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid>
-                <Grid item xs={12} sm={5}><TextField fullWidth size="small" label={recipientLabel} value={recipient} onChange={e => this.updateNativeValue(recipientAttr, e.target.value)} disabled={!enabled} required={adapterName === 'email' && enabled} /></Grid>
-            </Grid>
-        );
+        const enabled = this.state[enabledAttr]; const instance = this.state[instanceAttr]; const recipient = this.state[recipientAttr]; let adapterKey = adapterName === 'whatsapp' ? 'whatsapp-cmb' : adapterName === 'signal' ? 'signal-cma' : adapterName; const instances = this.state.availableInstances[adapterKey] || [];
+        return (<Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}><Grid item xs={12} sm={3}><FormControlLabel control={<Checkbox checked={enabled} onChange={e => this.updateNativeValue(enabledAttr, e.target.checked)} />} label={I18n.t(`notify_${adapterName}`)} /></Grid><Grid item xs={12} sm={4}><FormControl fullWidth size="small" disabled={!enabled}><InputLabel>{I18n.t('notify_instance')}</InputLabel><Select value={instance} label={I18n.t('notify_instance')} onChange={(e: any) => this.updateNativeValue(instanceAttr, e.target.value)}>{instances.length === 0 ? <MenuItem value="">{I18n.t('notify_no_instances')}</MenuItem> : instances.map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid><Grid item xs={12} sm={5}><TextField fullWidth size="small" label={recipientLabel} value={recipient} onChange={e => this.updateNativeValue(recipientAttr, e.target.value)} disabled={!enabled} required={adapterName === 'email' && enabled} /></Grid></Grid>);
     }
-
-    renderWizardDialog() {
-        const { showWizard, wizardStep, scanFilters, scannedDevices, availableEnums, showEnumList } = this.state;
-        return (
-            <Dialog open={showWizard} onClose={() => wizardStep !== 1 && this.setState({ showWizard: false })} maxWidth="md" fullWidth>
-                <DialogTitle>Auto-Discovery Wizard {wizardStep !== 1 && <IconButton onClick={() => this.setState({ showWizard: false })} sx={{ position: 'absolute', right: 8, top: 8 }}>×</IconButton>}</DialogTitle>
-                <DialogContent dividers>
-                    {wizardStep === 0 && <Box sx={{ p: 2 }}><Typography variant="h6" gutterBottom>Was soll gescannt werden?</Typography><Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>Die KI kann automatisch Sensoren in Ihrer ioBroker-Installation finden.</Typography><FormGroup><FormControlLabel control={<Checkbox checked={scanFilters.motion} onChange={() => this.handleFilterChange('motion')} />} label="Bewegungsmelder" /><FormControlLabel control={<Checkbox checked={scanFilters.doors} onChange={() => this.handleFilterChange('doors')} />} label="Fenster & Türen" /><FormControlLabel control={<Checkbox checked={scanFilters.lights} onChange={() => this.handleFilterChange('lights')} />} label="Lichter & Schalter" />{availableEnums.length > 0 && (<Box sx={{ mt: 2, mb: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}><ListItemButton onClick={() => this.setState({ showEnumList: !showEnumList })}><ListItemText primary="Spezifische Funktionen" secondary={`${scanFilters.selectedFunctionIds.length} ausgewählt`} />{showEnumList ? <ExpandLessIcon /> : <ExpandMoreIcon />}</ListItemButton><Collapse in={showEnumList} timeout="auto" unmountOnExit><List component="div" disablePadding dense sx={{ maxHeight: 200, overflow: 'auto' }}>{availableEnums.map((en) => (<ListItem key={en.id} dense disablePadding><ListItemButton onClick={() => this.handleEnumToggle(en.id)}><ListItemIcon><Checkbox edge="start" checked={scanFilters.selectedFunctionIds.indexOf(en.id) !== -1} tabIndex={-1} disableRipple /></ListItemIcon><ListItemText primary={en.name} secondary={en.id} /></ListItemButton></ListItem>))}</List></Collapse></Box>)}<Box sx={{ mt: 2, borderTop: '1px solid', borderColor: 'divider', pt: 1 }}><FormControlLabel control={<Checkbox checked={scanFilters.temperature} onChange={() => this.handleFilterChange('temperature')} />} label="Temperatur / Klima" /><FormControlLabel control={<Checkbox checked={scanFilters.weather} onChange={() => this.handleFilterChange('weather')} color="warning" />} label="Wetterdaten (Alle Adapter)" /></Box></FormGroup></Box>}
-                    {wizardStep === 1 && <Box sx={{ width: '100%', mt: 4, mb: 4, textAlign: 'center' }}><LinearProgress /><Typography variant="h6" sx={{ mt: 2 }}>Suche Sensoren...</Typography></Box>}
-                    {wizardStep === 2 && <Box><List dense sx={{ width: '100%', bgcolor: 'background.paper', maxHeight: 400, overflow: 'auto' }}>
-                        {scannedDevices.filter(d => d.location && !d.exists).length > 0 && <ListSubheader>🏠 Zugeordnet</ListSubheader>}
-                        {scannedDevices.filter(d => d.location && !d.exists).map(d => (<ListItem key={d.id} disablePadding divider><ListItemButton onClick={() => this.handleToggleScannedDevice(scannedDevices.indexOf(d))} dense><ListItemIcon><Checkbox edge="start" checked={d.selected} tabIndex={-1} /></ListItemIcon><ListItemText primary={d.name || d.id} secondary={`${d.type} • ${d.location}`} /></ListItemButton></ListItem>))}
-                        {scannedDevices.filter(d => !d.location && !d.exists).length > 0 && <ListSubheader>❓ Sonstige</ListSubheader>}
-                        {scannedDevices.filter(d => !d.location && !d.exists).map(d => (<ListItem key={d.id} disablePadding divider><ListItemButton onClick={() => this.handleToggleScannedDevice(scannedDevices.indexOf(d))} dense><ListItemIcon><Checkbox edge="start" checked={d.selected} tabIndex={-1} /></ListItemIcon><ListItemText primary={d.name || d.id} secondary={`${d.type} • (Kein Raum)`} /></ListItemButton></ListItem>))}
-                        {scannedDevices.filter(d => d.exists).length > 0 && <ListSubheader>✅ Bereits vorhanden</ListSubheader>}
-                        {scannedDevices.filter(d => d.exists).map(d => (<ListItem key={d.id} disablePadding divider><ListItemButton dense disabled><ListItemIcon><CheckCircleIcon color="success" /></ListItemIcon><ListItemText primary={d.name || d.id} secondary="Bereits konfiguriert" /></ListItemButton></ListItem>))}
-                    </List></Box>}
-                </DialogContent>
-                <DialogActions>
-                    {wizardStep === 0 && <Button variant="contained" onClick={this.handleStartScan} startIcon={<AutoFixHighIcon />}>Scan Starten</Button>}
-                    {wizardStep === 2 && (<><Button onClick={() => this.setState({ wizardStep: 0 })}>Zurück</Button><Button onClick={this.handleSelectAll}>Alle</Button><Button onClick={this.handleDeselectAll}>Keine</Button><Box sx={{ flexGrow: 1 }} /><Button variant="contained" onClick={this.handleImportDevices} color="primary">{this.state.scannedDevices.filter(d => d.selected).length} Importieren</Button></>)}
-                </DialogActions>
-            </Dialog>
-        );
-    }
+    renderWizardDialog() { const { showWizard, wizardStep, scanFilters, scannedDevices, availableEnums, showEnumList } = this.state; return (<Dialog open={showWizard} onClose={() => wizardStep !== 1 && this.setState({ showWizard: false })} maxWidth="md" fullWidth><DialogTitle>Auto-Discovery Wizard {wizardStep !== 1 && <IconButton onClick={() => this.setState({ showWizard: false })} sx={{ position: 'absolute', right: 8, top: 8 }}>×</IconButton>}</DialogTitle><DialogContent dividers>{wizardStep === 0 && <Box sx={{ p: 2 }}><Typography variant="h6" gutterBottom>Was soll gescannt werden?</Typography><Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>Die KI kann automatisch Sensoren in Ihrer ioBroker-Installation finden.</Typography><FormGroup><FormControlLabel control={<Checkbox checked={scanFilters.motion} onChange={() => this.handleFilterChange('motion')} />} label="Bewegungsmelder" /><FormControlLabel control={<Checkbox checked={scanFilters.doors} onChange={() => this.handleFilterChange('doors')} />} label="Fenster & Türen" /><FormControlLabel control={<Checkbox checked={scanFilters.lights} onChange={() => this.handleFilterChange('lights')} />} label="Lichter & Schalter" />{availableEnums.length > 0 && (<Box sx={{ mt: 2, mb: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}><ListItemButton onClick={() => this.setState({ showEnumList: !showEnumList })}><ListItemText primary="Spezifische Funktionen" secondary={`${scanFilters.selectedFunctionIds.length} ausgewählt`} />{showEnumList ? <ExpandLessIcon /> : <ExpandMoreIcon />}</ListItemButton><Collapse in={showEnumList} timeout="auto" unmountOnExit><List component="div" disablePadding dense sx={{ maxHeight: 200, overflow: 'auto' }}>{availableEnums.map((en) => (<ListItem key={en.id} dense disablePadding><ListItemButton onClick={() => this.handleEnumToggle(en.id)}><ListItemIcon><Checkbox edge="start" checked={scanFilters.selectedFunctionIds.indexOf(en.id) !== -1} tabIndex={-1} disableRipple /></ListItemIcon><ListItemText primary={en.name} secondary={en.id} /></ListItemButton></ListItem>))}</List></Collapse></Box>)}<Box sx={{ mt: 2, borderTop: '1px solid', borderColor: 'divider', pt: 1 }}><FormControlLabel control={<Checkbox checked={scanFilters.temperature} onChange={() => this.handleFilterChange('temperature')} />} label="Temperatur / Klima" /><FormControlLabel control={<Checkbox checked={scanFilters.weather} onChange={() => this.handleFilterChange('weather')} color="warning" />} label="Wetterdaten (Alle Adapter)" /></Box></FormGroup></Box>}{wizardStep === 1 && <Box sx={{ width: '100%', mt: 4, mb: 4, textAlign: 'center' }}><LinearProgress /><Typography variant="h6" sx={{ mt: 2 }}>Suche Sensoren...</Typography></Box>}{wizardStep === 2 && <Box><List dense sx={{ width: '100%', bgcolor: 'background.paper', maxHeight: 400, overflow: 'auto' }}>{scannedDevices.filter(d => d.location && !d.exists).length > 0 && <ListSubheader>🏠 Zugeordnet</ListSubheader>}{scannedDevices.filter(d => d.location && !d.exists).map(d => (<ListItem key={d.id} disablePadding divider><ListItemButton onClick={() => this.handleToggleScannedDevice(scannedDevices.indexOf(d))} dense><ListItemIcon><Checkbox edge="start" checked={d.selected} tabIndex={-1} /></ListItemIcon><ListItemText primary={d.name || d.id} secondary={`${d.type} • ${d.location}`} /></ListItemButton></ListItem>))}{scannedDevices.filter(d => !d.location && !d.exists).length > 0 && <ListSubheader>❓ Sonstige</ListSubheader>}{scannedDevices.filter(d => !d.location && !d.exists).map(d => (<ListItem key={d.id} disablePadding divider><ListItemButton onClick={() => this.handleToggleScannedDevice(scannedDevices.indexOf(d))} dense><ListItemIcon><Checkbox edge="start" checked={d.selected} tabIndex={-1} /></ListItemIcon><ListItemText primary={d.name || d.id} secondary={`${d.type} • (Kein Raum)`} /></ListItemButton></ListItem>))}{scannedDevices.filter(d => d.exists).length > 0 && <ListSubheader>✅ Bereits vorhanden</ListSubheader>}{scannedDevices.filter(d => d.exists).map(d => (<ListItem key={d.id} disablePadding divider><ListItemButton dense disabled><ListItemIcon><CheckCircleIcon color="success" /></ListItemIcon><ListItemText primary={d.name || d.id} secondary="Bereits konfiguriert" /></ListItemButton></ListItem>))}</List></Box>}</DialogContent><DialogActions>{wizardStep === 0 && <Button variant="contained" onClick={this.handleStartScan} startIcon={<AutoFixHighIcon />}>Scan Starten</Button>}{wizardStep === 2 && (<><Button onClick={() => this.setState({ wizardStep: 0 })}>Zurück</Button><Button onClick={this.handleSelectAll}>Alle</Button><Button onClick={this.handleDeselectAll}>Keine</Button><Box sx={{ flexGrow: 1 }} /><Button variant="contained" onClick={this.handleImportDevices} color="primary">{this.state.scannedDevices.filter(d => d.selected).length} Importieren</Button></>)}</DialogActions></Dialog>); }
 
     render() {
         const { expandedAccordion } = this.state;
-        // Dark Mode Anpassung für Accordions
-        const accordionStyle = { bgcolor: this.props.themeType === 'dark' ? '#1e1e1e' : '#fff', color: this.props.theme.palette.text.primary };
+        const isDark = this.props.themeType === 'dark';
+        const cardBg = isDark ? '#1e1e1e' : '#fff';
+        const textColor = isDark ? '#fff' : 'text.primary';
+        // Style overrides
+        const accordionStyle = { bgcolor: cardBg, color: textColor };
         const titleStyle = { display: 'flex', alignItems: 'center', gap: 2, fontWeight: 'bold' };
+        const tooltipProps = { componentsProps: { tooltip: { sx: { fontSize: '0.9rem' } } }, arrow: true };
 
         return (
             <Box sx={{ p: 2, maxWidth: '1200px', margin: '0 auto' }}>
-                {this.renderSelectIdDialog()}
-                {this.renderWizardDialog()}
+                {this.renderSelectIdDialog()} {this.renderWizardDialog()}
                 <Snackbar open={this.state.snackbarOpen} autoHideDuration={6000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity}>{this.state.snackbarMessage}</Alert></Snackbar>
-
-                {/* 1. LIZENZ & VERBINDUNG */}
-                <Accordion expanded={expandedAccordion === 'panel1'} onChange={this.handleAccordionChange('panel1')} sx={accordionStyle}>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon sx={{color: 'action.active'}} />}>
-                        <Typography sx={titleStyle}><LockIcon color="primary"/> Lizenz & KI-Verbindung</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                        <Grid container spacing={3}>
-                            <Grid item xs={12} md={6}>
-                                <Tooltip title="Ihr Pro-Lizenzschlüssel. Ermöglicht LTM, Automatisierung und Drift-Analyse.">
-                                    <TextField fullWidth label={I18n.t('license_key')} value={this.state.licenseKey} type="password" onChange={e => this.updateNativeValue('licenseKey', e.target.value)} helperText="Für vollen Funktionsumfang erforderlich" variant="outlined" size="small" />
-                                </Tooltip>
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{display: 'flex', gap: 1}}>
-                                    <Tooltip title="Ihr Google Gemini API Key. Kostenlos erstellbar unter aistudio.google.com.">
-                                        <TextField fullWidth label={I18n.t('gemini_api_key')} value={this.state.geminiApiKey} type="password" onChange={e => this.updateNativeValue('geminiApiKey', e.target.value)} variant="outlined" size="small" />
-                                    </Tooltip>
-                                    <Button variant="outlined" onClick={() => this.handleTestApiClick()} disabled={this.state.isTestingApi || !this.state.geminiApiKey}>
-                                        {this.state.isTestingApi ? <CircularProgress size={20} /> : <WifiIcon />}
-                                    </Button>
-                                </Box>
-                            </Grid>
-                        </Grid>
-                    </AccordionDetails>
-                </Accordion>
-
-                {/* 2. KI VERHALTEN */}
-                <Accordion expanded={expandedAccordion === 'panel2'} onChange={this.handleAccordionChange('panel2')} sx={accordionStyle}>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon sx={{color: 'action.active'}} />}>
-                        <Typography sx={titleStyle}><SettingsSuggestIcon color="primary"/> KI-Verhalten & Kontext</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                        <Grid container spacing={3}>
-                            <Grid item xs={12} md={6}>
-                                <Tooltip title="Bestimmt, worauf die KI achten soll. 'Senior (AAL)' priorisiert Sicherheit, 'Single' priorisiert Komfort.">
-                                    <FormControl fullWidth size="small">
-                                        <InputLabel>{I18n.t('ai_persona')}</InputLabel>
-                                        <Select value={this.state.aiPersona} label={I18n.t('ai_persona')} onChange={e => this.updateNativeValue('aiPersona', e.target.value)}>
-                                            <MenuItem value="generic">Ausgewogen (Standard)</MenuItem>
-                                            <MenuItem value="senior_aal">Senioren-Schutz (AAL)</MenuItem>
-                                            <MenuItem value="family">Familie & Kinder</MenuItem>
-                                            <MenuItem value="single_comfort">Single (Komfort)</MenuItem>
-                                            <MenuItem value="security">Maximale Sicherheit</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Tooltip>
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Tooltip title="Wie oft soll der 'Autopilot' die letzten Events prüfen? Kleiner Wert = schnellere Reaktion, aber mehr API-Calls.">
-                                    <TextField fullWidth label={I18n.t('analysis_interval')} value={this.state.analysisInterval} type="number" onChange={e => this.updateNativeValue('analysisInterval', parseInt(e.target.value))} helperText="Minuten (Standard: 15)" variant="outlined" size="small" />
-                                </Tooltip>
-                            </Grid>
-                            <Grid item xs={12}>
-                                <Tooltip title="Beschreiben Sie die Wohnsituation (z.B. 'Bewohnerin ist 80, hat einen Hund, steht früh auf'). Dies hilft der KI enorm, Fehlalarme zu vermeiden.">
-                                    <TextField fullWidth multiline rows={4} label="Wohnkontext & Details" value={this.state.livingContext} onChange={e => this.updateNativeValue('livingContext', e.target.value)} helperText="Freitext für die KI (max 1000 Zeichen)" inputProps={{maxLength: 1000}} />
-                                </Tooltip>
-                            </Grid>
-                            <Grid item xs={12}><Typography variant="subtitle2" sx={{mt:2, mb:1, display:'flex', alignItems:'center'}}><MemoryIcon fontSize="small" sx={{mr:1}}/> Gedächtnis-Einstellungen (LTM)</Typography></Grid>
-                            <Grid item xs={6} md={3}><Tooltip title="Mindestanzahl Tage, bevor die KI eine Routine 'lernt'."><TextField fullWidth label="Lernphase (Tage)" value={this.state.minDaysForBaseline} type="number" onChange={e => this.updateNativeValue('minDaysForBaseline', parseInt(e.target.value))} size="small" /></Tooltip></Grid>
-                            <Grid item xs={6} md={3}><Tooltip title="Zeitraum für das Kurzzeit-Gedächtnis (STB)."><TextField fullWidth label="Aktuelle Routine (Tage)" value={this.state.ltmStbWindowDays} type="number" onChange={e => this.updateNativeValue('ltmStbWindowDays', parseInt(e.target.value))} size="small" /></Tooltip></Grid>
-                            <Grid item xs={6} md={3}><Tooltip title="Zeitraum für das Langzeit-Gedächtnis (LTB)."><TextField fullWidth label="Langzeit Basis (Tage)" value={this.state.ltmLtbWindowDays} type="number" onChange={e => this.updateNativeValue('ltmLtbWindowDays', parseInt(e.target.value))} size="small" /></Tooltip></Grid>
-                        </Grid>
-                    </AccordionDetails>
-                </Accordion>
-
-                {/* 3. BENACHRICHTIGUNGEN */}
-                <Accordion expanded={expandedAccordion === 'panel3'} onChange={this.handleAccordionChange('panel3')} sx={accordionStyle}>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon sx={{color: 'action.active'}} />}>
-                        <Typography sx={titleStyle}><NotificationsIcon color="primary"/> Benachrichtigungen</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                        <Alert severity="info" sx={{mb: 2}}>Die KI sendet nur bei erkannten Anomalien (isAlert = true) eine Nachricht.</Alert>
-                        {this.renderNotificationSetting('telegram', 'notifyTelegramEnabled', 'notifyTelegramInstance', 'notifyTelegramRecipient', 'User ID (oder leer für alle)')}
-                        {this.renderNotificationSetting('pushover', 'notifyPushoverEnabled', 'notifyPushoverInstance', 'notifyPushoverRecipient', 'Device ID')}
-                        {this.renderNotificationSetting('email', 'notifyEmailEnabled', 'notifyEmailInstance', 'notifyEmailRecipient', 'Empfänger E-Mail')}
-                        {this.renderNotificationSetting('whatsapp', 'notifyWhatsappEnabled', 'notifyWhatsappInstance', 'notifyWhatsappRecipient', 'Telefonnummer')}
-                        <Button variant="outlined" sx={{mt:1}} onClick={() => this.handleTestNotificationClick()} disabled={this.state.isTestingNotification}>Test-Nachricht senden</Button>
-                    </AccordionDetails>
-                </Accordion>
-
-                {/* 4. SENSOREN */}
-                <Accordion expanded={expandedAccordion === 'panel4'} onChange={this.handleAccordionChange('panel4')} sx={accordionStyle}>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon sx={{color: 'action.active'}} />}>
-                        <Typography sx={titleStyle}><SensorsIcon color="primary"/> Sensoren & Geräte</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                        <Box sx={{ display: 'flex', gap: 2, mb: 2, justifyContent: 'space-between' }}>
-                            <Button variant="contained" color="secondary" startIcon={<AutoFixHighIcon />} onClick={this.handleOpenWizard}>Auto-Discovery Wizard</Button>
-                            <Button variant="outlined" startIcon={<AddIcon />} onClick={() => this.onAddDevice()}>Manuell Hinzufügen</Button>
-                        </Box>
-                        <TableContainer component={Paper} variant="outlined" sx={{ bgcolor: this.props.themeType === 'dark' ? '#333' : '#fafafa' }}>
-                            <Table size="small">
-                                <TableHead><TableRow><TableCell>ID</TableCell><TableCell>Name</TableCell><TableCell>Ort</TableCell><TableCell>Typ</TableCell><TableCell>Log</TableCell><TableCell></TableCell></TableRow></TableHead>
-                                <TableBody>
-                                    {this.state.devices.map((device, index) => (
-                                        <TableRow key={index}>
-                                            <TableCell><Box sx={{display:'flex'}}><TextField value={device.id} onChange={e => this.onDeviceChange(index, 'id', e.target.value)} size="small" variant="standard"/><IconButton size="small" onClick={() => this.openSelectIdDialog(index)}><ListIcon fontSize="small"/></IconButton></Box></TableCell>
-                                            <TableCell><TextField value={device.name} onChange={e => this.onDeviceChange(index, 'name', e.target.value)} size="small" variant="standard" placeholder="Auto"/></TableCell>
-                                            <TableCell><TextField value={device.location} onChange={e => this.onDeviceChange(index, 'location', e.target.value)} size="small" variant="standard" placeholder="z.B. Küche"/></TableCell>
-                                            <TableCell><TextField value={device.type} onChange={e => this.onDeviceChange(index, 'type', e.target.value)} size="small" variant="standard" placeholder="z.B. Licht"/></TableCell>
-                                            <TableCell><Checkbox checked={device.logDuplicates} onChange={e => this.onDeviceChange(index, 'logDuplicates', e.target.checked)} size="small"/></TableCell>
-                                            <TableCell><IconButton size="small" onClick={() => this.onDeleteDevice(index)}><DeleteIcon fontSize="small"/></IconButton></TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {this.state.devices.length === 0 && <TableRow><TableCell colSpan={6} align="center">Keine Sensoren konfiguriert. Nutzen Sie den Wizard!</TableCell></TableRow>}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                        {this.state.devices.length > 0 && <Button color="error" size="small" startIcon={<DeleteForeverIcon/>} onClick={() => this.setState({showDeleteConfirm: true})} sx={{mt:2}}>Alle löschen</Button>}
-                    </AccordionDetails>
-                </Accordion>
-
-                {/* Delete Dialog */}
-                <Dialog open={this.state.showDeleteConfirm} onClose={() => this.setState({showDeleteConfirm:false})}><DialogTitle>Sicher?</DialogTitle><DialogContent><Typography>Alle Sensoren wirklich löschen?</Typography></DialogContent><DialogActions><Button onClick={()=>this.setState({showDeleteConfirm:false})}>Abbrechen</Button><Button onClick={this.onDeleteAllDevices} color="error">Löschen</Button></DialogActions></Dialog>
+                <Accordion expanded={expandedAccordion === 'panel1'} onChange={this.handleAccordionChange('panel1')} sx={accordionStyle}><AccordionSummary expandIcon={<ExpandMoreIcon sx={{color: 'action.active'}} />}><Typography sx={titleStyle}><LockIcon color="primary"/> Lizenz & KI-Verbindung</Typography></AccordionSummary><AccordionDetails><Grid container spacing={3}><Grid item xs={12} md={6}><Tooltip title="Ihr Pro-Lizenzschlüssel." {...tooltipProps}><TextField fullWidth label={I18n.t('license_key')} value={this.state.licenseKey} type="password" onChange={e => this.updateNativeValue('licenseKey', e.target.value)} helperText="Für vollen Funktionsumfang" variant="outlined" size="small" /></Tooltip></Grid><Grid item xs={12} md={6}><Box sx={{display: 'flex', gap: 1}}><Tooltip title="Gemini API Key." {...tooltipProps}><TextField fullWidth label={I18n.t('gemini_api_key')} value={this.state.geminiApiKey} type="password" onChange={e => this.updateNativeValue('geminiApiKey', e.target.value)} variant="outlined" size="small" /></Tooltip><Button variant="outlined" onClick={() => this.handleTestApiClick()} disabled={this.state.isTestingApi || !this.state.geminiApiKey}>{this.state.isTestingApi ? <CircularProgress size={20} /> : <WifiIcon />}</Button></Box></Grid></Grid></AccordionDetails></Accordion>
+                <Accordion expanded={expandedAccordion === 'panel2'} onChange={this.handleAccordionChange('panel2')} sx={accordionStyle}><AccordionSummary expandIcon={<ExpandMoreIcon sx={{color: 'action.active'}} />}><Typography sx={titleStyle}><SettingsSuggestIcon color="primary"/> KI-Verhalten & Kontext</Typography></AccordionSummary><AccordionDetails><Grid container spacing={3}><Grid item xs={12} md={6}><Tooltip title="Fokus der Analyse." {...tooltipProps}><FormControl fullWidth size="small"><InputLabel>{I18n.t('ai_persona')}</InputLabel><Select value={this.state.aiPersona} label={I18n.t('ai_persona')} onChange={e => this.updateNativeValue('aiPersona', e.target.value)}><MenuItem value="generic">Ausgewogen</MenuItem><MenuItem value="senior_aal">Senioren-Schutz</MenuItem><MenuItem value="family">Familie</MenuItem><MenuItem value="single_comfort">Single</MenuItem><MenuItem value="security">Sicherheit</MenuItem></Select></FormControl></Tooltip></Grid><Grid item xs={12} md={6}><Tooltip title="Analyse-Intervall in Minuten." {...tooltipProps}><TextField fullWidth label={I18n.t('analysis_interval')} value={this.state.analysisInterval} type="number" onChange={e => this.updateNativeValue('analysisInterval', parseInt(e.target.value))} size="small" /></Tooltip></Grid><Grid item xs={12}><Tooltip title="Wohnkontext." {...tooltipProps}><TextField fullWidth multiline rows={4} label="Kontext" value={this.state.livingContext} onChange={e => this.updateNativeValue('livingContext', e.target.value)} helperText="max 1000 Zeichen" inputProps={{maxLength: 1000}} /></Tooltip></Grid><Grid item xs={6} md={3}><Tooltip title="Lernphase in Tagen." {...tooltipProps}><TextField fullWidth label="Lernphase" value={this.state.minDaysForBaseline} type="number" onChange={e => this.updateNativeValue('minDaysForBaseline', parseInt(e.target.value))} size="small" /></Tooltip></Grid><Grid item xs={6} md={3}><Tooltip title="STM Fenster." {...tooltipProps}><TextField fullWidth label="STM (Tage)" value={this.state.ltmStbWindowDays} type="number" onChange={e => this.updateNativeValue('ltmStbWindowDays', parseInt(e.target.value))} size="small" /></Tooltip></Grid><Grid item xs={6} md={3}><Tooltip title="LTM Fenster." {...tooltipProps}><TextField fullWidth label="LTM (Tage)" value={this.state.ltmLtbWindowDays} type="number" onChange={e => this.updateNativeValue('ltmLtbWindowDays', parseInt(e.target.value))} size="small" /></Tooltip></Grid></Grid></AccordionDetails></Accordion>
+                <Accordion expanded={expandedAccordion === 'panel3'} onChange={this.handleAccordionChange('panel3')} sx={accordionStyle}><AccordionSummary expandIcon={<ExpandMoreIcon sx={{color: 'action.active'}} />}><Typography sx={titleStyle}><NotificationsIcon color="primary"/> Benachrichtigungen</Typography></AccordionSummary><AccordionDetails><Alert severity="info" sx={{mb: 2}}>Nur bei Alarm (isAlert=true).</Alert>{this.renderNotificationSetting('telegram', 'notifyTelegramEnabled', 'notifyTelegramInstance', 'notifyTelegramRecipient', 'User ID')}{this.renderNotificationSetting('pushover', 'notifyPushoverEnabled', 'notifyPushoverInstance', 'notifyPushoverRecipient', 'Device ID')}{this.renderNotificationSetting('email', 'notifyEmailEnabled', 'notifyEmailInstance', 'notifyEmailRecipient', 'E-Mail')}{this.renderNotificationSetting('whatsapp', 'notifyWhatsappEnabled', 'notifyWhatsappInstance', 'notifyWhatsappRecipient', 'Tel')}<Button variant="outlined" sx={{mt:1}} onClick={() => this.handleTestNotificationClick()} disabled={this.state.isTestingNotification}>Test</Button></AccordionDetails></Accordion>
+                <Accordion expanded={expandedAccordion === 'panel4'} onChange={this.handleAccordionChange('panel4')} sx={accordionStyle}><AccordionSummary expandIcon={<ExpandMoreIcon sx={{color: 'action.active'}} />}><Typography sx={titleStyle}><SensorsIcon color="primary"/> Sensoren</Typography></AccordionSummary><AccordionDetails><Box sx={{ display: 'flex', gap: 2, mb: 2, justifyContent: 'space-between' }}><Button variant="contained" color="secondary" startIcon={<AutoFixHighIcon />} onClick={this.handleOpenWizard}>Auto-Discovery</Button><Button variant="outlined" startIcon={<AddIcon />} onClick={() => this.onAddDevice()}>Neu</Button></Box>
+                    <TableContainer component={Paper} variant="outlined" sx={{ bgcolor: isDark ? '#2d2d2d' : '#fafafa' }}> {/* Helleres Grau für Table im Dark Mode */}
+                        <Table size="small"><TableHead><TableRow><TableCell>ID</TableCell><TableCell>Name</TableCell><TableCell>Ort</TableCell><TableCell>Typ</TableCell><TableCell>Log</TableCell><TableCell></TableCell></TableRow></TableHead>
+                            <TableBody>{this.state.devices.map((device, index) => (<TableRow key={index}><TableCell><Box sx={{display:'flex'}}><TextField value={device.id} onChange={e => this.onDeviceChange(index, 'id', e.target.value)} size="small" variant="standard"/><IconButton size="small" onClick={() => this.openSelectIdDialog(index)}><ListIcon fontSize="small"/></IconButton></Box></TableCell><TableCell><TextField value={device.name} onChange={e => this.onDeviceChange(index, 'name', e.target.value)} size="small" variant="standard"/></TableCell><TableCell><TextField value={device.location} onChange={e => this.onDeviceChange(index, 'location', e.target.value)} size="small" variant="standard"/></TableCell><TableCell><TextField value={device.type} onChange={e => this.onDeviceChange(index, 'type', e.target.value)} size="small" variant="standard"/></TableCell><TableCell><Checkbox checked={device.logDuplicates} onChange={e => this.onDeviceChange(index, 'logDuplicates', e.target.checked)} size="small"/></TableCell><TableCell><IconButton size="small" onClick={() => this.onDeleteDevice(index)}><DeleteIcon fontSize="small"/></IconButton></TableCell></TableRow>))}{this.state.devices.length === 0 && <TableRow><TableCell colSpan={6} align="center">Keine Sensoren.</TableCell></TableRow>}</TableBody>
+                        </Table>
+                    </TableContainer>
+                    {this.state.devices.length > 0 && <Button color="error" size="small" startIcon={<DeleteForeverIcon/>} onClick={() => this.setState({showDeleteConfirm: true})} sx={{mt:2}}>Alle löschen</Button>}</AccordionDetails></Accordion>
+                <Dialog open={this.state.showDeleteConfirm} onClose={() => this.setState({showDeleteConfirm:false})}><DialogTitle>Sicher?</DialogTitle><DialogContent><Typography>Alle Sensoren löschen?</Typography></DialogContent><DialogActions><Button onClick={()=>this.setState({showDeleteConfirm:false})}>Abbrechen</Button><Button onClick={this.onDeleteAllDevices} color="error">Löschen</Button></DialogActions></Dialog>
             </Box>
         );
     }
