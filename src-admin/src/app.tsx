@@ -74,6 +74,9 @@ class App extends GenericApp<any, AppState> {
                             socket={this.socket}
                             adapterName={this.adapterName}
                             instance={this.instance}
+                            // FIX: Theme weitergeben!
+                            theme={theme}
+                            themeType={themeType}
                         />
                     )}
 
@@ -82,6 +85,9 @@ class App extends GenericApp<any, AppState> {
                             socket={this.socket}
                             adapterName={this.adapterName}
                             instance={this.instance}
+                            // FIX: Theme weitergeben!
+                            theme={theme}
+                            themeType={themeType}
                         />
                     )}
 
