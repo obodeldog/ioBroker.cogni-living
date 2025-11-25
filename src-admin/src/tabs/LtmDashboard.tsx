@@ -210,52 +210,69 @@ export default class LtmDashboard extends React.Component<LtmDashboardProps, Ltm
     }
 
     renderStmHistory() {
-        // Zeige nur die neuesten 3 Events
-        const items = this.state.analysisHistory.slice(0, 3);
+        // ÄNDERUNG: Wir zeigen jetzt bis zu 20 Einträge statt nur 3
+        const items = this.state.analysisHistory.slice(0, 20);
+
         if (items.length === 0) return <Alert severity="info">Keine aktuellen Analysen vorhanden.</Alert>;
 
         return (
-            <Grid container spacing={2}>
-                {items.map((item) => {
-                    const isAlert = item.analysis.activity.isAlert;
-                    const dateStr = new Date(item.timestamp).toLocaleTimeString();
+            // ÄNDERUNG: Scroll-Container (maxHeight 500px), damit die Seite nicht explodiert
+            <Box sx={{ maxHeight: '500px', overflowY: 'auto', pr: 1 }}>
+                <Grid container spacing={2}>
+                    {items.map((item) => {
+                        const isAlert = item.analysis.activity.isAlert;
+                        const dateStr = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        const dateDay = new Date(item.timestamp).toLocaleDateString();
 
-                    return (
-                        <Grid item xs={12} md={4} key={item.id}>
-                            <Card variant="outlined" sx={{ borderColor: isAlert ? 'error.main' : 'divider' }}>
-                                <CardContent sx={{ pb: 1 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography variant="caption" color="text.secondary">{dateStr}</Typography>
-                                        {isAlert && <Chip label="ALARM" color="error" size="small" icon={<WarningIcon />} />}
-                                    </Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold', minHeight: '40px' }}>
-                                        {isAlert ? item.analysis.activity.alertReason : item.analysis.activity.summary}
-                                    </Typography>
-                                    {item.analysis.comfort?.automationProposal?.patternDetected && (
-                                        <Typography variant="caption" color="primary" sx={{ display: 'block', mt: 1 }}>
-                                            💡 Muster erkannt: {item.analysis.comfort.automationProposal.description}
+                        return (
+                            <Grid item xs={12} key={item.id}>
+                                <Card variant="outlined" sx={{
+                                    borderColor: isAlert ? 'error.main' : 'divider',
+                                    borderLeft: isAlert ? '6px solid #d32f2f' : '6px solid #4caf50', // Visueller Indikator links
+                                    bgcolor: isAlert ? '#fff5f5' : 'inherit'
+                                }}>
+                                    <CardContent sx={{ pb: 1, '&:last-child': { pb: 1 } }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {dateDay} — <strong>{dateStr} Uhr</strong>
+                                            </Typography>
+
+                                            <Box>
+                                                {isAlert && <Chip label="ALARM" color="error" size="small" icon={<WarningIcon />} sx={{mr: 1}} />}
+
+                                                {/* Kleine Feedback Buttons direkt oben rechts */}
+                                                <Tooltip title="Korrekt">
+                                                    <IconButton size="small" color="success" onClick={() => this.handleFeedbackClick(item, true)}>
+                                                        <ThumbUpIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Falsch">
+                                                    <IconButton size="small" color="error" onClick={() => this.handleFeedbackClick(item, false)}>
+                                                        <ThumbDownIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </Box>
+                                        </Box>
+
+                                        <Typography variant="body2" sx={{ fontWeight: isAlert ? 'bold' : 'normal' }}>
+                                            {isAlert ? item.analysis.activity.alertReason : item.analysis.activity.summary}
                                         </Typography>
-                                    )}
-                                </CardContent>
-                                <Divider />
-                                <CardActions disableSpacing sx={{ justifyContent: 'flex-end', pt: 0, pb: 0 }}>
-                                    <Typography variant="caption" sx={{ mr: 1 }}>War das korrekt?</Typography>
-                                    <Tooltip title="Ja, gute Analyse">
-                                        <IconButton size="small" color="success" onClick={() => this.handleFeedbackClick(item, true)}>
-                                            <ThumbUpIcon fontSize="small" />
-                                        </IconButton>
-                                    </Tooltip>
-                                    <Tooltip title="Nein, Fehler melden">
-                                        <IconButton size="small" color="error" onClick={() => this.handleFeedbackClick(item, false)}>
-                                            <ThumbDownIcon fontSize="small" />
-                                        </IconButton>
-                                    </Tooltip>
-                                </CardActions>
-                            </Card>
-                        </Grid>
-                    );
-                })}
-            </Grid>
+
+                                        {item.analysis.comfort?.automationProposal?.patternDetected && (
+                                            <Box sx={{ display: 'flex', gap: 1, mt: 1, bgcolor: 'rgba(25, 118, 210, 0.08)', p: 1, borderRadius: 1 }}>
+                                                <InfoIcon fontSize="small" color="primary" sx={{mt: 0.3}} />
+                                                <Typography variant="caption" color="text.primary">
+                                                    {item.analysis.comfort.automationProposal.description}
+                                                </Typography>
+                                            </Box>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        );
+                    })}
+                </Grid>
+            </Box>
         );
     }
 
