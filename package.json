@@ -1,6 +1,6 @@
 {
     "name": "iobroker.cogni-living",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
     "author": {
         "name": "Marc Jaeger",
@@ -12,15 +12,8 @@
         "iobroker",
         "cogni-living",
         "ai",
-        "ki",
-        "behavior",
-        "health",
-        "comfort",
-        "automation",
-        "pattern",
-        "learning",
-        "context",
-        "smart home"
+        "smart home",
+        "aal"
     ],
     "repository": {
         "type": "git",
@@ -31,10 +24,6 @@
         "@iobroker/adapter-core": "^3.1.6",
         "axios": "^1.7.2",
         "node-schedule": "^2.1.1"
-    },
-    "backup": {
-        "@emotion/react": "^11.14.0",
-        "@emotion/styled": "^11.11.5"
     },
     "devDependencies": {
         "@iobroker/adapter-react-v5": "^8.0.13",
@@ -67,19 +56,12 @@
         "build:react": "node tasks",
         "build:backend:dev": "copy src\\main.js main.js",
         "build:backend:prod": "javascript-obfuscator src/main.js --output main.js --compact true --self-defending true --disable-console-output false --debug-protection false",
-        "dev-run": "dev-server run",
-        "dev-watch": "dev-server watch",
         "build": "npm run build:react && npm run build:backend:dev",
         "build:prod": "npm run build:react && npm run build:backend:prod",
         "watch": "npm run watch:react",
-        "test:js": "mocha --config test/mocharc.custom.json \"{!(node_modules|test)/**/*.test.js,*.test.js,test/**/test!(PackageFiles|Startup).js}\"",
-        "test:package": "mocha test/package --exit",
-        "test:integration": "mocha test/integration --exit",
         "test": "npm run test:js && npm run test:package",
-        "check": "tsc --noEmit",
-        "lint": "eslint --ext .js,.jsx,.ts,.tsx admin/src/",
-        "translate": "translate-adapter",
-        "release": "release-script"
+        "test:js": "mocha --config test/mocharc.custom.json \"{!(node_modules|test)/**/*.test.js,*.test.js,test/**/test!(PackageFiles|Startup).js}\"",
+        "test:package": "mocha test/package --exit"
     },
     "bugs": {
         "url": "https://github.com/obodeldog/ioBroker.cogni-living/issues"

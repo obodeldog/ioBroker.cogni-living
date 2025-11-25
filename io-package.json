@@ -1,21 +1,15 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.2.0",
-        "enabled": true,
-        "main": "main.js",
+        "version": "0.3.0",
         "news": {
-            "0.2.0": {
-                "en": "Major Release: Auto-Discovery Wizard for sensors introduced. Added LTM Dashboard UI. Implemented Licensing & Security features. Enhanced Junk-Filter for cleaner setups.",
-                "de": "Major Release: Auto-Discovery Wizard für Sensoren eingeführt. LTM Dashboard UI hinzugefügt. Lizenzierung & Sicherheitsfunktionen implementiert. Verbesserter Junk-Filter für sauberere Einrichtung."
+            "0.3.0": {
+                "en": "UI Overhaul: New App-like design with improved Dark Mode. Added Feedback-Loop (Reinforcement Learning).",
+                "de": "UI Überarbeitung: Neues App-Design mit verbessertem Dark Mode. Feedback-Loop (Reinforcement Learning) hinzugefügt."
             },
-            "0.1.22": {
-                "en": "LTM Visualization (UI): Added 'LTM Dashboard' tab in settings. Visualizes activity history (Daily Digests) using charts and displays Baseline Drift status. Requires 'recharts'.",
-                "de": "LTM Visualisierung (UI): 'LTM Dashboard'-Tab in den Einstellungen hinzugefügt. Visualisiert den Aktivitätsverlauf (Daily Digests) mittels Charts und zeigt den Baseline Drift Status an. Benötigt 'recharts'."
-            },
-            "0.1.21": {
-                "en": "Advanced LTM (Dual Baseline): Introduced 'Baseline Drift Analysis' (Pro) to detect gradual behavioral changes by comparing Short-Term (STB) and Long-Term Baselines (LTB). Added new LTM configuration options.",
-                "de": "Erweitertes LTM (Dual Baseline): 'Baseline Drift Analyse' (Pro) eingeführt, um schleichende Verhaltensänderungen durch Vergleich von Kurzzeit- (STB) und Langzeit-Baseline (LTB) zu erkennen. Neue LTM-Konfigurationsoptionen hinzugefügt."
+            "0.2.4": {
+                "en": "Hotfix: Location context injection for AI.",
+                "de": "Hotfix: Standort-Kontext für die KI hinzugefügt."
             }
         },
         "titleLang": {
@@ -31,14 +25,8 @@
         ],
         "keywords": [
             "ai",
-            "ki",
             "behavior",
             "health",
-            "comfort",
-            "automation",
-            "pattern",
-            "learning",
-            "context",
             "smart home"
         ],
         "licenseInformation": {
