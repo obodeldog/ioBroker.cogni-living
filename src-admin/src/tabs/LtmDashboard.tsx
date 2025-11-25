@@ -8,7 +8,17 @@ import {
     Grid,
     Chip,
     Tooltip,
-    Button
+    Button,
+    Card,
+    CardContent,
+    CardActions,
+    Divider,
+    IconButton,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    TextField,
+    DialogActions
 } from '@mui/material';
 import { I18n } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
@@ -29,6 +39,9 @@ import HistoryIcon from '@mui/icons-material/History';
 import InfoIcon from '@mui/icons-material/Info';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import WarningIcon from '@mui/icons-material/Warning';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import ThumbDownIcon from '@mui/icons-material/ThumbDown';
+import RateReviewIcon from '@mui/icons-material/RateReview';
 
 interface LtmDashboardProps {
     socket: Connection;
@@ -37,13 +50,31 @@ interface LtmDashboardProps {
     themeType: string;
 }
 
-// Datenstruktur der Daily Digests
 interface DailyDigest {
     timestamp: string;
     eventCount: number;
     summary: string;
     activityLevel: string;
     systemMode?: string;
+}
+
+interface AnalysisHistoryItem {
+    timestamp: number;
+    id: string;
+    analysis: {
+        activity: {
+            summary: string;
+            isAlert: boolean;
+            alertReason?: string;
+            deviationFromBaseline?: string;
+        };
+        comfort?: {
+            automationProposal?: {
+                patternDetected: boolean;
+                description: string;
+            }
+        }
+    };
 }
 
 interface DriftAnalysisStatus {
@@ -57,25 +88,21 @@ interface LtmDashboardState {
     error: string | null;
     isPro: boolean;
     dailyDigests: DailyDigest[];
+    analysisHistory: AnalysisHistoryItem[]; // STM Data
     driftAnalysis: DriftAnalysisStatus | null;
+
+    // Feedback Dialog State
+    feedbackOpen: boolean;
+    feedbackItem: AnalysisHistoryItem | null;
+    feedbackComment: string;
 }
 
-// Mapping von Aktivitätslevel zu numerischen Werten für das Chart
 const ACTIVITY_LEVEL_MAP: Record<string, number> = {
-    'sehr niedrig': 1,
-    'niedrig': 2,
-    'normal': 3,
-    'hoch': 4,
-    'sehr hoch': 5,
+    'sehr niedrig': 1, 'niedrig': 2, 'normal': 3, 'hoch': 4, 'sehr hoch': 5,
 };
 
-// Mapping von numerischen Werten zu Farben
 const ACTIVITY_COLOR_MAP: Record<number, string> = {
-    1: '#90caf9', // Hellblau (Sehr niedrig)
-    2: '#64b5f6', // Blau (Niedrig)
-    3: '#4caf50', // Grün (Normal)
-    4: '#ffb300', // Bernstein (Hoch)
-    5: '#f44336', // Rot (Sehr hoch)
+    1: '#90caf9', 2: '#64b5f6', 3: '#4caf50', 4: '#ffb300', 5: '#f44336',
 };
 
 export default class LtmDashboard extends React.Component<LtmDashboardProps, LtmDashboardState> {
@@ -86,7 +113,11 @@ export default class LtmDashboard extends React.Component<LtmDashboardProps, Ltm
             error: null,
             isPro: false,
             dailyDigests: [],
+            analysisHistory: [],
             driftAnalysis: null,
+            feedbackOpen: false,
+            feedbackItem: null,
+            feedbackComment: ''
         };
     }
 
@@ -97,272 +128,224 @@ export default class LtmDashboard extends React.Component<LtmDashboardProps, Ltm
     fetchLtmData = () => {
         this.setState({ loading: true, error: null });
 
-        // Timeout Promise: Wirft Fehler nach 5 Sekunden
-        const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => {
-                reject(new Error('Timeout: Adapter antwortet nicht. Ist die Instanz gestartet?'));
-            }, 5000);
-        });
-
-        // Backend Request
-        const requestPromise = this.props.socket.sendTo(
-            `${this.props.adapterName}.${this.props.instance}`,
-            'getLtmData',
-            {}
-        );
-
-        // Race: Wer zuerst fertig ist, gewinnt. Verhindert endlosen Spinner.
-        Promise.race([requestPromise, timeoutPromise])
+        this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'getLtmData', {})
             .then((response: any) => {
-                // Check ob Pro-Check im Backend fehlgeschlagen ist
                 if (response && response.isPro === false) {
-                    this.setState({
-                        loading: false,
-                        isPro: false,
-                        error: I18n.t('ltm_pro_feature_required'),
-                    });
+                    this.setState({ loading: false, isPro: false, error: I18n.t('ltm_pro_feature_required') });
                     return;
                 }
-
                 if (response && response.success) {
                     this.setState({
                         loading: false,
                         isPro: true,
                         dailyDigests: response.dailyDigests || [],
+                        analysisHistory: response.analysisHistory || [],
                         driftAnalysis: response.driftAnalysis || null,
                         error: null
                     });
                 } else {
-                    this.setState({
-                        loading: false,
-                        error: response ? response.message : I18n.t('ltm_fetch_error_unknown'),
-                        isPro: true, // Annahme: Pro ist aktiv, aber Fehler beim Datenholen
-                    });
+                    this.setState({ loading: false, error: response ? response.message : 'Unknown Error', isPro: true });
                 }
             })
             .catch((error: Error) => {
-                console.error("LTM Fetch Error:", error);
-                this.setState({
-                    loading: false,
-                    error: `${I18n.t('ltm_fetch_error_connection')}: ${error.message}`,
-                });
+                this.setState({ loading: false, error: error.message });
             });
     }
 
-    prepareChartData() {
-        return this.state.dailyDigests.map(digest => {
-            const date = new Date(digest.timestamp).toLocaleDateString();
-            const activityValue = ACTIVITY_LEVEL_MAP[digest.activityLevel] || 0;
-            return {
-                date,
-                activityValue,
-                eventCount: digest.eventCount,
-                summary: digest.summary,
-                activityLevel: digest.activityLevel,
-                systemMode: digest.systemMode,
-                fillColor: ACTIVITY_COLOR_MAP[activityValue] || '#8884d8',
-            };
-        }); // .reverse() entfernen wir hier, da das Chart layout="vertical" nutzt und die Reihenfolge oft andersherum besser liest
+    // --- FEEDBACK HANDLERS ---
+
+    handleFeedbackClick = (item: AnalysisHistoryItem, isPositive: boolean) => {
+        if (isPositive) {
+            // Direktes positives Feedback senden
+            this.sendFeedback(item.id, 'correct', '', item.analysis.activity.alertReason);
+        } else {
+            // Dialog öffnen für negatives Feedback
+            this.setState({ feedbackOpen: true, feedbackItem: item, feedbackComment: '' });
+        }
     }
 
-    renderChartTooltip = ({ active, payload }: any) => {
-        if (active && payload && payload.length) {
-            const data = payload[0].payload;
-            return (
-                <Paper sx={{ p: 1, maxWidth: 300, fontSize: '0.8rem', border: '1px solid #ccc' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>{data.date}</Typography>
-                    <Typography variant="body2">
-                        {I18n.t('ltm_activity_level')}: <strong>{data.activityLevel}</strong>
-                    </Typography>
-                    <Typography variant="body2">
-                        {I18n.t('ltm_event_count')}: {data.eventCount}
-                    </Typography>
-                    {data.systemMode && data.systemMode !== 'normal' && (
-                        <Typography variant="body2" color="error">
-                            {I18n.t('ltm_system_mode')}: {data.systemMode}
-                        </Typography>
-                    )}
-                    <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic', borderTop: '1px solid #eee', paddingTop: 0.5 }}>
-                        "{data.summary}"
-                    </Typography>
-                </Paper>
-            );
+    submitNegativeFeedback = () => {
+        const { feedbackItem, feedbackComment } = this.state;
+        if (feedbackItem) {
+            this.sendFeedback(feedbackItem.id, 'false_positive', feedbackComment, feedbackItem.analysis.activity.alertReason);
         }
-        return null;
-    };
+        this.setState({ feedbackOpen: false, feedbackItem: null });
+    }
 
-    renderDriftStatus() {
-        const { driftAnalysis } = this.state;
+    sendFeedback(historyId: string, rating: string, comment: string, alertReason?: string) {
+        this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'submitFeedback', {
+            historyId, rating, comment, alertReason
+        }).then(() => {
+            // Optional: Snackbar anzeigen
+            console.log("Feedback sent");
+        });
+    }
 
-        // Zeige Status nicht an, wenn er N/A oder null ist
-        if (!driftAnalysis || !driftAnalysis.status || driftAnalysis.status.startsWith('N/A')) {
-            return (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
-                    <InfoIcon color="disabled" />
-                    <Typography variant="body2">{I18n.t('ltm_drift_status_unavailable')}</Typography>
-                </Box>
-            );
-        }
+    // --- RENDERERS ---
 
-        let color: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' = 'default';
-        let icon = <InfoIcon />;
+    renderFeedbackDialog() {
+        return (
+            <Dialog open={this.state.feedbackOpen} onClose={() => this.setState({ feedbackOpen: false })}>
+                <DialogTitle>KI-Feedback: Fehlalarm melden</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" sx={{ mb: 2 }}>
+                        Helfen Sie der KI zu lernen. Warum war diese Analyse falsch?
+                    </Typography>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="Begründung (z.B. 'Ich habe nur gelüftet')"
+                        fullWidth
+                        variant="outlined"
+                        value={this.state.feedbackComment}
+                        onChange={(e) => this.setState({ feedbackComment: e.target.value })}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => this.setState({ feedbackOpen: false })}>Abbrechen</Button>
+                    <Button onClick={this.submitNegativeFeedback} variant="contained" color="primary">Absenden</Button>
+                </DialogActions>
+            </Dialog>
+        );
+    }
 
-        switch (driftAnalysis.status) {
-            case 'none':
-                color = 'success';
-                break;
-            case 'slight':
-                color = 'info';
-                break;
-            case 'significant':
-                color = 'warning';
-                icon = <TrendingUpIcon />;
-                break;
-            case 'critical':
-                color = 'error';
-                icon = <WarningIcon />;
-                break;
-        }
-
-        const lastCheckTime = driftAnalysis.lastCheck ? new Date(driftAnalysis.lastCheck).toLocaleString() : 'N/A';
+    renderStmHistory() {
+        // Zeige nur die neuesten 3 Events
+        const items = this.state.analysisHistory.slice(0, 3);
+        if (items.length === 0) return <Alert severity="info">Keine aktuellen Analysen vorhanden.</Alert>;
 
         return (
-            <Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <Typography variant="subtitle1" fontWeight="bold">{I18n.t('ltm_baseline_drift_status')}:</Typography>
-                    <Chip
-                        icon={icon}
-                        label={I18n.t(`drift_${driftAnalysis.status}`) || driftAnalysis.status}
-                        color={color}
-                        variant={color === 'default' ? 'outlined' : 'filled'}
-                    />
-                </Box>
-                <Alert severity={color === 'default' ? 'info' : color} sx={{ mb: 1 }}>
-                    {driftAnalysis.details}
-                </Alert>
-                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textAlign: 'right' }}>
-                    {I18n.t('ltm_last_check')}: {lastCheckTime}
-                </Typography>
-            </Box>
+            <Grid container spacing={2}>
+                {items.map((item) => {
+                    const isAlert = item.analysis.activity.isAlert;
+                    const dateStr = new Date(item.timestamp).toLocaleTimeString();
+
+                    return (
+                        <Grid item xs={12} md={4} key={item.id}>
+                            <Card variant="outlined" sx={{ borderColor: isAlert ? 'error.main' : 'divider' }}>
+                                <CardContent sx={{ pb: 1 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                        <Typography variant="caption" color="text.secondary">{dateStr}</Typography>
+                                        {isAlert && <Chip label="ALARM" color="error" size="small" icon={<WarningIcon />} />}
+                                    </Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold', minHeight: '40px' }}>
+                                        {isAlert ? item.analysis.activity.alertReason : item.analysis.activity.summary}
+                                    </Typography>
+                                    {item.analysis.comfort?.automationProposal?.patternDetected && (
+                                        <Typography variant="caption" color="primary" sx={{ display: 'block', mt: 1 }}>
+                                            💡 Muster erkannt: {item.analysis.comfort.automationProposal.description}
+                                        </Typography>
+                                    )}
+                                </CardContent>
+                                <Divider />
+                                <CardActions disableSpacing sx={{ justifyContent: 'flex-end', pt: 0, pb: 0 }}>
+                                    <Typography variant="caption" sx={{ mr: 1 }}>War das korrekt?</Typography>
+                                    <Tooltip title="Ja, gute Analyse">
+                                        <IconButton size="small" color="success" onClick={() => this.handleFeedbackClick(item, true)}>
+                                            <ThumbUpIcon fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title="Nein, Fehler melden">
+                                        <IconButton size="small" color="error" onClick={() => this.handleFeedbackClick(item, false)}>
+                                            <ThumbDownIcon fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
+                                </CardActions>
+                            </Card>
+                        </Grid>
+                    );
+                })}
+            </Grid>
+        );
+    }
+
+    renderChart() {
+        const { dailyDigests } = this.state;
+        const chartData = dailyDigests.map(d => ({
+            date: new Date(d.timestamp).toLocaleDateString(),
+            activityValue: ACTIVITY_LEVEL_MAP[d.activityLevel] || 0,
+            eventCount: d.eventCount,
+            summary: d.summary,
+            activityLevel: d.activityLevel,
+            systemMode: d.systemMode,
+            fillColor: ACTIVITY_COLOR_MAP[ACTIVITY_LEVEL_MAP[d.activityLevel] || 0] || '#8884d8',
+        })); // .reverse() removed for vertical layout
+
+        return (
+            <ResponsiveContainer width="100%" height={Math.max(300, dailyDigests.length * 50)}>
+                <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" domain={[0, 5]} hide />
+                    <YAxis dataKey="date" type="category" width={80} style={{ fontSize: '0.8rem' }} />
+                    <RechartsTooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                                <Paper sx={{ p: 1, maxWidth: 300, fontSize: '0.8rem' }}>
+                                    <strong>{data.date}</strong><br/>
+                                    Level: {data.activityLevel}<br/>
+                                    Events: {data.eventCount}<br/>
+                                    <div style={{marginTop: 5, fontStyle: 'italic'}}>"{data.summary}"</div>
+                                </Paper>
+                            );
+                        }
+                        return null;
+                    }}/>
+                    <Bar dataKey="activityValue" radius={[0, 4, 4, 0]} barSize={20}>
+                        {chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fillColor} />)}
+                    </Bar>
+                </BarChart>
+            </ResponsiveContainer>
         );
     }
 
     render() {
-        const { loading, error, isPro, dailyDigests } = this.state;
+        const { loading, error, isPro } = this.state;
 
-        // Loading State
-        if (loading) {
-            return (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px', flexDirection: 'column', gap: 2 }}>
-                    <CircularProgress />
-                    <Typography>{I18n.t('ltm_loading_data')}</Typography>
-                </Box>
-            );
-        }
-
-        // Error / Pro Check Fail State
-        if (error) {
-            const isLicenseError = !isPro;
-            return (
-                <Box sx={{ p: 3 }}>
-                    <Alert
-                        severity={isLicenseError ? "warning" : "error"}
-                        action={
-                            <Button color="inherit" size="small" onClick={this.fetchLtmData} startIcon={<RefreshIcon />}>
-                                REFRESH
-                            </Button>
-                        }
-                    >
-                        {isLicenseError && <Typography variant="h6" gutterBottom>{I18n.t('ltm_pro_feature_title')}</Typography>}
-                        {error}
-                    </Alert>
-                </Box>
-            );
-        }
-
-        // Empty Data State
-        if (dailyDigests.length === 0) {
-            return (
-                <Box sx={{ p: 3 }}>
-                    <Grid container spacing={3}>
-                        <Grid item xs={12}>
-                            <Alert severity="info" action={
-                                <Button color="inherit" size="small" onClick={this.fetchLtmData}>
-                                    Check Again
-                                </Button>
-                            }>
-                                {I18n.t('ltm_no_data_available')}
-                            </Alert>
-                        </Grid>
-                    </Grid>
-                </Box>
-            );
-        }
-
-        // --- MAIN DASHBOARD RENDER ---
-        const chartData = this.prepareChartData();
-        // Dynamische Höhe: Mindestens 300px, sonst wächst es mit den Daten (30px pro Balken)
-        const chartHeight = Math.max(300, dailyDigests.length * 50);
+        if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
+        if (error) return <Alert severity={!isPro ? "warning" : "error"}>{error}</Alert>;
 
         return (
             <Box sx={{ p: 3 }}>
+                {this.renderFeedbackDialog()}
+
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-                    <Button startIcon={<RefreshIcon />} onClick={this.fetchLtmData} variant="outlined" size="small">
-                        Refresh Data
-                    </Button>
+                    <Button startIcon={<RefreshIcon />} onClick={this.fetchLtmData} variant="outlined" size="small">Refresh</Button>
                 </Box>
 
                 <Grid container spacing={3}>
-                    {/* Sektion: Baseline Drift Analyse */}
+                    {/* SEKTION 1: STM & FEEDBACK (Sprint 24) */}
                     <Grid item xs={12}>
-                        <Paper sx={{ p: 2, borderLeft: '6px solid #1976d2' }}>
+                        <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
                             <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <TrendingUpIcon color="primary" />
-                                {I18n.t('ltm_baseline_drift_analysis')}
+                                <RateReviewIcon color="primary" /> Aktuelle Analysen & Feedback
                             </Typography>
-                            {this.renderDriftStatus()}
+                            <Divider sx={{ mb: 2 }} />
+                            {this.renderStmHistory()}
                         </Paper>
                     </Grid>
 
-                    {/* Sektion: Aktivitätsverlauf Chart */}
+                    {/* SEKTION 2: DRIFT */}
+                    <Grid item xs={12}>
+                        <Paper sx={{ p: 2, borderLeft: '6px solid #1976d2' }}>
+                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <TrendingUpIcon color="primary" /> Baseline Drift Analyse
+                            </Typography>
+                            {this.state.driftAnalysis?.status ? (
+                                <Alert severity={this.state.driftAnalysis.status === 'critical' ? 'error' : 'info'}>
+                                    Status: <strong>{this.state.driftAnalysis.status.toUpperCase()}</strong> — {this.state.driftAnalysis.details}
+                                </Alert>
+                            ) : <Typography variant="body2" color="text.secondary">Noch nicht verfügbar.</Typography>}
+                        </Paper>
+                    </Grid>
+
+                    {/* SEKTION 3: LTM CHART */}
                     <Grid item xs={12}>
                         <Paper sx={{ p: 2 }}>
                             <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <HistoryIcon color="primary" />
-                                {I18n.t('ltm_activity_history')} ({dailyDigests.length} {I18n.t('ltm_days')})
+                                <HistoryIcon color="primary" /> Langzeit-Historie
                             </Typography>
-
-                            <Box sx={{ mt: 3, mb: 2, height: chartHeight }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart
-                                        data={chartData}
-                                        layout="vertical"
-                                        margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-                                    >
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                                        <XAxis type="number" domain={[0, 5]} ticks={[1, 2, 3, 4, 5]} hide />
-                                        <YAxis dataKey="date" type="category" width={80} style={{ fontSize: '0.8rem' }} />
-                                        <RechartsTooltip content={this.renderChartTooltip} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-
-                                        <Bar dataKey="activityValue" name={I18n.t('ltm_activity_level') || 'Activity'} radius={[0, 4, 4, 0]} barSize={20}>
-                                            {
-                                                chartData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.fillColor} />
-                                                ))
-                                            }
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </Box>
-
-                            <Tooltip title={I18n.t('ltm_chart_legend_tooltip') || ''}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, cursor: 'help' }}>
-                                    <InfoIcon fontSize="small" color="action"/>
-                                    <Typography variant="caption" color="textSecondary">
-                                        {I18n.t('ltm_chart_legend_info')}
-                                    </Typography>
-                                </Box>
-                            </Tooltip>
+                            <Box sx={{ mt: 2 }}>{this.renderChart()}</Box>
                         </Paper>
                     </Grid>
                 </Grid>
