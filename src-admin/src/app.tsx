@@ -1,170 +1,108 @@
 import React from 'react';
-import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles';
+import { Box, AppBar, Tabs, Tab } from '@mui/material';
+// FIX: ThemeType importieren
+import { GenericApp, I18n, type IobTheme, type GenericAppState, type ThemeType } from '@iobroker/adapter-react-v5';
 
-// Importiere Box und CssBaseline für das Layout von MUI v5
-import { Box, CssBaseline, Tabs, Tab } from '@mui/material';
+import Settings from './components/Settings';
+import Overview from './components/Overview';
+import Activities from './components/Activities';
 
-// SPRINT 21: MUI Icons für die Tabs
-import SettingsIcon from '@mui/icons-material/Settings';
+// Icons
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import SettingsIcon from '@mui/icons-material/Settings';
 
-// Wichtig: Imports von adapter-react-v5 und TypeScript-Typen
-import {
-    GenericApp,
-    type GenericAppProps,
-    type GenericAppSettings,
-    type GenericAppState, // <--- WICHTIG: Hier GenericAppState importieren
-    type ThemeType,
-    Loader,
-    I18n,
-} from '@iobroker/adapter-react-v5';
-
-// FIX SPRINT 21: Importiere Connection für Type-Casting
-import type { Connection } from '@iobroker/socket-client';
-
-import Settings from './components/settings';
-// SPRINT 21: Importiere das neue LTM Dashboard
-import LtmDashboard from './tabs/LtmDashboard';
-
-import enLang from './i18n/en.json';
-import deLang from './i18n/de.json';
-import ruLang from './i18n/ru.json';
-import ptLang from './i18n/pt.json';
-import nlLang from './i18n/nl.json';
-import frLang from './i18n/fr.json';
-import itLang from './i18n/it.json';
-import esLang from './i18n/es.json';
-import plLang from './i18n/pl.json';
-import ukLang from './i18n/uk.json';
-import zhCnLang from './i18n/zh-cn.json';
-
-// SPRINT 21 FIX: AppState muss GenericAppState erweitern (nicht Settings!)
-// Damit erben wir 'loaded', 'theme', 'native' usw. automatisch.
 interface AppState extends GenericAppState {
-    activeTab: number;
+    selectedTab: string;
+    // FIX: Hier muss ThemeType stehen, nicht string
+    themeType: ThemeType;
+    theme: IobTheme;
 }
 
-export default class App extends GenericApp<GenericAppProps, AppState> {
-
-    constructor(props: GenericAppProps) {
-        const extendedProps: GenericAppSettings = {
-            ...props,
-            encryptedFields: [],
-            translations: {
-                en: enLang,
-                de: deLang,
-                ru: ruLang,
-                pt: ptLang,
-                nl: nlLang,
-                fr: frLang,
-                it: itLang,
-                es: esLang,
-                pl: plLang,
-                uk: ukLang,
-                'zh-cn': zhCnLang,
-            },
-        };
-
+class App extends GenericApp<any, AppState> {
+    constructor(props: any) {
+        const extendedProps = { ...props };
         super(props, extendedProps);
 
-        // SPRINT 21 FIX: Initialisiere den aktiven Tab im State
-        // Wir nutzen Object.assign, um unseren Teil des States hinzuzufügen
-        Object.assign(this.state, {
-            activeTab: 0,
-        });
+        this.state = {
+            ...this.state,
+            selectedTab: 'overview',
+        };
     }
-
-    onConnectionReady(): void {
-        // executed when connection is ready
-    }
-
-    // SPRINT 21: Handler für Tab-Wechsel
-    handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-        this.setState({ activeTab: newValue });
-    };
 
     render() {
         if (!this.state.loaded) {
-            return (
-                <StyledEngineProvider injectFirst>
-                    <ThemeProvider theme={this.state.theme}>
-                        <Loader themeType={this.state.themeType} />
-                    </ThemeProvider>
-                </StyledEngineProvider>
-            );
+            return super.render();
         }
 
+        const { theme, themeType, native } = this.state;
+
         return (
-            <StyledEngineProvider injectFirst>
-                <ThemeProvider theme={this.state.theme}>
-                    <CssBaseline />
-                    <Box
-                        sx={{
-                            width: '100%',
-                            height: '100%',
-                            overflow: 'hidden',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            boxSizing: 'border-box',
-                            backgroundColor: 'background.default',
-                            color: this.state.themeType === 'dark' ? '#FFF' : '#000',
-                        }}
+            <div className="App" style={{ background: theme.palette.background.default, color: theme.palette.text.primary, minHeight: '100vh' }}>
+                <AppBar position="static" color="default" elevation={1}>
+                    <Tabs
+                        value={this.state.selectedTab}
+                        onChange={(_e, newVal) => this.setState({ selectedTab: newVal })}
+                        indicatorColor="primary"
+                        textColor="primary"
+                        variant="fullWidth"
                     >
-                        {/* SPRINT 21: Tab Navigation */}
-                        <Box sx={{ borderBottom: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}>
-                            <Tabs value={this.state.activeTab} onChange={this.handleTabChange} aria-label="adapter settings tabs">
-                                <Tab icon={<SettingsIcon />} iconPosition="start" label={I18n.t('tab_configuration')} />
-                                <Tab icon={<DashboardIcon />} iconPosition="start" label={I18n.t('tab_ltm_dashboard')} />
-                            </Tabs>
-                        </Box>
+                        <Tab
+                            value="overview"
+                            label={I18n.t('Übersicht')}
+                            icon={<DashboardIcon />}
+                            iconPosition="start"
+                        />
+                        <Tab
+                            value="activities"
+                            label={I18n.t('Aktivitäten')}
+                            icon={<ListAltIcon />}
+                            iconPosition="start"
+                        />
+                        <Tab
+                            value="settings"
+                            label={I18n.t('Einstellungen')}
+                            icon={<SettingsIcon />}
+                            iconPosition="start"
+                        />
+                    </Tabs>
+                </AppBar>
 
-                        {/* Content Area (Scrollable) */}
-                        <Box
-                            sx={{
-                                flexGrow: 1,
-                                overflow: 'auto',
-                            }}
-                        >
-                            {/* SPRINT 21: Bedingtes Rendering basierend auf dem aktiven Tab */}
-                            {this.state.activeTab === 0 && (
-                                <Settings
-                                    native={this.state.native}
-                                    onChange={(attr, value) => this.updateNativeValue(attr, value)}
-                                    // FIX SPRINT 21: Socket und themeType korrekt durchreichen
-                                    socket={this.socket as Connection}
-                                    themeType={this.state.themeType as ThemeType}
-                                    adapterName={this.adapterName}
-                                    instance={this.instance}
-                                    theme={this.state.theme}
-                                />
-                            )}
-                            {this.state.activeTab === 1 && (
-                                <LtmDashboard
-                                    socket={this.socket as Connection}
-                                    adapterName={this.adapterName}
-                                    instance={this.instance}
-                                    themeType={this.state.themeType as ThemeType}
-                                />
-                            )}
-                        </Box>
+                <Box sx={{ p: 0 }}>
+                    {this.state.selectedTab === 'overview' && (
+                        <Overview
+                            socket={this.socket}
+                            adapterName={this.adapterName}
+                            instance={this.instance}
+                        />
+                    )}
 
-                        {/* Footer Area (Fixed) */}
-                        <Box
-                            sx={{
-                                flexShrink: 0,
-                                p: 2,
-                                borderTop: 1,
-                                borderColor: 'divider',
-                                backgroundColor: 'background.paper',
-                            }}
-                        >
-                            {this.renderError()}
-                            {this.renderToast()}
-                            {this.renderSaveCloseButtons()}
-                        </Box>
-                    </Box>
-                </ThemeProvider>
-            </StyledEngineProvider>
+                    {this.state.selectedTab === 'activities' && (
+                        <Activities
+                            socket={this.socket}
+                            adapterName={this.adapterName}
+                            instance={this.instance}
+                        />
+                    )}
+
+                    {this.state.selectedTab === 'settings' && (
+                        <Settings
+                            native={native}
+                            onChange={(attr: string, value: any) => this.updateNativeValue(attr, value)}
+                            socket={this.socket}
+                            themeType={themeType}
+                            theme={theme}
+                            adapterName={this.adapterName}
+                            instance={this.instance}
+                        />
+                    )}
+                </Box>
+
+                {this.renderError()}
+                {this.renderToast()}
+            </div>
         );
     }
 }
+
+export default App;
