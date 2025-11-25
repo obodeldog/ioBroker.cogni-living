@@ -18,8 +18,10 @@ import {
     DialogTitle,
     DialogContent,
     TextField,
-    DialogActions
+    DialogActions,
+    Snackbar
 } from '@mui/material';
+import type { AlertColor } from '@mui/material';
 import { I18n } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
 import {
@@ -95,6 +97,11 @@ interface LtmDashboardState {
     feedbackOpen: boolean;
     feedbackItem: AnalysisHistoryItem | null;
     feedbackComment: string;
+
+    // Snackbar State (NEU)
+    snackbarOpen: boolean;
+    snackbarMessage: string;
+    snackbarSeverity: AlertColor;
 }
 
 const ACTIVITY_LEVEL_MAP: Record<string, number> = {
@@ -115,9 +122,14 @@ export default class LtmDashboard extends React.Component<LtmDashboardProps, Ltm
             dailyDigests: [],
             analysisHistory: [],
             driftAnalysis: null,
+
             feedbackOpen: false,
             feedbackItem: null,
-            feedbackComment: ''
+            feedbackComment: '',
+
+            snackbarOpen: false,
+            snackbarMessage: '',
+            snackbarSeverity: 'success'
         };
     }
 
@@ -175,11 +187,28 @@ export default class LtmDashboard extends React.Component<LtmDashboardProps, Ltm
     sendFeedback(historyId: string, rating: string, comment: string, alertReason?: string) {
         this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'submitFeedback', {
             historyId, rating, comment, alertReason
-        }).then(() => {
-            // Optional: Snackbar anzeigen
-            console.log("Feedback sent");
+        }).then((res: any) => {
+            if (res && res.success) {
+                this.showSnackbar(
+                    rating === 'correct' ? 'Bestätigung gesendet. Danke!' : 'Danke! Feedback gespeichert.',
+                    'success'
+                );
+            } else {
+                this.showSnackbar('Fehler beim Senden des Feedbacks.', 'error');
+            }
         });
     }
+
+    // --- SNACKBAR HANDLERS (NEU) ---
+
+    showSnackbar(message: string, severity: AlertColor) {
+        this.setState({ snackbarOpen: true, snackbarMessage: message, snackbarSeverity: severity });
+    }
+
+    handleSnackbarClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+        if (reason === 'clickaway') return;
+        this.setState({ snackbarOpen: false });
+    };
 
     // --- RENDERERS ---
 
@@ -210,13 +239,11 @@ export default class LtmDashboard extends React.Component<LtmDashboardProps, Ltm
     }
 
     renderStmHistory() {
-        // ÄNDERUNG: Wir zeigen jetzt bis zu 20 Einträge statt nur 3
-        const items = this.state.analysisHistory.slice(0, 20);
+        const items = this.state.analysisHistory.slice(0, 20); // Letzte 20 anzeigen
 
         if (items.length === 0) return <Alert severity="info">Keine aktuellen Analysen vorhanden.</Alert>;
 
         return (
-            // ÄNDERUNG: Scroll-Container (maxHeight 500px), damit die Seite nicht explodiert
             <Box sx={{ maxHeight: '500px', overflowY: 'auto', pr: 1 }}>
                 <Grid container spacing={2}>
                     {items.map((item) => {
@@ -228,7 +255,7 @@ export default class LtmDashboard extends React.Component<LtmDashboardProps, Ltm
                             <Grid item xs={12} key={item.id}>
                                 <Card variant="outlined" sx={{
                                     borderColor: isAlert ? 'error.main' : 'divider',
-                                    borderLeft: isAlert ? '6px solid #d32f2f' : '6px solid #4caf50', // Visueller Indikator links
+                                    borderLeft: isAlert ? '6px solid #d32f2f' : '6px solid #4caf50',
                                     bgcolor: isAlert ? '#fff5f5' : 'inherit'
                                 }}>
                                     <CardContent sx={{ pb: 1, '&:last-child': { pb: 1 } }}>
@@ -240,7 +267,6 @@ export default class LtmDashboard extends React.Component<LtmDashboardProps, Ltm
                                             <Box>
                                                 {isAlert && <Chip label="ALARM" color="error" size="small" icon={<WarningIcon />} sx={{mr: 1}} />}
 
-                                                {/* Kleine Feedback Buttons direkt oben rechts */}
                                                 <Tooltip title="Korrekt">
                                                     <IconButton size="small" color="success" onClick={() => this.handleFeedbackClick(item, true)}>
                                                         <ThumbUpIcon fontSize="small" />
@@ -286,7 +312,7 @@ export default class LtmDashboard extends React.Component<LtmDashboardProps, Ltm
             activityLevel: d.activityLevel,
             systemMode: d.systemMode,
             fillColor: ACTIVITY_COLOR_MAP[ACTIVITY_LEVEL_MAP[d.activityLevel] || 0] || '#8884d8',
-        })); // .reverse() removed for vertical layout
+        }));
 
         return (
             <ResponsiveContainer width="100%" height={Math.max(300, dailyDigests.length * 50)}>
@@ -325,6 +351,18 @@ export default class LtmDashboard extends React.Component<LtmDashboardProps, Ltm
         return (
             <Box sx={{ p: 3 }}>
                 {this.renderFeedbackDialog()}
+
+                {/* NEU: Feedback Snackbar */}
+                <Snackbar
+                    open={this.state.snackbarOpen}
+                    autoHideDuration={4000}
+                    onClose={this.handleSnackbarClose}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                >
+                    <Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity} sx={{ width: '100%' }}>
+                        {this.state.snackbarMessage}
+                    </Alert>
+                </Snackbar>
 
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
                     <Button startIcon={<RefreshIcon />} onClick={this.fetchLtmData} variant="outlined" size="small">Refresh</Button>
