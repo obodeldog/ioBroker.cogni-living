@@ -76,5 +76,8 @@
     "ltm_chart_legend_info": "Hover over the bars for details.",
     "ltm_chart_legend_tooltip": "Shows the AI-determined activity level for each day based on the compressed summaries.",
     "inactivity_monitoring_enabled": "Inactivity Monitor (Dead Man's Switch)",
-    "inactivity_threshold_hours": "Alert after Inactivity (Hours)"
+    "inactivity_threshold_hours": "Alert after Inactivity (Hours)",
+    "presence_devices_label": "WiFi/Network Devices (Smartphones)",
+    "presence_devices_helper": "If ONE of these devices is online, presence is confirmed (overrides door logic).",
+    "btn_add_presence_device": "Add Device"
 }
