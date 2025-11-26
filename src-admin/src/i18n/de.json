@@ -74,6 +74,6 @@
     "drift_critical": "Kritisch (Große Änderung)",
     "ltm_chart_legend_info": "Fahren Sie über die Balken für Details.",
     "ltm_chart_legend_tooltip": "Zeigt das von der KI ermittelte Aktivitäts-Level für jeden Tag basierend auf den komprimierten Zusammenfassungen.",
-    "inactivity_monitoring_enabled": "Inaktivitäts-Monitor (Totmannschalter)",
+    "inactivity_monitoring_enabled": "🔴 TEST v0.3.3: Inaktivitäts-Monitor (Totmannschalter)",
     "inactivity_threshold_hours": "Alarm nach Inaktivität (Stunden)"
 }
