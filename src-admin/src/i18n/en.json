@@ -73,5 +73,7 @@
     "drift_significant": "Significant (Trend)",
     "drift_critical": "Critical (Major Change)",
     "ltm_chart_legend_info": "Hover over the bars for details.",
-    "ltm_chart_legend_tooltip": "Shows the AI-determined activity level for each day based on the compressed summaries."
+    "ltm_chart_legend_tooltip": "Shows the AI-determined activity level for each day based on the compressed summaries.",
+    "inactivity_monitoring_enabled": "Inactivity Monitor (Dead Man's Switch)",
+    "inactivity_threshold_hours": "Alert after Inactivity (Hours)"
 }

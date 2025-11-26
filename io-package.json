@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.3.0",
+        "version": "0.3.1",
         "news": {
+            "0.3.1": {
+                "en": "New Feature: Dead Man's Switch (Inactivity Monitor) & Emergency Escalation.",
+                "de": "Neues Feature: Totmannschalter (Inaktivitäts-Monitor) & Notfall-Eskalation."
+            },
             "0.3.0": {
                 "en": "UI Overhaul: New App-like design with improved Dark Mode. Added Feedback-Loop (Reinforcement Learning).",
                 "de": "UI Überarbeitung: Neues App-Design mit verbessertem Dark Mode. Feedback-Loop (Reinforcement Learning) hinzugefügt."
@@ -68,6 +72,8 @@
         "aiPersona": "generic",
         "livingContext": "",
         "minDaysForBaseline": 7,
+        "inactivityMonitoringEnabled": false,
+        "inactivityThresholdHours": 12,
         "notifyTelegramEnabled": false,
         "notifyTelegramInstance": "",
         "notifyTelegramRecipient": "",

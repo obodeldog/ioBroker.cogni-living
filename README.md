@@ -4,6 +4,8 @@
 
 **AI-powered behavioral analysis for Health, Safety & Comfort.**
 
+[![German Version](https://img.shields.io/badge/Sprache-Deutsch-black)](README_de.md)
+
 ---
 
 ## 📖 About this Adapter
@@ -35,6 +37,11 @@ Every night, the AI creates a summary ("Daily Digest") of the day and learns the
 
 ## 🚀 Features in Detail
 
+### 🛡️ Active Safety (Dead Man's Switch) [NEW v0.3.1]
+Standard AI systems only react when something happens. **Cogni-Living reacts when NOTHING happens.**
+* **Inactivity Monitor:** If no sensor activity is detected for a defined period (e.g., 12 hours) while the system is in "Normal" mode, the adapter triggers an **EMERGENCY** state.
+* **Emergency Escalation:** Unlike normal alerts, Emergency events trigger high-priority push notifications (e.g., Pushover Priority 2 with Siren).
+
 ### 🪄 Auto-Discovery Wizard
 No more complicated configuration! The integrated wizard scans your entire ioBroker installation and automatically finds relevant sensors (lights, motion, windows, doors, thermostats). You simply select what you want to monitor.
 
@@ -47,7 +54,7 @@ Visualize behavior directly in the admin panel.
 ### 🔔 Intelligent Notifications
 Receive warnings not just as log entries, but directly on your smartphone. Supported services:
 * Telegram
-* Pushover
+* Pushover (Supports Emergency Priority & Retry)
 * Email
 * WhatsApp (via CMB Adapter)
 * Signal (via CMA Adapter)
@@ -59,6 +66,7 @@ Receive warnings not just as log entries, but directly on your smartphone. Suppo
 | Feature | Free Version | Pro Version |
 | :--- | :---: | :---: |
 | **STM Real-time Analysis** | ✅ | ✅ |
+| **Dead Man's Switch (Inactivity)** | ✅ | ✅ |
 | **AI Context (Weather/Persona)** | ✅ | ✅ |
 | **Auto-Discovery Wizard** | ✅ | ✅ |
 | **Notifications** | ✅ | ✅ |
@@ -78,30 +86,34 @@ Receive warnings not just as log entries, but directly on your smartphone. Suppo
 2.  **API Key:** Get a free [Google Gemini API Key](https://aistudio.google.com/app/apikey) and enter it in the settings.
 3.  **Auto-Scan:** Click on **"Auto-Scan (Wizard)"** in the configuration tab. Select your sensors and import them.
 4.  **Context:** Briefly describe the living situation in the "Context" field (e.g., *"Resident is 82 years old, lives alone, owns a dog."*). This greatly helps the AI avoid false alarms.
-5.  **Start:** Start the instance. The system begins analysis immediately (STM). Long-Term Memory requires approx. 7 days of learning phase.
+5.  **Safety:** Enable the **Inactivity Monitor** in settings if you use this for AAL/Elderly Care.
 
 ---
 
 ## 📜 Changelog
+
+### 0.3.1 (2025-11-26)
+* ✨ **New:** **Dead Man's Switch (Inactivity Monitor)** added. Triggers alarm if no events occur for X hours.
+* ✨ **New:** **Emergency State**. Distinction between "Alert" (Yellow) and "Emergency" (Red).
+* ✨ **New:** Pushover Priority 2 support (Emergency Siren & Retry) for critical alarms.
+
+### 0.3.0 (2025-11-25)
+* (Marc Jaeger) **Major UI Release**
+* ✨ **New:** Complete UI Overhaul ("App-like" experience). Introduced "Overview" (Cockpit) and "Activities" (Journal) tabs.
+* ✨ **New:** Implemented Feedback-Loop (Reinforcement Learning). Users can now rate AI analysis ("Thumbs up/down") to train the model.
+* 🛠️ **Fix:** Massive improvements to Dark Mode / High Contrast theme.
+
+### 0.2.4 (2025-11-25)
+* (Marc Jaeger) **Hotfix**: Added location context injection (Lat/Lon) so AI understands local time and weather context better.
 
 ### 0.2.0 (2025-11-24)
 * (Marc Jaeger) **Major Release**
 * ✨ **New:** Implemented Auto-Discovery Wizard.
 * ✨ **New:** Added LTM Dashboard UI.
 * ✨ **New:** Implemented Licensing & Hardware Binding.
-* 🛠️ **Fix:** Improved "Junk-Filter" to ignore technical data points (scripts, weather data) more reliably.
-* 🛠️ **Fix:** Increased context description limit to 1000 chars.
 
-### 0.1.22 (2025-11-23)
-* (Marc Jaeger) Introduction of UI Tabs (Config / Dashboard).
-* (Marc Jaeger) Prepared code obfuscation for production builds.
-
-### 0.1.21 (2025-11-21)
-* (Marc Jaeger) Introduction of "Drift Analysis" (Comparing Short-Term vs. Long-Term Baseline).
-
-### 0.1.0 - 0.1.20
+### 0.1.0 - 0.1.22
 * (Marc Jaeger) Initial development of Cogni-Engine (STM & LTM logic).
-* (Marc Jaeger) Integration of Google Gemini API.
 
 ---
 
