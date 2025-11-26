@@ -24,6 +24,7 @@
     "table_name": "Name",
     "table_location": "Location (Room)",
     "table_type": "Type",
+    "table_is_exit": "Exit?",
     "table_delete": "Delete",
     "btn_add_sensor": "Add Sensor",
     "btn_test_notification": "Send Test Notification",

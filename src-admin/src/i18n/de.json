@@ -24,6 +24,7 @@
     "table_name": "Name",
     "table_location": "Ort (Raum)",
     "table_type": "Typ",
+    "table_is_exit": "Ausgang?",
     "table_delete": "Löschen",
     "btn_add_sensor": "Sensor hinzufügen",
     "btn_test_notification": "Test-Benachrichtigung senden",
