@@ -47,8 +47,9 @@ Standard-KI-Systeme reagieren nur, wenn etwas passiert. **Cogni-Living reagiert 
 * **Smarte Anwesenheit:** Das System unterscheidet automatisch zwischen "Schlafen" (Anwesend) und "Einkaufen" (Abwesend) durch intelligente Analyse der Tür-Sensoren.
 * **Notfall-Eskalation:** Im Gegensatz zu normalen Warnungen lösen Notfall-Events Push-Nachrichten mit höchster Priorität aus (z.B. Pushover Priority 2 mit Sirene/Bestätigungszwang).
 
-### 📊 LTM Dashboard
+### 📊 LTM Dashboard & Health
 Visualisieren Sie das Verhalten direkt im Admin-Panel.
+* **[NEU Sprint 27] Health Dashboard:** Überwachung von Schlafqualität und nächtlicher Unruhe.
 * Balkendiagramme zeigen das Aktivitätslevel pro Tag.
 * Detaillierte Text-Zusammenfassungen erklären den Tagesablauf.
 * Der Drift-Indikator warnt vor langfristigen negativen Trends.
@@ -93,6 +94,11 @@ Erhalten Sie Warnungen nicht nur als Log-Eintrag, sondern direkt auf Ihr Smartph
 ---
 
 ## 📜 Changelog
+
+### 0.3.10 (2025-11-26)
+* (Marc Jaeger) **Health Dashboard Update**
+* ✨ **Neu:** Visualisierung von Schlafqualität und Unruhe im LTM-Rückblick.
+* ✨ **Neu:** Graphische Trennung von Aktivitäts- und Gesundheitsdaten.
 
 ### 0.3.5 (2025-11-26)
 * (Marc Jaeger) **Wartungs-Update**

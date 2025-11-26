@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.3.7",
+        "version": "0.3.10",
         "news": {
+            "0.3.10": {
+                "en": "Feature: Health & Sleep Dashboard with LTM trends.",
+                "de": "Feature: Gesundheit & Schlaf Dashboard mit LTM-Trends."
+            },
             "0.3.7": {
                 "en": "Feature: Added optional WiFi/Network presence detection.",
                 "de": "Feature: Optionale WLAN/Netzwerk-Anwesenheitserkennung hinzugefügt."
