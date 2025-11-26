@@ -29,18 +29,13 @@ class App extends GenericApp<any, AppState> {
         const { themeType, native } = this.state;
         const isDark = themeType === 'dark';
 
-        // --- CUSTOM THEME ENGINE ---
-        // Wir erstellen ein eigenes Theme, das auf dem aktuellen Modus basiert,
-        // aber unsere eigenen "schönen" Farben erzwingt.
         const cogniTheme = createTheme({
             palette: {
                 mode: isDark ? 'dark' : 'light',
-                primary: {
-                    main: isDark ? '#90caf9' : '#1976d2', // Helleres Blau im Darkmode
-                },
+                primary: { main: isDark ? '#90caf9' : '#1976d2' },
                 background: {
-                    default: isDark ? '#121212' : '#f5f5f5', // "Rich Black" statt Pitch Black
-                    paper: isDark ? '#1e1e1e' : '#ffffff',   // Karten heben sich ab
+                    default: isDark ? '#121212' : '#f5f5f5',
+                    paper: isDark ? '#1e1e1e' : '#ffffff',
                 },
                 text: {
                     primary: isDark ? '#ffffff' : '#000000',
@@ -48,25 +43,14 @@ class App extends GenericApp<any, AppState> {
                 }
             },
             components: {
-                MuiAppBar: {
-                    styleOverrides: {
-                        root: {
-                            backgroundColor: isDark ? '#272727' : '#1976d2', // Feste Farbe für Menü
-                            color: '#ffffff',
-                        }
-                    }
-                },
+                MuiAppBar: { styleOverrides: { root: { backgroundColor: isDark ? '#272727' : '#1976d2', color: '#ffffff' } } },
                 MuiTab: {
                     styleOverrides: {
                         root: {
-                            textTransform: 'none', // Keine GROSSBUCHSTABEN
-                            fontWeight: 'bold',
-                            borderRight: '1px solid rgba(255,255,255,0.1)', // TRENNLINIE
+                            textTransform: 'none', fontWeight: 'bold',
+                            borderRight: '1px solid rgba(255,255,255,0.1)',
                             '&:last-child': { borderRight: 'none' },
-                            '&.Mui-selected': {
-                                backgroundColor: 'rgba(255,255,255,0.1)', // Highlight aktiver Tab
-                                color: '#fff'
-                            }
+                            '&.Mui-selected': { backgroundColor: 'rgba(255,255,255,0.1)', color: '#fff' }
                         }
                     }
                 }
@@ -78,9 +62,9 @@ class App extends GenericApp<any, AppState> {
                 <div className="App" style={{
                     background: cogniTheme.palette.background.default,
                     color: cogniTheme.palette.text.primary,
-                    height: '100vh',
-                    overflowY: 'auto',
-                    overflowX: 'hidden'
+                    minHeight: '100vh',
+                    display: 'flex',
+                    flexDirection: 'column'
                 }}>
                     <AppBar position="sticky" elevation={2}>
                         <Tabs
@@ -96,7 +80,8 @@ class App extends GenericApp<any, AppState> {
                         </Tabs>
                     </AppBar>
 
-                    <Box sx={{ p: 0, pb: 10 }}>
+                    {/* WICHTIG: pb: 12 sorgt für Platz unten, damit der Save-Button nicht verdeckt wird */}
+                    <Box sx={{ p: 0, pb: 12, flexGrow: 1, overflowY: 'auto' }}>
                         {this.state.selectedTab === 'overview' && (
                             <Overview socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />
                         )}
