@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, ListSubheader, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider } from '@mui/material';
 import type { AlertColor } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon, AccessibilityNew as AccessibilityNewIcon, Logout as LogoutIcon, PhoneAndroid as PhoneAndroidIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon, AccessibilityNew as AccessibilityNewIcon, Logout as LogoutIcon, PhoneAndroid as PhoneAndroidIcon, ConnectWithoutContact as ConnectWithoutContactIcon } from '@mui/icons-material';
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
 
@@ -13,7 +13,7 @@ interface EnumItem { id: string; name: string; }
 
 interface SettingsState {
     devices: DeviceConfig[];
-    presenceDevices: string[]; // NEW: List of IDs for Wifi Presence
+    presenceDevices: string[];
     geminiApiKey: string;
     analysisInterval: number;
     minDaysForBaseline: number;
@@ -40,11 +40,14 @@ interface SettingsState {
     notifySignalEnabled: boolean;
     notifySignalInstance: string;
     notifySignalRecipient: string;
+    // Briefing
+    briefingEnabled: boolean;
+    briefingTime: string;
     availableInstances: Record<string, string[]>;
     isTestingNotification: boolean;
     showSelectId: boolean;
     selectIdIndex: number;
-    selectIdContext: 'device' | 'presence' | null; // NEW: To know which list we are editing
+    selectIdContext: 'device' | 'presence' | null;
     isTestingApi: boolean;
     showWizard: boolean;
     wizardStep: number;
@@ -69,7 +72,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         const native = props.native;
         this.state = {
             devices: native.devices || [],
-            presenceDevices: native.presenceDevices || [], // NEW
+            presenceDevices: native.presenceDevices || [],
             geminiApiKey: native.geminiApiKey || '',
             analysisInterval: native.analysisInterval || 15,
             minDaysForBaseline: native.minDaysForBaseline || 7,
@@ -96,6 +99,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             notifySignalEnabled: native.notifySignalEnabled || false,
             notifySignalInstance: native.notifySignalInstance || '',
             notifySignalRecipient: native.notifySignalRecipient || '',
+            briefingEnabled: native.briefingEnabled || false,
+            briefingTime: native.briefingTime || "08:00",
             availableInstances: {},
             isTestingNotification: false,
             showSelectId: false,
@@ -131,7 +136,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     onDeleteDevice(index: number) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices.splice(index, 1); this.updateDevices(devices); }
     onDeleteAllDevices = () => { this.updateDevices([]); this.setState({ showDeleteConfirm: false }); this.showSnackbar('Alle Sensoren gelöscht.', 'info'); }
 
-    // PRESENCE DEVICE LOGIC
     onAddPresenceDevice() { this.setState({ showSelectId: true, selectIdContext: 'presence', selectIdIndex: -1 }); }
     onDeletePresenceDevice(index: number) { const p = [...this.state.presenceDevices]; p.splice(index, 1); this.updatePresenceDevices(p); }
 
@@ -217,7 +221,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     {wizardStep === 1 && <Box sx={{ width: '100%', mt: 4, mb: 4, textAlign: 'center' }}><LinearProgress /><Typography variant="h6" sx={{ mt: 2 }}>Suche Sensoren...</Typography></Box>}
                     {wizardStep === 2 && <Box>
                         <List dense sx={{ width: '100%', bgcolor: 'background.paper', maxHeight: 400, overflow: 'auto' }}>
-                            {scannedDevices.filter(d => d.location && !d.exists).length > 0 && <ListSubheader>🏠 Zugeordnet</ListSubheader>}
                             {scannedDevices.filter(d => d.location && !d.exists).map(d => (
                                 <ListItem key={d.id} disablePadding divider>
                                     <ListItemButton onClick={() => this.handleToggleScannedDevice(scannedDevices.indexOf(d))} dense>
@@ -226,7 +229,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                     </ListItemButton>
                                 </ListItem>
                             ))}
-                            {scannedDevices.filter(d => !d.location && !d.exists).length > 0 && <ListSubheader>❓ Sonstige</ListSubheader>}
                             {scannedDevices.filter(d => !d.location && !d.exists).map(d => (
                                 <ListItem key={d.id} disablePadding divider>
                                     <ListItemButton onClick={() => this.handleToggleScannedDevice(scannedDevices.indexOf(d))} dense>
@@ -235,7 +237,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                     </ListItemButton>
                                 </ListItem>
                             ))}
-                            {scannedDevices.filter(d => d.exists).length > 0 && <ListSubheader>✅ Bereits vorhanden</ListSubheader>}
                             {scannedDevices.filter(d => d.exists).map(d => (
                                 <ListItem key={d.id} disablePadding divider>
                                     <ListItemButton dense disabled><ListItemIcon><CheckCircleIcon color="success" /></ListItemIcon><ListItemText primary={d.name || d.id} secondary="Bereits konfiguriert" /></ListItemButton>
@@ -324,7 +325,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </Tooltip>
                 </Grid>
 
-                {/* NEW: Presence Devices Selection */}
                 <Grid item xs={12} md={12}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                         <Typography variant="caption" sx={{color:'text.secondary'}}>{I18n.t('presence_devices_label')}</Typography>
@@ -351,6 +351,39 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         );
     }
 
+    renderReportingSection(tooltipProps: any) {
+        return (
+            <Grid container spacing={3}>
+                <Grid item xs={12}>
+                    <Alert severity="info" icon={<ConnectWithoutContactIcon />}>
+                        Der "Family Link" sendet automatisch Berichte an die unten konfigurierten Empfänger.
+                    </Alert>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                        control={<Checkbox checked={this.state.briefingEnabled} onChange={e => this.updateNativeValue('briefingEnabled', e.target.checked)} />}
+                        label="Tägliches 'Guten Morgen' Briefing"
+                    />
+                    <Typography variant="caption" color="text.secondary" display="block">Sendet morgens eine Zusammenfassung der Nacht (Schlaf/Aktivität).</Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <Tooltip title="Uhrzeit für den täglichen Bericht (Format HH:MM)." {...tooltipProps}>
+                        <TextField
+                            fullWidth
+                            label="Uhrzeit"
+                            type="time"
+                            value={this.state.briefingTime}
+                            onChange={e => this.updateNativeValue('briefingTime', e.target.value)}
+                            disabled={!this.state.briefingEnabled}
+                            InputLabelProps={{ shrink: true }}
+                            size="small"
+                        />
+                    </Tooltip>
+                </Grid>
+            </Grid>
+        );
+    }
+
     renderNotificationRow(adapterName: string, enabledAttr: NotificationEnabledKey, instanceAttr: NotificationInstanceKey, recipientAttr: NotificationRecipientKey, recipientLabel: string) {
         const enabled = this.state[enabledAttr]; const instance = this.state[instanceAttr]; const recipient = this.state[recipientAttr]; let adapterKey = adapterName === 'whatsapp' ? 'whatsapp-cmb' : adapterName === 'signal' ? 'signal-cma' : adapterName; const instances = this.state.availableInstances[adapterKey] || [];
         return (<Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}><Grid item xs={12} sm={3}><FormControlLabel control={<Checkbox checked={enabled} onChange={e => this.updateNativeValue(enabledAttr, e.target.checked)} />} label={I18n.t(`notify_${adapterName}`)} /></Grid><Grid item xs={12} sm={4}><FormControl fullWidth size="small" disabled={!enabled}><InputLabel>{I18n.t('notify_instance')}</InputLabel><Select value={instance} label={I18n.t('notify_instance')} onChange={(e: any) => this.updateNativeValue(instanceAttr, e.target.value)}>{instances.length === 0 ? <MenuItem value="">{I18n.t('notify_no_instances')}</MenuItem> : instances.map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid><Grid item xs={12} sm={5}><TextField fullWidth size="small" label={recipientLabel} value={recipient} onChange={e => this.updateNativeValue(recipientAttr, e.target.value)} disabled={!enabled} required={adapterName === 'email' && enabled} /></Grid></Grid>);
@@ -359,7 +392,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     renderNotificationsSection() {
         return (
             <Box>
-                <Alert severity="info" sx={{mb: 2}}>Nur bei Alarm (isAlert=true).</Alert>
+                <Alert severity="info" sx={{mb: 2}}>Benachrichtigungen werden bei Alarmen und (wenn aktiviert) für Berichte verwendet.</Alert>
                 {this.renderNotificationRow('telegram', 'notifyTelegramEnabled', 'notifyTelegramInstance', 'notifyTelegramRecipient', 'User ID')}
                 {this.renderNotificationRow('pushover', 'notifyPushoverEnabled', 'notifyPushoverInstance', 'notifyPushoverRecipient', 'Device ID')}
                 {this.renderNotificationRow('email', 'notifyEmailEnabled', 'notifyEmailInstance', 'notifyEmailRecipient', 'E-Mail')}
@@ -374,7 +407,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             <Box>
                 <TableContainer component={Paper} variant="outlined" sx={{ bgcolor: isDark ? '#2d2d2d' : '#fafafa' }}>
                     <Table size="small"><TableHead><TableRow><TableCell>ID</TableCell><TableCell>Name</TableCell><TableCell>Ort</TableCell><TableCell>Typ</TableCell>
-                        {/* NEW COLUMN HEADER: Ausgang? */}
                         <TableCell>{I18n.t('table_is_exit')}</TableCell>
                         <TableCell>Log</TableCell><TableCell></TableCell></TableRow></TableHead>
                         <TableBody>{this.state.devices.map((device, index) => (<TableRow key={index}>
@@ -382,7 +414,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             <TableCell><TextField value={device.name} onChange={e => this.onDeviceChange(index, 'name', e.target.value)} size="small" variant="standard"/></TableCell>
                             <TableCell><TextField value={device.location} onChange={e => this.onDeviceChange(index, 'location', e.target.value)} size="small" variant="standard"/></TableCell>
                             <TableCell><TextField value={device.type} onChange={e => this.onDeviceChange(index, 'type', e.target.value)} size="small" variant="standard"/></TableCell>
-                            {/* NEW CELL: Exit Checkbox */}
                             <TableCell>
                                 <Tooltip title="Wenn dieser Sensor auslöst (z.B. Tür geht auf), startet der Anwesenheits-Timer.">
                                     <Checkbox checked={device.isExit || false} icon={<LogoutIcon fontSize='small' sx={{color: 'action.disabled'}} />} checkedIcon={<LogoutIcon fontSize='small' color='primary' />} onChange={e => this.onDeviceChange(index, 'isExit', e.target.checked)} size="small"/>
@@ -394,7 +425,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </Table>
                 </TableContainer>
 
-                {/* Buttons nach unten verschoben */}
                 <Box sx={{ display: 'flex', gap: 2, mt: 2, justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
                         <Button variant="contained" color="secondary" startIcon={<AutoFixHighIcon />} onClick={this.handleOpenWizard} sx={{ mr: 1 }}>Auto-Discovery</Button>
@@ -434,6 +464,16 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </AccordionSummary>
                     <AccordionDetails>
                         {this.renderAIBehaviorSection(tooltipProps)}
+                    </AccordionDetails>
+                </Accordion>
+
+                {/* NEW: Reporting Section */}
+                <Accordion expanded={expandedAccordion === 'panel5'} onChange={this.handleAccordionChange('panel5')} sx={accordionStyle}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon sx={{color: 'action.active'}} />}>
+                        <Typography sx={titleStyle}><ConnectWithoutContactIcon color="primary"/> Reporting & Family Link</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                        {this.renderReportingSection(tooltipProps)}
                     </AccordionDetails>
                 </Accordion>
 
