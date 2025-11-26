@@ -21,6 +21,16 @@ interface AppState extends GenericAppState {
 class App extends GenericApp<any, AppState> {
     constructor(props: any) {
         const extendedProps = { ...props };
+
+        // =========================================================
+        // DER FIX: Übersetzungen direkt einbetten (Hardcoded)
+        // =========================================================
+        // Damit umgehen wir Server-Ladeprobleme der JSON-Dateien.
+        extendedProps.translations = {
+            'en': require('./i18n/en.json'),
+            'de': require('./i18n/de.json'),
+        };
+
         super(props, extendedProps);
         this.state = { ...this.state, selectedTab: 'overview', hasChanges: false };
     }
@@ -30,9 +40,9 @@ class App extends GenericApp<any, AppState> {
         super.updateNativeValue(attr, value);
     }
 
-    // FIX 1: Speichern OHNE Schließen
+    // FIX: Speichern OHNE Schließen (damit man weiterarbeiten kann)
     handleSave = () => {
-        this.onSave(false); // false = Dialog offen lassen
+        this.onSave(false);
         this.setState({ hasChanges: false });
     };
 
@@ -82,7 +92,6 @@ class App extends GenericApp<any, AppState> {
                     flexDirection: 'column'
                 }}>
                     <AppBar position="sticky" elevation={2}>
-                        {/* FIX 2: Layout Flexbox korrigiert */}
                         <Box sx={{ display: 'flex', width: '100%', alignItems: 'center' }}>
 
                             <Tabs
@@ -90,16 +99,16 @@ class App extends GenericApp<any, AppState> {
                                 onChange={(_e, newVal) => this.setState({ selectedTab: newVal })}
                                 indicatorColor="secondary"
                                 textColor="inherit"
-                                variant="standard" // 'standard' erlaubt zentrieren besser als 'fullWidth' bei Buttons daneben
-                                centered={true}    // Tabs zentrieren
-                                sx={{ flexGrow: 1 }} // Den meisten Platz einnehmen
+                                variant="standard"
+                                centered={true}
+                                sx={{ flexGrow: 1 }}
                             >
                                 <Tab value="overview" label={I18n.t('Übersicht')} icon={<DashboardIcon />} iconPosition="start" />
                                 <Tab value="activities" label={I18n.t('Aktivitäten')} icon={<ListAltIcon />} iconPosition="start" />
                                 <Tab value="settings" label={I18n.t('Einstellungen')} icon={<SettingsIcon />} iconPosition="start" />
                             </Tabs>
 
-                            {/* Save Button rechts fixiert */}
+                            {/* Manueller Save Button (Rechts oben) */}
                             <Box sx={{ position: 'absolute', right: 16 }}>
                                 <Tooltip title={this.state.hasChanges ? "Änderungen speichern" : "Keine Änderungen"}>
                                     <span>
