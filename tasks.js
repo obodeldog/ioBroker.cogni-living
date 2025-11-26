@@ -10,6 +10,7 @@ const { buildReact, copyFiles, deleteFoldersRecursive, npmInstall, patchHtmlFile
 function clean() {
     deleteFoldersRecursive(`${__dirname}/admin`, ['cogni-living.png']);
 }
+
 if (process.argv.find(arg => arg === '--0-clean')) {
     clean();
 } else if (process.argv.find(arg => arg === '--1-npm')) {
@@ -19,7 +20,9 @@ if (process.argv.find(arg => arg === '--0-clean')) {
 } else if (process.argv.find(arg => arg === '--2-build')) {
     buildReact(`${__dirname}/src-admin/`, { rootDir: __dirname, vite: true }).catch(error => console.error(error));
 } else if (process.argv.find(arg => arg === '--3-copy')) {
-    copyFiles(['src-admin/build/*/**', 'src-admin/build/*'], 'admin/');
+    // HIER GEÄNDERT: Kopiert erst den Build, DANN die Übersetzungen
+    copyFiles(['src-admin/build/**/*', 'src-admin/build/*'], 'admin/')
+        .then(() => copyFiles(['src-admin/src/i18n/*.json'], 'admin/i18n/'));
 } else if (process.argv.find(arg => arg === '--4-patch')) {
     patchHtmlFile(`${__dirname}/admin/index.html`)
         .then(() => patchHtmlFile(`${__dirname}/src-admin/build/index.html`, '../..'))
@@ -34,7 +37,8 @@ if (process.argv.find(arg => arg === '--0-clean')) {
     }
     npmPromise
         .then(() => buildReact(`${__dirname}/src-admin/`, { rootDir: __dirname, vite: true }))
-        .then(() => copyFiles(['src-admin/build/**/*', 'src/build/*'], 'admin/'))
+        .then(() => copyFiles(['src-admin/build/**/*', 'src-admin/build/*'], 'admin/'))
+        .then(() => copyFiles(['src-admin/src/i18n/*.json'], 'admin/i18n/')) // <--- WICHTIG: Übersetzungen kopieren
         .then(() => patchHtmlFile(`${__dirname}/admin/index.html`, '../..'))
         .catch(error => console.error(error));
 } else {
@@ -48,5 +52,6 @@ if (process.argv.find(arg => arg === '--0-clean')) {
     installPromise
         .then(() => buildReact(`${__dirname}/src-admin/`, { rootDir: __dirname, vite: true }))
         .then(() => copyFiles(['src-admin/build/**/*', 'src-admin/build/*'], 'admin/'))
+        .then(() => copyFiles(['src-admin/src/i18n/*.json'], 'admin/i18n/')) // <--- WICHTIG: Übersetzungen kopieren
         .then(() => patchHtmlFile(`${__dirname}/admin/index.html`, '../..'));
 }
