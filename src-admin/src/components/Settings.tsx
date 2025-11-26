@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, ListSubheader, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider } from '@mui/material';
 import type { AlertColor } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon, AccessibilityNew as AccessibilityNewIcon, Logout as LogoutIcon, PhoneAndroid as PhoneAndroidIcon, ConnectWithoutContact as ConnectWithoutContactIcon, Cloud, CalendarMonth, Search as SearchIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon, AccessibilityNew as AccessibilityNewIcon, Logout as LogoutIcon, PhoneAndroid as PhoneAndroidIcon, ConnectWithoutContact as ConnectWithoutContactIcon, Cloud, CalendarMonth, Search as SearchIcon, Sync as SyncIcon } from '@mui/icons-material';
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
 
@@ -46,6 +46,7 @@ interface SettingsState {
     weatherInstance: string;
     useCalendar: boolean;
     calendarInstance: string;
+    calendarSelection: string[];
     availableInstances: Record<string, string[]>;
     isTestingNotification: boolean;
     showSelectId: boolean;
@@ -66,6 +67,8 @@ interface SettingsState {
     showContextDialog: boolean;
     contextResult: { weather: string; calendar: string; } | null;
     isTestingContext: boolean;
+    detectedCalendars: string[];
+    isLoadingCalendars: boolean;
 }
 
 type NotificationEnabledKey = 'notifyTelegramEnabled' | 'notifyPushoverEnabled' | 'notifyEmailEnabled' | 'notifyWhatsappEnabled' | 'notifySignalEnabled';
@@ -76,6 +79,9 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     constructor(props: SettingsProps) {
         super(props);
         const native = props.native;
+        let calSel = native.calendarSelection || [];
+        if (typeof calSel === 'string') calSel = calSel.split(',').filter((s:string) => s);
+
         this.state = {
             devices: native.devices || [],
             presenceDevices: native.presenceDevices || [],
@@ -111,6 +117,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             weatherInstance: native.weatherInstance || '',
             useCalendar: native.useCalendar || false,
             calendarInstance: native.calendarInstance || '',
+            calendarSelection: calSel,
             availableInstances: {},
             isTestingNotification: false,
             showSelectId: false,
@@ -130,7 +137,9 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             expandedAccordion: 'panel1',
             showContextDialog: false,
             contextResult: null,
-            isTestingContext: false
+            isTestingContext: false,
+            detectedCalendars: [],
+            isLoadingCalendars: false
         };
     }
 
@@ -179,7 +188,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     }
 
     handleOpenWizard = () => { this.setState({ showWizard: true, wizardStep: 0, scannedDevices: [] }); }
-    handleFilterChange = (key: keyof ScanFilters) => { this.setState(prevState => ({ scanFilters: { ...prevState.scanFilters, [key]: !prevState.scanFilters[key] } })); } // @ts-ignore
+    handleFilterChange = (key: keyof ScanFilters) => { this.setState(prevState => ({ scanFilters: { ...prevState.scanFilters, [key]: !prevState.scanFilters[key] } })); }
     handleEnumToggle = (enumId: string) => { const current = [...this.state.scanFilters.selectedFunctionIds]; const index = current.indexOf(enumId); if (index === -1) current.push(enumId); else current.splice(index, 1); this.setState(prevState => ({ scanFilters: { ...prevState.scanFilters, selectedFunctionIds: current } })); }
     handleStartScan = () => { this.setState({ wizardStep: 1 }); this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'scanDevices', this.state.scanFilters).then((response: any) => { if(response && response.success && Array.isArray(response.devices)) { if (response.devices.length === 0) { this.showSnackbar('Keine Sensoren gefunden.', 'info'); this.setState({ wizardStep: 0 }); } else { const existingIds = new Set(this.state.devices.map(d => d.id)); const devices = response.devices.map((d: any) => { const exists = existingIds.has(d.id); return { ...d, exists: exists, selected: !exists && (!!d.location || d._score >= 20) }; }); this.setState({ scannedDevices: devices, wizardStep: 2 }); } } else { this.showSnackbar(`Scan fehlgeschlagen: ${response?.error}`, 'warning'); this.setState({ wizardStep: 0 }); } }).catch(e => { this.showSnackbar(`Scan Error: ${e.message}`, 'error'); this.setState({ wizardStep: 0 }); }); }
     handleToggleScannedDevice = (index: number) => { const devices = [...this.state.scannedDevices]; if (devices[index].exists) return; devices[index].selected = !devices[index].selected; this.setState({ scannedDevices: devices }); }
@@ -202,38 +211,48 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         });
     }
 
+    handleFetchCalendarNames() {
+        const inst = this.state.calendarInstance || 'ical.0';
+        this.setState({ isLoadingCalendars: true });
+        this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'getCalendarNames', { instance: inst }).then((res: any) => {
+            this.setState({ isLoadingCalendars: false });
+            if (res && res.success && Array.isArray(res.names)) {
+                this.setState({ detectedCalendars: res.names });
+                if(res.names.length === 0) this.showSnackbar('Keine Kalender-Namen gefunden. (Sind Termine in data.table?)', 'warning');
+            } else {
+                this.showSnackbar('Fehler beim Laden der Kalender.', 'error');
+            }
+        });
+    }
+
+    toggleCalendarSelection(calName: string) {
+        const current = [...this.state.calendarSelection];
+        const index = current.indexOf(calName);
+        if(index === -1) current.push(calName);
+        else current.splice(index, 1);
+
+        this.setState({ calendarSelection: current });
+        this.props.onChange('calendarSelection', current);
+    }
+
     showSnackbar(message: string, severity: AlertColor) { this.setState({ snackbarOpen: true, snackbarMessage: message, snackbarSeverity: severity }); }
     handleSnackbarClose = (event?: React.SyntheticEvent | Event, reason?: string) => { if (reason === 'clickaway') return; this.setState({ snackbarOpen: false }); };
 
     renderContextDialog() {
-        // FIX: Used 'background.default' for theme-aware color, removed hardcoded hex
         return (
             <Dialog open={this.state.showContextDialog} onClose={() => this.setState({ showContextDialog: false })} maxWidth="sm" fullWidth>
                 <DialogTitle>Kontext-Daten (Live-Check)</DialogTitle>
                 <DialogContent dividers>
                     <Typography variant="subtitle2" color="primary" gutterBottom>Wetter-Status</Typography>
                     <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}>
-                        <Typography variant="body2" style={{ fontFamily: 'monospace' }}>
-                            {this.state.contextResult?.weather || 'Lade...'}
-                        </Typography>
+                        <Typography variant="body2" style={{ fontFamily: 'monospace' }}>{this.state.contextResult?.weather || 'Lade...'}</Typography>
                     </Paper>
-
-                    <Typography variant="subtitle2" color="primary" gutterBottom>Kalender-Status</Typography>
+                    <Typography variant="subtitle2" color="primary" gutterBottom>Kalender-Status (Gefiltert)</Typography>
                     <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default', maxHeight: 200, overflow: 'auto' }}>
-                        <Typography variant="body2" style={{ fontFamily: 'monospace' }}>
-                            {this.state.contextResult?.calendar || 'Lade...'}
-                        </Typography>
+                        <Typography variant="body2" style={{ fontFamily: 'monospace' }}>{this.state.contextResult?.calendar || 'Lade...'}</Typography>
                     </Paper>
-
-                    <Box sx={{mt: 2}}>
-                        <Alert severity="info" sx={{fontSize: '0.85rem'}}>
-                            Diese Daten werden an die KI gesendet, um Fehlalarme zu vermeiden (z.B. "Gartenbewegung bei Regen").
-                        </Alert>
-                    </Box>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => this.setState({ showContextDialog: false })}>Schließen</Button>
-                </DialogActions>
+                <DialogActions><Button onClick={() => this.setState({ showContextDialog: false })}>Schließen</Button></DialogActions>
             </Dialog>
         );
     }
@@ -441,7 +460,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </Tooltip>
                 </Grid>
 
-                {/* Context Switches & Debug */}
+                {/* Context Switches */}
                 <Grid item xs={12}><Divider textAlign="left"><Typography variant="caption" sx={{color:'text.secondary', display:'flex', alignItems:'center', gap:1}}><Cloud fontSize="small"/> Erweiterter Kontext (Sprint 29)</Typography></Divider></Grid>
 
                 <Grid item xs={12} md={6}>
@@ -472,7 +491,41 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </FormControl>
                 </Grid>
 
-                {/* Check Context Button */}
+                {/* Dynamic Calendar Selection */}
+                {this.state.useCalendar && (
+                    <Grid item xs={12}>
+                        <Paper variant="outlined" sx={{p: 2}}>
+                            <Box sx={{display:'flex', justifyContent:'space-between', alignItems:'center', mb: 1}}>
+                                <Typography variant="subtitle2">Relevante Kalender auswählen (Whitelist)</Typography>
+                                <Button size="small" startIcon={this.state.isLoadingCalendars ? <CircularProgress size={16}/> : <SyncIcon/>} onClick={() => this.handleFetchCalendarNames()}>Kalender suchen</Button>
+                            </Box>
+
+                            {this.state.detectedCalendars.length > 0 ? (
+                                <FormGroup row>
+                                    {this.state.detectedCalendars.map(calName => (
+                                        <FormControlLabel
+                                            key={calName}
+                                            control={
+                                                <Checkbox
+                                                    checked={this.state.calendarSelection.includes(calName)}
+                                                    onChange={() => this.toggleCalendarSelection(calName)}
+                                                />
+                                            }
+                                            label={calName}
+                                        />
+                                    ))}
+                                </FormGroup>
+                            ) : (
+                                <Typography variant="body2" color="text.secondary">Klicken Sie auf "Suchen", um Kalendernamen zu laden.</Typography>
+                            )}
+
+                            {this.state.calendarSelection.length === 0 && this.state.detectedCalendars.length > 0 && (
+                                <Alert severity="warning" sx={{mt: 1, py: 0}}>Achtung: Kein Kalender ausgewählt. Die KI wird alle Termine ignorieren!</Alert>
+                            )}
+                        </Paper>
+                    </Grid>
+                )}
+
                 <Grid item xs={12}>
                     <Button
                         variant="outlined"

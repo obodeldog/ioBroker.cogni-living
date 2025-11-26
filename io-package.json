@@ -1,19 +1,19 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.5.0",
+        "version": "0.5.9",
         "news": {
+            "0.5.9": {
+                "en": "Feature: Calendar Selector (Whitelist) instead of blacklist.",
+                "de": "Feature: Kalender-Auswahl (Whitelist) statt Blacklist."
+            },
+            "0.5.7": {
+                "en": "Fix: Context Debugging & Message Handling.",
+                "de": "Fix: Kontext-Debugging & Nachrichten-Handling."
+            },
             "0.5.0": {
-                "en": "Feature: Advanced Context Awareness (Weather & Calendar Integration).",
-                "de": "Feature: Erweiterter Kontext (Wetter & Kalender Integration)."
-            },
-            "0.3.10": {
-                "en": "Feature: Health & Sleep Dashboard with LTM trends.",
-                "de": "Feature: Gesundheit & Schlaf Dashboard mit LTM-Trends."
-            },
-            "0.3.7": {
-                "en": "Feature: Added optional WiFi/Network presence detection.",
-                "de": "Feature: Optionale WLAN/Netzwerk-Anwesenheitserkennung hinzugefügt."
+                "en": "Feature: Advanced Context Awareness.",
+                "de": "Feature: Erweiterter Kontext."
             }
         },
         "titleLang": {
@@ -98,7 +98,8 @@
         "useWeather": false,
         "weatherInstance": "",
         "useCalendar": false,
-        "calendarInstance": ""
+        "calendarInstance": "",
+        "calendarSelection": []
     },
     "objects": [],
     "instanceObjects": []
