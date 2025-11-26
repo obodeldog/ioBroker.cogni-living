@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, ListSubheader, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider } from '@mui/material';
 import type { AlertColor } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon, AccessibilityNew as AccessibilityNewIcon, Logout as LogoutIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon, AccessibilityNew as AccessibilityNewIcon, Logout as LogoutIcon, PhoneAndroid as PhoneAndroidIcon } from '@mui/icons-material';
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
 
@@ -13,6 +13,7 @@ interface EnumItem { id: string; name: string; }
 
 interface SettingsState {
     devices: DeviceConfig[];
+    presenceDevices: string[]; // NEW: List of IDs for Wifi Presence
     geminiApiKey: string;
     analysisInterval: number;
     minDaysForBaseline: number;
@@ -43,6 +44,7 @@ interface SettingsState {
     isTestingNotification: boolean;
     showSelectId: boolean;
     selectIdIndex: number;
+    selectIdContext: 'device' | 'presence' | null; // NEW: To know which list we are editing
     isTestingApi: boolean;
     showWizard: boolean;
     wizardStep: number;
@@ -67,6 +69,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         const native = props.native;
         this.state = {
             devices: native.devices || [],
+            presenceDevices: native.presenceDevices || [], // NEW
             geminiApiKey: native.geminiApiKey || '',
             analysisInterval: native.analysisInterval || 15,
             minDaysForBaseline: native.minDaysForBaseline || 7,
@@ -97,6 +100,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             isTestingNotification: false,
             showSelectId: false,
             selectIdIndex: -1,
+            selectIdContext: null,
             isTestingApi: false,
             showWizard: false,
             wizardStep: 0,
@@ -118,14 +122,44 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     updateNativeValue(attr: string, value: any) { if (attr === 'livingContext' && typeof value === 'string' && value.length > 1000) value = value.substring(0, 1000); this.setState({ [attr]: value } as Pick<SettingsState, keyof SettingsState>, () => { this.props.onChange(attr, value); }); }
     updateDevices(newDevices: DeviceConfig[]) { this.setState({ devices: newDevices }); this.props.onChange('devices', newDevices); }
+    updatePresenceDevices(newPresenceDevices: string[]) { this.setState({ presenceDevices: newPresenceDevices }); this.props.onChange('presenceDevices', newPresenceDevices); }
+
     handleAccordionChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => { this.setState({ expandedAccordion: isExpanded ? panel : false }); };
 
     onAddDevice() { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices.push({ id: '', name: '', location: '', type: '', logDuplicates: false, isExit: false }); this.updateDevices(devices); }
     onDeviceChange(index: number, attr: keyof DeviceConfig, value: any) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices[index][attr] = value; this.updateDevices(devices); }
     onDeleteDevice(index: number) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices.splice(index, 1); this.updateDevices(devices); }
     onDeleteAllDevices = () => { this.updateDevices([]); this.setState({ showDeleteConfirm: false }); this.showSnackbar('Alle Sensoren gelöscht.', 'info'); }
-    openSelectIdDialog(index: number) { this.setState({ showSelectId: true, selectIdIndex: index }); }
-    onSelectId(selectedId?: string) { const index = this.state.selectIdIndex; if (selectedId && index !== -1) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices[index].id = selectedId; this.props.socket.getObject(selectedId).then(obj => { if (obj && obj.common && obj.common.name) { let name: any = obj.common.name; if (typeof name === 'object') name = name[I18n.getLanguage()] || name.en || name.de || JSON.stringify(name); devices[index].name = name as string; this.updateDevices(devices); } else { this.updateDevices(devices); } }).catch(e => { console.error(e); this.updateDevices(devices); }); } this.setState({ showSelectId: false, selectIdIndex: -1 }); }
+
+    // PRESENCE DEVICE LOGIC
+    onAddPresenceDevice() { this.setState({ showSelectId: true, selectIdContext: 'presence', selectIdIndex: -1 }); }
+    onDeletePresenceDevice(index: number) { const p = [...this.state.presenceDevices]; p.splice(index, 1); this.updatePresenceDevices(p); }
+
+    openSelectIdDialog(index: number) { this.setState({ showSelectId: true, selectIdIndex: index, selectIdContext: 'device' }); }
+
+    onSelectId(selectedId?: string) {
+        if (selectedId) {
+            if (this.state.selectIdContext === 'device' && this.state.selectIdIndex !== -1) {
+                const devices = JSON.parse(JSON.stringify(this.state.devices));
+                devices[this.state.selectIdIndex].id = selectedId;
+                this.props.socket.getObject(selectedId).then(obj => {
+                    if (obj && obj.common && obj.common.name) {
+                        let name: any = obj.common.name;
+                        if (typeof name === 'object') name = name[I18n.getLanguage()] || name.en || name.de || JSON.stringify(name);
+                        devices[this.state.selectIdIndex].name = name as string;
+                        this.updateDevices(devices);
+                    } else { this.updateDevices(devices); }
+                }).catch(e => { this.updateDevices(devices); });
+            } else if (this.state.selectIdContext === 'presence') {
+                const p = [...this.state.presenceDevices];
+                if (!p.includes(selectedId)) {
+                    p.push(selectedId);
+                    this.updatePresenceDevices(p);
+                }
+            }
+        }
+        this.setState({ showSelectId: false, selectIdIndex: -1, selectIdContext: null });
+    }
 
     handleOpenWizard = () => { this.setState({ showWizard: true, wizardStep: 0, scannedDevices: [] }); }
     handleFilterChange = (key: keyof ScanFilters) => { this.setState(prevState => ({ scanFilters: { ...prevState.scanFilters, [key]: !prevState.scanFilters[key] } })); } // @ts-ignore
@@ -221,7 +255,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     renderDialogs() {
         return (
             <>
-                {this.state.showSelectId && (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={this.state.devices[this.state.selectIdIndex]?.id || ''} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />)}
+                {this.state.showSelectId && (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={(this.state.selectIdContext === 'device' && this.state.devices[this.state.selectIdIndex]?.id) || ''} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />)}
                 {this.renderWizardDialog()}
                 <Dialog open={this.state.showDeleteConfirm} onClose={() => this.setState({showDeleteConfirm:false})}><DialogTitle>Sicher?</DialogTitle><DialogContent><Typography>Alle Sensoren löschen?</Typography></DialogContent><DialogActions><Button onClick={()=>this.setState({showDeleteConfirm:false})}>Abbrechen</Button><Button onClick={this.onDeleteAllDevices} color="error">Löschen</Button></DialogActions></Dialog>
                 <Snackbar open={this.state.snackbarOpen} autoHideDuration={6000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity}>{this.state.snackbarMessage}</Alert></Snackbar>
@@ -289,6 +323,30 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         <TextField fullWidth label={I18n.t('inactivity_threshold_hours')} value={this.state.inactivityThresholdHours} type="number" disabled={!this.state.inactivityMonitoringEnabled} onChange={e => this.updateNativeValue('inactivityThresholdHours', parseFloat(e.target.value))} size="small" inputProps={{step: 0.1}} />
                     </Tooltip>
                 </Grid>
+
+                {/* NEW: Presence Devices Selection */}
+                <Grid item xs={12} md={12}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="caption" sx={{color:'text.secondary'}}>{I18n.t('presence_devices_label')}</Typography>
+                        <Button size="small" startIcon={<AddIcon />} onClick={() => this.onAddPresenceDevice()}>{I18n.t('btn_add_presence_device')}</Button>
+                    </Box>
+                    <Paper variant="outlined" sx={{ p: 1, minHeight: 50, bgcolor: 'background.default' }}>
+                        {this.state.presenceDevices.length === 0 ? (
+                            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 1 }}>Keine Geräte ausgewählt (Tür-Logik aktiv)</Typography>
+                        ) : (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                {this.state.presenceDevices.map((id, idx) => (
+                                    <Box key={idx} sx={{ display: 'flex', alignItems: 'center', bgcolor: 'action.hover', borderRadius: 1, px: 1, py: 0.5, fontSize: '0.85rem' }}>
+                                        <PhoneAndroidIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.7 }} />
+                                        {id}
+                                        <IconButton size="small" onClick={() => this.onDeletePresenceDevice(idx)} sx={{ ml: 0.5, p: 0.2 }}><DeleteIcon fontSize="inherit" /></IconButton>
+                                    </Box>
+                                ))}
+                            </Box>
+                        )}
+                    </Paper>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>{I18n.t('presence_devices_helper')}</Typography>
+                </Grid>
             </Grid>
         );
     }
@@ -316,6 +374,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             <Box>
                 <TableContainer component={Paper} variant="outlined" sx={{ bgcolor: isDark ? '#2d2d2d' : '#fafafa' }}>
                     <Table size="small"><TableHead><TableRow><TableCell>ID</TableCell><TableCell>Name</TableCell><TableCell>Ort</TableCell><TableCell>Typ</TableCell>
+                        {/* NEW COLUMN HEADER: Ausgang? */}
                         <TableCell>{I18n.t('table_is_exit')}</TableCell>
                         <TableCell>Log</TableCell><TableCell></TableCell></TableRow></TableHead>
                         <TableBody>{this.state.devices.map((device, index) => (<TableRow key={index}>
@@ -323,6 +382,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             <TableCell><TextField value={device.name} onChange={e => this.onDeviceChange(index, 'name', e.target.value)} size="small" variant="standard"/></TableCell>
                             <TableCell><TextField value={device.location} onChange={e => this.onDeviceChange(index, 'location', e.target.value)} size="small" variant="standard"/></TableCell>
                             <TableCell><TextField value={device.type} onChange={e => this.onDeviceChange(index, 'type', e.target.value)} size="small" variant="standard"/></TableCell>
+                            {/* NEW CELL: Exit Checkbox */}
                             <TableCell>
                                 <Tooltip title="Wenn dieser Sensor auslöst (z.B. Tür geht auf), startet der Anwesenheits-Timer.">
                                     <Checkbox checked={device.isExit || false} icon={<LogoutIcon fontSize='small' sx={{color: 'action.disabled'}} />} checkedIcon={<LogoutIcon fontSize='small' color='primary' />} onChange={e => this.onDeviceChange(index, 'isExit', e.target.checked)} size="small"/>

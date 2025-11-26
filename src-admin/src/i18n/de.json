@@ -76,5 +76,8 @@
     "ltm_chart_legend_info": "Fahren Sie über die Balken für Details.",
     "ltm_chart_legend_tooltip": "Zeigt das von der KI ermittelte Aktivitäts-Level für jeden Tag basierend auf den komprimierten Zusammenfassungen.",
     "inactivity_monitoring_enabled": "Inaktivitäts-Monitor (Totmannschalter)",
-    "inactivity_threshold_hours": "Alarm nach Inaktivität (Stunden)"
+    "inactivity_threshold_hours": "Alarm nach Inaktivität (Stunden)",
+    "presence_devices_label": "WLAN/Netzwerk Geräte (Smartphones)",
+    "presence_devices_helper": "Wenn EINES dieser Geräte online ist, wird die Anwesenheit bestätigt (überschreibt die Tür-Logik).",
+    "btn_add_presence_device": "Gerät hinzufügen"
 }
