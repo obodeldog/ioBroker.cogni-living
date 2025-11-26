@@ -11,6 +11,13 @@ import ListAltIcon from '@mui/icons-material/ListAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SaveIcon from '@mui/icons-material/Save';
 
+// =========================================================
+// FIX: Statische Imports für die Sprachen (statt require)
+// =========================================================
+// Das zwingt den Compiler, die JSON-Daten direkt in den Code zu schreiben.
+import enLang from './i18n/en.json';
+import deLang from './i18n/de.json';
+
 interface AppState extends GenericAppState {
     selectedTab: string;
     themeType: ThemeType;
@@ -22,13 +29,10 @@ class App extends GenericApp<any, AppState> {
     constructor(props: any) {
         const extendedProps = { ...props };
 
-        // =========================================================
-        // DER FIX: Übersetzungen direkt einbetten (Hardcoded)
-        // =========================================================
-        // Damit umgehen wir Server-Ladeprobleme der JSON-Dateien.
+        // HIER GEÄNDERT: Wir nutzen die oben importierten Objekte
         extendedProps.translations = {
-            'en': require('./i18n/en.json'),
-            'de': require('./i18n/de.json'),
+            'en': enLang,
+            'de': deLang,
         };
 
         super(props, extendedProps);
@@ -40,7 +44,6 @@ class App extends GenericApp<any, AppState> {
         super.updateNativeValue(attr, value);
     }
 
-    // FIX: Speichern OHNE Schließen (damit man weiterarbeiten kann)
     handleSave = () => {
         this.onSave(false);
         this.setState({ hasChanges: false });
@@ -108,7 +111,6 @@ class App extends GenericApp<any, AppState> {
                                 <Tab value="settings" label={I18n.t('Einstellungen')} icon={<SettingsIcon />} iconPosition="start" />
                             </Tabs>
 
-                            {/* Manueller Save Button (Rechts oben) */}
                             <Box sx={{ position: 'absolute', right: 16 }}>
                                 <Tooltip title={this.state.hasChanges ? "Änderungen speichern" : "Keine Änderungen"}>
                                     <span>
