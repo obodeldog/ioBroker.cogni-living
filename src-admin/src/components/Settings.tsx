@@ -63,7 +63,6 @@ interface SettingsState {
     snackbarMessage: string;
     snackbarSeverity: AlertColor;
     expandedAccordion: string | false;
-    // NEW: Context Debug
     showContextDialog: boolean;
     contextResult: { weather: string; calendar: string; } | null;
     isTestingContext: boolean;
@@ -207,19 +206,20 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     handleSnackbarClose = (event?: React.SyntheticEvent | Event, reason?: string) => { if (reason === 'clickaway') return; this.setState({ snackbarOpen: false }); };
 
     renderContextDialog() {
+        // FIX: Used 'background.default' for theme-aware color, removed hardcoded hex
         return (
             <Dialog open={this.state.showContextDialog} onClose={() => this.setState({ showContextDialog: false })} maxWidth="sm" fullWidth>
                 <DialogTitle>Kontext-Daten (Live-Check)</DialogTitle>
                 <DialogContent dividers>
                     <Typography variant="subtitle2" color="primary" gutterBottom>Wetter-Status</Typography>
-                    <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: '#f5f5f5' }}>
+                    <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}>
                         <Typography variant="body2" style={{ fontFamily: 'monospace' }}>
                             {this.state.contextResult?.weather || 'Lade...'}
                         </Typography>
                     </Paper>
 
                     <Typography variant="subtitle2" color="primary" gutterBottom>Kalender-Status</Typography>
-                    <Paper variant="outlined" sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                    <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default', maxHeight: 200, overflow: 'auto' }}>
                         <Typography variant="body2" style={{ fontFamily: 'monospace' }}>
                             {this.state.contextResult?.calendar || 'Lade...'}
                         </Typography>
@@ -312,7 +312,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         );
     }
 
-    // Re-introduced Method: This was missing in the previous version
     renderDialogs() {
         return (
             <>
@@ -442,7 +441,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </Tooltip>
                 </Grid>
 
-                {/* NEW: Context Switches */}
+                {/* Context Switches & Debug */}
                 <Grid item xs={12}><Divider textAlign="left"><Typography variant="caption" sx={{color:'text.secondary', display:'flex', alignItems:'center', gap:1}}><Cloud fontSize="small"/> Erweiterter Kontext (Sprint 29)</Typography></Divider></Grid>
 
                 <Grid item xs={12} md={6}>
@@ -454,7 +453,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         <InputLabel>Wetter-Instanz (Optional)</InputLabel>
                         <Select value={this.state.weatherInstance} label="Wetter-Instanz (Optional)" onChange={(e) => this.updateNativeValue('weatherInstance', e.target.value)}>
                             <MenuItem value=""><em>Automatisch erkennen</em></MenuItem>
-                            {/* Merge lists for adapters we support */}
                             {[...(this.state.availableInstances['accuweather'] || []), ...(this.state.availableInstances['daswetter'] || [])].map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}
                         </Select>
                     </FormControl>
