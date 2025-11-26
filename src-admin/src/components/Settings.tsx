@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, ListSubheader, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider } from '@mui/material';
 import type { AlertColor } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon, AccessibilityNew as AccessibilityNewIcon, Logout as LogoutIcon, PhoneAndroid as PhoneAndroidIcon, ConnectWithoutContact as ConnectWithoutContactIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon, AccessibilityNew as AccessibilityNewIcon, Logout as LogoutIcon, PhoneAndroid as PhoneAndroidIcon, ConnectWithoutContact as ConnectWithoutContactIcon, Cloud, CalendarMonth } from '@mui/icons-material';
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
 
@@ -40,9 +40,13 @@ interface SettingsState {
     notifySignalEnabled: boolean;
     notifySignalInstance: string;
     notifySignalRecipient: string;
-    // Briefing
+    // Context
     briefingEnabled: boolean;
     briefingTime: string;
+    useWeather: boolean;
+    weatherInstance: string;
+    useCalendar: boolean;
+    calendarInstance: string;
     availableInstances: Record<string, string[]>;
     isTestingNotification: boolean;
     showSelectId: boolean;
@@ -101,6 +105,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             notifySignalRecipient: native.notifySignalRecipient || '',
             briefingEnabled: native.briefingEnabled || false,
             briefingTime: native.briefingTime || "08:00",
+            useWeather: native.useWeather || false,
+            weatherInstance: native.weatherInstance || '',
+            useCalendar: native.useCalendar || false,
+            calendarInstance: native.calendarInstance || '',
             availableInstances: {},
             isTestingNotification: false,
             showSelectId: false,
@@ -122,7 +130,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     }
 
     componentDidMount() { this.fetchAvailableInstances(); this.fetchEnums(); }
-    fetchAvailableInstances() { const adapters = ['telegram', 'pushover', 'email', 'whatsapp-cmb', 'signal-cma']; const instances: Record<string, string[]> = {}; const promises = adapters.map(adapter => this.props.socket.getAdapterInstances(adapter).then(objs => { instances[adapter] = objs.map(obj => obj._id.replace('system.adapter.', '')); }).catch(e => console.error(`Error fetching instances for ${adapter}:`, e))); Promise.all(promises).then(() => { this.setState({ availableInstances: instances }); }); }
+    fetchAvailableInstances() { const adapters = ['telegram', 'pushover', 'email', 'whatsapp-cmb', 'signal-cma', 'accuweather', 'daswetter', 'ical']; const instances: Record<string, string[]> = {}; const promises = adapters.map(adapter => this.props.socket.getAdapterInstances(adapter).then(objs => { instances[adapter] = objs.map(obj => obj._id.replace('system.adapter.', '')); }).catch(e => console.error(`Error fetching instances for ${adapter}:`, e))); Promise.all(promises).then(() => { this.setState({ availableInstances: instances }); }); }
     fetchEnums() { this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'getEnums', {}).then((res: any) => { if(res && res.success && res.enums) { this.setState({ availableEnums: res.enums }); } }); }
 
     updateNativeValue(attr: string, value: any) { if (attr === 'livingContext' && typeof value === 'string' && value.length > 1000) value = value.substring(0, 1000); this.setState({ [attr]: value } as Pick<SettingsState, keyof SettingsState>, () => { this.props.onChange(attr, value); }); }
@@ -380,6 +388,39 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         />
                     </Tooltip>
                 </Grid>
+
+                {/* NEW: Context Switches */}
+                <Grid item xs={12}><Divider textAlign="left"><Typography variant="caption" sx={{color:'text.secondary', display:'flex', alignItems:'center', gap:1}}><Cloud fontSize="small"/> Erweiterter Kontext (Sprint 29)</Typography></Divider></Grid>
+
+                <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                        control={<Checkbox checked={this.state.useWeather} onChange={e => this.updateNativeValue('useWeather', e.target.checked)} />}
+                        label="Wetterdaten nutzen"
+                    />
+                    <FormControl fullWidth size="small" disabled={!this.state.useWeather}>
+                        <InputLabel>Wetter-Instanz (Optional)</InputLabel>
+                        <Select value={this.state.weatherInstance} label="Wetter-Instanz (Optional)" onChange={(e) => this.updateNativeValue('weatherInstance', e.target.value)}>
+                            <MenuItem value=""><em>Automatisch erkennen</em></MenuItem>
+                            {/* Merge lists for adapters we support */}
+                            {[...(this.state.availableInstances['accuweather'] || []), ...(this.state.availableInstances['daswetter'] || [])].map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}
+                        </Select>
+                    </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                        control={<Checkbox checked={this.state.useCalendar} onChange={e => this.updateNativeValue('useCalendar', e.target.checked)} />}
+                        label="Kalender nutzen (iCal)"
+                    />
+                    <FormControl fullWidth size="small" disabled={!this.state.useCalendar}>
+                        <InputLabel>Kalender-Instanz (Optional)</InputLabel>
+                        <Select value={this.state.calendarInstance} label="Kalender-Instanz (Optional)" onChange={(e) => this.updateNativeValue('calendarInstance', e.target.value)}>
+                            <MenuItem value=""><em>Automatisch erkennen</em></MenuItem>
+                            {(this.state.availableInstances['ical'] || []).map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}
+                        </Select>
+                    </FormControl>
+                </Grid>
+
             </Grid>
         );
     }
@@ -467,7 +508,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </AccordionDetails>
                 </Accordion>
 
-                {/* NEW: Reporting Section */}
                 <Accordion expanded={expandedAccordion === 'panel5'} onChange={this.handleAccordionChange('panel5')} sx={accordionStyle}>
                     <AccordionSummary expandIcon={<ExpandMoreIcon sx={{color: 'action.active'}} />}>
                         <Typography sx={titleStyle}><ConnectWithoutContactIcon color="primary"/> Reporting & Family Link</Typography>

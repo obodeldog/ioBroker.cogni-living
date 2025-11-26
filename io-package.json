@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.3.10",
+        "version": "0.5.0",
         "news": {
+            "0.5.0": {
+                "en": "Feature: Advanced Context Awareness (Weather & Calendar Integration).",
+                "de": "Feature: Erweiterter Kontext (Wetter & Kalender Integration)."
+            },
             "0.3.10": {
                 "en": "Feature: Health & Sleep Dashboard with LTM trends.",
                 "de": "Feature: Gesundheit & Schlaf Dashboard mit LTM-Trends."
@@ -10,22 +14,6 @@
             "0.3.7": {
                 "en": "Feature: Added optional WiFi/Network presence detection.",
                 "de": "Feature: Optionale WLAN/Netzwerk-Anwesenheitserkennung hinzugefügt."
-            },
-            "0.3.5": {
-                "en": "Hotfix: Fixed AI response parsing for comfort data. Stabilized Presence Logic.",
-                "de": "Hotfix: KI-Antwortverarbeitung für Komfort-Daten korrigiert. Präsenz-Logik stabilisiert."
-            },
-            "0.3.4": {
-                "en": "Improved UI stability (Save Button workaround).",
-                "de": "Verbesserte UI-Stabilität (Speichern-Button Workaround)."
-            },
-            "0.3.3": {
-                "en": "Added Smart Presence Logic & Grace Period.",
-                "de": "Smart Presence Logik & Grace Period hinzugefügt."
-            },
-            "0.3.1": {
-                "en": "New Feature: Dead Man's Switch (Inactivity Monitor) & Emergency Escalation.",
-                "de": "Neues Feature: Totmannschalter (Inaktivitäts-Monitor) & Notfall-Eskalation."
             }
         },
         "titleLang": {
@@ -104,7 +92,13 @@
         "notifySignalRecipient": "",
         "ltmStbWindowDays": 14,
         "ltmLtbWindowDays": 60,
-        "ltmDriftCheckIntervalHours": 24
+        "ltmDriftCheckIntervalHours": 24,
+        "briefingEnabled": false,
+        "briefingTime": "08:00",
+        "useWeather": false,
+        "weatherInstance": "",
+        "useCalendar": false,
+        "calendarInstance": ""
     },
     "objects": [],
     "instanceObjects": []
