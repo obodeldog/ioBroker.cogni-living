@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, AppBar, Tabs, Tab, ThemeProvider, createTheme, IconButton, Tooltip, CircularProgress } from '@mui/material';
+import { Box, AppBar, Tabs, Tab, ThemeProvider, createTheme, IconButton, Tooltip, CircularProgress, Fab, Zoom } from '@mui/material';
 import { GenericApp, I18n, type IobTheme, type GenericAppState, type ThemeType } from '@iobroker/adapter-react-v5';
 
 import Settings from './components/Settings';
@@ -11,9 +11,7 @@ import ListAltIcon from '@mui/icons-material/ListAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SaveIcon from '@mui/icons-material/Save';
 
-// =========================================================
-// FIX: Statische Imports für die Sprachen (statt require)
-// =========================================================
+// FIX: Statische Imports für die Sprachen
 import enLang from './i18n/en.json';
 import deLang from './i18n/de.json';
 
@@ -27,13 +25,10 @@ interface AppState extends GenericAppState {
 class App extends GenericApp<any, AppState> {
     constructor(props: any) {
         const extendedProps = { ...props };
-
-        // HIER GEÄNDERT: Wir nutzen die oben importierten Objekte
         extendedProps.translations = {
             'en': enLang,
             'de': deLang,
         };
-
         super(props, extendedProps);
         this.state = { ...this.state, selectedTab: 'overview', hasChanges: false };
     }
@@ -91,11 +86,11 @@ class App extends GenericApp<any, AppState> {
                     color: cogniTheme.palette.text.primary,
                     minHeight: '100vh',
                     display: 'flex',
-                    flexDirection: 'column'
+                    flexDirection: 'column',
+                    position: 'relative' // Wichtig für absolute Positionierung des FAB
                 }}>
                     <AppBar position="sticky" elevation={2}>
                         <Box sx={{ display: 'flex', width: '100%', alignItems: 'center' }}>
-
                             <Tabs
                                 value={this.state.selectedTab}
                                 onChange={(_e, newVal) => this.setState({ selectedTab: newVal })}
@@ -110,6 +105,7 @@ class App extends GenericApp<any, AppState> {
                                 <Tab value="settings" label={I18n.t('Einstellungen')} icon={<SettingsIcon />} iconPosition="start" />
                             </Tabs>
 
+                            {/* Kleiner Save Button oben (Backup) */}
                             <Box sx={{ position: 'absolute', right: 16 }}>
                                 <Tooltip title={this.state.hasChanges ? "Änderungen speichern" : "Keine Änderungen"}>
                                     <span>
@@ -117,11 +113,8 @@ class App extends GenericApp<any, AppState> {
                                             color="inherit"
                                             onClick={this.handleSave}
                                             disabled={!this.state.hasChanges}
-                                            sx={{
-                                                border: '1px solid rgba(255,255,255,0.3)',
-                                                bgcolor: this.state.hasChanges ? 'rgba(76, 175, 80, 0.8)' : 'transparent',
-                                                '&:hover': { bgcolor: 'rgba(76, 175, 80, 1)' }
-                                            }}
+                                            size="small"
+                                            sx={{ opacity: 0.7 }}
                                         >
                                             <SaveIcon />
                                         </IconButton>
@@ -142,6 +135,26 @@ class App extends GenericApp<any, AppState> {
                             <Settings native={native} onChange={(attr: string, value: any) => this.updateNativeValue(attr, value)} socket={this.socket} themeType={themeType} theme={this.state.theme} adapterName={this.adapterName} instance={this.instance} />
                         )}
                     </Box>
+
+                    {/* FLOATING ACTION BUTTON (FAB) - Der große Speicher-Knopf unten rechts */}
+                    <Zoom in={this.state.hasChanges}>
+                        <Tooltip title="Einstellungen speichern" placement="left">
+                            <Fab
+                                color="primary"
+                                aria-label="save"
+                                onClick={this.handleSave}
+                                sx={{
+                                    position: 'fixed',
+                                    bottom: 30,
+                                    right: 30,
+                                    zIndex: 1000,
+                                    boxShadow: '0px 4px 20px rgba(0,0,0,0.4)'
+                                }}
+                            >
+                                <SaveIcon fontSize="large" />
+                            </Fab>
+                        </Tooltip>
+                    </Zoom>
 
                     {this.renderError()}
                     {this.renderToast()}

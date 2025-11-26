@@ -11,7 +11,6 @@ interface ScannedDevice extends DeviceConfig { selected?: boolean; _score?: numb
 interface ScanFilters { motion: boolean; doors: boolean; lights: boolean; temperature: boolean; weather: boolean; selectedFunctionIds: string[]; }
 interface EnumItem { id: string; name: string; }
 
-// FIX: Bereinigtes Interface ohne Duplikate
 interface SettingsState {
     devices: DeviceConfig[];
     geminiApiKey: string;
@@ -51,7 +50,7 @@ interface SettingsState {
     scannedDevices: ScannedDevice[];
     showDeleteConfirm: boolean;
     availableEnums: EnumItem[];
-    showEnumList: boolean; // Nur noch einmal hier vorhanden
+    showEnumList: boolean;
     snackbarOpen: boolean;
     snackbarMessage: string;
     snackbarSeverity: AlertColor;
@@ -315,13 +314,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     renderSensorsSection(isDark: boolean) {
         return (
             <Box>
-                <Box sx={{ display: 'flex', gap: 2, mb: 2, justifyContent: 'space-between' }}>
-                    <Button variant="contained" color="secondary" startIcon={<AutoFixHighIcon />} onClick={this.handleOpenWizard}>Auto-Discovery</Button>
-                    <Button variant="outlined" startIcon={<AddIcon />} onClick={() => this.onAddDevice()}>Neu</Button>
-                </Box>
                 <TableContainer component={Paper} variant="outlined" sx={{ bgcolor: isDark ? '#2d2d2d' : '#fafafa' }}>
                     <Table size="small"><TableHead><TableRow><TableCell>ID</TableCell><TableCell>Name</TableCell><TableCell>Ort</TableCell><TableCell>Typ</TableCell>
-                        {/* NEW COLUMN HEADER: Ausgang? */}
                         <TableCell>{I18n.t('table_is_exit')}</TableCell>
                         <TableCell>Log</TableCell><TableCell></TableCell></TableRow></TableHead>
                         <TableBody>{this.state.devices.map((device, index) => (<TableRow key={index}>
@@ -329,7 +323,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             <TableCell><TextField value={device.name} onChange={e => this.onDeviceChange(index, 'name', e.target.value)} size="small" variant="standard"/></TableCell>
                             <TableCell><TextField value={device.location} onChange={e => this.onDeviceChange(index, 'location', e.target.value)} size="small" variant="standard"/></TableCell>
                             <TableCell><TextField value={device.type} onChange={e => this.onDeviceChange(index, 'type', e.target.value)} size="small" variant="standard"/></TableCell>
-                            {/* NEW CELL: Exit Checkbox */}
                             <TableCell>
                                 <Tooltip title="Wenn dieser Sensor auslöst (z.B. Tür geht auf), startet der Anwesenheits-Timer.">
                                     <Checkbox checked={device.isExit || false} icon={<LogoutIcon fontSize='small' sx={{color: 'action.disabled'}} />} checkedIcon={<LogoutIcon fontSize='small' color='primary' />} onChange={e => this.onDeviceChange(index, 'isExit', e.target.checked)} size="small"/>
@@ -340,7 +333,15 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         </TableRow>))}{this.state.devices.length === 0 && <TableRow><TableCell colSpan={7} align="center">Keine Sensoren.</TableCell></TableRow>}</TableBody>
                     </Table>
                 </TableContainer>
-                {this.state.devices.length > 0 && <Button color="error" size="small" startIcon={<DeleteForeverIcon/>} onClick={() => this.setState({showDeleteConfirm: true})} sx={{mt:2}}>Alle löschen</Button>}
+
+                {/* Buttons nach unten verschoben */}
+                <Box sx={{ display: 'flex', gap: 2, mt: 2, justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                        <Button variant="contained" color="secondary" startIcon={<AutoFixHighIcon />} onClick={this.handleOpenWizard} sx={{ mr: 1 }}>Auto-Discovery</Button>
+                        <Button variant="outlined" startIcon={<AddIcon />} onClick={() => this.onAddDevice()}>Neu</Button>
+                    </Box>
+                    {this.state.devices.length > 0 && <Button color="error" size="small" startIcon={<DeleteForeverIcon/>} onClick={() => this.setState({showDeleteConfirm: true})}>Alle löschen</Button>}
+                </Box>
             </Box>
         );
     }
