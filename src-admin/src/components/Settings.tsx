@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, ListSubheader, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider } from '@mui/material';
 import type { AlertColor } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon, AccessibilityNew as AccessibilityNewIcon, Logout as LogoutIcon, PhoneAndroid as PhoneAndroidIcon, ConnectWithoutContact as ConnectWithoutContactIcon, Cloud, CalendarMonth } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon, AccessibilityNew as AccessibilityNewIcon, Logout as LogoutIcon, PhoneAndroid as PhoneAndroidIcon, ConnectWithoutContact as ConnectWithoutContactIcon, Cloud, CalendarMonth, Search as SearchIcon } from '@mui/icons-material';
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
 
@@ -40,7 +40,6 @@ interface SettingsState {
     notifySignalEnabled: boolean;
     notifySignalInstance: string;
     notifySignalRecipient: string;
-    // Context
     briefingEnabled: boolean;
     briefingTime: string;
     useWeather: boolean;
@@ -64,6 +63,10 @@ interface SettingsState {
     snackbarMessage: string;
     snackbarSeverity: AlertColor;
     expandedAccordion: string | false;
+    // NEW: Context Debug
+    showContextDialog: boolean;
+    contextResult: { weather: string; calendar: string; } | null;
+    isTestingContext: boolean;
 }
 
 type NotificationEnabledKey = 'notifyTelegramEnabled' | 'notifyPushoverEnabled' | 'notifyEmailEnabled' | 'notifyWhatsappEnabled' | 'notifySignalEnabled';
@@ -125,7 +128,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             snackbarOpen: false,
             snackbarMessage: '',
             snackbarSeverity: 'info',
-            expandedAccordion: 'panel1'
+            expandedAccordion: 'panel1',
+            showContextDialog: false,
+            contextResult: null,
+            isTestingContext: false
         };
     }
 
@@ -184,8 +190,53 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     handleTestApiClick() { if (!this.state.geminiApiKey) return this.showSnackbar(I18n.t('msg_api_key_empty'), 'warning'); this.setState({ isTestingApi: true }); this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testApiKey', { apiKey: this.state.geminiApiKey }).then((res: any) => { this.setState({ isTestingApi: false }); this.showSnackbar(res?.success ? res.message : `${I18n.t('msg_connection_failed')}: ${res?.message}`, res?.success ? 'success' : 'error'); }); }
     handleTestNotificationClick() { this.setState({ isTestingNotification: true }); this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testNotification', {}).then((res: any) => { this.setState({ isTestingNotification: false }); this.showSnackbar(res?.success ? res.message : `${I18n.t('msg_notification_failed')}: ${res?.message}`, res?.success ? 'success' : 'warning'); }); }
+
+    handleTestContextClick() {
+        this.setState({ isTestingContext: true });
+        this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testContext', {}).then((res: any) => {
+            this.setState({ isTestingContext: false });
+            if (res && res.success) {
+                this.setState({ showContextDialog: true, contextResult: { weather: res.weather, calendar: res.calendar } });
+            } else {
+                this.showSnackbar('Fehler beim Abrufen der Kontext-Daten.', 'error');
+            }
+        });
+    }
+
     showSnackbar(message: string, severity: AlertColor) { this.setState({ snackbarOpen: true, snackbarMessage: message, snackbarSeverity: severity }); }
     handleSnackbarClose = (event?: React.SyntheticEvent | Event, reason?: string) => { if (reason === 'clickaway') return; this.setState({ snackbarOpen: false }); };
+
+    renderContextDialog() {
+        return (
+            <Dialog open={this.state.showContextDialog} onClose={() => this.setState({ showContextDialog: false })} maxWidth="sm" fullWidth>
+                <DialogTitle>Kontext-Daten (Live-Check)</DialogTitle>
+                <DialogContent dividers>
+                    <Typography variant="subtitle2" color="primary" gutterBottom>Wetter-Status</Typography>
+                    <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: '#f5f5f5' }}>
+                        <Typography variant="body2" style={{ fontFamily: 'monospace' }}>
+                            {this.state.contextResult?.weather || 'Lade...'}
+                        </Typography>
+                    </Paper>
+
+                    <Typography variant="subtitle2" color="primary" gutterBottom>Kalender-Status</Typography>
+                    <Paper variant="outlined" sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                        <Typography variant="body2" style={{ fontFamily: 'monospace' }}>
+                            {this.state.contextResult?.calendar || 'Lade...'}
+                        </Typography>
+                    </Paper>
+
+                    <Box sx={{mt: 2}}>
+                        <Alert severity="info" sx={{fontSize: '0.85rem'}}>
+                            Diese Daten werden an die KI gesendet, um Fehlalarme zu vermeiden (z.B. "Gartenbewegung bei Regen").
+                        </Alert>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => this.setState({ showContextDialog: false })}>Schließen</Button>
+                </DialogActions>
+            </Dialog>
+        );
+    }
 
     renderWizardDialog() {
         const { showWizard, wizardStep, scanFilters, scannedDevices, availableEnums, showEnumList } = this.state;
@@ -261,11 +312,13 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         );
     }
 
+    // Re-introduced Method: This was missing in the previous version
     renderDialogs() {
         return (
             <>
                 {this.state.showSelectId && (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={(this.state.selectIdContext === 'device' && this.state.devices[this.state.selectIdIndex]?.id) || ''} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />)}
                 {this.renderWizardDialog()}
+                {this.renderContextDialog()}
                 <Dialog open={this.state.showDeleteConfirm} onClose={() => this.setState({showDeleteConfirm:false})}><DialogTitle>Sicher?</DialogTitle><DialogContent><Typography>Alle Sensoren löschen?</Typography></DialogContent><DialogActions><Button onClick={()=>this.setState({showDeleteConfirm:false})}>Abbrechen</Button><Button onClick={this.onDeleteAllDevices} color="error">Löschen</Button></DialogActions></Dialog>
                 <Snackbar open={this.state.snackbarOpen} autoHideDuration={6000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity}>{this.state.snackbarMessage}</Alert></Snackbar>
             </>
@@ -419,6 +472,18 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             {(this.state.availableInstances['ical'] || []).map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}
                         </Select>
                     </FormControl>
+                </Grid>
+
+                {/* Check Context Button */}
+                <Grid item xs={12}>
+                    <Button
+                        variant="outlined"
+                        startIcon={this.state.isTestingContext ? <CircularProgress size={20} /> : <SearchIcon />}
+                        onClick={() => this.handleTestContextClick()}
+                        disabled={this.state.isTestingContext || (!this.state.useWeather && !this.state.useCalendar)}
+                    >
+                        Kontext-Daten jetzt prüfen
+                    </Button>
                 </Grid>
 
             </Grid>
