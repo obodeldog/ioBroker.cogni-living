@@ -14,7 +14,6 @@ import SaveIcon from '@mui/icons-material/Save';
 // =========================================================
 // FIX: Statische Imports für die Sprachen (statt require)
 // =========================================================
-// Das zwingt den Compiler, die JSON-Daten direkt in den Code zu schreiben.
 import enLang from './i18n/en.json';
 import deLang from './i18n/de.json';
 

@@ -19,31 +19,33 @@ Especially suitable for:
 
 ---
 
-## ⚙️ How it Works
+## ⚙️ How it Works & History
 
-The adapter operates using a dual-memory model, similar to the human brain:
+The adapter operates using a dual-memory model, developed over 26 intense sprints:
 
-### 1. Short-Term Memory (STM)
+### 1. Short-Term Memory (STM) [Sprints 1-20]
 The "Autopilot" monitors the last 50 events in real-time.
 * **Example:** It's 3 AM, the front door opens, but no one is in the hallway? -> **Alert.**
 * **Example:** The resident fell in the bathroom and hasn't moved for 30 minutes? -> **Alert.**
 
-### 2. Long-Term Memory (LTM) [Pro Feature]
+### 2. Long-Term Memory (LTM) [Sprint 21]
 Every night, the AI creates a summary ("Daily Digest") of the day and learns the resident's normal habits.
-* **Baseline Learning:** After approx. 7-14 days, the system knows when you typically get up, how often you cook, or when you leave the house.
 * **Drift Analysis:** A special algorithm compares behavior from the last 2 weeks with the long-term average. This detects gradual changes (e.g., "Resident leaves the house much less often than before").
+
+### 3. Professional Foundation [Sprints 22-24]
+* **SaaS Security:** Code obfuscation and license key validation.
+* **Auto-Discovery:** A wizard automatically scans your ioBroker for sensors.
+* **User Feedback:** A reinforcement learning loop allows users to rate AI decisions.
 
 ---
 
 ## 🚀 Features in Detail
 
-### 🛡️ Active Safety (Dead Man's Switch) [NEW v0.3.1]
+### 🛡️ Active Safety (Dead Man's Switch) [NEW Sprint 25/26]
 Standard AI systems only react when something happens. **Cogni-Living reacts when NOTHING happens.**
 * **Inactivity Monitor:** If no sensor activity is detected for a defined period (e.g., 12 hours) while the system is in "Normal" mode, the adapter triggers an **EMERGENCY** state.
+* **Smart Presence:** The system intelligently detects if the resident is home or away based on door sensors and movement patterns, preventing false alarms during vacations or shopping trips.
 * **Emergency Escalation:** Unlike normal alerts, Emergency events trigger high-priority push notifications (e.g., Pushover Priority 2 with Siren).
-
-### 🪄 Auto-Discovery Wizard
-No more complicated configuration! The integrated wizard scans your entire ioBroker installation and automatically finds relevant sensors (lights, motion, windows, doors, thermostats). You simply select what you want to monitor.
 
 ### 📊 LTM Dashboard
 Visualize behavior directly in the admin panel.
@@ -92,7 +94,13 @@ Receive warnings not just as log entries, but directly on your smartphone. Suppo
 
 ## 📜 Changelog
 
+### 0.3.5 (2025-11-26)
+* (Marc Jaeger) **Maintenance Release**
+* 🛠️ **Fix:** Resolved issues with UI translations and saving settings.
+* 🛠️ **Fix:** Improved robustness of "Smart Presence" logic.
+
 ### 0.3.1 (2025-11-26)
+* (Marc Jaeger) **Feature Release: Safety**
 * ✨ **New:** **Dead Man's Switch (Inactivity Monitor)** added. Triggers alarm if no events occur for X hours.
 * ✨ **New:** **Emergency State**. Distinction between "Alert" (Yellow) and "Emergency" (Red).
 * ✨ **New:** Pushover Priority 2 support (Emergency Siren & Retry) for critical alarms.

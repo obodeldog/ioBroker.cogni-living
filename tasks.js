@@ -20,7 +20,6 @@ if (process.argv.find(arg => arg === '--0-clean')) {
 } else if (process.argv.find(arg => arg === '--2-build')) {
     buildReact(`${__dirname}/src-admin/`, { rootDir: __dirname, vite: true }).catch(error => console.error(error));
 } else if (process.argv.find(arg => arg === '--3-copy')) {
-    // HIER GEÄNDERT: Kopiert erst den Build, DANN die Übersetzungen
     copyFiles(['src-admin/build/**/*', 'src-admin/build/*'], 'admin/')
         .then(() => copyFiles(['src-admin/src/i18n/*.json'], 'admin/i18n/'));
 } else if (process.argv.find(arg => arg === '--4-patch')) {
@@ -38,7 +37,7 @@ if (process.argv.find(arg => arg === '--0-clean')) {
     npmPromise
         .then(() => buildReact(`${__dirname}/src-admin/`, { rootDir: __dirname, vite: true }))
         .then(() => copyFiles(['src-admin/build/**/*', 'src-admin/build/*'], 'admin/'))
-        .then(() => copyFiles(['src-admin/src/i18n/*.json'], 'admin/i18n/')) // <--- WICHTIG: Übersetzungen kopieren
+        .then(() => copyFiles(['src-admin/src/i18n/*.json'], 'admin/i18n/'))
         .then(() => patchHtmlFile(`${__dirname}/admin/index.html`, '../..'))
         .catch(error => console.error(error));
 } else {
@@ -52,6 +51,6 @@ if (process.argv.find(arg => arg === '--0-clean')) {
     installPromise
         .then(() => buildReact(`${__dirname}/src-admin/`, { rootDir: __dirname, vite: true }))
         .then(() => copyFiles(['src-admin/build/**/*', 'src-admin/build/*'], 'admin/'))
-        .then(() => copyFiles(['src-admin/src/i18n/*.json'], 'admin/i18n/')) // <--- WICHTIG: Übersetzungen kopieren
+        .then(() => copyFiles(['src-admin/src/i18n/*.json'], 'admin/i18n/'))
         .then(() => patchHtmlFile(`${__dirname}/admin/index.html`, '../..'));
 }

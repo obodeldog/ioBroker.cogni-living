@@ -1,19 +1,23 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.3.1",
+        "version": "0.3.5",
         "news": {
+            "0.3.5": {
+                "en": "Hotfix: Fixed AI response parsing for comfort data. Stabilized Presence Logic.",
+                "de": "Hotfix: KI-Antwortverarbeitung für Komfort-Daten korrigiert. Präsenz-Logik stabilisiert."
+            },
+            "0.3.4": {
+                "en": "Improved UI stability (Save Button workaround).",
+                "de": "Verbesserte UI-Stabilität (Speichern-Button Workaround)."
+            },
+            "0.3.3": {
+                "en": "Added Smart Presence Logic & Grace Period.",
+                "de": "Smart Presence Logik & Grace Period hinzugefügt."
+            },
             "0.3.1": {
                 "en": "New Feature: Dead Man's Switch (Inactivity Monitor) & Emergency Escalation.",
                 "de": "Neues Feature: Totmannschalter (Inaktivitäts-Monitor) & Notfall-Eskalation."
-            },
-            "0.3.0": {
-                "en": "UI Overhaul: New App-like design with improved Dark Mode. Added Feedback-Loop (Reinforcement Learning).",
-                "de": "UI Überarbeitung: Neues App-Design mit verbessertem Dark Mode. Feedback-Loop (Reinforcement Learning) hinzugefügt."
-            },
-            "0.2.4": {
-                "en": "Hotfix: Location context injection for AI.",
-                "de": "Hotfix: Standort-Kontext für die KI hinzugefügt."
             }
         },
         "titleLang": {
