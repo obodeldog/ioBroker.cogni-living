@@ -9,13 +9,13 @@ import Activities from './components/Activities';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
-import SaveIcon from '@mui/icons-material/Save'; // NEU: Icon für Speichern
+import SaveIcon from '@mui/icons-material/Save';
 
 interface AppState extends GenericAppState {
     selectedTab: string;
     themeType: ThemeType;
     theme: IobTheme;
-    hasChanges: boolean; // NEU: Wir tracken Änderungen selbst für die Optik
+    hasChanges: boolean;
 }
 
 class App extends GenericApp<any, AppState> {
@@ -25,15 +25,14 @@ class App extends GenericApp<any, AppState> {
         this.state = { ...this.state, selectedTab: 'overview', hasChanges: false };
     }
 
-    // Wrapper um Native Value Update, um Button zu aktivieren
     updateNativeValue(attr: string, value: any) {
         this.setState({ hasChanges: true });
         super.updateNativeValue(attr, value);
     }
 
-    // Manuelles Speichern auslösen
+    // FIX 1: Speichern OHNE Schließen
     handleSave = () => {
-        this.onSave(true); // Ruft die interne Speichern-Routine von GenericApp auf
+        this.onSave(false); // false = Dialog offen lassen
         this.setState({ hasChanges: false });
     };
 
@@ -83,38 +82,42 @@ class App extends GenericApp<any, AppState> {
                     flexDirection: 'column'
                 }}>
                     <AppBar position="sticky" elevation={2}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pr: 2 }}>
+                        {/* FIX 2: Layout Flexbox korrigiert */}
+                        <Box sx={{ display: 'flex', width: '100%', alignItems: 'center' }}>
 
-                            {/* TABS */}
                             <Tabs
                                 value={this.state.selectedTab}
                                 onChange={(_e, newVal) => this.setState({ selectedTab: newVal })}
                                 indicatorColor="secondary"
                                 textColor="inherit"
-                                sx={{ flexGrow: 1 }}
+                                variant="standard" // 'standard' erlaubt zentrieren besser als 'fullWidth' bei Buttons daneben
+                                centered={true}    // Tabs zentrieren
+                                sx={{ flexGrow: 1 }} // Den meisten Platz einnehmen
                             >
                                 <Tab value="overview" label={I18n.t('Übersicht')} icon={<DashboardIcon />} iconPosition="start" />
                                 <Tab value="activities" label={I18n.t('Aktivitäten')} icon={<ListAltIcon />} iconPosition="start" />
                                 <Tab value="settings" label={I18n.t('Einstellungen')} icon={<SettingsIcon />} iconPosition="start" />
                             </Tabs>
 
-                            {/* NOTFALL-SPEICHERN BUTTON (Rechts oben) */}
-                            <Tooltip title={this.state.hasChanges ? "Änderungen speichern" : "Keine Änderungen"}>
-                                <span> {/* Span wird benötigt, damit Tooltip bei disabled Button geht */}
-                                    <IconButton
-                                        color="inherit"
-                                        onClick={this.handleSave}
-                                        disabled={!this.state.hasChanges}
-                                        sx={{
-                                            border: '1px solid rgba(255,255,255,0.3)',
-                                            bgcolor: this.state.hasChanges ? 'rgba(76, 175, 80, 0.8)' : 'transparent',
-                                            '&:hover': { bgcolor: 'rgba(76, 175, 80, 1)' }
-                                        }}
-                                    >
-                                        <SaveIcon />
-                                    </IconButton>
-                                </span>
-                            </Tooltip>
+                            {/* Save Button rechts fixiert */}
+                            <Box sx={{ position: 'absolute', right: 16 }}>
+                                <Tooltip title={this.state.hasChanges ? "Änderungen speichern" : "Keine Änderungen"}>
+                                    <span>
+                                        <IconButton
+                                            color="inherit"
+                                            onClick={this.handleSave}
+                                            disabled={!this.state.hasChanges}
+                                            sx={{
+                                                border: '1px solid rgba(255,255,255,0.3)',
+                                                bgcolor: this.state.hasChanges ? 'rgba(76, 175, 80, 0.8)' : 'transparent',
+                                                '&:hover': { bgcolor: 'rgba(76, 175, 80, 1)' }
+                                            }}
+                                        >
+                                            <SaveIcon />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                            </Box>
                         </Box>
                     </AppBar>
 
