@@ -5,12 +5,12 @@ import { GenericApp, I18n, type IobTheme, type GenericAppState, type ThemeType }
 import Settings from './components/Settings';
 import Overview from './components/Overview';
 import Activities from './components/Activities';
-import Help from './components/Help'; // NEU
+import Help from './components/Help';
 
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
-import MenuBookIcon from '@mui/icons-material/MenuBook'; // Icon für Handbuch
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SaveIcon from '@mui/icons-material/Save';
 
 import enLang from './i18n/en.json';
@@ -92,7 +92,8 @@ class App extends GenericApp<any, AppState> {
                         {this.state.selectedTab === 'overview' && <Overview socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
                         {this.state.selectedTab === 'activities' && <Activities socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
                         {this.state.selectedTab === 'settings' && <Settings native={native} onChange={(attr, val) => this.updateNativeValue(attr, val)} socket={this.socket} themeType={themeType} theme={this.state.theme} adapterName={this.adapterName} instance={this.instance} />}
-                        {this.state.selectedTab === 'help' && <Help />}
+                        {/* FIX: Theme an Help übergeben */}
+                        {this.state.selectedTab === 'help' && <Help themeType={themeType} />}
                     </Box>
 
                     <Zoom in={this.state.hasChanges}>
