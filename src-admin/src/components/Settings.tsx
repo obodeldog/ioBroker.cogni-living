@@ -1,7 +1,8 @@
 import React from 'react';
-import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, ListSubheader, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider } from '@mui/material';
+import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider } from '@mui/material';
 import type { AlertColor } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon, AccessibilityNew as AccessibilityNewIcon, Logout as LogoutIcon, PhoneAndroid as PhoneAndroidIcon, ConnectWithoutContact as ConnectWithoutContactIcon, Cloud, CalendarMonth, Search as SearchIcon, Sync as SyncIcon } from '@mui/icons-material';
+// FIX: Corrected Imports for MUI Icons (removed unused ones, fixed AutoFixHigh)
+import { Add as AddIcon, Delete as DeleteIcon, List as ListIcon, Wifi as WifiIcon, Lock as LockIcon, Notifications as NotificationsIcon, AutoFixHigh as AutoFixHighIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, CheckCircle as CheckCircleIcon, DeleteForever as DeleteForeverIcon, SettingsSuggest as SettingsSuggestIcon, Sensors as SensorsIcon, AccessibilityNew as AccessibilityNewIcon, Logout as LogoutIcon, PhoneAndroid as PhoneAndroidIcon, ConnectWithoutContact as ConnectWithoutContactIcon, Cloud, Search as SearchIcon, Sync as SyncIcon } from '@mui/icons-material';
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
 
@@ -152,17 +153,13 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     updatePresenceDevices(newPresenceDevices: string[]) { this.setState({ presenceDevices: newPresenceDevices }); this.props.onChange('presenceDevices', newPresenceDevices); }
 
     handleAccordionChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => { this.setState({ expandedAccordion: isExpanded ? panel : false }); };
-
     onAddDevice() { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices.push({ id: '', name: '', location: '', type: '', logDuplicates: false, isExit: false }); this.updateDevices(devices); }
     onDeviceChange(index: number, attr: keyof DeviceConfig, value: any) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices[index][attr] = value; this.updateDevices(devices); }
     onDeleteDevice(index: number) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices.splice(index, 1); this.updateDevices(devices); }
     onDeleteAllDevices = () => { this.updateDevices([]); this.setState({ showDeleteConfirm: false }); this.showSnackbar('Alle Sensoren gelöscht.', 'info'); }
-
     onAddPresenceDevice() { this.setState({ showSelectId: true, selectIdContext: 'presence', selectIdIndex: -1 }); }
     onDeletePresenceDevice(index: number) { const p = [...this.state.presenceDevices]; p.splice(index, 1); this.updatePresenceDevices(p); }
-
     openSelectIdDialog(index: number) { this.setState({ showSelectId: true, selectIdIndex: index, selectIdContext: 'device' }); }
-
     onSelectId(selectedId?: string) {
         if (selectedId) {
             if (this.state.selectIdContext === 'device' && this.state.selectIdIndex !== -1) {
@@ -186,7 +183,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         }
         this.setState({ showSelectId: false, selectIdIndex: -1, selectIdContext: null });
     }
-
     handleOpenWizard = () => { this.setState({ showWizard: true, wizardStep: 0, scannedDevices: [] }); }
     handleFilterChange = (key: keyof ScanFilters) => { this.setState(prevState => ({ scanFilters: { ...prevState.scanFilters, [key]: !prevState.scanFilters[key] } })); }
     handleEnumToggle = (enumId: string) => { const current = [...this.state.scanFilters.selectedFunctionIds]; const index = current.indexOf(enumId); if (index === -1) current.push(enumId); else current.splice(index, 1); this.setState(prevState => ({ scanFilters: { ...prevState.scanFilters, selectedFunctionIds: current } })); }
@@ -195,46 +191,40 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     handleSelectAll = () => { const devices = this.state.scannedDevices.map(d => ({ ...d, selected: !d.exists })); this.setState({ scannedDevices: devices }); }
     handleDeselectAll = () => { const devices = this.state.scannedDevices.map(d => ({ ...d, selected: false })); this.setState({ scannedDevices: devices }); }
     handleImportDevices = () => { const selected = this.state.scannedDevices.filter(d => d.selected); if(selected.length === 0) { this.setState({ showWizard: false }); return; } const currentDevices = [...this.state.devices]; let addedCount = 0; selected.forEach(newItem => { if(!currentDevices.find(d => d.id === newItem.id)) { const { selected, _score, exists, ...deviceConfig } = newItem; currentDevices.push(deviceConfig); addedCount++; } }); this.updateDevices(currentDevices); this.showSnackbar(`${addedCount} Sensoren importiert.`, 'success'); this.setState({ showWizard: false }); }
-
     handleTestApiClick() { if (!this.state.geminiApiKey) return this.showSnackbar(I18n.t('msg_api_key_empty'), 'warning'); this.setState({ isTestingApi: true }); this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testApiKey', { apiKey: this.state.geminiApiKey }).then((res: any) => { this.setState({ isTestingApi: false }); this.showSnackbar(res?.success ? res.message : `${I18n.t('msg_connection_failed')}: ${res?.message}`, res?.success ? 'success' : 'error'); }); }
     handleTestNotificationClick() { this.setState({ isTestingNotification: true }); this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testNotification', {}).then((res: any) => { this.setState({ isTestingNotification: false }); this.showSnackbar(res?.success ? res.message : `${I18n.t('msg_notification_failed')}: ${res?.message}`, res?.success ? 'success' : 'warning'); }); }
-
-    handleTestContextClick() {
-        this.setState({ isTestingContext: true });
-        this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testContext', {}).then((res: any) => {
-            this.setState({ isTestingContext: false });
-            if (res && res.success) {
-                this.setState({ showContextDialog: true, contextResult: { weather: res.weather, calendar: res.calendar } });
-            } else {
-                this.showSnackbar('Fehler beim Abrufen der Kontext-Daten.', 'error');
-            }
-        });
-    }
+    handleTestContextClick() { this.setState({ isTestingContext: true }); this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testContext', {}).then((res: any) => { this.setState({ isTestingContext: false }); if (res && res.success) { this.setState({ showContextDialog: true, contextResult: { weather: res.weather, calendar: res.calendar } }); } else { this.showSnackbar('Fehler beim Abrufen der Kontext-Daten.', 'error'); } }); }
 
     handleFetchCalendarNames() {
         const inst = this.state.calendarInstance || 'ical.0';
         this.setState({ isLoadingCalendars: true });
-        this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'getCalendarNames', { instance: inst }).then((res: any) => {
-            this.setState({ isLoadingCalendars: false });
-            if (res && res.success && Array.isArray(res.names)) {
-                this.setState({ detectedCalendars: res.names });
-                if(res.names.length === 0) this.showSnackbar('Keine Kalender-Namen gefunden. (Sind Termine in data.table?)', 'warning');
-            } else {
-                this.showSnackbar('Fehler beim Laden der Kalender.', 'error');
+
+        const timeout = setTimeout(() => {
+            if(this.state.isLoadingCalendars) {
+                this.setState({ isLoadingCalendars: false });
+                this.showSnackbar('Zeitüberschreitung: Keine Antwort vom Adapter.', 'error');
             }
-        });
+        }, 5000);
+
+        this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'getCalendarNames', { instance: inst })
+            .then((res: any) => {
+                clearTimeout(timeout);
+                this.setState({ isLoadingCalendars: false });
+                if (res && res.success && Array.isArray(res.names)) {
+                    this.setState({ detectedCalendars: res.names });
+                    if(res.names.length === 0) this.showSnackbar('Keine Kalender-Namen gefunden. (Sind Termine in data.table?)', 'warning');
+                } else {
+                    this.showSnackbar('Fehler beim Laden der Kalender.', 'error');
+                }
+            })
+            .catch(e => {
+                clearTimeout(timeout);
+                this.setState({ isLoadingCalendars: false });
+                this.showSnackbar(`Fehler: ${e.message}`, 'error');
+            });
     }
 
-    toggleCalendarSelection(calName: string) {
-        const current = [...this.state.calendarSelection];
-        const index = current.indexOf(calName);
-        if(index === -1) current.push(calName);
-        else current.splice(index, 1);
-
-        this.setState({ calendarSelection: current });
-        this.props.onChange('calendarSelection', current);
-    }
-
+    toggleCalendarSelection(calName: string) { const current = [...this.state.calendarSelection]; const index = current.indexOf(calName); if(index === -1) current.push(calName); else current.splice(index, 1); this.setState({ calendarSelection: current }); this.props.onChange('calendarSelection', current); }
     showSnackbar(message: string, severity: AlertColor) { this.setState({ snackbarOpen: true, snackbarMessage: message, snackbarSeverity: severity }); }
     handleSnackbarClose = (event?: React.SyntheticEvent | Event, reason?: string) => { if (reason === 'clickaway') return; this.setState({ snackbarOpen: false }); };
 
@@ -256,7 +246,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             </Dialog>
         );
     }
-
     renderWizardDialog() {
         const { showWizard, wizardStep, scanFilters, scannedDevices, availableEnums, showEnumList } = this.state;
         return (
@@ -299,25 +288,12 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     {wizardStep === 1 && <Box sx={{ width: '100%', mt: 4, mb: 4, textAlign: 'center' }}><LinearProgress /><Typography variant="h6" sx={{ mt: 2 }}>Suche Sensoren...</Typography></Box>}
                     {wizardStep === 2 && <Box>
                         <List dense sx={{ width: '100%', bgcolor: 'background.paper', maxHeight: 400, overflow: 'auto' }}>
-                            {scannedDevices.filter(d => d.location && !d.exists).map(d => (
+                            {scannedDevices.map(d => (
                                 <ListItem key={d.id} disablePadding divider>
-                                    <ListItemButton onClick={() => this.handleToggleScannedDevice(scannedDevices.indexOf(d))} dense>
-                                        <ListItemIcon><Checkbox edge="start" checked={d.selected} tabIndex={-1} /></ListItemIcon>
-                                        <ListItemText primary={d.name || d.id} secondary={`${d.type} • ${d.location}`} />
+                                    <ListItemButton onClick={() => this.handleToggleScannedDevice(scannedDevices.indexOf(d))} dense disabled={d.exists}>
+                                        <ListItemIcon>{d.exists ? <CheckCircleIcon color="success"/> : <Checkbox edge="start" checked={d.selected} tabIndex={-1} />}</ListItemIcon>
+                                        <ListItemText primary={d.name || d.id} secondary={d.exists ? 'Bereits konfiguriert' : `${d.type} • ${d.location || '(Kein Raum)'}`} />
                                     </ListItemButton>
-                                </ListItem>
-                            ))}
-                            {scannedDevices.filter(d => !d.location && !d.exists).map(d => (
-                                <ListItem key={d.id} disablePadding divider>
-                                    <ListItemButton onClick={() => this.handleToggleScannedDevice(scannedDevices.indexOf(d))} dense>
-                                        <ListItemIcon><Checkbox edge="start" checked={d.selected} tabIndex={-1} /></ListItemIcon>
-                                        <ListItemText primary={d.name || d.id} secondary={`${d.type} • (Kein Raum)`} />
-                                    </ListItemButton>
-                                </ListItem>
-                            ))}
-                            {scannedDevices.filter(d => d.exists).map(d => (
-                                <ListItem key={d.id} disablePadding divider>
-                                    <ListItemButton dense disabled><ListItemIcon><CheckCircleIcon color="success" /></ListItemIcon><ListItemText primary={d.name || d.id} secondary="Bereits konfiguriert" /></ListItemButton>
                                 </ListItem>
                             ))}
                         </List>
@@ -330,7 +306,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             </Dialog>
         );
     }
-
     renderDialogs() {
         return (
             <>
@@ -342,7 +317,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             </>
         );
     }
-
     renderLicenseSection(tooltipProps: any) {
         return (
             <Grid container spacing={3}>
@@ -362,7 +336,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             </Grid>
         );
     }
-
     renderAIBehaviorSection(tooltipProps: any) {
         return (
             <Grid container spacing={3}>
@@ -460,7 +433,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </Tooltip>
                 </Grid>
 
-                {/* Context Switches */}
                 <Grid item xs={12}><Divider textAlign="left"><Typography variant="caption" sx={{color:'text.secondary', display:'flex', alignItems:'center', gap:1}}><Cloud fontSize="small"/> Erweiterter Kontext (Sprint 29)</Typography></Divider></Grid>
 
                 <Grid item xs={12} md={6}>
@@ -491,7 +463,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </FormControl>
                 </Grid>
 
-                {/* Dynamic Calendar Selection */}
                 {this.state.useCalendar && (
                     <Grid item xs={12}>
                         <Paper variant="outlined" sx={{p: 2}}>
