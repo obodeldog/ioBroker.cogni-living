@@ -5,10 +5,12 @@ import { GenericApp, I18n, type IobTheme, type GenericAppState, type ThemeType }
 import Settings from './components/Settings';
 import Overview from './components/Overview';
 import Activities from './components/Activities';
+import Help from './components/Help'; // NEU
 
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
+import MenuBookIcon from '@mui/icons-material/MenuBook'; // Icon für Handbuch
 import SaveIcon from '@mui/icons-material/Save';
 
 import enLang from './i18n/en.json';
@@ -24,10 +26,7 @@ interface AppState extends GenericAppState {
 class App extends GenericApp<any, AppState> {
     constructor(props: any) {
         const extendedProps = { ...props };
-        extendedProps.translations = {
-            'en': enLang,
-            'de': deLang,
-        };
+        extendedProps.translations = { 'en': enLang, 'de': deLang };
         super(props, extendedProps);
         this.state = { ...this.state, selectedTab: 'overview', hasChanges: false };
     }
@@ -43,9 +42,7 @@ class App extends GenericApp<any, AppState> {
     };
 
     render() {
-        if (!this.state.loaded) {
-            return <CircularProgress />;
-        }
+        if (!this.state.loaded) return <CircularProgress />;
 
         const { themeType, native } = this.state;
         const isDark = themeType === 'dark';
@@ -54,22 +51,15 @@ class App extends GenericApp<any, AppState> {
             palette: {
                 mode: isDark ? 'dark' : 'light',
                 primary: { main: isDark ? '#90caf9' : '#1976d2' },
-                background: {
-                    default: isDark ? '#121212' : '#f5f5f5',
-                    paper: isDark ? '#1e1e1e' : '#ffffff',
-                },
-                text: {
-                    primary: isDark ? '#ffffff' : '#000000',
-                    secondary: isDark ? '#b0b0b0' : '#666666',
-                }
+                background: { default: isDark ? '#121212' : '#f5f5f5', paper: isDark ? '#1e1e1e' : '#ffffff' },
+                text: { primary: isDark ? '#ffffff' : '#000000', secondary: isDark ? '#b0b0b0' : '#666666' }
             },
             components: {
                 MuiAppBar: { styleOverrides: { root: { backgroundColor: isDark ? '#272727' : '#1976d2', color: '#ffffff' } } },
                 MuiTab: {
                     styleOverrides: {
                         root: {
-                            textTransform: 'none', fontWeight: 'bold',
-                            minWidth: 160, // FIX: Breitere Tabs
+                            textTransform: 'none', fontWeight: 'bold', minWidth: 140,
                             borderRight: '1px solid rgba(255,255,255,0.1)',
                             '&:last-child': { borderRight: 'none' },
                             '&.Mui-selected': { backgroundColor: 'rgba(255,255,255,0.1)', color: '#fff' }
@@ -81,79 +71,35 @@ class App extends GenericApp<any, AppState> {
 
         return (
             <ThemeProvider theme={cogniTheme}>
-                <div className="App" style={{
-                    background: cogniTheme.palette.background.default,
-                    color: cogniTheme.palette.text.primary,
-                    minHeight: '100vh',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    position: 'relative'
-                }}>
+                <div className="App" style={{ background: cogniTheme.palette.background.default, color: cogniTheme.palette.text.primary, minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                     <AppBar position="sticky" elevation={2}>
                         <Box sx={{ display: 'flex', width: '100%', alignItems: 'center' }}>
-                            <Tabs
-                                value={this.state.selectedTab}
-                                onChange={(_e, newVal) => this.setState({ selectedTab: newVal })}
-                                indicatorColor="secondary"
-                                textColor="inherit"
-                                variant="standard"
-                                centered={true}
-                                sx={{ flexGrow: 1 }}
-                            >
+                            <Tabs value={this.state.selectedTab} onChange={(_e, newVal) => this.setState({ selectedTab: newVal })} indicatorColor="secondary" textColor="inherit" variant="standard" centered sx={{ flexGrow: 1 }}>
                                 <Tab value="overview" label={I18n.t('Übersicht')} icon={<DashboardIcon />} iconPosition="start" />
                                 <Tab value="activities" label={I18n.t('Aktivitäten')} icon={<ListAltIcon />} iconPosition="start" />
                                 <Tab value="settings" label={I18n.t('Einstellungen')} icon={<SettingsIcon />} iconPosition="start" />
+                                <Tab value="help" label="Handbuch" icon={<MenuBookIcon />} iconPosition="start" />
                             </Tabs>
-
                             <Box sx={{ position: 'absolute', right: 16 }}>
                                 <Tooltip title={this.state.hasChanges ? "Änderungen speichern" : "Keine Änderungen"}>
-                                    <span>
-                                        <IconButton
-                                            color="inherit"
-                                            onClick={this.handleSave}
-                                            disabled={!this.state.hasChanges}
-                                            size="small"
-                                            sx={{ opacity: 0.7 }}
-                                        >
-                                            <SaveIcon />
-                                        </IconButton>
-                                    </span>
+                                    <span><IconButton color="inherit" onClick={this.handleSave} disabled={!this.state.hasChanges} size="small" sx={{ opacity: 0.7 }}><SaveIcon /></IconButton></span>
                                 </Tooltip>
                             </Box>
                         </Box>
                     </AppBar>
 
                     <Box sx={{ p: 0, pb: 12, flexGrow: 1, overflowY: 'auto' }}>
-                        {this.state.selectedTab === 'overview' && (
-                            <Overview socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />
-                        )}
-                        {this.state.selectedTab === 'activities' && (
-                            <Activities socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />
-                        )}
-                        {this.state.selectedTab === 'settings' && (
-                            <Settings native={native} onChange={(attr: string, value: any) => this.updateNativeValue(attr, value)} socket={this.socket} themeType={themeType} theme={this.state.theme} adapterName={this.adapterName} instance={this.instance} />
-                        )}
+                        {this.state.selectedTab === 'overview' && <Overview socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+                        {this.state.selectedTab === 'activities' && <Activities socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+                        {this.state.selectedTab === 'settings' && <Settings native={native} onChange={(attr, val) => this.updateNativeValue(attr, val)} socket={this.socket} themeType={themeType} theme={this.state.theme} adapterName={this.adapterName} instance={this.instance} />}
+                        {this.state.selectedTab === 'help' && <Help />}
                     </Box>
 
                     <Zoom in={this.state.hasChanges}>
                         <Tooltip title="Einstellungen speichern" placement="left">
-                            <Fab
-                                color="primary"
-                                aria-label="save"
-                                onClick={this.handleSave}
-                                sx={{
-                                    position: 'fixed',
-                                    bottom: 30,
-                                    right: 30,
-                                    zIndex: 1000,
-                                    boxShadow: '0px 4px 20px rgba(0,0,0,0.4)'
-                                }}
-                            >
-                                <SaveIcon fontSize="large" />
-                            </Fab>
+                            <Fab color="primary" aria-label="save" onClick={this.handleSave} sx={{ position: 'fixed', bottom: 30, right: 30, zIndex: 1000, boxShadow: '0px 4px 20px rgba(0,0,0,0.4)' }}><SaveIcon fontSize="large" /></Fab>
                         </Tooltip>
                     </Zoom>
-
                     {this.renderError()}
                     {this.renderToast()}
                 </div>
@@ -161,5 +107,4 @@ class App extends GenericApp<any, AppState> {
         );
     }
 }
-
 export default App;
