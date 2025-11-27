@@ -1,15 +1,15 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.5.9",
+        "version": "0.6.0",
         "news": {
-            "0.5.9": {
-                "en": "Feature: Calendar Selector (Whitelist) instead of blacklist.",
-                "de": "Feature: Kalender-Auswahl (Whitelist) statt Blacklist."
+            "0.6.0": {
+                "en": "Feature: Interactive Telegram Notifications (Sprint 28).",
+                "de": "Feature: Interaktive Telegram-Benachrichtigungen (Sprint 28)."
             },
-            "0.5.7": {
-                "en": "Fix: Context Debugging & Message Handling.",
-                "de": "Fix: Kontext-Debugging & Nachrichten-Handling."
+            "0.5.26": {
+                "en": "Fix: AI Cockpit Visuals & Scanner improvements.",
+                "de": "Fix: AI Cockpit Darstellung & Scanner Verbesserungen."
             },
             "0.5.0": {
                 "en": "Feature: Advanced Context Awareness.",
