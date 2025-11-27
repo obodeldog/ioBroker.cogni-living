@@ -11,7 +11,6 @@ import ListAltIcon from '@mui/icons-material/ListAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SaveIcon from '@mui/icons-material/Save';
 
-// FIX: Statische Imports für die Sprachen
 import enLang from './i18n/en.json';
 import deLang from './i18n/de.json';
 
@@ -70,6 +69,7 @@ class App extends GenericApp<any, AppState> {
                     styleOverrides: {
                         root: {
                             textTransform: 'none', fontWeight: 'bold',
+                            minWidth: 160, // FIX: Breitere Tabs
                             borderRight: '1px solid rgba(255,255,255,0.1)',
                             '&:last-child': { borderRight: 'none' },
                             '&.Mui-selected': { backgroundColor: 'rgba(255,255,255,0.1)', color: '#fff' }
@@ -87,7 +87,7 @@ class App extends GenericApp<any, AppState> {
                     minHeight: '100vh',
                     display: 'flex',
                     flexDirection: 'column',
-                    position: 'relative' // Wichtig für absolute Positionierung des FAB
+                    position: 'relative'
                 }}>
                     <AppBar position="sticky" elevation={2}>
                         <Box sx={{ display: 'flex', width: '100%', alignItems: 'center' }}>
@@ -105,7 +105,6 @@ class App extends GenericApp<any, AppState> {
                                 <Tab value="settings" label={I18n.t('Einstellungen')} icon={<SettingsIcon />} iconPosition="start" />
                             </Tabs>
 
-                            {/* Kleiner Save Button oben (Backup) */}
                             <Box sx={{ position: 'absolute', right: 16 }}>
                                 <Tooltip title={this.state.hasChanges ? "Änderungen speichern" : "Keine Änderungen"}>
                                     <span>
@@ -136,7 +135,6 @@ class App extends GenericApp<any, AppState> {
                         )}
                     </Box>
 
-                    {/* FLOATING ACTION BUTTON (FAB) - Der große Speicher-Knopf unten rechts */}
                     <Zoom in={this.state.hasChanges}>
                         <Tooltip title="Einstellungen speichern" placement="left">
                             <Fab
