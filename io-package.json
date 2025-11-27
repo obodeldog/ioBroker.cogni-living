@@ -1,19 +1,19 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.6.0",
+        "version": "0.7.0",
         "news": {
+            "0.7.0": {
+                "en": "Feature: The Butler (Automation & Actionable Insights).",
+                "de": "Feature: Der Butler (Automation & Handlungsoptionen)."
+            },
             "0.6.0": {
-                "en": "Feature: Interactive Telegram Notifications (Sprint 28).",
-                "de": "Feature: Interaktive Telegram-Benachrichtigungen (Sprint 28)."
+                "en": "Feature: Interactive Telegram Notifications.",
+                "de": "Feature: Interaktive Telegram-Benachrichtigungen."
             },
             "0.5.26": {
                 "en": "Fix: AI Cockpit Visuals & Scanner improvements.",
                 "de": "Fix: AI Cockpit Darstellung & Scanner Verbesserungen."
-            },
-            "0.5.0": {
-                "en": "Feature: Advanced Context Awareness.",
-                "de": "Feature: Erweiterter Kontext."
             }
         },
         "titleLang": {
