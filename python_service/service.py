@@ -1,7 +1,6 @@
 import sys
 import json
 import time
-import os
 from datetime import datetime
 
 # VERSUCH: Externe KI-Libs laden
@@ -13,12 +12,11 @@ except ImportError:
     LIBS_AVAILABLE = False
 
 # KONFIGURATION
-VERSION = "0.3.0 (Communication Ready)"
+VERSION = "0.4.0 (Guardian Core: Trend Analysis)"
 
 def log(msg):
-    """Sendet Logs an Node.js via stdout mit Prefix"""
+    """Sendet Logs an Node.js"""
     ts = datetime.now().strftime("%H:%M:%S")
-    # Wir nutzen ein spezielles Prefix, das Node.js parsen kann
     print(f"[LOG] {msg}")
     sys.stdout.flush()
 
@@ -28,58 +26,95 @@ def send_result(type, payload):
         "type": type,
         "payload": payload
     }
-    # WICHTIG: JSON muss in einer einzigen Zeile stehen!
     print(f"[RESULT] {json.dumps(msg)}")
     sys.stdout.flush()
 
+def calculate_trend(values):
+    """
+    Kernfunktion des Wächters (Phase 3):
+    Berechnet die Steigung (Trend) einer Zeitreihe mittels linearer Regression.
+    Nutzt numpy.polyfit für mathematische Präzision.
+    """
+    if not LIBS_AVAILABLE or len(values) < 2:
+        return 0.0, "Insufficient Data"
+
+    try:
+        # x-Achse: Einfach 0, 1, 2, 3... (Tage/Einheiten)
+        x = np.arange(len(values))
+        y = np.array(values)
+
+        # Lineare Regression (Grad 1) -> y = mx + b
+        # m (Steigung) ist unser "Trend"
+        slope, intercept = np.polyfit(x, y, 1)
+
+        # Umrechnung in lesbare Prozent (ungefähr):
+        # Wenn wir bei 100 starten und bei 90 enden, ist das ein negativer Trend.
+        start_val = (slope * 0) + intercept
+        end_val = (slope * (len(values)-1)) + intercept
+
+        if start_val == 0: start_val = 0.001 # Div/0 Schutz
+
+        percent_change = ((end_val - start_val) / start_val) * 100
+
+        return slope, percent_change
+
+    except Exception as e:
+        log(f"Mathe-Fehler: {e}")
+        return 0.0, str(e)
+
 def process_message(msg):
-    """Verarbeitet eingehende Befehle von Node.js"""
+    """Verarbeitet Befehle"""
     try:
         data = json.loads(msg)
         cmd = data.get("command")
 
         if cmd == "PING":
-            log(f"Ping empfangen. Antworte mit Pong...")
             send_result("PONG", {"timestamp": time.time()})
 
-        elif cmd == "CALC_STATS":
-            # Simulation einer Berechnung (Später hier: Pandas/Numpy)
+        elif cmd == "ANALYZE_TREND":
+            # Hier kommt der "Medical Need":
+            # Node.js schickt uns z.B. die täglichen Aktivitäts-Scores der letzten 14 Tage.
+            # Wir prüfen: Geht es bergab?
             values = data.get("values", [])
-            if LIBS_AVAILABLE and len(values) > 0:
-                mean = np.mean(values)
-                median = np.median(values)
-                send_result("STATS_RESULT", {"mean": mean, "median": median})
-            else:
-                log("Keine Libs oder keine Daten.")
+            tag = data.get("tag", "General")
+
+            log(f"Analysiere Trend für '{tag}' mit {len(values)} Datenpunkten...")
+
+            slope, change = calculate_trend(values)
+
+            # Interpretation (Diagnose)
+            diagnosis = "Stabil"
+            if change < -10: diagnosis = "Signifikanter Abfall (Achtung)"
+            elif change < -5: diagnosis = "Leichter Abfall"
+            elif change > 5: diagnosis = "Anstieg (Positiv)"
+
+            send_result("TREND_RESULT", {
+                "tag": tag,
+                "slope": round(slope, 4),
+                "change_percent": round(change, 2),
+                "diagnosis": diagnosis
+            })
 
         else:
             log(f"Unbekannter Befehl: {cmd}")
 
     except Exception as e:
-        log(f"Fehler beim Verarbeiten der Nachricht: {e}")
+        log(f"Fehler beim Verarbeiten: {e}")
 
 def main():
-    log(f"Service gestartet. Version: {VERSION}")
+    log(f"Guardian Engine gestartet. Version: {VERSION}")
 
     if LIBS_AVAILABLE:
-        log("Math-Engine (Numpy/Pandas) bereit.")
+        log("✅ Math-Engine (Numpy) bereit für Trend-Diagnose.")
     else:
-        log("Math-Engine FEHLT (Nur Basic Mode).")
+        log("❌ FEHLER: Numpy fehlt. Guardian läuft im Blindflug.")
 
-    # HAUPTSCHLEIFE: Warten auf Input von Node.js (via stdin)
+    # HAUPTSCHLEIFE
     while True:
         try:
-            # Liest eine Zeile von stdin (blockierend)
             line = sys.stdin.readline()
-
-            if not line:
-                # End of Stream (Node.js hat Prozess beendet)
-                break
-
-            line = line.strip()
-            if line:
-                process_message(line)
-
+            if not line: break
+            process_message(line.strip())
         except KeyboardInterrupt:
             break
         except Exception as e:
