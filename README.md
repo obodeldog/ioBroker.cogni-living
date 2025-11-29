@@ -1,127 +1,96 @@
-![Logo](admin/cogni-living.png)
-
 # ioBroker.cogni-living
 
-**AI-powered behavioral analysis for health, safety & comfort.**
+![Logo](admin/cogni-living.png)
 
-[![Deutsche Version](https://img.shields.io/badge/Language-Deutsch-blue)](README_de.md)
+**Artificial Intelligence for your Home: Safety, Health & Comfort in one system.**
 
----
+> **"A smart home is only truly smart if it cares about you."**
 
-## 📖 About this Adapter
+Cogni-Living acts as an intelligent guardian, using Google Gemini AI to understand the complex behavioral patterns within your household. It doesn't just detect *that* something moved – it understands *if* that movement is normal, unusual, or potentially dangerous.
 
-**Cogni-Living** transforms your smart home from a passive system into an intelligent, thinking assistant. Instead of manually programming hundreds of rules ("If motion, then light"), this adapter uses state-of-the-art Artificial Intelligence (**Google Gemini**) to understand and interpret your sensor data.
+## 🎯 What is this system for?
 
-Especially suitable for:
-* **Ambient Assisted Living (AAL):** Carefree living for seniors through intelligent routine monitoring.
-* **Security:** Detection of anomalies that classic alarm systems overlook.
-* **Health Monitoring:** Detection of gradual behavioral changes (e.g., reduced mobility).
+Cogni-Living is designed to address three core needs:
 
----
+1.  **Ambient Assisted Living (AAL) & Senior Safety:**
+    Allows elderly people to live safely on their own for longer. The system detects falls (via inactivity in unusual places) or gradual changes in daily routines without the need for cameras or wearable panic buttons.
 
-## ⚙️ How it works & History
+2.  **Security & Intrusion Detection:**
+    Distinguishes between "Resident getting a glass of water at night" and "Stranger in the house". In vacation mode, every activity triggers an immediate alert.
 
-The adapter works with a dual memory model that has matured over 26 development sprints:
-
-### 1. Short-Term Memory (STM) [Sprints 1-20]
-The "Autopilot" monitors the last 50 events in real-time.
-* **Example:** It is 3 AM, the front door opens, but no one is in the hallway? -> **Alarm.**
-* **Example:** The resident fell in the bathroom and has not moved for 30 minutes? -> **Alarm.**
-
-### 2. Long-Term Memory (LTM) [Sprint 21]
-Every night, the AI creates a summary ("Daily Digest") of the day and learns the resident's normal habits.
-* **Drift Analysis:** A special algorithm compares the behavior of the last 2 weeks with the long-term average. This detects gradual changes (e.g., "Resident leaves the house much less frequently than before").
-
-### 3. Professional Foundation [Sprints 22-24]
-* **SaaS Security:** Code obfuscation and license verification.
-* **Auto-Discovery:** A wizard automatically finds your sensors in the system.
-* **Feedback Loop:** Users can train the AI ("Thumbs up/down").
+3.  **Comfort & The Butler:**
+    Learns your habits ("Whenever I enter the bathroom, I turn on the light") and offers to automate these tasks for you proactively.
 
 ---
 
-## 🚀 Features in Detail
+## 🛡️ How it works: The 3-Phase Neuro Model
 
-### 🛡️ Active Protection (Dead Man's Switch) [NEW Sprint 25/26]
-Standard AI systems only react when something happens. **Cogni-Living also reacts when NOTHING happens.**
-* **Inactivity Monitor:** If no sensor activity is detected over a defined period (e.g., 12 hours) even though the resident is at home, the adapter triggers an **EMERGENCY**.
-* **Smart Presence:** The system automatically distinguishes between "Sleeping" (Present) and "Shopping" (Absent) through intelligent analysis of door sensors.
-* **Emergency Escalation:** Unlike normal warnings, emergency events trigger push notifications with highest priority (e.g., Pushover Priority 2 with siren/acknowledgment requirement).
+The system analyzes data on three time scales simultaneously:
 
-### 📊 LTM Dashboard & Health
-Visualize behavior directly in the admin panel.
-* **[NEW Sprint 27] Health Dashboard:** Monitoring of sleep quality and nightly restlessness.
-* Bar charts show the activity level per day.
-* Detailed text summaries explain the daily routine.
-* The drift indicator warns of long-term negative trends.
+### Phase 1: The Instant Guardian (Ad-Hoc)
+* **Reaction:** Immediate (Real-time).
+* **Detects:** Acute emergencies.
+* *Example:* Someone enters the bathroom but doesn't leave after 60 minutes. Or: It's 9:00 AM and there is still no movement in the house (resident usually wakes up at 7:00 AM).
+* **Action:** Sends immediate alarm via Telegram/Pushover ("Suspicious silence!").
 
-### 🔔 Intelligent Notifications
-Receive warnings not just as a log entry, but directly on your smartphone. Supported services:
-* Telegram
-* Pushover (Supports Emergency Priority & Retry)
-* Email
-* WhatsApp (via CMB Adapter)
-* Signal (via CMA Adapter)
+### Phase 2: The Health Check (Short-Term Baseline)
+* **Reaction:** Analyzes the last 14 days.
+* **Detects:** Acute illness or stress.
+* *Example:* The resident suddenly needs to use the bathroom 5 times a night (Normal: 1x). This indicates an infection or sleep disorder.
+* **Action:** Notification in the "Good Morning" briefing.
+
+### Phase 3: The Long-Term Analysis (Long-Term Drift)
+* **Reaction:** Compares the last 60 days.
+* **Detects:** Gradual decline (Drift).
+* *Example:* Mobility decreases by 20% over several months. Time spent in bed increases steadily. Such changes are often invisible in daily life but medically significant.
+* **Action:** Report in the Dashboard (Pro Feature).
 
 ---
 
 ## 💎 Free vs. Pro Version
 
-| Feature | Free Version | Pro Version |
+The adapter is fully functional and free to use. Extended features are available for users requiring deep long-term analysis.
+
+| Feature | Free Version (Standard) | Pro Version (License) |
 | :--- | :---: | :---: |
-| **STM Real-time Analysis** | ✅ | ✅ |
-| **Dead Man's Switch (Inactivity)** | ✅ | ✅ |
-| **AI Context (Weather/Persona)** | ✅ | ✅ |
-| **Auto-Discovery Wizard** | ✅ | ✅ |
-| **Notifications** | ✅ | ✅ |
-| **Long-Term Memory (LTM)** | ❌ | ✅ |
-| **Daily Summaries** | ❌ | ✅ |
-| **Drift Analysis (Health)** | ❌ | ✅ |
-| **Automation Proposals** | ❌ | ✅ |
-| **LTM Dashboard** | ❌ | ✅ |
-
-> **Note on Pro Version:** A license key is required for commercial use or full functionality.
+| **AI Analysis (Gemini)** | ✅ Yes | ✅ Yes |
+| **Emergency Detection (Phase 1)** | ✅ Yes | ✅ Yes |
+| **Auto-Discovery Wizard** | ✅ Yes | ✅ Yes |
+| **Family Link (Telegram Alerts)** | ✅ Yes | ✅ Yes |
+| **The Butler (Automation)** | ✅ Yes | ✅ Yes |
+| **Long-Term Memory (LTM)** | ❌ No (Live Logs only) | ✅ Yes (Database) |
+| **Drift Analysis (Phase 3)** | ❌ No | ✅ Yes |
+| **Python Stats Engine** | ❌ No | ✅ Yes |
+| **Doctor Export (PDF Report)** | ❌ No | ✅ Yes |
 
 ---
 
-## 🛠️ Setup in 5 Steps
+## 🚀 Installation & Setup (Zero-Config)
 
-1.  **Installation:** Install the adapter via ioBroker Admin.
-2.  **API Key:** Get a free [Google Gemini API Key](https://aistudio.google.com/app/apikey) and enter it in the settings.
-3.  **Auto-Scan:** Click on **"Auto-Scan (Wizard)"** in the configuration tab. Select your sensors and import them.
-4.  **Context:** Briefly describe the living situation in the "Context" field (e.g., *"Resident is 82 years old, lives alone, has a dog."*). This massively helps the AI to avoid false alarms.
-5.  **Security:** Activate the **Inactivity Monitor** in the settings if you use the system for AAL/senior care.
+### 1. Install Adapter
+Install the adapter via ioBroker. The system automatically checks for Python and installs it if missing (Linux).
 
----
+### 2. Connect AI
+Get a free API Key from [Google AI Studio](https://aistudio.google.com/) and enter it in the adapter settings.
 
-## 📜 Changelog
+### 3. Find Sensors
+Start the **Auto-Discovery Wizard** in the "Sensors" tab. The adapter scans your home for motion detectors, door sensors, and lights and adds them automatically.
 
-### 0.3.10 (2025-11-26)
-* (Marc Jaeger) **Health Dashboard Update**
-* ✨ **New:** Visualization of sleep quality and restlessness in LTM review.
-* ✨ **New:** Graphical separation of activity and health data.
-
-### 0.3.5 (2025-11-26)
-* (Marc Jaeger) **Maintenance Update**
-* 🛠️ **Fix:** Fixed issues with UI translations and save button.
-* 🛠️ **Fix:** Stabilized presence logic.
-
-### 0.3.1 (2025-11-26)
-* (Marc Jaeger) **Feature Release: Security**
-* ✨ **New:** Added **Dead Man's Switch (Inactivity Monitor)**.
-* ✨ **New:** **Emergency Status**. Distinction between "Warning" (Yellow) and "Emergency" (Red).
-* ✨ **New:** Pushover Priority 2 Support (Emergency Siren & Retry) for critical alarms.
-
-### 0.3.0 (2025-11-25)
-* (Marc Jaeger) **Major UI Release**
-* ✨ **New:** Complete UI Redesign ("App-like").
-* ✨ **New:** Feedback Loop (Reinforcement Learning) implemented.
-* 🛠️ **Fix:** Massive improvements to Dark Mode / High Contrast Theme.
+### 4. Hybrid Engine (Self-Healing)
+Upon first start, the adapter checks if all AI libraries (Numpy, Pandas) are present. If not, it downloads them **automatically** in the background. No manual Linux commands required in most cases.
 
 ---
 
-## 📄 License
+## ⚖️ IMPORTANT LEGAL DISCLAIMER
 
-MIT License (Codebase).
-The use of Pro features is subject to separate license terms.
+**PLEASE READ CAREFULLY:**
 
-Copyright (c) 2025 Marc Jaeger <mj112@gmx.de>
+1.  **Not a Medical Device:** This software is **NOT** a medical device according to Regulation (EU) 2017/745. It is for informational and smart home comfort purposes only.
+2.  **No Emergency Guarantee:** **NEVER** rely solely on this software in health emergencies or life-threatening situations. Technology can fail (power outage, internet loss, bugs).
+3.  **Liability:** The developer accepts no liability for damages resulting from the use, malfunction, or interpretation of the data.
+4.  **Privacy:** Analysis is performed via the Google Gemini API. Sensor data is sent to Google for processing. Ensure this complies with your privacy requirements.
+
+---
+
+## License
+MIT License. Copyright (c) 2025 Dr.-Ing. Marc Jaeger.
