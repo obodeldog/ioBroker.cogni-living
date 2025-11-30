@@ -1,4 +1,6 @@
-requests
-pandas
 numpy
-schedule
+pandas
+scikit-learn
+tensorflow-cpu; platform_machine != "aarch64" and platform_machine != "armv7l"
+# Für Raspberry Pi (ARM) nutzen wir oft System-Pakete, aber wir versuchen es generisch:
+tensorflow; platform_machine == "aarch64"
