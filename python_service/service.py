@@ -6,14 +6,13 @@ import pickle
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.8.0 (Phase B: Health Brain Added)"
+VERSION = "0.9.0 (Phase B: Energy Brain Added)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
 VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "security_config.json")
-
-# HEALTH PATHS
 HEALTH_MODEL_PATH = os.path.join(os.path.dirname(__file__), "health_model.pkl")
+ENERGY_MODEL_PATH = os.path.join(os.path.dirname(__file__), "energy_model.pkl")
 
 # THRESHOLD FÜR ALARM
 ANOMALY_THRESHOLD = 0.05
@@ -23,7 +22,8 @@ try:
     import numpy as np
     import pandas as pd
     from sklearn.preprocessing import MinMaxScaler, LabelBinarizer
-    from sklearn.ensemble import IsolationForest # NEU FÜR HEALTH
+    from sklearn.ensemble import IsolationForest
+    from sklearn.linear_model import LinearRegression # NEU FÜR ENERGY
     LIBS_AVAILABLE = True
 except ImportError as e:
     print(f"[LOG] ⚠️ ML-Import Error: {e}")
@@ -91,7 +91,6 @@ class SecurityBrain:
 
         log(f"🚀 Starte Security Training mit {len(sequences)} Sequenzen...")
         try:
-            # A. Feature Engineering
             all_locations = set()
             max_len_found = 0
             for seq in sequences:
@@ -105,8 +104,6 @@ class SecurityBrain:
             self.vocab_encoder = LabelBinarizer()
             self.vocab_encoder.fit(list(all_locations))
             n_classes = len(self.vocab_encoder.classes_)
-
-            log(f"🔍 Training Setup: MaxLen={self.max_seq_len}, Locations={n_classes}")
 
             processed_data = []
             for seq in sequences:
@@ -135,7 +132,6 @@ class SecurityBrain:
             times_scaled = self.scaler.fit_transform(times)
             X[:, :, 0] = times_scaled.reshape(X.shape[0], X.shape[1])
 
-            # B. Model
             input_dim = X.shape[2]
             timesteps = X.shape[1]
 
@@ -152,19 +148,15 @@ class SecurityBrain:
             ])
             model.compile(optimizer='adam', loss='mse')
 
-            # C. Train
             history = model.fit(X, X, epochs=100, batch_size=16, validation_split=0.15, verbose=0)
             final_loss = history.history['loss'][-1]
 
-            # D. Save
             model.save(MODEL_PATH)
             with open(SCALER_PATH, 'wb') as f: pickle.dump(self.scaler, f)
             with open(VOCAB_PATH, 'wb') as f: pickle.dump(self.vocab_encoder, f)
             with open(CONFIG_PATH, 'w') as f: json.dump({'max_seq_len': self.max_seq_len}, f)
 
-            # E. FORCE RELOAD
             self.load_brain()
-
             return True, f"Loss: {final_loss:.4f}"
 
         except Exception as e:
@@ -216,9 +208,7 @@ class HealthBrain:
     def __init__(self):
         self.model = None
         self.is_ready = False
-        self.activity_map = {
-            'sehr niedrig': 1, 'niedrig': 2, 'normal': 3, 'hoch': 4, 'sehr hoch': 5
-        }
+        self.activity_map = {'sehr niedrig': 1, 'niedrig': 2, 'normal': 3, 'hoch': 4, 'sehr hoch': 5}
 
     def load_brain(self):
         if not LIBS_AVAILABLE: return
@@ -227,25 +217,22 @@ class HealthBrain:
                 with open(HEALTH_MODEL_PATH, 'rb') as f:
                     self.model = pickle.load(f)
                 self.is_ready = True
-                log("✅ Health Brain (IsoForest) geladen.")
+                log("✅ Health Brain geladen.")
             else:
                 log("ℹ️ Kein Health Brain gefunden.")
         except Exception as e:
             log(f"Fehler Health Load: {e}")
 
     def _prepare_features(self, digests):
-        # Feature Engineering: [ActivityLevel(1-5), EventCount, SleepScore]
         data = []
         for d in digests:
             lvl_str = d.get('activityLevel', 'normal').lower()
             lvl = self.activity_map.get(lvl_str, 3)
             count = d.get('eventCount', 0)
-
             health_data = d.get('health', {})
             sleep = 0
             if health_data and 'sleepScore' in health_data:
                 sleep = health_data['sleepScore'] or 0
-
             data.append([lvl, count, sleep])
         return np.array(data)
 
@@ -254,40 +241,109 @@ class HealthBrain:
         log(f"🩺 Starte Health Training mit {len(digests)} Tagen...")
         try:
             X = self._prepare_features(digests)
-
-            # Isolation Forest
-            # contamination='auto': Der Algo schätzt selbst, wie viele Ausreißer normal sind
             clf = IsolationForest(random_state=42, contamination='auto')
             clf.fit(X)
-
-            with open(HEALTH_MODEL_PATH, 'wb') as f:
-                pickle.dump(clf, f)
-
+            with open(HEALTH_MODEL_PATH, 'wb') as f: pickle.dump(clf, f)
             self.model = clf
             self.is_ready = True
             return True, "Modell gespeichert."
         except Exception as e:
-            log(f"Health Train Error: {e}")
             return False, str(e)
 
     def predict(self, digest):
         if not self.is_ready: return 0, "Not Ready"
         try:
             X = self._prepare_features([digest])
-            # predict liefert: 1 (Normal), -1 (Anomalie)
             res = self.model.predict(X)[0]
-            # score_samples liefert float (je niedriger desto anomaler)
             score = self.model.score_samples(X)[0]
-
-            # Mapping für User: 1 = Normal, -1 = Anomalie
-            # Wir geben den rohen Score auch zurück für Visualisierung
             return res, f"Score: {score:.3f}"
         except Exception as e:
             return 0, str(e)
 
+# --- MODULE 4: ENERGY (Linear Regression) ---
+class EnergyBrain:
+    def __init__(self):
+        self.model = None
+        self.is_ready = False
+        self.insulation_score = 0.0 # Heat Loss Coefficient
+
+    def load_brain(self):
+        if not LIBS_AVAILABLE: return
+        try:
+            if os.path.exists(ENERGY_MODEL_PATH):
+                with open(ENERGY_MODEL_PATH, 'rb') as f:
+                    data = pickle.load(f)
+                    self.model = data.get('model')
+                    self.insulation_score = data.get('score', 0.0)
+                self.is_ready = True
+                log(f"✅ Energy Brain geladen. (Insulation Score: {self.insulation_score:.4f})")
+            else:
+                log("ℹ️ Kein Energy Brain gefunden.")
+        except Exception as e:
+            log(f"Fehler Energy Load: {e}")
+
+    def train(self, data_points):
+        # data_points: list of {t_in, t_out, ts, room}
+        if not LIBS_AVAILABLE: return False, "No Libs"
+        log(f"🍃 Starte Energy Training mit {len(data_points)} Messpunkten...")
+
+        try:
+            # 1. Datenvorbereitung
+            # Wir suchen Zeiträume, in denen die Temperatur fällt (Heizung aus)
+            # und korrelieren dies mit der Außentemperatur.
+
+            df = pd.DataFrame(data_points)
+            df['ts'] = pd.to_datetime(df['ts'], unit='ms')
+            df = df.sort_values('ts')
+
+            # Berechne Differenzen
+            df['dt_sec'] = df['ts'].diff().dt.total_seconds()
+            df['temp_change'] = df['t_in'].diff()
+
+            # Filtere nur Abkühlphasen (Heizung aus) und sinnvolle Zeitabstände (>5min, <60min)
+            # temp_change < 0 (Abkühlung)
+            cooling_df = df[(df['temp_change'] < 0) & (df['dt_sec'] > 300) & (df['dt_sec'] < 3600)].copy()
+
+            if len(cooling_df) < 10:
+                return False, "Zu wenig Abkühlphasen gefunden."
+
+            # Rate: Grad pro Stunde
+            cooling_df['rate_per_hour'] = (cooling_df['temp_change'] / cooling_df['dt_sec']) * 3600
+
+            # Delta T: Innen - Außen
+            cooling_df['delta_t'] = cooling_df['t_in'] - cooling_df['t_out']
+
+            # Regression: Rate ~ Delta T
+            # Je größer Delta T, desto stärker die Abkühlung (negativere Rate)
+            X = cooling_df[['delta_t']].values
+            y = cooling_df['rate_per_hour'].values
+
+            reg = LinearRegression()
+            reg.fit(X, y)
+
+            # Der Koeffizient (Slope) sagt uns, wie viel Grad wir pro Stunde pro Grad Temperaturdifferenz verlieren.
+            # Ein Wert von -0.1 bedeutet: Bei 10 Grad Unterschied verlieren wir 1 Grad pro Stunde.
+            # Je näher an 0, desto besser isoliert.
+            insulation_score = reg.coef_[0]
+
+            # Speichern
+            with open(ENERGY_MODEL_PATH, 'wb') as f:
+                pickle.dump({'model': reg, 'score': insulation_score}, f)
+
+            self.model = reg
+            self.insulation_score = insulation_score
+            self.is_ready = True
+
+            return True, f"Insulation Score: {insulation_score:.4f} °C/h per Delta-K"
+
+        except Exception as e:
+            log(f"Energy Train Error: {e}")
+            return False, str(e)
+
 # SINGLETONS
 security_brain = SecurityBrain()
 health_brain = HealthBrain()
+energy_brain = EnergyBrain()
 
 def process_message(msg):
     try:
@@ -307,11 +363,10 @@ def process_message(msg):
             elif change > 5: diagnosis = "Anstieg (Positiv)"
             send_result("TREND_RESULT", {"tag": tag, "slope": round(slope, 4), "change_percent": round(change, 2), "diagnosis": diagnosis})
 
-        # --- SECURITY COMMANDS ---
+        # --- SECURITY ---
         elif cmd == "TRAIN_SECURITY":
             sequences = data.get("sequences", [])
             if len(sequences) < 5:
-                log("Zu wenig Daten (min 5).")
                 send_result("TRAINING_COMPLETE", {"success": False, "reason": "Not enough data"})
             else:
                 success, details = security_brain.train(sequences)
@@ -320,17 +375,14 @@ def process_message(msg):
         elif cmd == "ANALYZE_SEQUENCE":
             sequence = data.get("sequence", {})
             score, is_anomaly, msg = security_brain.predict(sequence)
-            if score is None:
-                log(f"Inferenz nicht möglich: {msg}")
-            else:
+            if score is not None:
                 log(f"🛡️ SECURITY CHECK: Score {score:.5f} -> {'ANOMALY' if is_anomaly else 'OK'}")
                 send_result("SECURITY_RESULT", {"anomaly_score": score, "is_anomaly": is_anomaly, "threshold": ANOMALY_THRESHOLD})
 
-        # --- HEALTH COMMANDS (NEU) ---
+        # --- HEALTH ---
         elif cmd == "TRAIN_HEALTH":
             digests = data.get("digests", [])
             if len(digests) < 3:
-                log("Zu wenig Tage für Health Training (min 3).")
                 send_result("HEALTH_TRAIN_RESULT", {"success": False, "reason": "Min 3 days needed"})
             else:
                 success, details = health_brain.train(digests)
@@ -338,11 +390,18 @@ def process_message(msg):
 
         elif cmd == "ANALYZE_HEALTH":
             digest = data.get("digest", {})
-            # res: 1 (OK), -1 (Anomaly)
             res, details = health_brain.predict(digest)
-            is_anomaly = (res == -1)
-            log(f"🩺 HEALTH CHECK: {details} -> {'Krankheit?' if is_anomaly else 'Gesund'}")
-            send_result("HEALTH_RESULT", {"is_anomaly": is_anomaly, "details": details})
+            send_result("HEALTH_RESULT", {"is_anomaly": (res == -1), "details": details})
+
+        # --- ENERGY (NEU) ---
+        elif cmd == "TRAIN_ENERGY":
+            points = data.get("points", [])
+            if len(points) < 50:
+                log("Zu wenig Thermo-Daten (min 50).")
+                send_result("ENERGY_TRAIN_RESULT", {"success": False, "reason": "Min 50 points needed"})
+            else:
+                success, details = energy_brain.train(points)
+                send_result("ENERGY_TRAIN_RESULT", {"success": success, "details": details})
 
         else:
             log(f"Unbekannt: {cmd}")
@@ -355,6 +414,7 @@ def main():
         log("✅ ML-Bibliotheken verfügbar.")
         security_brain.load_brain()
         health_brain.load_brain()
+        energy_brain.load_brain() # LOAD ENERGY
     else:
         log("⚠️ ML-Libs fehlen.")
     while True:
