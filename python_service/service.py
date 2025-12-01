@@ -6,7 +6,7 @@ import pickle
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.9.0 (Phase B: Energy Brain Added)"
+VERSION = "0.9.1 (Phase B: Per-Room Energy Analysis)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
 VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
@@ -23,7 +23,7 @@ try:
     import pandas as pd
     from sklearn.preprocessing import MinMaxScaler, LabelBinarizer
     from sklearn.ensemble import IsolationForest
-    from sklearn.linear_model import LinearRegression # NEU FÜR ENERGY
+    from sklearn.linear_model import LinearRegression
     LIBS_AVAILABLE = True
 except ImportError as e:
     print(f"[LOG] ⚠️ ML-Import Error: {e}")
@@ -260,12 +260,12 @@ class HealthBrain:
         except Exception as e:
             return 0, str(e)
 
-# --- MODULE 4: ENERGY (Linear Regression) ---
+# --- MODULE 4: ENERGY (Linear Regression PER ROOM) ---
 class EnergyBrain:
     def __init__(self):
-        self.model = None
+        self.models = {} # Dict: 'RoomName' -> Model
+        self.scores = {} # Dict: 'RoomName' -> Score
         self.is_ready = False
-        self.insulation_score = 0.0 # Heat Loss Coefficient
 
     def load_brain(self):
         if not LIBS_AVAILABLE: return
@@ -273,10 +273,10 @@ class EnergyBrain:
             if os.path.exists(ENERGY_MODEL_PATH):
                 with open(ENERGY_MODEL_PATH, 'rb') as f:
                     data = pickle.load(f)
-                    self.model = data.get('model')
-                    self.insulation_score = data.get('score', 0.0)
+                    self.models = data.get('models', {})
+                    self.scores = data.get('scores', {})
                 self.is_ready = True
-                log(f"✅ Energy Brain geladen. (Insulation Score: {self.insulation_score:.4f})")
+                log(f"✅ Energy Brain geladen. (Räume: {len(self.scores)})")
             else:
                 log("ℹ️ Kein Energy Brain gefunden.")
         except Exception as e:
@@ -285,59 +285,65 @@ class EnergyBrain:
     def train(self, data_points):
         # data_points: list of {t_in, t_out, ts, room}
         if not LIBS_AVAILABLE: return False, "No Libs"
-        log(f"🍃 Starte Energy Training mit {len(data_points)} Messpunkten...")
+        log(f"🍃 Starte Energy Training (Per Room) mit {len(data_points)} Messpunkten...")
 
         try:
-            # 1. Datenvorbereitung
-            # Wir suchen Zeiträume, in denen die Temperatur fällt (Heizung aus)
-            # und korrelieren dies mit der Außentemperatur.
-
             df = pd.DataFrame(data_points)
             df['ts'] = pd.to_datetime(df['ts'], unit='ms')
-            df = df.sort_values('ts')
 
-            # Berechne Differenzen
-            df['dt_sec'] = df['ts'].diff().dt.total_seconds()
-            df['temp_change'] = df['t_in'].diff()
+            # Gruppierung nach Raum
+            room_groups = df.groupby('room')
 
-            # Filtere nur Abkühlphasen (Heizung aus) und sinnvolle Zeitabstände (>5min, <60min)
-            # temp_change < 0 (Abkühlung)
-            cooling_df = df[(df['temp_change'] < 0) & (df['dt_sec'] > 300) & (df['dt_sec'] < 3600)].copy()
+            new_scores = {}
+            new_models = {}
+            processed_rooms = 0
 
-            if len(cooling_df) < 10:
-                return False, "Zu wenig Abkühlphasen gefunden."
+            for room_name, group_df in room_groups:
+                # Sortierung & Deltas pro Raum
+                group_df = group_df.sort_values('ts')
+                group_df['dt_sec'] = group_df['ts'].diff().dt.total_seconds()
+                group_df['temp_change'] = group_df['t_in'].diff()
 
-            # Rate: Grad pro Stunde
-            cooling_df['rate_per_hour'] = (cooling_df['temp_change'] / cooling_df['dt_sec']) * 3600
+                # Filter: Abkühlung, >5min, <60min
+                cooling = group_df[(group_df['temp_change'] < 0) & (group_df['dt_sec'] > 300) & (group_df['dt_sec'] < 3600)].copy()
 
-            # Delta T: Innen - Außen
-            cooling_df['delta_t'] = cooling_df['t_in'] - cooling_df['t_out']
+                if len(cooling) < 10:
+                    log(f"  -> {room_name}: Zu wenig Daten ({len(cooling)} Abkühlphasen).")
+                    continue
 
-            # Regression: Rate ~ Delta T
-            # Je größer Delta T, desto stärker die Abkühlung (negativere Rate)
-            X = cooling_df[['delta_t']].values
-            y = cooling_df['rate_per_hour'].values
+                cooling['rate_per_hour'] = (cooling['temp_change'] / cooling['dt_sec']) * 3600
+                cooling['delta_t'] = cooling['t_in'] - cooling['t_out']
 
-            reg = LinearRegression()
-            reg.fit(X, y)
+                # Regression
+                X = cooling[['delta_t']].values
+                y = cooling['rate_per_hour'].values
 
-            # Der Koeffizient (Slope) sagt uns, wie viel Grad wir pro Stunde pro Grad Temperaturdifferenz verlieren.
-            # Ein Wert von -0.1 bedeutet: Bei 10 Grad Unterschied verlieren wir 1 Grad pro Stunde.
-            # Je näher an 0, desto besser isoliert.
-            insulation_score = reg.coef_[0]
+                reg = LinearRegression()
+                reg.fit(X, y)
+
+                score = reg.coef_[0] # Wärmeverlust pro Stunde pro Delta-K
+                new_models[room_name] = reg
+                new_scores[room_name] = round(score, 4)
+                processed_rooms += 1
+
+            if processed_rooms == 0:
+                return False, "Keine Räume mit genügend Daten."
 
             # Speichern
             with open(ENERGY_MODEL_PATH, 'wb') as f:
-                pickle.dump({'model': reg, 'score': insulation_score}, f)
+                pickle.dump({'models': new_models, 'scores': new_scores}, f)
 
-            self.model = reg
-            self.insulation_score = insulation_score
+            self.models = new_models
+            self.scores = new_scores
             self.is_ready = True
 
-            return True, f"Insulation Score: {insulation_score:.4f} °C/h per Delta-K"
+            # Ergebnis als JSON-String zurückgeben für UI-Tabelle
+            return True, json.dumps(new_scores)
 
         except Exception as e:
             log(f"Energy Train Error: {e}")
+            import traceback
+            traceback.print_exc()
             return False, str(e)
 
 # SINGLETONS
@@ -352,7 +358,6 @@ def process_message(msg):
 
         if cmd == "PING":
             send_result("PONG", {"timestamp": time.time()})
-
         elif cmd == "ANALYZE_TREND":
             values = data.get("values", [])
             tag = data.get("tag", "General")
@@ -362,8 +367,6 @@ def process_message(msg):
             elif change < -5: diagnosis = "Leichter Abfall"
             elif change > 5: diagnosis = "Anstieg (Positiv)"
             send_result("TREND_RESULT", {"tag": tag, "slope": round(slope, 4), "change_percent": round(change, 2), "diagnosis": diagnosis})
-
-        # --- SECURITY ---
         elif cmd == "TRAIN_SECURITY":
             sequences = data.get("sequences", [])
             if len(sequences) < 5:
@@ -371,15 +374,12 @@ def process_message(msg):
             else:
                 success, details = security_brain.train(sequences)
                 send_result("TRAINING_COMPLETE", {"success": success, "details": details})
-
         elif cmd == "ANALYZE_SEQUENCE":
             sequence = data.get("sequence", {})
             score, is_anomaly, msg = security_brain.predict(sequence)
             if score is not None:
                 log(f"🛡️ SECURITY CHECK: Score {score:.5f} -> {'ANOMALY' if is_anomaly else 'OK'}")
                 send_result("SECURITY_RESULT", {"anomaly_score": score, "is_anomaly": is_anomaly, "threshold": ANOMALY_THRESHOLD})
-
-        # --- HEALTH ---
         elif cmd == "TRAIN_HEALTH":
             digests = data.get("digests", [])
             if len(digests) < 3:
@@ -387,22 +387,19 @@ def process_message(msg):
             else:
                 success, details = health_brain.train(digests)
                 send_result("HEALTH_TRAIN_RESULT", {"success": success, "details": details})
-
         elif cmd == "ANALYZE_HEALTH":
             digest = data.get("digest", {})
             res, details = health_brain.predict(digest)
             send_result("HEALTH_RESULT", {"is_anomaly": (res == -1), "details": details})
-
-        # --- ENERGY (NEU) ---
         elif cmd == "TRAIN_ENERGY":
             points = data.get("points", [])
-            if len(points) < 50:
-                log("Zu wenig Thermo-Daten (min 50).")
-                send_result("ENERGY_TRAIN_RESULT", {"success": False, "reason": "Min 50 points needed"})
+            # Threshold etwas senken für Tests
+            if len(points) < 20:
+                log("Zu wenig Thermo-Daten (min 20).")
+                send_result("ENERGY_TRAIN_RESULT", {"success": False, "reason": "Min 20 points needed"})
             else:
                 success, details = energy_brain.train(points)
                 send_result("ENERGY_TRAIN_RESULT", {"success": success, "details": details})
-
         else:
             log(f"Unbekannt: {cmd}")
     except Exception as e:
@@ -414,7 +411,7 @@ def main():
         log("✅ ML-Bibliotheken verfügbar.")
         security_brain.load_brain()
         health_brain.load_brain()
-        energy_brain.load_brain() # LOAD ENERGY
+        energy_brain.load_brain()
     else:
         log("⚠️ ML-Libs fehlen.")
     while True:
