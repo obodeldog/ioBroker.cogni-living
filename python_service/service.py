@@ -6,7 +6,7 @@ import pickle
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.9.1 (Phase B: Per-Room Energy Analysis)"
+VERSION = "0.9.2 (Phase B: Energy Brain - Heating & Cooling)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
 VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
@@ -91,6 +91,7 @@ class SecurityBrain:
 
         log(f"🚀 Starte Security Training mit {len(sequences)} Sequenzen...")
         try:
+            # A. Feature Engineering
             all_locations = set()
             max_len_found = 0
             for seq in sequences:
@@ -104,6 +105,8 @@ class SecurityBrain:
             self.vocab_encoder = LabelBinarizer()
             self.vocab_encoder.fit(list(all_locations))
             n_classes = len(self.vocab_encoder.classes_)
+
+            log(f"🔍 Training Setup: MaxLen={self.max_seq_len}, Locations={n_classes}")
 
             processed_data = []
             for seq in sequences:
@@ -132,6 +135,7 @@ class SecurityBrain:
             times_scaled = self.scaler.fit_transform(times)
             X[:, :, 0] = times_scaled.reshape(X.shape[0], X.shape[1])
 
+            # B. Model
             input_dim = X.shape[2]
             timesteps = X.shape[1]
 
@@ -148,15 +152,19 @@ class SecurityBrain:
             ])
             model.compile(optimizer='adam', loss='mse')
 
+            # C. Train
             history = model.fit(X, X, epochs=100, batch_size=16, validation_split=0.15, verbose=0)
             final_loss = history.history['loss'][-1]
 
+            # D. Save
             model.save(MODEL_PATH)
             with open(SCALER_PATH, 'wb') as f: pickle.dump(self.scaler, f)
             with open(VOCAB_PATH, 'wb') as f: pickle.dump(self.vocab_encoder, f)
             with open(CONFIG_PATH, 'w') as f: json.dump({'max_seq_len': self.max_seq_len}, f)
 
+            # E. FORCE RELOAD
             self.load_brain()
+
             return True, f"Loss: {final_loss:.4f}"
 
         except Exception as e:
@@ -260,11 +268,12 @@ class HealthBrain:
         except Exception as e:
             return 0, str(e)
 
-# --- MODULE 4: ENERGY (Linear Regression PER ROOM) ---
+# --- MODULE 4: ENERGY (Linear Regression PER ROOM + HEATING) ---
 class EnergyBrain:
     def __init__(self):
-        self.models = {} # Dict: 'RoomName' -> Model
-        self.scores = {} # Dict: 'RoomName' -> Score
+        self.models = {}
+        self.scores = {}
+        self.heating_rates = {} # Neu: Aufheiz-Speed
         self.is_ready = False
 
     def load_brain(self):
@@ -275,6 +284,7 @@ class EnergyBrain:
                     data = pickle.load(f)
                     self.models = data.get('models', {})
                     self.scores = data.get('scores', {})
+                    self.heating_rates = data.get('heating', {}) # Laden
                 self.is_ready = True
                 log(f"✅ Energy Brain geladen. (Räume: {len(self.scores)})")
             else:
@@ -283,67 +293,72 @@ class EnergyBrain:
             log(f"Fehler Energy Load: {e}")
 
     def train(self, data_points):
-        # data_points: list of {t_in, t_out, ts, room}
         if not LIBS_AVAILABLE: return False, "No Libs"
-        log(f"🍃 Starte Energy Training (Per Room) mit {len(data_points)} Messpunkten...")
+        log(f"🍃 Starte Energy Training (Isolation & Heating) mit {len(data_points)} Punkten...")
 
         try:
             df = pd.DataFrame(data_points)
             df['ts'] = pd.to_datetime(df['ts'], unit='ms')
-
-            # Gruppierung nach Raum
             room_groups = df.groupby('room')
 
             new_scores = {}
             new_models = {}
+            new_heating_rates = {}
             processed_rooms = 0
 
             for room_name, group_df in room_groups:
-                # Sortierung & Deltas pro Raum
                 group_df = group_df.sort_values('ts')
                 group_df['dt_sec'] = group_df['ts'].diff().dt.total_seconds()
                 group_df['temp_change'] = group_df['t_in'].diff()
 
-                # Filter: Abkühlung, >5min, <60min
+                # A. ISOLATION (Abkühlung)
                 cooling = group_df[(group_df['temp_change'] < 0) & (group_df['dt_sec'] > 300) & (group_df['dt_sec'] < 3600)].copy()
 
-                if len(cooling) < 10:
-                    log(f"  -> {room_name}: Zu wenig Daten ({len(cooling)} Abkühlphasen).")
-                    continue
+                if len(cooling) >= 10:
+                    cooling['rate_per_hour'] = (cooling['temp_change'] / cooling['dt_sec']) * 3600
+                    cooling['delta_t'] = cooling['t_in'] - cooling['t_out']
 
-                cooling['rate_per_hour'] = (cooling['temp_change'] / cooling['dt_sec']) * 3600
-                cooling['delta_t'] = cooling['t_in'] - cooling['t_out']
+                    X = cooling[['delta_t']].values
+                    y = cooling['rate_per_hour'].values
 
-                # Regression
-                X = cooling[['delta_t']].values
-                y = cooling['rate_per_hour'].values
+                    reg = LinearRegression()
+                    reg.fit(X, y)
+                    new_models[room_name] = reg
+                    new_scores[room_name] = round(reg.coef_[0], 4)
+                    processed_rooms += 1
+                else:
+                    log(f"  -> {room_name}: Zu wenig Cooling-Daten.")
 
-                reg = LinearRegression()
-                reg.fit(X, y)
+                # B. HEATING (Aufheizung)
+                # Wir suchen positive Temp-Änderungen
+                heating = group_df[(group_df['temp_change'] > 0) & (group_df['dt_sec'] > 300) & (group_df['dt_sec'] < 3600)].copy()
+                if len(heating) >= 5:
+                    heating['rate_per_hour'] = (heating['temp_change'] / heating['dt_sec']) * 3600
+                    # Wir nehmen den Median als robusten Schätzer für "Wie schnell heizt es typischerweise auf?"
+                    median_heat_rate = heating['rate_per_hour'].median()
+                    new_heating_rates[room_name] = round(median_heat_rate, 2)
 
-                score = reg.coef_[0] # Wärmeverlust pro Stunde pro Delta-K
-                new_models[room_name] = reg
-                new_scores[room_name] = round(score, 4)
-                processed_rooms += 1
-
-            if processed_rooms == 0:
+            if processed_rooms == 0 and len(new_heating_rates) == 0:
                 return False, "Keine Räume mit genügend Daten."
 
-            # Speichern
             with open(ENERGY_MODEL_PATH, 'wb') as f:
-                pickle.dump({'models': new_models, 'scores': new_scores}, f)
+                pickle.dump({'models': new_models, 'scores': new_scores, 'heating': new_heating_rates}, f)
 
             self.models = new_models
             self.scores = new_scores
+            self.heating_rates = new_heating_rates
             self.is_ready = True
 
-            # Ergebnis als JSON-String zurückgeben für UI-Tabelle
-            return True, json.dumps(new_scores)
+            # Kombiniertes Resultat zurückgeben
+            result_json = json.dumps({
+                "insulation": new_scores,
+                "heating": new_heating_rates
+            })
+
+            return True, result_json
 
         except Exception as e:
             log(f"Energy Train Error: {e}")
-            import traceback
-            traceback.print_exc()
             return False, str(e)
 
 # SINGLETONS
@@ -393,7 +408,6 @@ def process_message(msg):
             send_result("HEALTH_RESULT", {"is_anomaly": (res == -1), "details": details})
         elif cmd == "TRAIN_ENERGY":
             points = data.get("points", [])
-            # Threshold etwas senken für Tests
             if len(points) < 20:
                 log("Zu wenig Thermo-Daten (min 20).")
                 send_result("ENERGY_TRAIN_RESULT", {"success": False, "reason": "Min 20 points needed"})
