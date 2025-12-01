@@ -6,12 +6,15 @@ import Settings from './components/Settings';
 import Overview from './components/Overview';
 import Activities from './components/Activities';
 import Help from './components/Help';
+// NEW IMPORT
+import NeuralCockpit from './components/NeuralCockpit';
 
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SaveIcon from '@mui/icons-material/Save';
+import PsychologyIcon from '@mui/icons-material/Psychology'; // Icon für Neural Net
 
 import enLang from './i18n/en.json';
 import deLang from './i18n/de.json';
@@ -76,6 +79,8 @@ class App extends GenericApp<any, AppState> {
                         <Box sx={{ display: 'flex', width: '100%', alignItems: 'center' }}>
                             <Tabs value={this.state.selectedTab} onChange={(_e, newVal) => this.setState({ selectedTab: newVal })} indicatorColor="secondary" textColor="inherit" variant="standard" centered sx={{ flexGrow: 1 }}>
                                 <Tab value="overview" label={I18n.t('Übersicht')} icon={<DashboardIcon />} iconPosition="start" />
+                                {/* NEW TAB */}
+                                <Tab value="neural" label="Neural Network" icon={<PsychologyIcon />} iconPosition="start" />
                                 <Tab value="activities" label={I18n.t('Aktivitäten')} icon={<ListAltIcon />} iconPosition="start" />
                                 <Tab value="settings" label={I18n.t('Einstellungen')} icon={<SettingsIcon />} iconPosition="start" />
                                 <Tab value="help" label="Handbuch" icon={<MenuBookIcon />} iconPosition="start" />
@@ -90,9 +95,10 @@ class App extends GenericApp<any, AppState> {
 
                     <Box sx={{ p: 0, pb: 12, flexGrow: 1, overflowY: 'auto' }}>
                         {this.state.selectedTab === 'overview' && <Overview socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+                        {/* RENDER NEW TAB */}
+                        {this.state.selectedTab === 'neural' && <NeuralCockpit socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
                         {this.state.selectedTab === 'activities' && <Activities socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
                         {this.state.selectedTab === 'settings' && <Settings native={native} onChange={(attr, val) => this.updateNativeValue(attr, val)} socket={this.socket} themeType={themeType} theme={this.state.theme} adapterName={this.adapterName} instance={this.instance} />}
-                        {/* FIX: Theme an Help übergeben */}
                         {this.state.selectedTab === 'help' && <Help themeType={themeType} />}
                     </Box>
 

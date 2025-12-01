@@ -6,19 +6,22 @@ import pickle
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.5.0 (Hybrid: Guardian Core + Security LSTM Skeleton)"
+VERSION = "0.6.0 (Phase B: Security LSTM Autoencoder)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
+VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "security_config.json")
 
 # VERSUCH: Externe KI-Libs laden
 LIBS_AVAILABLE = False
 try:
     import numpy as np
     import pandas as pd
-    from sklearn.preprocessing import MinMaxScaler
+    from sklearn.preprocessing import MinMaxScaler, LabelBinarizer
     # TensorFlow laden wir erst bei Bedarf (Lazy Loading), um den Start zu beschleunigen
     LIBS_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print(f"[LOG] ⚠️ ML-Import Error: {e}")
     pass
 
 def log(msg):
@@ -55,102 +58,191 @@ class SecurityBrain:
     def __init__(self):
         self.model = None
         self.scaler = None
+        self.vocab_encoder = None # LabelBinarizer für Räume
+        self.max_seq_len = 20 # Standard, wird beim Training angepasst
         self.is_ready = False
 
     def load_brain(self):
-        """Versucht, ein existierendes Modell zu laden"""
+        """Versucht, ein existierendes Modell und Metadaten zu laden"""
         if not LIBS_AVAILABLE: return
         try:
             import tensorflow as tf
-            if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH):
+
+            # Check if all artifacts exist
+            if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH) and os.path.exists(VOCAB_PATH):
+
+                # 1. Load Model
                 self.model = tf.keras.models.load_model(MODEL_PATH)
+
+                # 2. Load Scaler
                 with open(SCALER_PATH, 'rb') as f:
                     self.scaler = pickle.load(f)
+
+                # 3. Load Vocab (Locations)
+                with open(VOCAB_PATH, 'rb') as f:
+                    self.vocab_encoder = pickle.load(f)
+
+                # 4. Load Config (Max Len)
+                if os.path.exists(CONFIG_PATH):
+                    with open(CONFIG_PATH, 'r') as f:
+                        conf = json.load(f)
+                        self.max_seq_len = conf.get('max_seq_len', 20)
+
                 self.is_ready = True
-                log("✅ Security Brain (LSTM) erfolgreich geladen.")
+                log(f"✅ Security Brain geladen. (SeqLen: {self.max_seq_len}, Classes: {len(self.vocab_encoder.classes_)})")
             else:
-                log("ℹ️ Kein Security Brain gefunden. Training erforderlich.")
+                log("ℹ️ Kein Security Brain gefunden. Bitte Training starten.")
         except Exception as e:
             log(f"Fehler beim Laden des Brains: {e}")
+            self.is_ready = False
 
     def train(self, sequences):
         """
-        Trainiert den Autoencoder mit den gesammelten Sequenzen.
-        Dies ist rechenintensiv!
+        Trainiert den Autoencoder mit One-Hot-Encoding für Räume + Zeit-Deltas.
         """
         if not LIBS_AVAILABLE:
             log("❌ Kann nicht trainieren: Bibliotheken fehlen.")
-            return False
+            return False, "Bibliotheken fehlen"
 
         import tensorflow as tf
         from tensorflow.keras.models import Sequential
-        from tensorflow.keras.layers import LSTM, Dense, RepeatVector, TimeDistributed
+        from tensorflow.keras.layers import LSTM, Dense, RepeatVector, TimeDistributed, Dropout
 
         log(f"🚀 Starte Training mit {len(sequences)} Sequenzen...")
 
         try:
-            # 1. Datenaufbereitung (Feature Engineering)
-            # Wir extrahieren nur die Zeit-Deltas (Rhythmus) für den Anfang
-            # Später: One-Hot-Encoding der Räume hinzufügen
-            data = []
-            max_len = 0
+            # --- A. FEATURE ENGINEERING ---
 
-            # Finde maximale Länge einer Sequenz
+            # 1. Vokabular aufbauen (Alle bekannten Räume sammeln)
+            all_locations = set()
+            max_len_found = 0
+
             for seq in sequences:
                 steps = seq.get('steps', [])
-                if len(steps) > max_len: max_len = len(steps)
+                if len(steps) > max_len_found: max_len_found = len(steps)
+                for step in steps:
+                    loc = step.get('loc', 'Unknown')
+                    all_locations.add(loc)
 
-            # Padding & Extraction
-            # Wir nehmen hier vereinfacht nur die 't_delta' Zeiten
-            # Ziel: Das Netz soll den "Rhythmus" des Hauses lernen.
+            # Limit Max Len um Speicher zu schonen, aber min 10
+            self.max_seq_len = max(10, min(max_len_found, 50))
+
+            # 2. Label Binarizer fitten (One-Hot Generator)
+            self.vocab_encoder = LabelBinarizer()
+            self.vocab_encoder.fit(list(all_locations))
+            n_classes = len(self.vocab_encoder.classes_)
+
+            log(f"🔍 Training Setup: MaxLen={self.max_seq_len}, Locations={n_classes} ({self.vocab_encoder.classes_})")
+
+            # 3. Vektoren bauen
+            # Pro Schritt: [TimeDelta_Normalized, Loc_OneHot_1, Loc_OneHot_2, ...]
+            # Dimension: 1 + n_classes
+
+            processed_data = []
+
             for seq in sequences:
                 steps = seq.get('steps', [])
-                deltas = [s['t_delta'] for s in steps]
+                seq_vector = []
 
-                # Padding mit 0, falls kürzer als max_len
-                while len(deltas) < max_len:
-                    deltas.append(0)
+                for step in steps:
+                    # Time Delta
+                    t_delta = step.get('t_delta', 0)
 
-                data.append(deltas)
+                    # Location Encoding
+                    loc = step.get('loc', 'Unknown')
+                    # Handle unknown locations gracefully during training (should be in fit, but safe is safe)
+                    try:
+                        loc_vec = self.vocab_encoder.transform([loc])[0]
+                    except:
+                        loc_vec = np.zeros(n_classes) # Fallback
 
-            # Normalisierung
-            dataset = np.array(data)
+                    # Combine: [t_delta] + [0, 0, 1, 0...]
+                    step_vec = np.hstack(([t_delta], loc_vec))
+                    seq_vector.append(step_vec)
+
+                # Padding / Truncating
+                # Wir füllen mit Nullen auf, bis max_seq_len erreicht ist
+                curr_len = len(seq_vector)
+                feature_dim = 1 + n_classes
+
+                if curr_len < self.max_seq_len:
+                    padding = np.zeros((self.max_seq_len - curr_len, feature_dim))
+                    seq_vector = np.vstack((seq_vector, padding))
+                else:
+                    seq_vector = np.array(seq_vector[:self.max_seq_len])
+
+                processed_data.append(seq_vector)
+
+            X = np.array(processed_data)
+
+            # 4. Zeit-Feature Normalisieren (Nur die erste Spalte)
+            # Wir müssen das Array flattenern für den Scaler und dann reshapen
+            # Aber einfacher: Wir fitten den Scaler auf alle t_deltas
+
+            # Extract time column
+            times = X[:, :, 0].flatten().reshape(-1, 1)
             self.scaler = MinMaxScaler()
-            scaled_data = self.scaler.fit_transform(dataset)
+            times_scaled = self.scaler.fit_transform(times)
 
-            # Reshape für LSTM [Samples, Timesteps, Features]
-            X = scaled_data.reshape((scaled_data.shape[0], scaled_data.shape[1], 1))
+            # Put back scaled times
+            X[:, :, 0] = times_scaled.reshape(X.shape[0], X.shape[1])
 
-            # 2. Modell-Architektur (Autoencoder)
+            log(f"📊 Dataset Shape: {X.shape}") # (Samples, Timesteps, Features)
+
+            # --- B. MODELL ARCHITEKTUR (LSTM Autoencoder) ---
+
+            input_dim = X.shape[2] # Features pro Step
+            timesteps = X.shape[1] # Sequenzlänge
+
             model = Sequential([
-                LSTM(64, activation='relu', input_shape=(X.shape[1], X.shape[2]), return_sequences=True),
+                # Encoder
+                LSTM(64, activation='relu', input_shape=(timesteps, input_dim), return_sequences=True),
+                Dropout(0.2),
                 LSTM(32, activation='relu', return_sequences=False),
-                RepeatVector(X.shape[1]),
+
+                # Bottleneck / Latent Space
+                RepeatVector(timesteps),
+
+                # Decoder
                 LSTM(32, activation='relu', return_sequences=True),
+                Dropout(0.2),
                 LSTM(64, activation='relu', return_sequences=True),
-                TimeDistributed(Dense(X.shape[2]))
+
+                # Output
+                TimeDistributed(Dense(input_dim))
             ])
 
             model.compile(optimizer='adam', loss='mse')
 
-            # 3. Training
-            history = model.fit(X, X, epochs=50, batch_size=32, validation_split=0.1, verbose=0)
-            loss = history.history['loss'][-1]
+            # --- C. TRAINING ---
+            epochs = 100
+            history = model.fit(X, X, epochs=epochs, batch_size=16, validation_split=0.15, verbose=0)
+            final_loss = history.history['loss'][-1]
 
-            log(f"✅ Training abgeschlossen. Final Loss: {loss:.4f}")
+            log(f"✅ Training abgeschlossen. Final Loss (MSE): {final_loss:.5f}")
 
-            # 4. Speichern
+            # --- D. SPEICHERN ---
             model.save(MODEL_PATH)
+
             with open(SCALER_PATH, 'wb') as f:
                 pickle.dump(self.scaler, f)
 
+            with open(VOCAB_PATH, 'wb') as f:
+                pickle.dump(self.vocab_encoder, f)
+
+            with open(CONFIG_PATH, 'w') as f:
+                json.dump({'max_seq_len': self.max_seq_len}, f)
+
             self.model = model
             self.is_ready = True
-            return True
+
+            return True, f"Loss: {final_loss:.4f}"
 
         except Exception as e:
-            log(f"Training Crash: {e}")
-            return False
+            log(f"❌ Training Crash: {e}")
+            import traceback
+            traceback.print_exc()
+            return False, str(e)
 
 # SINGLETON INSTANCE
 security_brain = SecurityBrain()
@@ -164,7 +256,6 @@ def process_message(msg):
             send_result("PONG", {"timestamp": time.time()})
 
         elif cmd == "ANALYZE_TREND":
-            # Bestehende Health-Logik
             values = data.get("values", [])
             tag = data.get("tag", "General")
             slope, change = calculate_trend(values)
@@ -181,17 +272,17 @@ def process_message(msg):
             })
 
         elif cmd == "TRAIN_SECURITY":
-            # NEU: Trigger für das Training
+            # TRAINING TRIGGER
             sequences = data.get("sequences", [])
-            if len(sequences) < 10:
-                log("Zu wenig Daten für Training (min 10).")
-                send_result("TRAINING_COMPLETE", {"success": False, "reason": "Not enough data"})
+            if len(sequences) < 5:
+                log("Zu wenig Daten für Training (min 5).")
+                send_result("TRAINING_COMPLETE", {"success": False, "reason": "Not enough data (<5)"})
             else:
-                success = security_brain.train(sequences)
-                send_result("TRAINING_COMPLETE", {"success": success})
+                success, details = security_brain.train(sequences)
+                send_result("TRAINING_COMPLETE", {"success": success, "details": details})
 
         elif cmd == "ANALYZE_SEQUENCE":
-            # Live-Check (Placeholder bis Modell trainiert ist)
+            # Live-Check (ToDo in Phase B.2)
             log("SECURITY Check: Sequenz empfangen. (Inferenz noch inaktiv)")
             send_result("SECURITY_RESULT", {"anomaly_score": 0, "is_anomaly": False})
 
@@ -205,7 +296,7 @@ def main():
     log(f"Hybrid-Engine gestartet. {VERSION}")
 
     if LIBS_AVAILABLE:
-        log("✅ ML-Bibliotheken geladen.")
+        log("✅ ML-Bibliotheken verfügbar (TensorFlow, Sklearn, Pandas).")
         # Versuche beim Start, ein altes Modell zu laden
         security_brain.load_brain()
     else:
