@@ -6,11 +6,14 @@ import pickle
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.7.1 (Phase B: Robust Reload Fix)"
+VERSION = "0.8.0 (Phase B: Health Brain Added)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
 VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "security_config.json")
+
+# HEALTH PATHS
+HEALTH_MODEL_PATH = os.path.join(os.path.dirname(__file__), "health_model.pkl")
 
 # THRESHOLD FÜR ALARM
 ANOMALY_THRESHOLD = 0.05
@@ -20,6 +23,7 @@ try:
     import numpy as np
     import pandas as pd
     from sklearn.preprocessing import MinMaxScaler, LabelBinarizer
+    from sklearn.ensemble import IsolationForest # NEU FÜR HEALTH
     LIBS_AVAILABLE = True
 except ImportError as e:
     print(f"[LOG] ⚠️ ML-Import Error: {e}")
@@ -34,7 +38,7 @@ def send_result(type, payload):
     print(f"[RESULT] {json.dumps(msg)}")
     sys.stdout.flush()
 
-# --- MODULE 1: HEALTH ---
+# --- MODULE 1: CORE HELPERS ---
 def calculate_trend(values):
     if not LIBS_AVAILABLE or len(values) < 2: return 0.0, 0.0
     try:
@@ -50,7 +54,7 @@ def calculate_trend(values):
         log(f"Math Error: {e}")
         return 0.0, 0.0
 
-# --- MODULE 2: SECURITY ---
+# --- MODULE 2: SECURITY (LSTM) ---
 class SecurityBrain:
     def __init__(self):
         self.model = None
@@ -76,7 +80,7 @@ class SecurityBrain:
             else:
                 log("ℹ️ Kein Security Brain gefunden. Bitte Training starten.")
         except Exception as e:
-            log(f"Fehler beim Laden des Brains: {e}")
+            log(f"Fehler beim Laden des Security Brains: {e}")
             self.is_ready = False
 
     def train(self, sequences):
@@ -85,7 +89,7 @@ class SecurityBrain:
         from tensorflow.keras.models import Sequential
         from tensorflow.keras.layers import LSTM, Dense, RepeatVector, TimeDistributed, Dropout, Input
 
-        log(f"🚀 Starte Training mit {len(sequences)} Sequenzen...")
+        log(f"🚀 Starte Security Training mit {len(sequences)} Sequenzen...")
         try:
             # A. Feature Engineering
             all_locations = set()
@@ -158,7 +162,7 @@ class SecurityBrain:
             with open(VOCAB_PATH, 'wb') as f: pickle.dump(self.vocab_encoder, f)
             with open(CONFIG_PATH, 'w') as f: json.dump({'max_seq_len': self.max_seq_len}, f)
 
-            # E. FORCE RELOAD (Wichtig für Live-Betrieb!)
+            # E. FORCE RELOAD
             self.load_brain()
 
             return True, f"Loss: {final_loss:.4f}"
@@ -207,7 +211,83 @@ class SecurityBrain:
         except Exception as e:
             return 0.0, False, str(e)
 
+# --- MODULE 3: HEALTH (Isolation Forest) ---
+class HealthBrain:
+    def __init__(self):
+        self.model = None
+        self.is_ready = False
+        self.activity_map = {
+            'sehr niedrig': 1, 'niedrig': 2, 'normal': 3, 'hoch': 4, 'sehr hoch': 5
+        }
+
+    def load_brain(self):
+        if not LIBS_AVAILABLE: return
+        try:
+            if os.path.exists(HEALTH_MODEL_PATH):
+                with open(HEALTH_MODEL_PATH, 'rb') as f:
+                    self.model = pickle.load(f)
+                self.is_ready = True
+                log("✅ Health Brain (IsoForest) geladen.")
+            else:
+                log("ℹ️ Kein Health Brain gefunden.")
+        except Exception as e:
+            log(f"Fehler Health Load: {e}")
+
+    def _prepare_features(self, digests):
+        # Feature Engineering: [ActivityLevel(1-5), EventCount, SleepScore]
+        data = []
+        for d in digests:
+            lvl_str = d.get('activityLevel', 'normal').lower()
+            lvl = self.activity_map.get(lvl_str, 3)
+            count = d.get('eventCount', 0)
+
+            health_data = d.get('health', {})
+            sleep = 0
+            if health_data and 'sleepScore' in health_data:
+                sleep = health_data['sleepScore'] or 0
+
+            data.append([lvl, count, sleep])
+        return np.array(data)
+
+    def train(self, digests):
+        if not LIBS_AVAILABLE: return False, "No Libs"
+        log(f"🩺 Starte Health Training mit {len(digests)} Tagen...")
+        try:
+            X = self._prepare_features(digests)
+
+            # Isolation Forest
+            # contamination='auto': Der Algo schätzt selbst, wie viele Ausreißer normal sind
+            clf = IsolationForest(random_state=42, contamination='auto')
+            clf.fit(X)
+
+            with open(HEALTH_MODEL_PATH, 'wb') as f:
+                pickle.dump(clf, f)
+
+            self.model = clf
+            self.is_ready = True
+            return True, "Modell gespeichert."
+        except Exception as e:
+            log(f"Health Train Error: {e}")
+            return False, str(e)
+
+    def predict(self, digest):
+        if not self.is_ready: return 0, "Not Ready"
+        try:
+            X = self._prepare_features([digest])
+            # predict liefert: 1 (Normal), -1 (Anomalie)
+            res = self.model.predict(X)[0]
+            # score_samples liefert float (je niedriger desto anomaler)
+            score = self.model.score_samples(X)[0]
+
+            # Mapping für User: 1 = Normal, -1 = Anomalie
+            # Wir geben den rohen Score auch zurück für Visualisierung
+            return res, f"Score: {score:.3f}"
+        except Exception as e:
+            return 0, str(e)
+
+# SINGLETONS
 security_brain = SecurityBrain()
+health_brain = HealthBrain()
 
 def process_message(msg):
     try:
@@ -216,6 +296,7 @@ def process_message(msg):
 
         if cmd == "PING":
             send_result("PONG", {"timestamp": time.time()})
+
         elif cmd == "ANALYZE_TREND":
             values = data.get("values", [])
             tag = data.get("tag", "General")
@@ -225,6 +306,8 @@ def process_message(msg):
             elif change < -5: diagnosis = "Leichter Abfall"
             elif change > 5: diagnosis = "Anstieg (Positiv)"
             send_result("TREND_RESULT", {"tag": tag, "slope": round(slope, 4), "change_percent": round(change, 2), "diagnosis": diagnosis})
+
+        # --- SECURITY COMMANDS ---
         elif cmd == "TRAIN_SECURITY":
             sequences = data.get("sequences", [])
             if len(sequences) < 5:
@@ -233,6 +316,7 @@ def process_message(msg):
             else:
                 success, details = security_brain.train(sequences)
                 send_result("TRAINING_COMPLETE", {"success": success, "details": details})
+
         elif cmd == "ANALYZE_SEQUENCE":
             sequence = data.get("sequence", {})
             score, is_anomaly, msg = security_brain.predict(sequence)
@@ -241,6 +325,25 @@ def process_message(msg):
             else:
                 log(f"🛡️ SECURITY CHECK: Score {score:.5f} -> {'ANOMALY' if is_anomaly else 'OK'}")
                 send_result("SECURITY_RESULT", {"anomaly_score": score, "is_anomaly": is_anomaly, "threshold": ANOMALY_THRESHOLD})
+
+        # --- HEALTH COMMANDS (NEU) ---
+        elif cmd == "TRAIN_HEALTH":
+            digests = data.get("digests", [])
+            if len(digests) < 3:
+                log("Zu wenig Tage für Health Training (min 3).")
+                send_result("HEALTH_TRAIN_RESULT", {"success": False, "reason": "Min 3 days needed"})
+            else:
+                success, details = health_brain.train(digests)
+                send_result("HEALTH_TRAIN_RESULT", {"success": success, "details": details})
+
+        elif cmd == "ANALYZE_HEALTH":
+            digest = data.get("digest", {})
+            # res: 1 (OK), -1 (Anomaly)
+            res, details = health_brain.predict(digest)
+            is_anomaly = (res == -1)
+            log(f"🩺 HEALTH CHECK: {details} -> {'Krankheit?' if is_anomaly else 'Gesund'}")
+            send_result("HEALTH_RESULT", {"is_anomaly": is_anomaly, "details": details})
+
         else:
             log(f"Unbekannt: {cmd}")
     except Exception as e:
@@ -251,6 +354,7 @@ def main():
     if LIBS_AVAILABLE:
         log("✅ ML-Bibliotheken verfügbar.")
         security_brain.load_brain()
+        health_brain.load_brain()
     else:
         log("⚠️ ML-Libs fehlen.")
     while True:
