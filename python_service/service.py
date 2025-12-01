@@ -4,6 +4,7 @@ import time
 import os
 import pickle
 from datetime import datetime
+from tensorflow.keras.layers import Input
 
 # LOGGING & CONFIG
 VERSION = "0.6.0 (Phase B: Security LSTM Autoencoder)"
@@ -195,12 +196,15 @@ class SecurityBrain:
             timesteps = X.shape[1] # Sequenzlänge
 
             model = Sequential([
-                # Encoder
-                LSTM(64, activation='relu', input_shape=(timesteps, input_dim), return_sequences=True),
+                # FIX: Explizite Input Layer gegen die Warnung
+                Input(shape=(timesteps, input_dim)),
+
+                # Encoder (input_shape hier entfernen)
+                LSTM(64, activation='relu', return_sequences=True),
                 Dropout(0.2),
                 LSTM(32, activation='relu', return_sequences=False),
 
-                # Bottleneck / Latent Space
+                # Bottleneck
                 RepeatVector(timesteps),
 
                 # Decoder
