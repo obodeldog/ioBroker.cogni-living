@@ -4,14 +4,16 @@ import time
 import os
 import pickle
 from datetime import datetime
-from tensorflow.keras.layers import Input
 
 # LOGGING & CONFIG
-VERSION = "0.6.0 (Phase B: Security LSTM Autoencoder)"
+VERSION = "0.7.0 (Phase B: Live Inference Active)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
 VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "security_config.json")
+
+# THRESHOLD FÜR ALARM (Kann später dynamisch werden)
+ANOMALY_THRESHOLD = 0.05
 
 # VERSUCH: Externe KI-Libs laden
 LIBS_AVAILABLE = False
@@ -19,7 +21,7 @@ try:
     import numpy as np
     import pandas as pd
     from sklearn.preprocessing import MinMaxScaler, LabelBinarizer
-    # TensorFlow laden wir erst bei Bedarf (Lazy Loading), um den Start zu beschleunigen
+    # TensorFlow laden wir erst bei Bedarf (Lazy Loading)
     LIBS_AVAILABLE = True
 except ImportError as e:
     print(f"[LOG] ⚠️ ML-Import Error: {e}")
@@ -98,26 +100,21 @@ class SecurityBrain:
             self.is_ready = False
 
     def train(self, sequences):
-        """
-        Trainiert den Autoencoder mit One-Hot-Encoding für Räume + Zeit-Deltas.
-        """
+        """Trainiert den Autoencoder."""
         if not LIBS_AVAILABLE:
             log("❌ Kann nicht trainieren: Bibliotheken fehlen.")
             return False, "Bibliotheken fehlen"
 
         import tensorflow as tf
         from tensorflow.keras.models import Sequential
-        from tensorflow.keras.layers import LSTM, Dense, RepeatVector, TimeDistributed, Dropout
+        from tensorflow.keras.layers import LSTM, Dense, RepeatVector, TimeDistributed, Dropout, Input
 
         log(f"🚀 Starte Training mit {len(sequences)} Sequenzen...")
 
         try:
             # --- A. FEATURE ENGINEERING ---
-
-            # 1. Vokabular aufbauen (Alle bekannten Räume sammeln)
             all_locations = set()
             max_len_found = 0
-
             for seq in sequences:
                 steps = seq.get('steps', [])
                 if len(steps) > max_len_found: max_len_found = len(steps)
@@ -125,128 +122,141 @@ class SecurityBrain:
                     loc = step.get('loc', 'Unknown')
                     all_locations.add(loc)
 
-            # Limit Max Len um Speicher zu schonen, aber min 10
             self.max_seq_len = max(10, min(max_len_found, 50))
 
-            # 2. Label Binarizer fitten (One-Hot Generator)
             self.vocab_encoder = LabelBinarizer()
             self.vocab_encoder.fit(list(all_locations))
             n_classes = len(self.vocab_encoder.classes_)
 
-            log(f"🔍 Training Setup: MaxLen={self.max_seq_len}, Locations={n_classes} ({self.vocab_encoder.classes_})")
-
-            # 3. Vektoren bauen
-            # Pro Schritt: [TimeDelta_Normalized, Loc_OneHot_1, Loc_OneHot_2, ...]
-            # Dimension: 1 + n_classes
+            log(f"🔍 Training Setup: MaxLen={self.max_seq_len}, Locations={n_classes}")
 
             processed_data = []
-
             for seq in sequences:
                 steps = seq.get('steps', [])
                 seq_vector = []
-
                 for step in steps:
-                    # Time Delta
                     t_delta = step.get('t_delta', 0)
-
-                    # Location Encoding
                     loc = step.get('loc', 'Unknown')
-                    # Handle unknown locations gracefully during training (should be in fit, but safe is safe)
                     try:
                         loc_vec = self.vocab_encoder.transform([loc])[0]
                     except:
-                        loc_vec = np.zeros(n_classes) # Fallback
-
-                    # Combine: [t_delta] + [0, 0, 1, 0...]
+                        loc_vec = np.zeros(n_classes)
                     step_vec = np.hstack(([t_delta], loc_vec))
                     seq_vector.append(step_vec)
 
-                # Padding / Truncating
-                # Wir füllen mit Nullen auf, bis max_seq_len erreicht ist
                 curr_len = len(seq_vector)
                 feature_dim = 1 + n_classes
-
                 if curr_len < self.max_seq_len:
                     padding = np.zeros((self.max_seq_len - curr_len, feature_dim))
                     seq_vector = np.vstack((seq_vector, padding))
                 else:
                     seq_vector = np.array(seq_vector[:self.max_seq_len])
-
                 processed_data.append(seq_vector)
 
             X = np.array(processed_data)
 
-            # 4. Zeit-Feature Normalisieren (Nur die erste Spalte)
-            # Wir müssen das Array flattenern für den Scaler und dann reshapen
-            # Aber einfacher: Wir fitten den Scaler auf alle t_deltas
-
-            # Extract time column
             times = X[:, :, 0].flatten().reshape(-1, 1)
             self.scaler = MinMaxScaler()
             times_scaled = self.scaler.fit_transform(times)
-
-            # Put back scaled times
             X[:, :, 0] = times_scaled.reshape(X.shape[0], X.shape[1])
 
-            log(f"📊 Dataset Shape: {X.shape}") # (Samples, Timesteps, Features)
-
-            # --- B. MODELL ARCHITEKTUR (LSTM Autoencoder) ---
-
-            input_dim = X.shape[2] # Features pro Step
-            timesteps = X.shape[1] # Sequenzlänge
+            # --- B. MODELL ARCHITEKTUR ---
+            input_dim = X.shape[2]
+            timesteps = X.shape[1]
 
             model = Sequential([
-                # FIX: Explizite Input Layer gegen die Warnung
                 Input(shape=(timesteps, input_dim)),
-
-                # Encoder (input_shape hier entfernen)
                 LSTM(64, activation='relu', return_sequences=True),
                 Dropout(0.2),
                 LSTM(32, activation='relu', return_sequences=False),
-
-                # Bottleneck
                 RepeatVector(timesteps),
-
-                # Decoder
                 LSTM(32, activation='relu', return_sequences=True),
                 Dropout(0.2),
                 LSTM(64, activation='relu', return_sequences=True),
-
-                # Output
                 TimeDistributed(Dense(input_dim))
             ])
 
             model.compile(optimizer='adam', loss='mse')
 
             # --- C. TRAINING ---
-            epochs = 100
-            history = model.fit(X, X, epochs=epochs, batch_size=16, validation_split=0.15, verbose=0)
+            history = model.fit(X, X, epochs=100, batch_size=16, validation_split=0.15, verbose=0)
             final_loss = history.history['loss'][-1]
 
             log(f"✅ Training abgeschlossen. Final Loss (MSE): {final_loss:.5f}")
 
             # --- D. SPEICHERN ---
             model.save(MODEL_PATH)
-
-            with open(SCALER_PATH, 'wb') as f:
-                pickle.dump(self.scaler, f)
-
-            with open(VOCAB_PATH, 'wb') as f:
-                pickle.dump(self.vocab_encoder, f)
-
-            with open(CONFIG_PATH, 'w') as f:
-                json.dump({'max_seq_len': self.max_seq_len}, f)
+            with open(SCALER_PATH, 'wb') as f: pickle.dump(self.scaler, f)
+            with open(VOCAB_PATH, 'wb') as f: pickle.dump(self.vocab_encoder, f)
+            with open(CONFIG_PATH, 'w') as f: json.dump({'max_seq_len': self.max_seq_len}, f)
 
             self.model = model
             self.is_ready = True
-
             return True, f"Loss: {final_loss:.4f}"
 
         except Exception as e:
             log(f"❌ Training Crash: {e}")
-            import traceback
-            traceback.print_exc()
             return False, str(e)
+
+    def predict(self, sequence):
+        """Prüft eine einzelne Sequenz auf Anomalie."""
+        if not self.is_ready:
+            return None, False, "Model not ready"
+
+        try:
+            # 1. Preprocessing (exakt wie beim Training)
+            steps = sequence.get('steps', [])
+            seq_vector = []
+            n_classes = len(self.vocab_encoder.classes_)
+
+            for step in steps:
+                t_delta = step.get('t_delta', 0)
+                loc = step.get('loc', 'Unknown')
+
+                # Robustes Transform (Unbekannte Räume abfangen)
+                if loc in self.vocab_encoder.classes_:
+                    loc_vec = self.vocab_encoder.transform([loc])[0]
+                else:
+                    # Fallback für neuen/unbekannten Raum -> Null-Vektor
+                    loc_vec = np.zeros(n_classes)
+
+                step_vec = np.hstack(([t_delta], loc_vec))
+                seq_vector.append(step_vec)
+
+            # Padding / Truncating
+            curr_len = len(seq_vector)
+            feature_dim = 1 + n_classes
+
+            if curr_len < self.max_seq_len:
+                padding = np.zeros((self.max_seq_len - curr_len, feature_dim))
+                if curr_len > 0:
+                    seq_vector = np.vstack((seq_vector, padding))
+                else:
+                    seq_vector = padding
+            else:
+                seq_vector = np.array(seq_vector[:self.max_seq_len])
+
+            # Input Shape [1, Timesteps, Features]
+            X = np.array([seq_vector])
+
+            # Skalierung der Zeit (Feature 0)
+            time_col = X[:, :, 0].flatten().reshape(-1, 1)
+            time_scaled = self.scaler.transform(time_col)
+            X[:, :, 0] = time_scaled.reshape(1, self.max_seq_len)
+
+            # 2. Inferenz (Vorhersage)
+            reconstruction = self.model.predict(X, verbose=0)
+
+            # 3. Fehlerberechnung (MSE)
+            mse = np.mean(np.power(X - reconstruction, 2))
+
+            is_anomaly = float(mse) > ANOMALY_THRESHOLD
+
+            return float(mse), is_anomaly, "OK"
+
+        except Exception as e:
+            log(f"Predict Error: {e}")
+            return 0.0, False, str(e)
 
 # SINGLETON INSTANCE
 security_brain = SecurityBrain()
@@ -276,7 +286,6 @@ def process_message(msg):
             })
 
         elif cmd == "TRAIN_SECURITY":
-            # TRAINING TRIGGER
             sequences = data.get("sequences", [])
             if len(sequences) < 5:
                 log("Zu wenig Daten für Training (min 5).")
@@ -286,9 +295,19 @@ def process_message(msg):
                 send_result("TRAINING_COMPLETE", {"success": success, "details": details})
 
         elif cmd == "ANALYZE_SEQUENCE":
-            # Live-Check (ToDo in Phase B.2)
-            log("SECURITY Check: Sequenz empfangen. (Inferenz noch inaktiv)")
-            send_result("SECURITY_RESULT", {"anomaly_score": 0, "is_anomaly": False})
+            # LIVE CHECK (Scharf geschaltet)
+            sequence = data.get("sequence", {})
+            score, is_anomaly, msg = security_brain.predict(sequence)
+
+            if score is None:
+                log(f"Inferenz nicht möglich: {msg}")
+            else:
+                log(f"🛡️ Security Check: MSE={score:.5f} | Anomaly={is_anomaly}")
+                send_result("SECURITY_RESULT", {
+                    "anomaly_score": score,
+                    "is_anomaly": is_anomaly,
+                    "threshold": ANOMALY_THRESHOLD
+                })
 
         else:
             log(f"Unbekannter Befehl: {cmd}")
@@ -300,8 +319,7 @@ def main():
     log(f"Hybrid-Engine gestartet. {VERSION}")
 
     if LIBS_AVAILABLE:
-        log("✅ ML-Bibliotheken verfügbar (TensorFlow, Sklearn, Pandas).")
-        # Versuche beim Start, ein altes Modell zu laden
+        log("✅ ML-Bibliotheken verfügbar.")
         security_brain.load_brain()
     else:
         log("⚠️ ML-Libs fehlen. Werden installiert...")
