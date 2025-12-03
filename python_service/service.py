@@ -6,7 +6,7 @@ import pickle
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.9.3 (Phase B: Dynamic Threshold Upgrade)"
+VERSION = "0.9.4 (Phase B: Threshold Instant Update)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
 VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
@@ -14,7 +14,7 @@ CONFIG_PATH = os.path.join(os.path.dirname(__file__), "security_config.json")
 HEALTH_MODEL_PATH = os.path.join(os.path.dirname(__file__), "health_model.pkl")
 ENERGY_MODEL_PATH = os.path.join(os.path.dirname(__file__), "energy_model.pkl")
 
-# FALLBACK THRESHOLD (wird durch Training überschrieben)
+# FALLBACK THRESHOLD
 DEFAULT_THRESHOLD = 0.05
 
 LIBS_AVAILABLE = False
@@ -73,7 +73,6 @@ class SecurityBrain:
                 with open(SCALER_PATH, 'rb') as f: self.scaler = pickle.load(f)
                 with open(VOCAB_PATH, 'rb') as f: self.vocab_encoder = pickle.load(f)
 
-                # Load Configuration & Threshold
                 if os.path.exists(CONFIG_PATH):
                     with open(CONFIG_PATH, 'r') as f:
                         conf = json.load(f)
@@ -89,7 +88,7 @@ class SecurityBrain:
             self.is_ready = False
 
     def train(self, sequences):
-        if not LIBS_AVAILABLE: return False, "Bibliotheken fehlen"
+        if not LIBS_AVAILABLE: return False, "Bibliotheken fehlen", DEFAULT_THRESHOLD
         import tensorflow as tf
         from tensorflow.keras.models import Sequential
         from tensorflow.keras.layers import LSTM, Dense, RepeatVector, TimeDistributed, Dropout, Input
@@ -110,8 +109,6 @@ class SecurityBrain:
             self.vocab_encoder = LabelBinarizer()
             self.vocab_encoder.fit(list(all_locations))
             n_classes = len(self.vocab_encoder.classes_)
-
-            log(f"🔍 Training Setup: MaxLen={self.max_seq_len}, Locations={n_classes}")
 
             processed_data = []
             for seq in sequences:
@@ -161,41 +158,31 @@ class SecurityBrain:
             history = model.fit(X, X, epochs=100, batch_size=16, validation_split=0.15, verbose=0)
             final_loss = history.history['loss'][-1]
 
-            # D. Dynamic Threshold Calculation (mu + 3*sigma)
+            # D. Threshold Calculation
             log("📊 Berechne dynamischen Threshold...")
             reconstructions = model.predict(X, verbose=0)
-            # MSE per sample (axis 1=timesteps, 2=features)
             train_mse = np.mean(np.power(X - reconstructions, 2), axis=(1, 2))
             mean_mse = np.mean(train_mse)
             std_mse = np.std(train_mse)
 
-            # Formel: Mean + 3 * StdDev
             self.dynamic_threshold = float(mean_mse + 3 * std_mse)
+            if self.dynamic_threshold < 0.01: self.dynamic_threshold = 0.01
 
-            # Safety Fallback: Nicht unter 0.01 gehen, um False Positives bei sehr sauberen Daten zu vermeiden
-            if self.dynamic_threshold < 0.01:
-                self.dynamic_threshold = 0.01
-
-            log(f"🎯 Neuer Threshold: {self.dynamic_threshold:.5f} (Mean: {mean_mse:.5f}, Std: {std_mse:.5f})")
+            log(f"🎯 Neuer Threshold: {self.dynamic_threshold:.5f}")
 
             # E. Save
             model.save(MODEL_PATH)
             with open(SCALER_PATH, 'wb') as f: pickle.dump(self.scaler, f)
             with open(VOCAB_PATH, 'wb') as f: pickle.dump(self.vocab_encoder, f)
             with open(CONFIG_PATH, 'w') as f:
-                json.dump({
-                    'max_seq_len': self.max_seq_len,
-                    'threshold': self.dynamic_threshold
-                }, f)
+                json.dump({'max_seq_len': self.max_seq_len, 'threshold': self.dynamic_threshold}, f)
 
-            # F. FORCE RELOAD
             self.load_brain()
-
-            return True, f"Loss: {final_loss:.4f} | Threshold: {self.dynamic_threshold:.4f}"
+            return True, f"Loss: {final_loss:.4f} | Threshold: {self.dynamic_threshold:.4f}", self.dynamic_threshold
 
         except Exception as e:
             log(f"❌ Training Crash: {e}")
-            return False, str(e)
+            return False, str(e), DEFAULT_THRESHOLD
 
     def predict(self, sequence):
         if not self.is_ready: return None, False, "Model not ready"
@@ -231,15 +218,13 @@ class SecurityBrain:
 
             reconstruction = self.model.predict(X, verbose=0)
             mse = np.mean(np.power(X - reconstruction, 2))
-
-            # COMPARE AGAINST DYNAMIC THRESHOLD
             is_anomaly = float(mse) > self.dynamic_threshold
 
             return float(mse), is_anomaly, "OK"
         except Exception as e:
             return 0.0, False, str(e)
 
-# --- MODULE 3: HEALTH (Isolation Forest) ---
+# --- MODULE 3: HEALTH ---
 class HealthBrain:
     def __init__(self):
         self.model = None
@@ -250,14 +235,10 @@ class HealthBrain:
         if not LIBS_AVAILABLE: return
         try:
             if os.path.exists(HEALTH_MODEL_PATH):
-                with open(HEALTH_MODEL_PATH, 'rb') as f:
-                    self.model = pickle.load(f)
+                with open(HEALTH_MODEL_PATH, 'rb') as f: self.model = pickle.load(f)
                 self.is_ready = True
                 log("✅ Health Brain geladen.")
-            else:
-                log("ℹ️ Kein Health Brain gefunden.")
-        except Exception as e:
-            log(f"Fehler Health Load: {e}")
+        except: pass
 
     def _prepare_features(self, digests):
         data = []
@@ -266,15 +247,12 @@ class HealthBrain:
             lvl = self.activity_map.get(lvl_str, 3)
             count = d.get('eventCount', 0)
             health_data = d.get('health', {})
-            sleep = 0
-            if health_data and 'sleepScore' in health_data:
-                sleep = health_data['sleepScore'] or 0
+            sleep = health_data.get('sleepScore', 0) if health_data else 0
             data.append([lvl, count, sleep])
         return np.array(data)
 
     def train(self, digests):
         if not LIBS_AVAILABLE: return False, "No Libs"
-        log(f"🩺 Starte Health Training mit {len(digests)} Tagen...")
         try:
             X = self._prepare_features(digests)
             clf = IsolationForest(random_state=42, contamination='auto')
@@ -283,8 +261,7 @@ class HealthBrain:
             self.model = clf
             self.is_ready = True
             return True, "Modell gespeichert."
-        except Exception as e:
-            return False, str(e)
+        except Exception as e: return False, str(e)
 
     def predict(self, digest):
         if not self.is_ready: return 0, "Not Ready"
@@ -293,16 +270,12 @@ class HealthBrain:
             res = self.model.predict(X)[0]
             score = self.model.score_samples(X)[0]
             return res, f"Score: {score:.3f}"
-        except Exception as e:
-            return 0, str(e)
+        except Exception as e: return 0, str(e)
 
-# --- MODULE 4: ENERGY (Linear Regression PER ROOM + HEATING) ---
+# --- MODULE 4: ENERGY ---
 class EnergyBrain:
     def __init__(self):
-        self.models = {}
-        self.scores = {}
-        self.heating_rates = {} # Neu: Aufheiz-Speed
-        self.is_ready = False
+        self.models = {}; self.scores = {}; self.heating_rates = {}; self.is_ready = False
 
     def load_brain(self):
         if not LIBS_AVAILABLE: return
@@ -312,82 +285,45 @@ class EnergyBrain:
                     data = pickle.load(f)
                     self.models = data.get('models', {})
                     self.scores = data.get('scores', {})
-                    self.heating_rates = data.get('heating', {}) # Laden
+                    self.heating_rates = data.get('heating', {})
                 self.is_ready = True
                 log(f"✅ Energy Brain geladen. (Räume: {len(self.scores)})")
-            else:
-                log("ℹ️ Kein Energy Brain gefunden.")
-        except Exception as e:
-            log(f"Fehler Energy Load: {e}")
+        except: pass
 
     def train(self, data_points):
         if not LIBS_AVAILABLE: return False, "No Libs"
-        log(f"🍃 Starte Energy Training (Isolation & Heating) mit {len(data_points)} Punkten...")
-
         try:
             df = pd.DataFrame(data_points)
             df['ts'] = pd.to_datetime(df['ts'], unit='ms')
             room_groups = df.groupby('room')
-
-            new_scores = {}
-            new_models = {}
-            new_heating_rates = {}
-            processed_rooms = 0
+            new_scores = {}; new_models = {}; new_heating_rates = {}; processed_rooms = 0
 
             for room_name, group_df in room_groups:
                 group_df = group_df.sort_values('ts')
                 group_df['dt_sec'] = group_df['ts'].diff().dt.total_seconds()
                 group_df['temp_change'] = group_df['t_in'].diff()
 
-                # A. ISOLATION (Abkühlung)
                 cooling = group_df[(group_df['temp_change'] < 0) & (group_df['dt_sec'] > 300) & (group_df['dt_sec'] < 3600)].copy()
-
                 if len(cooling) >= 10:
                     cooling['rate_per_hour'] = (cooling['temp_change'] / cooling['dt_sec']) * 3600
                     cooling['delta_t'] = cooling['t_in'] - cooling['t_out']
-
-                    X = cooling[['delta_t']].values
-                    y = cooling['rate_per_hour'].values
-
-                    reg = LinearRegression()
-                    reg.fit(X, y)
-                    new_models[room_name] = reg
-                    new_scores[room_name] = round(reg.coef_[0], 4)
+                    X = cooling[['delta_t']].values; y = cooling['rate_per_hour'].values
+                    reg = LinearRegression(); reg.fit(X, y)
+                    new_models[room_name] = reg; new_scores[room_name] = round(reg.coef_[0], 4)
                     processed_rooms += 1
-                else:
-                    log(f"  -> {room_name}: Zu wenig Cooling-Daten.")
 
-                # B. HEATING (Aufheizung)
-                # Wir suchen positive Temp-Änderungen
                 heating = group_df[(group_df['temp_change'] > 0) & (group_df['dt_sec'] > 300) & (group_df['dt_sec'] < 3600)].copy()
                 if len(heating) >= 5:
                     heating['rate_per_hour'] = (heating['temp_change'] / heating['dt_sec']) * 3600
-                    # Wir nehmen den Median als robusten Schätzer für "Wie schnell heizt es typischerweise auf?"
-                    median_heat_rate = heating['rate_per_hour'].median()
-                    new_heating_rates[room_name] = round(median_heat_rate, 2)
+                    new_heating_rates[room_name] = round(heating['rate_per_hour'].median(), 2)
 
-            if processed_rooms == 0 and len(new_heating_rates) == 0:
-                return False, "Keine Räume mit genügend Daten."
+            if processed_rooms == 0 and len(new_heating_rates) == 0: return False, "Keine Räume mit genügend Daten."
 
-            with open(ENERGY_MODEL_PATH, 'wb') as f:
-                pickle.dump({'models': new_models, 'scores': new_scores, 'heating': new_heating_rates}, f)
+            with open(ENERGY_MODEL_PATH, 'wb') as f: pickle.dump({'models': new_models, 'scores': new_scores, 'heating': new_heating_rates}, f)
+            self.models = new_models; self.scores = new_scores; self.heating_rates = new_heating_rates; self.is_ready = True
+            return True, json.dumps({"insulation": new_scores, "heating": new_heating_rates})
 
-            self.models = new_models
-            self.scores = new_scores
-            self.heating_rates = new_heating_rates
-            self.is_ready = True
-
-            # Kombiniertes Resultat zurückgeben
-            result_json = json.dumps({
-                "insulation": new_scores,
-                "heating": new_heating_rates
-            })
-
-            return True, result_json
-
-        except Exception as e:
-            log(f"Energy Train Error: {e}")
-            return False, str(e)
+        except Exception as e: return False, str(e)
 
 # SINGLETONS
 security_brain = SecurityBrain()
@@ -399,77 +335,43 @@ def process_message(msg):
         data = json.loads(msg)
         cmd = data.get("command")
 
-        if cmd == "PING":
-            send_result("PONG", {"timestamp": time.time()})
+        if cmd == "PING": send_result("PONG", {"timestamp": time.time()})
         elif cmd == "ANALYZE_TREND":
-            values = data.get("values", [])
-            tag = data.get("tag", "General")
-            slope, change = calculate_trend(values)
+            values = data.get("values", []); slope, change = calculate_trend(values)
             diagnosis = "Stabil"
             if change < -10: diagnosis = "Signifikanter Abfall"
-            elif change < -5: diagnosis = "Leichter Abfall"
-            elif change > 5: diagnosis = "Anstieg (Positiv)"
-            send_result("TREND_RESULT", {"tag": tag, "slope": round(slope, 4), "change_percent": round(change, 2), "diagnosis": diagnosis})
+            elif change > 5: diagnosis = "Anstieg"
+            send_result("TREND_RESULT", {"tag": data.get("tag"), "slope": round(slope, 4), "change_percent": round(change, 2), "diagnosis": diagnosis})
         elif cmd == "TRAIN_SECURITY":
             sequences = data.get("sequences", [])
-            if len(sequences) < 5:
-                send_result("TRAINING_COMPLETE", {"success": False, "reason": "Not enough data"})
+            if len(sequences) < 5: send_result("TRAINING_COMPLETE", {"success": False, "reason": "Not enough data"})
             else:
-                success, details = security_brain.train(sequences)
-                send_result("TRAINING_COMPLETE", {"success": success, "details": details})
+                success, details, threshold = security_brain.train(sequences)
+                send_result("TRAINING_COMPLETE", {"success": success, "details": details, "threshold": threshold})
         elif cmd == "ANALYZE_SEQUENCE":
-            sequence = data.get("sequence", {})
-            score, is_anomaly, msg = security_brain.predict(sequence)
+            score, is_anomaly, msg = security_brain.predict(data.get("sequence", {}))
             if score is not None:
-                log(f"🛡️ SECURITY CHECK: Score {score:.5f} -> {'ANOMALY' if is_anomaly else 'OK'}")
-                # SEND THE DYNAMIC THRESHOLD BACK
-                send_result("SECURITY_RESULT", {
-                    "anomaly_score": score,
-                    "is_anomaly": is_anomaly,
-                    "threshold": security_brain.dynamic_threshold
-                })
+                log(f"🛡️ SECURITY: {score:.5f} (Limit: {security_brain.dynamic_threshold:.5f})")
+                send_result("SECURITY_RESULT", {"anomaly_score": score, "is_anomaly": is_anomaly, "threshold": security_brain.dynamic_threshold})
         elif cmd == "TRAIN_HEALTH":
-            digests = data.get("digests", [])
-            if len(digests) < 3:
-                send_result("HEALTH_TRAIN_RESULT", {"success": False, "reason": "Min 3 days needed"})
-            else:
-                success, details = health_brain.train(digests)
-                send_result("HEALTH_TRAIN_RESULT", {"success": success, "details": details})
+            success, details = health_brain.train(data.get("digests", []))
+            send_result("HEALTH_TRAIN_RESULT", {"success": success, "details": details})
         elif cmd == "ANALYZE_HEALTH":
-            digest = data.get("digest", {})
-            res, details = health_brain.predict(digest)
+            res, details = health_brain.predict(data.get("digest", {}))
             send_result("HEALTH_RESULT", {"is_anomaly": (res == -1), "details": details})
         elif cmd == "TRAIN_ENERGY":
-            points = data.get("points", [])
-            if len(points) < 20:
-                log("Zu wenig Thermo-Daten (min 20).")
-                send_result("ENERGY_TRAIN_RESULT", {"success": False, "reason": "Min 20 points needed"})
-            else:
-                success, details = energy_brain.train(points)
-                send_result("ENERGY_TRAIN_RESULT", {"success": success, "details": details})
-        else:
-            log(f"Unbekannt: {cmd}")
-    except Exception as e:
-        log(f"Fehler: {e}")
+            success, details = energy_brain.train(data.get("points", []))
+            send_result("ENERGY_TRAIN_RESULT", {"success": success, "details": details})
+    except Exception as e: log(f"Fehler: {e}")
 
-def main():
+if __name__ == "__main__":
     log(f"Hybrid-Engine gestartet. {VERSION}")
     if LIBS_AVAILABLE:
-        log("✅ ML-Bibliotheken verfügbar.")
-        security_brain.load_brain()
-        health_brain.load_brain()
-        energy_brain.load_brain()
-    else:
-        log("⚠️ ML-Libs fehlen.")
+        security_brain.load_brain(); health_brain.load_brain(); energy_brain.load_brain()
     while True:
         try:
             line = sys.stdin.readline()
             if not line: break
             process_message(line.strip())
-        except KeyboardInterrupt:
-            break
-        except Exception as e:
-            log(f"Loop Fehler: {e}")
-
-if __name__ == "__main__":
-    main()
+        except KeyboardInterrupt: break
+        except Exception as e: log(f"Loop Fehler: {e}")
