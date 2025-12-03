@@ -6,7 +6,7 @@ import pickle
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.9.2 (Phase B: Energy Brain - Heating & Cooling)"
+VERSION = "0.9.3 (Phase B: Dynamic Threshold Upgrade)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
 VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
@@ -14,8 +14,8 @@ CONFIG_PATH = os.path.join(os.path.dirname(__file__), "security_config.json")
 HEALTH_MODEL_PATH = os.path.join(os.path.dirname(__file__), "health_model.pkl")
 ENERGY_MODEL_PATH = os.path.join(os.path.dirname(__file__), "energy_model.pkl")
 
-# THRESHOLD FÜR ALARM
-ANOMALY_THRESHOLD = 0.05
+# FALLBACK THRESHOLD (wird durch Training überschrieben)
+DEFAULT_THRESHOLD = 0.05
 
 LIBS_AVAILABLE = False
 try:
@@ -61,6 +61,7 @@ class SecurityBrain:
         self.scaler = None
         self.vocab_encoder = None
         self.max_seq_len = 20
+        self.dynamic_threshold = DEFAULT_THRESHOLD
         self.is_ready = False
 
     def load_brain(self):
@@ -71,12 +72,16 @@ class SecurityBrain:
                 self.model = tf.keras.models.load_model(MODEL_PATH)
                 with open(SCALER_PATH, 'rb') as f: self.scaler = pickle.load(f)
                 with open(VOCAB_PATH, 'rb') as f: self.vocab_encoder = pickle.load(f)
+
+                # Load Configuration & Threshold
                 if os.path.exists(CONFIG_PATH):
                     with open(CONFIG_PATH, 'r') as f:
                         conf = json.load(f)
                         self.max_seq_len = conf.get('max_seq_len', 20)
+                        self.dynamic_threshold = conf.get('threshold', DEFAULT_THRESHOLD)
+
                 self.is_ready = True
-                log(f"✅ Security Brain geladen. (SeqLen: {self.max_seq_len})")
+                log(f"✅ Security Brain geladen. (SeqLen: {self.max_seq_len}, Threshold: {self.dynamic_threshold:.5f})")
             else:
                 log("ℹ️ Kein Security Brain gefunden. Bitte Training starten.")
         except Exception as e:
@@ -156,16 +161,37 @@ class SecurityBrain:
             history = model.fit(X, X, epochs=100, batch_size=16, validation_split=0.15, verbose=0)
             final_loss = history.history['loss'][-1]
 
-            # D. Save
+            # D. Dynamic Threshold Calculation (mu + 3*sigma)
+            log("📊 Berechne dynamischen Threshold...")
+            reconstructions = model.predict(X, verbose=0)
+            # MSE per sample (axis 1=timesteps, 2=features)
+            train_mse = np.mean(np.power(X - reconstructions, 2), axis=(1, 2))
+            mean_mse = np.mean(train_mse)
+            std_mse = np.std(train_mse)
+
+            # Formel: Mean + 3 * StdDev
+            self.dynamic_threshold = float(mean_mse + 3 * std_mse)
+
+            # Safety Fallback: Nicht unter 0.01 gehen, um False Positives bei sehr sauberen Daten zu vermeiden
+            if self.dynamic_threshold < 0.01:
+                self.dynamic_threshold = 0.01
+
+            log(f"🎯 Neuer Threshold: {self.dynamic_threshold:.5f} (Mean: {mean_mse:.5f}, Std: {std_mse:.5f})")
+
+            # E. Save
             model.save(MODEL_PATH)
             with open(SCALER_PATH, 'wb') as f: pickle.dump(self.scaler, f)
             with open(VOCAB_PATH, 'wb') as f: pickle.dump(self.vocab_encoder, f)
-            with open(CONFIG_PATH, 'w') as f: json.dump({'max_seq_len': self.max_seq_len}, f)
+            with open(CONFIG_PATH, 'w') as f:
+                json.dump({
+                    'max_seq_len': self.max_seq_len,
+                    'threshold': self.dynamic_threshold
+                }, f)
 
-            # E. FORCE RELOAD
+            # F. FORCE RELOAD
             self.load_brain()
 
-            return True, f"Loss: {final_loss:.4f}"
+            return True, f"Loss: {final_loss:.4f} | Threshold: {self.dynamic_threshold:.4f}"
 
         except Exception as e:
             log(f"❌ Training Crash: {e}")
@@ -205,7 +231,9 @@ class SecurityBrain:
 
             reconstruction = self.model.predict(X, verbose=0)
             mse = np.mean(np.power(X - reconstruction, 2))
-            is_anomaly = float(mse) > ANOMALY_THRESHOLD
+
+            # COMPARE AGAINST DYNAMIC THRESHOLD
+            is_anomaly = float(mse) > self.dynamic_threshold
 
             return float(mse), is_anomaly, "OK"
         except Exception as e:
@@ -394,7 +422,12 @@ def process_message(msg):
             score, is_anomaly, msg = security_brain.predict(sequence)
             if score is not None:
                 log(f"🛡️ SECURITY CHECK: Score {score:.5f} -> {'ANOMALY' if is_anomaly else 'OK'}")
-                send_result("SECURITY_RESULT", {"anomaly_score": score, "is_anomaly": is_anomaly, "threshold": ANOMALY_THRESHOLD})
+                # SEND THE DYNAMIC THRESHOLD BACK
+                send_result("SECURITY_RESULT", {
+                    "anomaly_score": score,
+                    "is_anomaly": is_anomaly,
+                    "threshold": security_brain.dynamic_threshold
+                })
         elif cmd == "TRAIN_HEALTH":
             digests = data.get("digests", [])
             if len(digests) < 3:
