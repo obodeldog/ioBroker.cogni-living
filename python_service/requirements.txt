@@ -1,8 +1,5 @@
-sudo bash -c 'cat > /opt/iobroker/node_modules/iobroker.cogni-living/python_service/requirements.txt <<EOF
---index-url https://mirror.faau.de/pypi/simple
 numpy
 pandas
 scikit-learn
 tensorflow-cpu; platform_machine != "aarch64" and platform_machine != "armv7l"
 tensorflow; platform_machine == "aarch64"
-EOF'
