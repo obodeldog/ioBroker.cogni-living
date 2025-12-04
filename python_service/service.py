@@ -7,7 +7,7 @@ import math
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.11.0 (Phase C: Prediction & Gait)"
+VERSION = "0.11.1 (Fix: Verbose Import Error)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
 VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
@@ -17,14 +17,6 @@ ENERGY_MODEL_PATH = os.path.join(os.path.dirname(__file__), "energy_model.pkl")
 
 DEFAULT_THRESHOLD = 0.05
 LIBS_AVAILABLE = False
-try:
-    import numpy as np
-    import pandas as pd
-    from sklearn.preprocessing import MinMaxScaler, LabelBinarizer
-    from sklearn.ensemble import IsolationForest
-    from sklearn.linear_model import LinearRegression
-    LIBS_AVAILABLE = True
-except ImportError: pass
 
 def log(msg):
     print(f"[LOG] {msg}")
@@ -34,6 +26,21 @@ def send_result(type, payload):
     msg = {"type": type, "payload": payload}
     print(f"[RESULT] {json.dumps(msg)}")
     sys.stdout.flush()
+
+# --- IMPORTS ---
+try:
+    import numpy as np
+    import pandas as pd
+    from sklearn.preprocessing import MinMaxScaler, LabelBinarizer
+    from sklearn.ensemble import IsolationForest
+    from sklearn.linear_model import LinearRegression
+    LIBS_AVAILABLE = True
+except ImportError as e:
+    log(f"⚠️ CRITICAL: ML-Libs fehlen/defekt: {e}")
+    pass
+except Exception as e:
+    log(f"⚠️ CRITICAL: Unbekannter Fehler beim Import: {e}")
+    pass
 
 # --- MODULE 1: HELPERS ---
 def calculate_trend(values):
@@ -78,7 +85,6 @@ class SecurityBrain:
         from tensorflow.keras.models import Sequential
         from tensorflow.keras.layers import LSTM, Dense, RepeatVector, TimeDistributed, Dropout, Input
 
-        log(f"🚀 Starte Security Training ({len(sequences)} seq)...")
         try:
             all_locations = set()
             max_len_found = 0
@@ -150,6 +156,7 @@ class SecurityBrain:
     def predict(self, sequence):
         if not self.is_ready: return None, False, "Model not ready"
         try:
+            import numpy as np # Re-import safe inside method
             steps = sequence.get('steps', [])
             seq_vector = []
             n_classes = len(self.vocab_encoder.classes_)
@@ -203,31 +210,53 @@ class HealthBrain:
                 with open(HEALTH_MODEL_PATH, 'rb') as f: self.model = pickle.load(f); self.is_ready = True
         except: pass
 
-    def train(self, digests): return True, "Saved"
-    def predict(self, digest): return 0, "OK"
+    def _prepare_features(self, digests):
+        data = []
+        for d in digests:
+            vec = d.get('activityVector', None)
+            if vec is None or len(vec) != 96:
+                count = d.get('eventCount', 0)
+                vec = [0] * 96
+                for i in range(32, 80): vec[i] = int(count / 48)
+            data.append(vec)
+        return np.array(data)
+
+    def train(self, digests):
+        if not LIBS_AVAILABLE: return False, "No Libs"
+        try:
+            X = self._prepare_features(digests)
+            if len(X) < 2: return False, "Not enough data"
+            clf = IsolationForest(random_state=42, contamination='auto')
+            clf.fit(X)
+            with open(HEALTH_MODEL_PATH, 'wb') as f: pickle.dump(clf, f)
+            self.model = clf
+            self.is_ready = True
+            return True, "Modell gespeichert."
+        except Exception as e: return False, str(e)
+
+    def predict(self, digest):
+        if not self.is_ready: return 0, "Not Ready"
+        try:
+            X = self._prepare_features([digest])
+            res = self.model.predict(X)[0]
+            score = self.model.score_samples(X)[0]
+            return res, f"Score: {score:.3f}"
+        except Exception as e: return 0, str(e)
 
     def analyze_gait_speed(self, sequences):
-        # Find motion sequences in Hallway ('Flur', 'Corridor', etc.)
-        # Calculate duration and check for trend
         if not LIBS_AVAILABLE: return None
         durations = []
         for seq in sequences:
             steps = seq.get('steps', [])
             if len(steps) < 2: continue
-
-            # Check if all locations involve typical "Hallway" names
             is_hallway = all(any(x in step['loc'].lower() for x in ['flur', 'corridor', 'hall', 'diele', 'gang', 'treppe']) for step in steps)
-
             if is_hallway:
                 duration = steps[-1]['t_delta']
-                if duration > 1 and duration < 20: # Valid walk
-                    durations.append(duration)
+                if duration > 1 and duration < 20: durations.append(duration)
 
         if len(durations) < 5: return None
-
-        # Calculate trend
         slope, change = calculate_trend(durations)
-        return change # % change in speed (positive = slower)
+        return change
 
 # --- MODULE 4: ENERGY (With Prediction) ---
 class EnergyBrain:
@@ -245,36 +274,19 @@ class EnergyBrain:
 
     def train(self, data):
         if not LIBS_AVAILABLE: return False, "No Libs"
-        # Simplified training reuse
         return True, "{}"
 
     def predict_cooling(self, current_temps, t_out):
-        # Forecast temperature in 1h, 2h, 4h
         if not self.is_ready: return {}
-
         forecasts = {}
         for room, t_in in current_temps.items():
-            k = self.scores.get(room, -0.5) # Default cooling rate if unknown
-            # Linear approximation from training: Rate = k * (T_in - T_out)
-            # 1 Hour Forecast
-            delta_t = t_in - t_out
-
-            # If regression was Rate = k (slope), then Rate is fixed per deg diff?
-            # We assume k is the coefficient from LinearRegression(delta_t -> rate_per_hour)
-            # So rate = k * delta_t + intercept (ignoring intercept for now)
-            rate = k * delta_t
-
-            # Safety checks (Physics: it cools down towards t_out)
-            if t_in > t_out and rate > 0: rate = -0.1 # Force cooling
-            if t_in < t_out and rate < 0: rate = 0.1 # Force warming (summer)
-
+            k = self.scores.get(room, -0.5)
+            rate = k * (t_in - t_out)
+            if t_in > t_out and rate > 0: rate = -0.1
+            if t_in < t_out and rate < 0: rate = 0.1
             t_1h = t_in + rate
             t_4h = t_in + (rate * 4)
-
-            forecasts[room] = {
-                "1h": round(t_1h, 1),
-                "4h": round(t_4h, 1)
-            }
+            forecasts[room] = { "1h": round(t_1h, 1), "4h": round(t_4h, 1) }
         return forecasts
 
 # --- MODULE 5: COMFORT ---
@@ -283,15 +295,12 @@ class ComfortBrain:
 
     def train(self, events):
         if not LIBS_AVAILABLE: return False, "No Libs"
-        # ... (Full Pattern Mining Logic from v0.10.0 reused here) ...
+        log(f"🛋️ Comfort Training mit {len(events)} Events...")
         try:
             df = pd.DataFrame(events)
             if 'timestamp' in df.columns: df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             df = df.sort_values('timestamp')
-
-            patterns_2 = {}
-            patterns_3 = {}
-            event_counts = {}
+            patterns_2 = {}; patterns_3 = {}; event_counts = {}
 
             def is_trivial(id1, id2):
                 if id1 == id2: return True
@@ -392,22 +401,18 @@ def process_message(msg):
         elif cmd == "ANALYZE_HEALTH":
             res, details = health_brain.predict(data.get("digest", {}))
             send_result("HEALTH_RESULT", {"is_anomaly": (res == -1), "details": details})
-
-        # --- NEW PHASE C COMMANDS ---
         elif cmd == "ANALYZE_GAIT":
             trend = health_brain.analyze_gait_speed(data.get("sequences", []))
-            if trend is not None:
-                send_result("GAIT_RESULT", {"speed_trend": trend})
-
+            if trend is not None: send_result("GAIT_RESULT", {"speed_trend": trend})
         elif cmd == "PREDICT_ENERGY":
             forecast = energy_brain.predict_cooling(data.get("current_temps", {}), data.get("t_out", 0))
             send_result("ENERGY_PREDICT_RESULT", {"forecast": forecast})
-
     except Exception as e: log(f"Err: {e}")
 
 if __name__ == "__main__":
     log(f"Hybrid-Engine gestartet. {VERSION}")
     if LIBS_AVAILABLE: security_brain.load_brain(); health_brain.load_brain(); energy_brain.load_brain()
+    else: log("⚠️ Critical: ML-Libs not available.")
     while True:
         try:
             line = sys.stdin.readline()
