@@ -1,11 +1,11 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.10.0",
+        "version": "0.10.1",
         "news": {
-            "0.10.0": {
-                "en": "Major Update: Health Vector Analysis & Comfort Pattern Optimization.",
-                "de": "Großes Update: Health-Vektor-Analyse & Optimierung der Mustererkennung."
+            "0.10.1": {
+                "en": "Feature: Live Health Vector visualization.",
+                "de": "Feature: Live Health-Vektor Visualisierung."
             }
         },
         "titleLang": {
