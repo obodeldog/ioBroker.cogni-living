@@ -1,23 +1,11 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.9.16",
+        "version": "0.9.18",
         "news": {
-            "0.9.16": {
-                "en": "Feature: Support for dedicated local outdoor temperature sensor.",
-                "de": "Feature: Unterstützung für eigenen lokalen Außentemperatur-Fühler."
-            },
-            "0.9.15": {
-                "en": "Feature: Thermodynamics Data Logger (Energy).",
-                "de": "Feature: Thermodynamik-Datenlogger (Energie)."
-            },
-            "0.9.3": {
-                "en": "Feature: Auto-healing for Python dependencies (Hybrid Engine).",
-                "de": "Feature: Selbstheilung für Python-Abhängigkeiten (Hybrid Engine)."
-            },
-            "0.9.0": {
-                "en": "Feature: Hybrid Intelligence Architecture (Node.js + Python Sidecar).",
-                "de": "Feature: Hybride Intelligenz-Architektur (Node.js + Python Sidecar)."
+            "0.9.18": {
+                "en": "Feature: Pattern Mining list visualization.",
+                "de": "Feature: Visualisierung der Muster-Liste."
             }
         },
         "titleLang": {
