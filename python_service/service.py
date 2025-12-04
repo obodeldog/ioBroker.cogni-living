@@ -6,7 +6,7 @@ import pickle
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.9.7 (Phase B: Comfort Pattern Mining)"
+VERSION = "0.9.8 (Phase B: Comfort Pattern Mining v2)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
 VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
@@ -232,7 +232,7 @@ class EnergyBrain:
         if not LIBS_AVAILABLE: return False, "No Libs"
         return True, "{}"
 
-# --- NEW: COMFORT BRAIN (Pattern Mining) ---
+# --- NEW: COMFORT BRAIN (Advanced Pattern Mining) ---
 class ComfortBrain:
     def __init__(self):
         self.rules = []
@@ -246,48 +246,94 @@ class ComfortBrain:
             df = df.sort_values('timestamp')
 
             patterns = {}
+            patterns_3 = {} # For A->B->C
             event_counts = {}
 
-            # Simple Pair Mining
-            last_event = None
-            for index, row in df.iterrows():
-                current_id = row.get('name', row.get('id', 'unknown'))
-                current_time = row['timestamp']
+            # Helper to check if events are 'trivial' (same device)
+            def is_trivial(id1, id2):
+                if id1 == id2: return True
+                # Simple check: same prefix often means same device (e.g. hue.0.light1.on vs hue.0.light1.level)
+                if id1.split('.')[:-1] == id2.split('.')[:-1]: return True
+                return False
 
-                # Filter out raw values like temperature numbers to keep patterns readable
-                # We only want discrete events (On/Off, Motion, Open)
-                etype = str(row.get('type', '')).lower()
-                if 'temp' in etype or 'energy' in etype or 'power' in etype:
-                    continue
+            # Sliding Window Logic (look ahead)
+            # Convert to list of dicts for faster iteration than iterrows
+            records = df.to_dict('records')
+            n = len(records)
 
-                event_counts[current_id] = event_counts.get(current_id, 0) + 1
+            for i in range(n):
+                evt_a = records[i]
+                id_a = evt_a.get('name', evt_a.get('id', 'unknown'))
 
-                if last_event is not None:
-                    last_id = last_event['id']
-                    last_time = last_event['time']
-                    delta = (current_time - last_time).total_seconds()
+                # Skip technical events (numbers, temperatures) for pattern source
+                type_a = str(evt_a.get('type', '')).lower()
+                if 'temp' in type_a or 'energy' in type_a or 'power' in type_a: continue
 
-                    # 1s to 120s window (increased from 60s)
-                    if 1 < delta < 120 and last_id != current_id:
-                        pair = f"{last_id} -> {current_id}"
-                        patterns[pair] = patterns.get(pair, 0) + 1
+                event_counts[id_a] = event_counts.get(id_a, 0) + 1
 
-                last_event = {'id': current_id, 'time': current_time}
+                # Look ahead for B (within 1-60s)
+                for j in range(i + 1, min(i + 10, n)): # Check next 10 events max
+                    evt_b = records[j]
+                    id_b = evt_b.get('name', evt_b.get('id', 'unknown'))
+                    delta_ab = (evt_b['timestamp'] - evt_a['timestamp']).total_seconds()
 
+                    if delta_ab > 60: break # Too late
+                    if delta_ab < 1.0: continue # Too fast (Group/Scene)
+                    if is_trivial(id_a, id_b): continue # Same device
+
+                    # Found Pair A -> B
+                    pair = f"{id_a} -> {id_b}"
+                    patterns[pair] = patterns.get(pair, 0) + 1
+
+                    # Look ahead for C (within 1-60s from B)
+                    for k in range(j + 1, min(j + 10, n)):
+                        evt_c = records[k]
+                        id_c = evt_c.get('name', evt_c.get('id', 'unknown'))
+                        delta_bc = (evt_c['timestamp'] - evt_b['timestamp']).total_seconds()
+
+                        if delta_bc > 60: break
+                        if delta_bc < 1.0: continue
+                        if is_trivial(id_b, id_c) or is_trivial(id_a, id_c): continue
+
+                        # Found Chain A -> B -> C
+                        triple = f"{id_a} -> {id_b} -> {id_c}"
+                        patterns_3[triple] = patterns_3.get(triple, 0) + 1
+
+            # Scoring & Ranking
             results = []
-            for pair, count in patterns.items():
+
+            # Process Pairs
+            for rule, count in patterns.items():
                 if count < 3: continue
-                source = pair.split(" -> ")[0]
-                source_count = event_counts.get(source, 1)
-                confidence = count / source_count
+                source = rule.split(" -> ")[0]
+                conf = count / event_counts.get(source, 1)
+                if conf > 0.4: results.append({'rule': rule, 'confidence': conf, 'count': count, 'len': 2})
 
-                if confidence > 0.4: # Slightly lower threshold to find more
-                    results.append({'rule': pair, 'confidence': confidence, 'count': count})
+            # Process Triples (Boost score for length)
+            for rule, count in patterns_3.items():
+                if count < 3: continue
+                parts = rule.split(" -> ")
+                source = parts[0]
+                conf = count / event_counts.get(source, 1)
+                if conf > 0.3: # Lower threshold for triples
+                    results.append({'rule': rule, 'confidence': conf * 1.2, 'count': count, 'len': 3}) # Boost confidence for ranking
 
+            # Sort by Confidence
             results.sort(key=lambda x: x['confidence'], reverse=True)
 
-            # Return TOP 5
-            return True, results[:5]
+            # Deduplicate (If A->B->C is in list, remove A->B if it's the same flow)
+            # Simplified: Just return top 5 unique strings
+            unique_results = []
+            seen_rules = set()
+            for r in results:
+                if r['rule'] not in seen_rules:
+                    # Normalizing confidence for display (max 1.0)
+                    r['confidence'] = min(0.99, r['confidence'])
+                    unique_results.append(r)
+                    seen_rules.add(r['rule'])
+                if len(unique_results) >= 5: break
+
+            return True, unique_results
 
         except Exception as e:
             log(f"Comfort Error: {e}")
