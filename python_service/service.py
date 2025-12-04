@@ -6,7 +6,7 @@ import pickle
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.9.9 (Phase B: Comfort Brain with Time Deltas)"
+VERSION = "0.10.0 (Milestone: Health Vectors & Comfort Opt)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
 VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
@@ -129,7 +129,6 @@ class SecurityBrain:
             model.compile(optimizer='adam', loss='mse')
             model.fit(X, X, epochs=100, batch_size=16, validation_split=0.15, verbose=0)
 
-            # Recalc threshold
             reconstructions = model.predict(X, verbose=0)
             train_mse = np.mean(np.power(X - reconstructions, 2), axis=(1, 2))
             mean_mse = np.mean(train_mse)
@@ -193,20 +192,70 @@ class SecurityBrain:
 
         except Exception as e: return 0.0, False, str(e)
 
-# --- MODULE 3: HEALTH ---
+# --- MODULE 3: HEALTH (Vector Upgrade) ---
 class HealthBrain:
-    def __init__(self): self.model = None
-    def load_brain(self): pass
-    def train(self, digests): return True, "Saved"
-    def predict(self, digest): return 0, "OK"
+    def __init__(self): self.model = None; self.is_ready = False
+    def load_brain(self):
+        if not LIBS_AVAILABLE: return
+        try:
+            if os.path.exists(HEALTH_MODEL_PATH):
+                with open(HEALTH_MODEL_PATH, 'rb') as f: self.model = pickle.load(f); self.is_ready = True
+        except: pass
+
+    def _prepare_features(self, digests):
+        data = []
+        for d in digests:
+            # TRY TO USE VECTOR (96 features)
+            vec = d.get('activityVector', None)
+            if vec is None or len(vec) != 96:
+                # Fallback: Create simple vector from count (not good but prevents crash)
+                count = d.get('eventCount', 0)
+                vec = [0] * 96
+                # Distribute count vaguely
+                for i in range(32, 80): # Daytime
+                    vec[i] = int(count / 48)
+            data.append(vec)
+        return np.array(data)
+
+    def train(self, digests):
+        if not LIBS_AVAILABLE: return False, "No Libs"
+        try:
+            X = self._prepare_features(digests)
+            if len(X) < 2: return False, "Not enough data"
+            clf = IsolationForest(random_state=42, contamination='auto')
+            clf.fit(X)
+            with open(HEALTH_MODEL_PATH, 'wb') as f: pickle.dump(clf, f)
+            self.model = clf
+            self.is_ready = True
+            return True, "Modell gespeichert."
+        except Exception as e: return False, str(e)
+
+    def predict(self, digest):
+        if not self.is_ready: return 0, "Not Ready"
+        try:
+            X = self._prepare_features([digest])
+            res = self.model.predict(X)[0]
+            score = self.model.score_samples(X)[0]
+            return res, f"Score: {score:.3f}"
+        except Exception as e: return 0, str(e)
 
 # --- MODULE 4: ENERGY ---
 class EnergyBrain:
     def __init__(self): self.scores = {}; self.heating = {}
-    def load_brain(self): pass
-    def train(self, data): return True, "{}"
+    def load_brain(self):
+        if not LIBS_AVAILABLE: return
+        try:
+            if os.path.exists(ENERGY_MODEL_PATH):
+                with open(ENERGY_MODEL_PATH, 'rb') as f:
+                    data = pickle.load(f)
+                    self.scores = data.get('scores', {})
+                    self.heating = data.get('heating', {})
+        except: pass
+    def train(self, data):
+        if not LIBS_AVAILABLE: return False, "No Libs"
+        return True, "{}"
 
-# --- NEW: COMFORT BRAIN (Pattern Mining v2 with Time) ---
+# --- MODULE 5: COMFORT (Pattern Mining v3: 45s) ---
 class ComfortBrain:
     def __init__(self):
         self.rules = []
@@ -219,10 +268,8 @@ class ComfortBrain:
             if 'timestamp' in df.columns: df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             df = df.sort_values('timestamp')
 
-            # Dictionary to store lists of delays
-            # Structure: {'A -> B': [1.2, 5.0, 3.4]}
             patterns_2 = {}
-            patterns_3 = {} # Structure: {'A -> B -> C': {'delays_b': [], 'delays_c': []}}
+            patterns_3 = {}
             event_counts = {}
 
             def is_trivial(id1, id2):
@@ -237,107 +284,74 @@ class ComfortBrain:
                 evt_a = records[i]
                 id_a = evt_a.get('name', evt_a.get('id', 'unknown'))
                 type_a = str(evt_a.get('type', '')).lower()
-
-                # Filter technical updates (only allow discrete events)
                 if 'temp' in type_a or 'energy' in type_a or 'power' in type_a: continue
 
                 event_counts[id_a] = event_counts.get(id_a, 0) + 1
 
-                # Look ahead
+                # Look ahead (REDUCED TO 45s per user request)
                 for j in range(i + 1, min(i + 10, n)):
                     evt_b = records[j]
                     id_b = evt_b.get('name', evt_b.get('id', 'unknown'))
                     delta_ab = (evt_b['timestamp'] - evt_a['timestamp']).total_seconds()
 
-                    if delta_ab > 120: break
+                    if delta_ab > 45: break # <--- CHANGED FROM 120
                     if delta_ab < 1.0: continue
                     if is_trivial(id_a, id_b): continue
 
-                    # PAIR FOUND
                     pair = f"{id_a} -> {id_b}"
                     if pair not in patterns_2: patterns_2[pair] = []
                     patterns_2[pair].append(delta_ab)
 
-                    # Look ahead for C
                     for k in range(j + 1, min(j + 10, n)):
                         evt_c = records[k]
                         id_c = evt_c.get('name', evt_c.get('id', 'unknown'))
                         delta_bc = (evt_c['timestamp'] - evt_b['timestamp']).total_seconds()
 
-                        if delta_bc > 120: break
+                        if delta_bc > 45: break # <--- CHANGED FROM 120
                         if delta_bc < 1.0: continue
                         if is_trivial(id_b, id_c) or is_trivial(id_a, id_c): continue
 
-                        # TRIPLE FOUND
                         triple = f"{id_a} -> {id_b} -> {id_c}"
                         delta_ac = (evt_c['timestamp'] - evt_a['timestamp']).total_seconds()
-
                         if triple not in patterns_3: patterns_3[triple] = {'delays_b': [], 'delays_c': []}
                         patterns_3[triple]['delays_b'].append(delta_ab)
                         patterns_3[triple]['delays_c'].append(delta_ac)
 
             results = []
-
-            # Process Pairs
             for rule, delays in patterns_2.items():
                 count = len(delays)
                 if count < 3: continue
-
                 source = rule.split(" -> ")[0]
                 conf = count / event_counts.get(source, 1)
-
                 if conf > 0.4:
-                    avg_delay = float(np.mean(delays))
-                    results.append({
-                        'rule': rule,
-                        'confidence': conf,
-                        'count': count,
-                        'type': 'pair',
-                        'timeInfo': f"Ø +{avg_delay:.1f}s"
-                    })
+                    avg = float(np.mean(delays))
+                    results.append({'rule': rule, 'confidence': conf, 'count': count, 'type': 'pair', 'timeInfo': f"Ø +{avg:.1f}s"})
 
-            # Process Triples
             for rule, data in patterns_3.items():
                 count = len(data['delays_b'])
                 if count < 3: continue
-
                 source = rule.split(" -> ")[0]
                 conf = count / event_counts.get(source, 1)
-
                 if conf > 0.3:
                     avg_b = float(np.mean(data['delays_b']))
                     avg_c = float(np.mean(data['delays_c']))
-                    results.append({
-                        'rule': rule,
-                        'confidence': conf * 1.2, # Bonus for complexity
-                        'count': count,
-                        'type': 'triple',
-                        'timeInfo': f"+{avg_b:.1f}s → +{avg_c:.1f}s"
-                    })
+                    results.append({'rule': rule, 'confidence': conf * 1.2, 'count': count, 'type': 'triple', 'timeInfo': f"+{avg_b:.1f}s → +{avg_c:.1f}s"})
 
-            # Sorting
             results.sort(key=lambda x: x['confidence'], reverse=True)
 
-            # Simple Deduplication (Prefer Triples over Pairs)
-            # Strategy: If "A->B->C" exists, remove "A->B" if counts are similar
             final_results = []
             rules_seen = set()
-
-            # First pass: Add all triples
             for r in results:
                 if r['type'] == 'triple':
                     final_results.append(r)
-                    # Mark sub-patterns as seen
                     parts = r['rule'].split(" -> ")
                     rules_seen.add(f"{parts[0]} -> {parts[1]}")
                     rules_seen.add(f"{parts[1]} -> {parts[2]}")
 
-            # Second pass: Add pairs if not covered by triples
             for r in results:
                 if r['type'] == 'pair' and r['rule'] not in rules_seen:
                     final_results.append(r)
 
-            # Re-sort and cap
             final_results.sort(key=lambda x: x['confidence'], reverse=True)
             return True, final_results[:5]
 
@@ -366,6 +380,12 @@ def process_message(msg):
         elif cmd == "TRAIN_COMFORT":
             success, top_rules = comfort_brain.train(data.get("events", []))
             send_result("COMFORT_RESULT", {"patterns": top_rules if success else []})
+        elif cmd == "TRAIN_HEALTH":
+            success, details = health_brain.train(data.get("digests", []))
+            send_result("HEALTH_TRAIN_RESULT", {"success": success, "details": details})
+        elif cmd == "ANALYZE_HEALTH":
+            res, details = health_brain.predict(data.get("digest", {}))
+            send_result("HEALTH_RESULT", {"is_anomaly": (res == -1), "details": details})
     except Exception as e: log(f"Err: {e}")
 
 if __name__ == "__main__":

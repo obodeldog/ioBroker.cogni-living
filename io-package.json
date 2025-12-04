@@ -1,20 +1,20 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.9.18",
+        "version": "0.10.0",
         "news": {
-            "0.9.18": {
-                "en": "Feature: Pattern Mining list visualization.",
-                "de": "Feature: Visualisierung der Muster-Liste."
+            "0.10.0": {
+                "en": "Major Update: Health Vector Analysis & Comfort Pattern Optimization.",
+                "de": "Großes Update: Health-Vektor-Analyse & Optimierung der Mustererkennung."
             }
         },
         "titleLang": {
-            "en": "Cogni-Living",
-            "de": "Kognitives Leben"
+            "en": "NUUKANNI (Cogni-Living)",
+            "de": "NUUKANNI (Cogni-Living)"
         },
         "desc": {
-            "en": "Analyzes behavioral patterns for health, safety & comfort",
-            "de": "Analysiert Verhaltensmuster für Gesundheit, Sicherheit & Komfort"
+            "en": "Neuro-Symbolic AI for Home Automation & Health",
+            "de": "Neuro-Symbolische KI für Hausautomation & Gesundheit"
         },
         "authors": [
             "Marc Jaeger <mj112@gmx.de>"
