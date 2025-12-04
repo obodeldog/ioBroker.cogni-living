@@ -7,7 +7,7 @@ import math
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.11.1 (Fix: Verbose Import Error)"
+VERSION = "0.12.0 (Feature: Markov Topology)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
 VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
@@ -200,6 +200,41 @@ class SecurityBrain:
 
         except Exception as e: return 0.0, False, str(e)
 
+# --- MODULE 2.1: TOPOLOGY (NEW) ---
+class TopologyBrain:
+    def build_matrix(self, sequences):
+        if not LIBS_AVAILABLE: return None
+        try:
+            # Extrahiere alle Übergänge (From -> To)
+            transitions = []
+            for seq in sequences:
+                steps = seq.get('steps', [])
+                for i in range(len(steps) - 1):
+                    loc_a = steps[i].get('loc', 'Unknown')
+                    loc_b = steps[i+1].get('loc', 'Unknown')
+                    if loc_a != loc_b: # Keine Selbst-Referenz
+                        transitions.append({'from': loc_a, 'to': loc_b})
+
+            if len(transitions) < 5: return None
+
+            df = pd.DataFrame(transitions)
+            # Berechne Wahrscheinlichkeiten (Row normalized)
+            matrix = pd.crosstab(df['from'], df['to'], normalize='index')
+
+            # Convert to pure JSON structure
+            rooms = list(matrix.columns)
+            values = []
+            for idx, row in matrix.iterrows():
+                row_dict = {'from': idx}
+                for room in rooms:
+                    row_dict[room] = float(row[room]) if room in row else 0.0
+                values.append(row_dict)
+
+            return {'rooms': rooms, 'matrix': values, 'count': len(transitions)}
+        except Exception as e:
+            log(f"Topology Error: {e}")
+            return None
+
 # --- MODULE 3: HEALTH (With Gait Speed) ---
 class HealthBrain:
     def __init__(self): self.model = None; self.is_ready = False
@@ -379,6 +414,7 @@ security_brain = SecurityBrain()
 health_brain = HealthBrain()
 energy_brain = EnergyBrain()
 comfort_brain = ComfortBrain()
+topology_brain = TopologyBrain()
 
 def process_message(msg):
     try:
@@ -407,6 +443,10 @@ def process_message(msg):
         elif cmd == "PREDICT_ENERGY":
             forecast = energy_brain.predict_cooling(data.get("current_temps", {}), data.get("t_out", 0))
             send_result("ENERGY_PREDICT_RESULT", {"forecast": forecast})
+        elif cmd == "BUILD_TOPOLOGY":
+            res = topology_brain.build_matrix(data.get("sequences", []))
+            if res: send_result("TOPOLOGY_RESULT", {"data": res})
+
     except Exception as e: log(f"Err: {e}")
 
 if __name__ == "__main__":

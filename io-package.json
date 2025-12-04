@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.11.0",
+        "version": "0.12.0",
         "news": {
+            "0.12.0": {
+                "en": "Feature: Markov Topology Matrix (Graph Learning)",
+                "de": "Feature: Markov Topologie Matrix (Graph Learning)"
+            },
             "0.11.0": {
                 "en": "Phase C Start: Energy Prediction & Gait Speed Analysis.",
                 "de": "Start Phase C: Energie-Vorhersage & Gehgeschwindigkeits-Analyse."
