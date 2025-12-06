@@ -1,8 +1,6 @@
 import React from 'react';
-import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider } from '@mui/material';
+import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider, Autocomplete, createFilterOptions } from '@mui/material';
 import type { AlertColor } from '@mui/material';
-
-// KEINE ICON IMPORTS MEHR (Verursacher des Absturzes eliminiert)
 
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
@@ -62,6 +60,7 @@ interface SettingsState {
     scannedDevices: ScannedDevice[];
     showDeleteConfirm: boolean;
     availableEnums: EnumItem[];
+    availableRooms: string[]; // NEW: List of rooms from ioBroker
     showEnumList: boolean;
     snackbarOpen: boolean;
     snackbarMessage: string;
@@ -80,7 +79,6 @@ type NotificationEnabledKey = 'notifyTelegramEnabled' | 'notifyPushoverEnabled' 
 type NotificationInstanceKey = 'notifyTelegramInstance' | 'notifyPushoverInstance' | 'notifyEmailInstance' | 'notifyWhatsappInstance' | 'notifySignalInstance';
 type NotificationRecipientKey = 'notifyTelegramRecipient' | 'notifyPushoverRecipient' | 'notifyEmailRecipient' | 'notifyWhatsappRecipient' | 'notifySignalRecipient';
 
-// HIER IST DAS WICHTIGE DROPDOWN (Damit die KI es versteht)
 const SENSOR_TYPES = [
     { id: 'motion', label: 'Bewegungsmelder (Motion)' },
     { id: 'door', label: 'Tür / Fenster (Door)' },
@@ -90,6 +88,8 @@ const SENSOR_TYPES = [
     { id: 'lock', label: 'Schloss (Lock)' },
     { id: 'custom', label: 'Sonstiges (Custom)' }
 ];
+
+const filter = createFilterOptions<string>();
 
 export default class Settings extends React.Component<SettingsProps, SettingsState> {
     constructor(props: SettingsProps) {
@@ -147,6 +147,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             scannedDevices: [],
             showDeleteConfirm: false,
             availableEnums: [],
+            availableRooms: [], // Init empty
             showEnumList: false,
             snackbarOpen: false,
             snackbarMessage: '',
@@ -164,7 +165,18 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     componentDidMount() { this.fetchAvailableInstances(); this.fetchEnums(); }
     fetchAvailableInstances() { const adapters = ['telegram', 'pushover', 'email', 'whatsapp-cmb', 'signal-cma', 'accuweather', 'daswetter', 'ical']; const instances: Record<string, string[]> = {}; const promises = adapters.map(adapter => this.props.socket.getAdapterInstances(adapter).then(objs => { instances[adapter] = objs.map(obj => obj._id.replace('system.adapter.', '')); }).catch(e => console.error(`Error fetching instances for ${adapter}:`, e))); Promise.all(promises).then(() => { this.setState({ availableInstances: instances }); }); }
-    fetchEnums() { this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'getEnums', {}).then((res: any) => { if(res && res.success && res.enums) { this.setState({ availableEnums: res.enums }); } }); }
+
+    // UPDATED: Fetches Functions AND Rooms
+    fetchEnums() {
+        this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'getEnums', {}).then((res: any) => {
+            if(res && res.success) {
+                this.setState({
+                    availableEnums: res.enums || [],
+                    availableRooms: res.rooms || [] // Store ioBroker rooms
+                });
+            }
+        });
+    }
 
     updateNativeValue(attr: string, value: any) { if (attr === 'livingContext' && typeof value === 'string' && value.length > 5000) value = value.substring(0, 1000); this.setState({ [attr]: value } as Pick<SettingsState, keyof SettingsState>, () => { this.props.onChange(attr, value); }); }
     updateDevices(newDevices: DeviceConfig[]) { this.setState({ devices: newDevices }); this.props.onChange('devices', newDevices); }
@@ -227,6 +239,13 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     showSnackbar(message: string, severity: AlertColor) { this.setState({ snackbarOpen: true, snackbarMessage: message, snackbarSeverity: severity }); }
     handleSnackbarClose = (event?: React.SyntheticEvent | Event, reason?: string) => { if (reason === 'clickaway') return; this.setState({ snackbarOpen: false }); };
 
+    // HELPER: Merge ioBroker rooms with already typed rooms to avoid losing custom ones
+    collectUniqueLocations() {
+        const fromDevices = this.state.devices.map(d => d.location).filter(l => l);
+        const fromIoBroker = this.state.availableRooms;
+        return Array.from(new Set([...fromIoBroker, ...fromDevices])).sort();
+    }
+
     renderContextDialog() { return ( <Dialog open={this.state.showContextDialog} onClose={() => this.setState({ showContextDialog: false })} maxWidth="sm" fullWidth><DialogTitle>Kontext-Daten (Live-Check)</DialogTitle><DialogContent dividers><Typography variant="subtitle2" color="primary" gutterBottom>Wetter-Status</Typography><Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}><Typography variant="body2" style={{ fontFamily: 'monospace' }}>{this.state.contextResult?.weather || 'Lade...'}</Typography></Paper><Typography variant="subtitle2" color="primary" gutterBottom>Kalender-Status (Gefiltert)</Typography><Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default', maxHeight: 200, overflow: 'auto' }}><Typography variant="body2" style={{ fontFamily: 'monospace' }}>{this.state.contextResult?.calendar || 'Lade...'}</Typography></Paper></DialogContent><DialogActions><Button onClick={() => this.setState({ showContextDialog: false })}>Schließen</Button></DialogActions></Dialog> ); }
     renderWizardDialog() { const { showWizard, wizardStep, scanFilters, scannedDevices, availableEnums, showEnumList } = this.state; return ( <Dialog open={showWizard} onClose={() => wizardStep !== 1 && this.setState({ showWizard: false })} maxWidth="md" fullWidth><DialogTitle>Auto-Discovery Wizard {wizardStep !== 1 && <IconButton onClick={() => this.setState({ showWizard: false })} sx={{ position: 'absolute', right: 8, top: 8 }}>x</IconButton>}</DialogTitle><DialogContent dividers>{wizardStep === 0 && <Box sx={{ p: 2 }}><Typography variant="h6" gutterBottom>Was soll gescannt werden?</Typography><Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>Die KI kann automatisch Sensoren in Ihrer ioBroker-Installation finden.</Typography><FormGroup><FormControlLabel control={<Checkbox checked={scanFilters.motion} onChange={() => this.handleFilterChange('motion')} />} label="Bewegungsmelder" /><FormControlLabel control={<Checkbox checked={scanFilters.doors} onChange={() => this.handleFilterChange('doors')} />} label="Fenster & Türen" /><FormControlLabel control={<Checkbox checked={scanFilters.lights} onChange={() => this.handleFilterChange('lights')} />} label="Lichter & Schalter" />{availableEnums.length > 0 && (<Box sx={{ mt: 2, mb: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}><ListItemButton onClick={() => this.setState({ showEnumList: !showEnumList })}><ListItemText primary="Spezifische Funktionen" secondary={`${scanFilters.selectedFunctionIds.length} ausgewählt`} />{showEnumList ? <span>^</span> : <span>v</span>}</ListItemButton><Collapse in={showEnumList} timeout="auto" unmountOnExit><List component="div" disablePadding dense sx={{ maxHeight: 200, overflow: 'auto' }}>{availableEnums.map((en) => (<ListItem key={en.id} dense disablePadding><ListItemButton onClick={() => this.handleEnumToggle(en.id)}><ListItemIcon><Checkbox edge="start" checked={scanFilters.selectedFunctionIds.indexOf(en.id) !== -1} tabIndex={-1} disableRipple /></ListItemIcon><ListItemText primary={en.name} secondary={en.id} /></ListItemButton></ListItem>))}</List></Collapse></Box>)}<Box sx={{ mt: 2, borderTop: '1px solid', borderColor: 'divider', pt: 1 }}><FormControlLabel control={<Checkbox checked={scanFilters.temperature} onChange={() => this.handleFilterChange('temperature')} />} label="Temperatur / Klima" /><FormControlLabel control={<Checkbox checked={scanFilters.weather} onChange={() => this.handleFilterChange('weather')} color="warning" />} label="Wetterdaten (Alle Adapter)" /></Box></FormGroup></Box>}{wizardStep === 1 && <Box sx={{ width: '100%', mt: 4, mb: 4, textAlign: 'center' }}><LinearProgress /><Typography variant="h6" sx={{ mt: 2 }}>Suche Sensoren...</Typography></Box>}{wizardStep === 2 && <Box><List dense sx={{ width: '100%', bgcolor: 'background.paper', maxHeight: 400, overflow: 'auto' }}>{scannedDevices.filter(d => d.location && !d.exists).map(d => (<ListItem key={d.id} disablePadding divider><ListItemButton onClick={() => this.handleToggleScannedDevice(scannedDevices.indexOf(d))} dense><ListItemIcon><Checkbox edge="start" checked={d.selected} tabIndex={-1} /></ListItemIcon><ListItemText primary={d.name || d.id} secondary={`${d.type} • ${d.location}`} /></ListItemButton></ListItem>))}{scannedDevices.filter(d => !d.location && !d.exists).map(d => (<ListItem key={d.id} disablePadding divider><ListItemButton onClick={() => this.handleToggleScannedDevice(scannedDevices.indexOf(d))} dense><ListItemIcon><Checkbox edge="start" checked={d.selected} tabIndex={-1} /></ListItemIcon><ListItemText primary={d.name || d.id} secondary={`${d.type} • (Kein Raum)`} /></ListItemButton></ListItem>))}{scannedDevices.filter(d => d.exists).map(d => (<ListItem key={d.id} disablePadding divider><ListItemButton dense disabled><ListItemIcon><span>OK</span></ListItemIcon><ListItemText primary={d.name || d.id} secondary="Bereits konfiguriert" /></ListItemButton></ListItem>))}</List></Box>}</DialogContent><DialogActions>{wizardStep === 0 && <Button variant="contained" onClick={this.handleStartScan}>Scan Starten</Button>}{wizardStep === 2 && (<><Button onClick={() => this.setState({ wizardStep: 0 })}>Zurück</Button><Button onClick={this.handleSelectAll}>Alle</Button><Button onClick={this.handleDeselectAll}>Keine</Button><Box sx={{ flexGrow: 1 }} /><Button variant="contained" onClick={this.handleImportDevices} color="primary">{this.state.scannedDevices.filter(d => d.selected).length} Importieren</Button></>)}</DialogActions></Dialog> ); }
     renderDialogs() { return ( <>{this.state.showSelectId && (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={this.state.selectIdContext === 'outdoor' ? this.state.outdoorSensorId : (this.state.selectIdContext === 'device' && this.state.devices[this.state.selectIdIndex]?.id) || ''} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />)}{this.renderWizardDialog()}{this.renderContextDialog()}<Dialog open={this.state.showDeleteConfirm} onClose={() => this.setState({showDeleteConfirm:false})}><DialogTitle>Sicher?</DialogTitle><DialogContent><Typography>Alle Sensoren löschen?</Typography></DialogContent><DialogActions><Button onClick={()=>this.setState({showDeleteConfirm:false})}>Abbrechen</Button><Button onClick={this.onDeleteAllDevices} color="error">Löschen</Button></DialogActions></Dialog><Snackbar open={this.state.snackbarOpen} autoHideDuration={6000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity}>{this.state.snackbarMessage}</Alert></Snackbar></> ); }
@@ -237,6 +256,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     renderNotificationsSection() { return ( <Box><Alert severity="info" sx={{mb: 2}}>Benachrichtigungen werden bei Alarmen und (wenn aktiviert) für Berichte verwendet.</Alert>{this.renderNotificationRow('telegram', 'notifyTelegramEnabled', 'notifyTelegramInstance', 'notifyTelegramRecipient', 'User ID')}{this.renderNotificationRow('pushover', 'notifyPushoverEnabled', 'notifyPushoverInstance', 'notifyPushoverRecipient', 'Device ID')}{this.renderNotificationRow('email', 'notifyEmailEnabled', 'notifyEmailInstance', 'notifyEmailRecipient', 'E-Mail')}{this.renderNotificationRow('whatsapp', 'notifyWhatsappEnabled', 'notifyWhatsappInstance', 'notifyWhatsappRecipient', 'Tel')}<Button variant="outlined" sx={{mt:1}} onClick={() => this.handleTestNotificationClick()} disabled={this.state.isTestingNotification}>Test</Button></Box> ); }
 
     renderSensorsSection(isDark: boolean) {
+        const uniqueLocations = this.collectUniqueLocations();
+
         return (
             <Box>
                 <TableContainer component={Paper} variant="outlined" sx={{ bgcolor: isDark ? '#2d2d2d' : '#fafafa' }}>
@@ -257,7 +278,53 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                 <TableRow key={index}>
                                     <TableCell><Box sx={{display:'flex'}}><TextField value={device.id} onChange={e => this.onDeviceChange(index, 'id', e.target.value)} size="small" variant="standard"/><IconButton size="small" onClick={() => this.openSelectIdDialog(index)}>...</IconButton></Box></TableCell>
                                     <TableCell><TextField value={device.name} onChange={e => this.onDeviceChange(index, 'name', e.target.value)} size="small" variant="standard"/></TableCell>
-                                    <TableCell><TextField value={device.location} onChange={e => this.onDeviceChange(index, 'location', e.target.value)} size="small" variant="standard"/></TableCell>
+
+                                    {/* UPDATED LOCATION: Autocomplete with ioBroker Rooms */}
+                                    <TableCell sx={{minWidth: 150}}>
+                                        <Autocomplete
+                                            freeSolo
+                                            options={uniqueLocations}
+                                            value={device.location || ''}
+                                            onChange={(event, newValue) => {
+                                                // Fix: newValue ist hier immer string oder null
+                                                if (typeof newValue === 'string') {
+                                                    this.onDeviceChange(index, 'location', newValue);
+                                                } else {
+                                                    // Wenn null (z.B. cleared), leeren String setzen
+                                                    this.onDeviceChange(index, 'location', '');
+                                                }
+                                            }}
+                                            onInputChange={(event, newInputValue) => {
+                                                this.onDeviceChange(index, 'location', newInputValue);
+                                            }}
+                                            filterOptions={(options, params) => {
+                                                const filtered = filter(options, params);
+                                                const { inputValue } = params;
+                                                // Prüfen, ob der getippte Raum schon existiert
+                                                const isExisting = options.some((option) => inputValue === option);
+                                                if (inputValue !== '' && !isExisting) {
+                                                    filtered.push(inputValue);
+                                                }
+                                                return filtered;
+                                            }}
+                                            selectOnFocus
+                                            clearOnBlur
+                                            handleHomeEndKeys
+                                            renderOption={(props, option) => {
+                                                // WICHTIG: Key extrahieren, um React Warnung zu vermeiden
+                                                const { key, ...optionProps } = props;
+                                                return (
+                                                    <li key={key} {...optionProps}>
+                                                        {option}
+                                                    </li>
+                                                );
+                                            }}
+                                            renderInput={(params) => (
+                                                <TextField {...params} variant="standard" size="small" placeholder="Raum wählen..." />
+                                            )}
+                                        />
+                                    </TableCell>
+
                                     <TableCell>
                                         <FormControl fullWidth size="small" variant="standard">
                                             <Select
