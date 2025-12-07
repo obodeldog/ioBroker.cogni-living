@@ -1,15 +1,19 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.12.0",
+        "version": "0.13.1",
         "news": {
+            "0.13.1": {
+                "en": "Optimization: Smart Scanner v2.1 with Recursive Parent Lookup.",
+                "de": "Optimierung: Smart Scanner v2.1 mit rekursiver Namensauflösung."
+            },
+            "0.13.0": {
+                "en": "Refactoring: Modular Architecture 'The Split'.",
+                "de": "Refactoring: Modulare Architektur 'The Split'."
+            },
             "0.12.0": {
                 "en": "Feature: Markov Topology Matrix (Graph Learning)",
                 "de": "Feature: Markov Topologie Matrix (Graph Learning)"
-            },
-            "0.11.0": {
-                "en": "Phase C Start: Energy Prediction & Gait Speed Analysis.",
-                "de": "Start Phase C: Energie-Vorhersage & Gehgeschwindigkeits-Analyse."
             }
         },
         "titleLang": {
@@ -95,16 +99,16 @@
         "notifySignalEnabled": false,
         "notifySignalInstance": "",
         "notifySignalRecipient": "",
-        "ltmStbWindowDays": 14,
-        "ltmLtbWindowDays": 60,
-        "ltmDriftCheckIntervalHours": 24,
         "briefingEnabled": false,
         "briefingTime": "08:00",
         "useWeather": false,
         "weatherInstance": "",
         "useCalendar": false,
         "calendarInstance": "",
-        "calendarSelection": []
+        "calendarSelection": [],
+        "ltmStbWindowDays": 14,
+        "ltmLtbWindowDays": 60,
+        "ltmDriftCheckIntervalHours": 24
     },
     "objects": [],
     "instanceObjects": []

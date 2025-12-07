@@ -1,6 +1,6 @@
 {
     "name": "iobroker.cogni-living",
-    "version": "0.13.0",
+    "version": "0.13.1",
     "description": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
     "author": {
         "name": "Marc Jaeger",
@@ -61,12 +61,6 @@
         "build": "npm run build:react && npm run build:backend:dev",
         "build:prod": "npm run build:react && npm run build:backend:prod",
         "watch": "npm run watch:react",
-        "test": "npm run test:js && npm run test:package",
-        "test:js": "mocha --config test/mocharc.custom.json \"{!(node_modules|test)/**/*.test.js,*.test.js,test/**/test!(PackageFiles|Startup).js}\"",
-        "test:package": "mocha test/package --exit"
-    },
-    "bugs": {
-        "url": "https://github.com/obodeldog/ioBroker.cogni-living/issues"
-    },
-    "readmeFilename": "README.md"
+        "test": "npm run test:js && npm run test:package"
+    }
 }
