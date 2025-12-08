@@ -242,7 +242,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     const devices = response.devices.map((d: any) => {
                         const idClean = (d.id || '').trim().toLowerCase();
                         const exists = existingIds.has(idClean);
-                        // Strict Auto-Select: Only if Location found AND high score AND not exists
+                        // Auto-Select only if Location found AND high score AND not exists
                         return { ...d, exists: exists, selected: !exists && (!!d.location || d._score >= 80) };
                     });
                     this.setState({ scannedDevices: devices, wizardStep: 2 });
@@ -353,7 +353,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                     <TableCell><Box sx={{display:'flex'}}><TextField value={device.id} onChange={e => this.onDeviceChange(index, 'id', e.target.value)} size="small" variant="standard"/><IconButton size="small" onClick={() => this.openSelectIdDialog(index)}>...</IconButton></Box></TableCell>
                                     <TableCell><TextField value={device.name} onChange={e => this.onDeviceChange(index, 'name', e.target.value)} size="small" variant="standard"/></TableCell>
 
-                                    {/* SAFE MODE: STANDARD TEXTFIELD (NO CRASH) */}
+                                    {/* SAFE MODE: STANDARD TEXTFIELD (NO AUTOCOMPLETE) */}
                                     <TableCell sx={{minWidth: 150}}>
                                         <TextField
                                             value={device.location || ''}
