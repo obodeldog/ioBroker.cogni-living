@@ -6,7 +6,6 @@ import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/a
 import type { Connection } from '@iobroker/socket-client';
 
 // Icons
-import ScienceIcon from '@mui/icons-material/Science';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
@@ -84,9 +83,11 @@ type NotificationEnabledKey = 'notifyTelegramEnabled' | 'notifyPushoverEnabled' 
 type NotificationInstanceKey = 'notifyTelegramInstance' | 'notifyPushoverInstance' | 'notifyEmailInstance' | 'notifyWhatsappInstance' | 'notifySignalInstance';
 type NotificationRecipientKey = 'notifyTelegramRecipient' | 'notifyPushoverRecipient' | 'notifyEmailRecipient' | 'notifyWhatsappRecipient' | 'notifySignalRecipient';
 
+// ADDED 'fire' TYPE
 const SENSOR_TYPES = [
     { id: 'motion', label: 'Bewegungsmelder (Motion)' },
     { id: 'door', label: 'Tür / Fenster (Door)' },
+    { id: 'fire', label: 'Rauchmelder (Fire)' },
     { id: 'temperature', label: 'Temperatur / Klima' },
     { id: 'light', label: 'Licht / Schalter (Light)' },
     { id: 'blind', label: 'Rollladen / Jalousie' },
@@ -245,7 +246,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     renderContextDialog() { return ( <Dialog open={this.state.showContextDialog} onClose={() => this.setState({ showContextDialog: false })} maxWidth="sm" fullWidth><DialogTitle>Kontext-Daten (Live-Check)</DialogTitle><DialogContent dividers><Typography variant="subtitle2" color="primary" gutterBottom>Wetter-Status</Typography><Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}><Typography variant="body2" style={{ fontFamily: 'monospace' }}>{this.state.contextResult?.weather || 'Lade...'}</Typography></Paper><Typography variant="subtitle2" color="primary" gutterBottom>Kalender-Status (Gefiltert)</Typography><Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default', maxHeight: 200, overflow: 'auto' }}><Typography variant="body2" style={{ fontFamily: 'monospace' }}>{this.state.contextResult?.calendar || 'Lade...'}</Typography></Paper></DialogContent><DialogActions><Button onClick={() => this.setState({ showContextDialog: false })}>Schließen</Button></DialogActions></Dialog> ); }
 
-    // UPDATED WIZARD WITH BADGES
     renderWizardDialog() {
         const { showWizard, wizardStep, scanFilters, scannedDevices, availableEnums, showEnumList } = this.state;
 
@@ -257,10 +257,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     {wizardStep === 1 && <Box sx={{ width: '100%', mt: 4, mb: 4, textAlign: 'center' }}><LinearProgress /><Typography variant="h6" sx={{ mt: 2 }}>Suche Sensoren & analysiere Namen...</Typography></Box>}
                     {wizardStep === 2 && <Box><List dense sx={{ width: '100%', bgcolor: 'background.paper', maxHeight: 400, overflow: 'auto' }}>
                         {scannedDevices.map(d => {
-                            // SKIP IF ALREADY EXISTS
                             if(d.exists) return null;
-
-                            const isHeuristic = d._source && d._source.includes("Heuristic");
                             const isEnum = d._source && d._source === "Enum";
                             const confidence = d._score || 50;
                             const color = confidence >= 80 ? "success" : (confidence >= 50 ? "warning" : "error");
@@ -274,7 +271,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                                 <Box sx={{display:'flex', alignItems:'center', gap: 1}}>
                                                     {d.name || d.id}
                                                     <Chip label={isEnum ? "Enum" : "AI-Scan"} size="small" color={isEnum ? "success" : "default"} variant="outlined" style={{height: 20, fontSize: '0.7rem'}}/>
-                                                    {isHeuristic && <Chip label={`${confidence}%`} size="small" color={color} variant="outlined" style={{height: 20, fontSize: '0.7rem'}} icon={confidence<60 ? <HelpOutlineIcon style={{fontSize:14}}/> : <VerifiedIcon style={{fontSize:14}}/>}/>}
+                                                    {d._source && d._source.includes("Heuristic") && <Chip label={`${confidence}%`} size="small" color={color} variant="outlined" style={{height: 20, fontSize: '0.7rem'}} icon={confidence<60 ? <HelpOutlineIcon style={{fontSize:14}}/> : <VerifiedIcon style={{fontSize:14}}/>}/>}
                                                 </Box>
                                             }
                                             secondary={`${d.type} • ${d.location || '(Kein Raum)'}`}
@@ -283,7 +280,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                 </ListItem>
                             );
                         })}
-                        {/* EXISTING DEVICES AT BOTTOM */}
                         {scannedDevices.filter(d => d.exists).length > 0 && <Box sx={{p: 1, bgcolor: '#f0f0f0', color: '#666', fontSize:'0.8rem', fontWeight:'bold'}}>Bereits konfiguriert:</Box>}
                         {scannedDevices.filter(d => d.exists).map(d => (
                             <ListItem key={d.id} disablePadding divider>
@@ -336,15 +332,22 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                             options={uniqueLocations}
                                             value={device.location || ''}
                                             onChange={(event, newValue) => {
-                                                if (typeof newValue === 'string') this.onDeviceChange(index, 'location', newValue);
-                                                else this.onDeviceChange(index, 'location', '');
+                                                if (typeof newValue === 'string') {
+                                                    this.onDeviceChange(index, 'location', newValue);
+                                                } else {
+                                                    this.onDeviceChange(index, 'location', '');
+                                                }
                                             }}
-                                            onInputChange={(event, newInputValue) => this.onDeviceChange(index, 'location', newInputValue)}
+                                            onInputChange={(event, newInputValue) => {
+                                                this.onDeviceChange(index, 'location', newInputValue);
+                                            }}
                                             filterOptions={(options, params) => {
                                                 const filtered = filter(options, params);
                                                 const { inputValue } = params;
                                                 const isExisting = options.some((option) => inputValue === option);
-                                                if (inputValue !== '' && !isExisting) filtered.push(inputValue);
+                                                if (inputValue !== '' && !isExisting) {
+                                                    filtered.push(inputValue);
+                                                }
                                                 return filtered;
                                             }}
                                             selectOnFocus
@@ -352,15 +355,27 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                             handleHomeEndKeys
                                             renderOption={(props, option) => {
                                                 const { key, ...optionProps } = props;
-                                                return <li key={key} {...optionProps}>{option}</li>;
+                                                return (
+                                                    <li key={key} {...optionProps}>
+                                                        {option}
+                                                    </li>
+                                                );
                                             }}
-                                            renderInput={(params) => <TextField {...params} variant="standard" size="small" placeholder="Raum wählen..." />}
+                                            renderInput={(params) => (
+                                                <TextField {...params} variant="standard" size="small" placeholder="Raum wählen..." />
+                                            )}
                                         />
                                     </TableCell>
                                     <TableCell>
                                         <FormControl fullWidth size="small" variant="standard">
-                                            <Select value={device.type} onChange={e => this.onDeviceChange(index, 'type', e.target.value)} displayEmpty>
-                                                {SENSOR_TYPES.map(type => <MenuItem key={type.id} value={type.id}>{type.label}</MenuItem>)}
+                                            <Select
+                                                value={device.type}
+                                                onChange={e => this.onDeviceChange(index, 'type', e.target.value)}
+                                                displayEmpty
+                                            >
+                                                {SENSOR_TYPES.map(type => (
+                                                    <MenuItem key={type.id} value={type.id}>{type.label}</MenuItem>
+                                                ))}
                                             </Select>
                                         </FormControl>
                                     </TableCell>
