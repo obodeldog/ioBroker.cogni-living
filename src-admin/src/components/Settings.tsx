@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider, Autocomplete, createFilterOptions, Chip } from '@mui/material';
+import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider, Chip } from '@mui/material';
 import type { AlertColor } from '@mui/material';
 
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
@@ -94,8 +94,6 @@ const SENSOR_TYPES = [
     { id: 'lock', label: 'Schloss (Lock)' },
     { id: 'custom', label: 'Sonstiges (Custom)' }
 ];
-
-const filter = createFilterOptions<string>();
 
 export default class Settings extends React.Component<SettingsProps, SettingsState> {
     constructor(props: SettingsProps) {
@@ -244,7 +242,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     const devices = response.devices.map((d: any) => {
                         const idClean = (d.id || '').trim().toLowerCase();
                         const exists = existingIds.has(idClean);
-                        // Auto-Select only if Location found AND high score AND not exists
+                        // Strict Auto-Select: Only if Location found AND high score AND not exists
                         return { ...d, exists: exists, selected: !exists && (!!d.location || d._score >= 80) };
                     });
                     this.setState({ scannedDevices: devices, wizardStep: 2 });
@@ -282,7 +280,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 <DialogTitle>Auto-Discovery Wizard {wizardStep !== 1 && <IconButton onClick={() => this.setState({ showWizard: false })} sx={{ position: 'absolute', right: 8, top: 8 }}>x</IconButton>}</DialogTitle>
                 <DialogContent dividers>
                     {wizardStep === 0 && <Box sx={{ p: 2 }}><Typography variant="h6" gutterBottom>Was soll gescannt werden?</Typography><Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>Die KI kann automatisch Sensoren in Ihrer ioBroker-Installation finden.</Typography><FormGroup><FormControlLabel control={<Checkbox checked={scanFilters.motion} onChange={() => this.handleFilterChange('motion')} />} label="Bewegungsmelder" /><FormControlLabel control={<Checkbox checked={scanFilters.doors} onChange={() => this.handleFilterChange('doors')} />} label="Fenster & Türen" /><FormControlLabel control={<Checkbox checked={scanFilters.lights} onChange={() => this.handleFilterChange('lights')} />} label="Lichter & Schalter" />{availableEnums.length > 0 && (<Box sx={{ mt: 2, mb: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}><ListItemButton onClick={() => this.setState({ showEnumList: !showEnumList })}><ListItemText primary="Spezifische Funktionen" secondary={`${scanFilters.selectedFunctionIds.length} ausgewählt`} />{showEnumList ? <span>^</span> : <span>v</span>}</ListItemButton><Collapse in={showEnumList} timeout="auto" unmountOnExit><List component="div" disablePadding dense sx={{ maxHeight: 200, overflow: 'auto' }}>{availableEnums.map((en) => (<ListItem key={en.id} dense disablePadding><ListItemButton onClick={() => this.handleEnumToggle(en.id)}><ListItemIcon><Checkbox edge="start" checked={scanFilters.selectedFunctionIds.indexOf(en.id) !== -1} tabIndex={-1} disableRipple /></ListItemIcon><ListItemText primary={en.name} secondary={en.id} /></ListItemButton></ListItem>))}</List></Collapse></Box>)}<Box sx={{ mt: 2, borderTop: '1px solid', borderColor: 'divider', pt: 1 }}><FormControlLabel control={<Checkbox checked={scanFilters.temperature} onChange={() => this.handleFilterChange('temperature')} />} label="Temperatur / Klima" /><FormControlLabel control={<Checkbox checked={scanFilters.weather} onChange={() => this.handleFilterChange('weather')} color="warning" />} label="Wetterdaten (Alle Adapter)" /></Box></FormGroup></Box>}
-                    {wizardStep === 1 && <Box sx={{ width: '100%', mt: 4, mb: 4, textAlign: 'center' }}><LinearProgress /><Typography variant="h6" sx={{ mt: 2 }}>Suche Sensoren & analysiere Namen...</Typography></Box>}
+                    {wizardStep === 1 && <Box sx={{ width: '100%', mt: 4, mb: 4, textAlign: 'center' }}><LinearProgress /><Typography variant="h6" sx={{ mt: 2 }}>Suche Sensoren (Strict Mode)...</Typography></Box>}
                     {wizardStep === 2 && <Box><List dense sx={{ width: '100%', bgcolor: 'background.paper', maxHeight: 400, overflow: 'auto' }}>
                         {scannedDevices.map(d => {
                             if(d.exists) return null;
@@ -354,46 +352,18 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                 <TableRow key={index}>
                                     <TableCell><Box sx={{display:'flex'}}><TextField value={device.id} onChange={e => this.onDeviceChange(index, 'id', e.target.value)} size="small" variant="standard"/><IconButton size="small" onClick={() => this.openSelectIdDialog(index)}>...</IconButton></Box></TableCell>
                                     <TableCell><TextField value={device.name} onChange={e => this.onDeviceChange(index, 'name', e.target.value)} size="small" variant="standard"/></TableCell>
+
+                                    {/* SAFE MODE: STANDARD TEXTFIELD (NO CRASH) */}
                                     <TableCell sx={{minWidth: 150}}>
-                                        <Autocomplete
-                                            freeSolo
-                                            options={uniqueLocations}
+                                        <TextField
                                             value={device.location || ''}
-                                            onChange={(event, newValue) => {
-                                                if (typeof newValue === 'string') {
-                                                    this.onDeviceChange(index, 'location', newValue);
-                                                } else {
-                                                    this.onDeviceChange(index, 'location', '');
-                                                }
-                                            }}
-                                            onInputChange={(event, newInputValue) => {
-                                                this.onDeviceChange(index, 'location', newInputValue);
-                                            }}
-                                            filterOptions={(options, params) => {
-                                                const filtered = filter(options, params);
-                                                const { inputValue } = params;
-                                                const isExisting = options.some((option) => inputValue === option);
-                                                if (inputValue !== '' && !isExisting) {
-                                                    filtered.push(inputValue);
-                                                }
-                                                return filtered;
-                                            }}
-                                            selectOnFocus
-                                            clearOnBlur
-                                            handleHomeEndKeys
-                                            renderOption={(props, option) => {
-                                                const { key, ...optionProps } = props;
-                                                return (
-                                                    <li key={key} {...optionProps}>
-                                                        {option}
-                                                    </li>
-                                                );
-                                            }}
-                                            renderInput={(params) => (
-                                                <TextField {...params} variant="standard" size="small" placeholder="Raum wählen..." />
-                                            )}
+                                            onChange={e => this.onDeviceChange(index, 'location', e.target.value)}
+                                            size="small"
+                                            variant="standard"
+                                            placeholder="Raum"
                                         />
                                     </TableCell>
+
                                     <TableCell>
                                         <FormControl fullWidth size="small" variant="standard">
                                             <Select
