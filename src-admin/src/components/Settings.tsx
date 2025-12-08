@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider, Autocomplete, createFilterOptions, Chip } from '@mui/material';
+import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider, Chip } from '@mui/material';
 import type { AlertColor } from '@mui/material';
 
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
@@ -94,8 +94,6 @@ const SENSOR_TYPES = [
     { id: 'lock', label: 'Schloss (Lock)' },
     { id: 'custom', label: 'Sonstiges (Custom)' }
 ];
-
-const filter = createFilterOptions<string>();
 
 export default class Settings extends React.Component<SettingsProps, SettingsState> {
     constructor(props: SettingsProps) {
@@ -352,38 +350,18 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                 <TableRow key={index}>
                                     <TableCell><Box sx={{display:'flex'}}><TextField value={device.id} onChange={e => this.onDeviceChange(index, 'id', e.target.value)} size="small" variant="standard"/><IconButton size="small" onClick={() => this.openSelectIdDialog(index)}>...</IconButton></Box></TableCell>
                                     <TableCell><TextField value={device.name} onChange={e => this.onDeviceChange(index, 'name', e.target.value)} size="small" variant="standard"/></TableCell>
+
+                                    {/* REPLACED AUTOCOMPLETE WITH STANDARD TEXTFIELD (SAFE MODE) */}
                                     <TableCell sx={{minWidth: 150}}>
-                                        <Autocomplete
-                                            freeSolo
-                                            options={uniqueLocations}
+                                        <TextField
                                             value={device.location || ''}
-                                            onChange={(event, newValue) => {
-                                                if (typeof newValue === 'string') {
-                                                    this.onDeviceChange(index, 'location', newValue);
-                                                } else {
-                                                    this.onDeviceChange(index, 'location', '');
-                                                }
-                                            }}
-                                            onInputChange={(event, newInputValue) => {
-                                                this.onDeviceChange(index, 'location', newInputValue);
-                                            }}
-                                            filterOptions={(options, params) => {
-                                                const filtered = filter(options, params);
-                                                const { inputValue } = params;
-                                                const isExisting = options.some((option) => inputValue === option);
-                                                if (inputValue !== '' && !isExisting) {
-                                                    filtered.push(inputValue);
-                                                }
-                                                return filtered;
-                                            }}
-                                            selectOnFocus
-                                            clearOnBlur
-                                            handleHomeEndKeys
-                                            renderInput={(params) => (
-                                                <TextField {...params} variant="standard" size="small" placeholder="Raum wählen..." />
-                                            )}
+                                            onChange={e => this.onDeviceChange(index, 'location', e.target.value)}
+                                            size="small"
+                                            variant="standard"
+                                            placeholder="Raum"
                                         />
                                     </TableCell>
+
                                     <TableCell>
                                         <FormControl fullWidth size="small" variant="standard">
                                             <Select
