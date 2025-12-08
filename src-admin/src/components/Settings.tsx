@@ -84,7 +84,6 @@ type NotificationEnabledKey = 'notifyTelegramEnabled' | 'notifyPushoverEnabled' 
 type NotificationInstanceKey = 'notifyTelegramInstance' | 'notifyPushoverInstance' | 'notifyEmailInstance' | 'notifyWhatsappInstance' | 'notifySignalInstance';
 type NotificationRecipientKey = 'notifyTelegramRecipient' | 'notifyPushoverRecipient' | 'notifyEmailRecipient' | 'notifyWhatsappRecipient' | 'notifySignalRecipient';
 
-// ADDED 'fire' TYPE
 const SENSOR_TYPES = [
     { id: 'motion', label: 'Bewegungsmelder (Motion)' },
     { id: 'door', label: 'Tür / Fenster (Door)' },
@@ -232,7 +231,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     handleFilterChange = (key: keyof ScanFilters) => { this.setState(prevState => ({ scanFilters: { ...prevState.scanFilters, [key]: !prevState.scanFilters[key] } })); }
     handleEnumToggle = (enumId: string) => { const current = [...this.state.scanFilters.selectedFunctionIds]; const index = current.indexOf(enumId); if (index === -1) current.push(enumId); else current.splice(index, 1); this.setState(prevState => ({ scanFilters: { ...prevState.scanFilters, selectedFunctionIds: current } })); }
 
-    // UPDATED: Fix for 'Already Exists' detection (Trim & Lowercase)
+    // UPDATED: Robust "Already Exists" check (Trim & Lowercase)
     handleStartScan = () => {
         this.setState({ wizardStep: 1 });
         this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'scanDevices', this.state.scanFilters).then((response: any) => {
@@ -241,14 +240,13 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     this.showSnackbar('Keine Sensoren gefunden.', 'info');
                     this.setState({ wizardStep: 0 });
                 } else {
-                    // FIX START: Normalized ID check
                     const existingIds = new Set(this.state.devices.map(d => (d.id || '').trim().toLowerCase()));
                     const devices = response.devices.map((d: any) => {
                         const idClean = (d.id || '').trim().toLowerCase();
                         const exists = existingIds.has(idClean);
+                        // Auto-Select only if Location found AND high score AND not exists
                         return { ...d, exists: exists, selected: !exists && (!!d.location || d._score >= 80) };
                     });
-                    // FIX END
                     this.setState({ scannedDevices: devices, wizardStep: 2 });
                 }
             } else {
@@ -301,7 +299,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                                 <Box sx={{display:'flex', alignItems:'center', gap: 1}}>
                                                     {d.name || d.id}
                                                     <Chip label={isEnum ? "Enum" : "AI-Scan"} size="small" color={isEnum ? "success" : "default"} variant="outlined" style={{height: 20, fontSize: '0.7rem'}}/>
-                                                    {d._source && d._source.includes("Heuristic") && <Chip label={`${confidence}%`} size="small" color={color} variant="outlined" style={{height: 20, fontSize: '0.7rem'}} icon={confidence<60 ? <HelpOutlineIcon style={{fontSize:14}}/> : <VerifiedIcon style={{fontSize:14}}/>}/>}
+                                                    {d._source && !isEnum && <Chip label={`${confidence}%`} size="small" color={color} variant="outlined" style={{height: 20, fontSize: '0.7rem'}} icon={confidence<60 ? <HelpOutlineIcon style={{fontSize:14}}/> : <VerifiedIcon style={{fontSize:14}}/>}/>}
                                                 </Box>
                                             }
                                             secondary={`${d.type} • ${d.location || '(Kein Raum)'}`}
