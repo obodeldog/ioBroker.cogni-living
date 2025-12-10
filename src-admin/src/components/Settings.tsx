@@ -5,6 +5,9 @@ import type { AlertColor } from '@mui/material';
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
 
+// --- NEU: TOPOLOGY VIEW IMPORT ---
+import TopologyView from './TopologyView';
+
 // Icons
 import VerifiedIcon from '@mui/icons-material/Verified';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -588,6 +591,23 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 {this.renderDialogs()}
                 <Accordion expanded={expandedAccordion === 'panel1'} onChange={this.handleAccordionChange('panel1')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Lizenz & KI-Verbindung</Typography></AccordionSummary><AccordionDetails>{this.renderLicenseSection(tooltipProps)}</AccordionDetails></Accordion>
                 <Accordion expanded={expandedAccordion === 'panel2'} onChange={this.handleAccordionChange('panel2')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>KI-Verhalten & Kontext</Typography></AccordionSummary><AccordionDetails>{this.renderAIBehaviorSection(tooltipProps)}</AccordionDetails></Accordion>
+
+                {/* --- NEU: TOPOLOGY ACCORDION (PHASE B) --- */}
+                <Accordion expanded={expandedAccordion === 'panelTopology'} onChange={this.handleAccordionChange('panelTopology')} sx={accordionStyle}>
+                    <AccordionSummary expandIcon={<span>v</span>}>
+                        <Typography sx={titleStyle}>Haus-Topologie (Graph)</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                        <TopologyView
+                            socket={this.props.socket}
+                            adapterName={this.props.adapterName}
+                            instance={this.props.instance}
+                            themeType={this.props.themeType}
+                        />
+                    </AccordionDetails>
+                </Accordion>
+                {/* ----------------------------------------- */}
+
                 <Accordion expanded={expandedAccordion === 'panel5'} onChange={this.handleAccordionChange('panel5')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Reporting & Family Link</Typography></AccordionSummary><AccordionDetails>{this.renderReportingSection(tooltipProps)}</AccordionDetails></Accordion>
                 <Accordion expanded={expandedAccordion === 'panel3'} onChange={this.handleAccordionChange('panel3')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Benachrichtigungen</Typography></AccordionSummary><AccordionDetails>{this.renderNotificationsSection()}</AccordionDetails></Accordion>
                 <Accordion expanded={expandedAccordion === 'panel4'} onChange={this.handleAccordionChange('panel4')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Sensoren</Typography></AccordionSummary><AccordionDetails>{this.renderSensorsSection(isDark)}</AccordionDetails></Accordion>
