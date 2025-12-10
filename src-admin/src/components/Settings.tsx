@@ -302,10 +302,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         if (!bulkLoading && showBulkDialog) {
             const allKeys = Object.keys(bulkAllObjects).sort();
 
-            // --- SMART SEARCH LOGIC ---
-            // 1. Suche in Kleinbuchstaben
+            // --- SMART SEARCH LOGIC (Google Style) ---
             const lowerFilter = bulkFilter.toLowerCase();
-            // 2. Suche aufteilen in Begriffe ("licht julia" -> ["licht", "julia"])
             const filterParts = lowerFilter.split(' ').filter(part => part.trim().length > 0);
 
             if (filterParts.length === 0 && allKeys.length > 5000) {
@@ -318,8 +316,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     const name = obj?.common?.name ? (typeof obj.common.name === 'object' ? JSON.stringify(obj.common.name) : obj.common.name) : '';
                     const fullString = (id + " " + name).toLowerCase();
 
-                    // 3. ALLE Begriffe müssen enthalten sein (AND-Logik)
-                    // Beispiel: "licht" muss drin sein UND "julia" muss drin sein.
+                    // Alle Begriffe müssen enthalten sein
                     const isMatch = filterParts.every(part => fullString.includes(part));
 
                     if (isMatch) {
@@ -426,10 +423,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     <Table size="small">
                         <TableHead>
                             <TableRow>
-                                <TableCell><Tooltip title="ioBroker Objekt-ID (Pfad)"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_sensor_id')}</span></Tooltip></TableCell>
-                                <TableCell><Tooltip title="Name für die KI (z.B. 'Küche Licht')"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_name')}</span></Tooltip></TableCell>
-                                <TableCell><Tooltip title="Raum/Ort (Wichtig für Kontext)"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_location')}</span></Tooltip></TableCell>
-                                <TableCell><Tooltip title="Art des Sensors"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_type')}</span></Tooltip></TableCell>
+                                <TableCell sx={{ minWidth: 300 }}><Tooltip title="ioBroker Objekt-ID (Pfad)"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_sensor_id')}</span></Tooltip></TableCell>
+                                <TableCell sx={{ minWidth: 250 }}><Tooltip title="Name für die KI (z.B. 'Küche Licht')"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_name')}</span></Tooltip></TableCell>
+                                <TableCell sx={{ minWidth: 200 }}><Tooltip title="Raum/Ort (Wichtig für Kontext)"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_location')}</span></Tooltip></TableCell>
+                                <TableCell sx={{ minWidth: 200 }}><Tooltip title="Art des Sensors"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_type')}</span></Tooltip></TableCell>
                                 <TableCell><Tooltip title={I18n.t('table_is_exit_tooltip')}><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_is_exit')}</span></Tooltip></TableCell>
                                 <TableCell><Tooltip title={I18n.t('table_log_duplicates_tooltip')}><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_log_duplicates')}</span></Tooltip></TableCell>
                                 <TableCell></TableCell>
@@ -510,6 +507,27 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </Box>
                     {this.state.devices.length > 0 && <Button color="error" size="small" onClick={() => this.setState({showDeleteConfirm: true})}>Alle löschen</Button>}
                 </Box>
+            </Box>
+        );
+    }
+
+    render() {
+        const { expandedAccordion } = this.state;
+        const isDark = this.props.themeType === 'dark';
+        const cardBg = isDark ? '#1e1e1e' : '#fff';
+        const textColor = isDark ? '#fff' : 'text.primary';
+        const accordionStyle = { bgcolor: cardBg, color: textColor };
+        const titleStyle = { display: 'flex', alignItems: 'center', gap: 2, fontWeight: 'bold' };
+        const tooltipProps = { componentsProps: { tooltip: { sx: { fontSize: '0.9rem' } } }, arrow: true };
+
+        return (
+            <Box sx={{ p: 2, maxWidth: '100%', margin: '0 auto' }}>
+                {this.renderDialogs()}
+                <Accordion expanded={expandedAccordion === 'panel1'} onChange={this.handleAccordionChange('panel1')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Lizenz & KI-Verbindung</Typography></AccordionSummary><AccordionDetails>{this.renderLicenseSection(tooltipProps)}</AccordionDetails></Accordion>
+                <Accordion expanded={expandedAccordion === 'panel2'} onChange={this.handleAccordionChange('panel2')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>KI-Verhalten & Kontext</Typography></AccordionSummary><AccordionDetails>{this.renderAIBehaviorSection(tooltipProps)}</AccordionDetails></Accordion>
+                <Accordion expanded={expandedAccordion === 'panel5'} onChange={this.handleAccordionChange('panel5')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Reporting & Family Link</Typography></AccordionSummary><AccordionDetails>{this.renderReportingSection(tooltipProps)}</AccordionDetails></Accordion>
+                <Accordion expanded={expandedAccordion === 'panel3'} onChange={this.handleAccordionChange('panel3')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Benachrichtigungen</Typography></AccordionSummary><AccordionDetails>{this.renderNotificationsSection()}</AccordionDetails></Accordion>
+                <Accordion expanded={expandedAccordion === 'panel4'} onChange={this.handleAccordionChange('panel4')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Sensoren</Typography></AccordionSummary><AccordionDetails>{this.renderSensorsSection(isDark)}</AccordionDetails></Accordion>
             </Box>
         );
     }
