@@ -7,7 +7,7 @@ import math
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.12.0 (Feature: Markov Topology)"
+VERSION = "0.14.2 (Feature: GCN Graph Engine)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
 VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
@@ -200,7 +200,7 @@ class SecurityBrain:
 
         except Exception as e: return 0.0, False, str(e)
 
-# --- MODULE 2.1: TOPOLOGY (NEW) ---
+# --- MODULE 2.1: TOPOLOGY (Legacy Markov) ---
 class TopologyBrain:
     def build_matrix(self, sequences):
         if not LIBS_AVAILABLE: return None
@@ -234,6 +234,75 @@ class TopologyBrain:
         except Exception as e:
             log(f"Topology Error: {e}")
             return None
+
+# --- MODULE 2.2: GRAPH ENGINE (New GCN Logic) ---
+class GraphEngine:
+    def __init__(self):
+        self.rooms = []
+        self.adj_matrix = None
+        self.norm_laplacian = None
+        self.ready = False
+
+    def update_topology(self, payload):
+        try:
+            self.rooms = payload.get('rooms', [])
+            matrix_raw = payload.get('matrix', [])
+
+            if not self.rooms or not matrix_raw:
+                log("GraphEngine: Received empty topology.")
+                return
+
+            # Konvertiere in Numpy Array
+            A = np.array(matrix_raw, dtype=float)
+
+            # GCN Mathematik: Normalized Laplacian berechnen
+            # D = Degree Matrix (Summe der Verbindungen pro Knoten)
+            # Formel: D^(-0.5) * A * D^(-0.5)
+
+            # 1. Self-Loops sicherstellen (Diagonale = 1)
+            np.fill_diagonal(A, 1.0)
+
+            # 2. Degree Matrix D berechnen
+            D = np.diag(np.sum(A, axis=1))
+
+            # 3. Inverse Quadratwurzel von D
+            with np.errstate(divide='ignore'):
+                D_inv_sqrt = np.power(D, -0.5)
+            D_inv_sqrt[np.isinf(D_inv_sqrt)] = 0.
+
+            # 4. Filter berechnen (Propagation Matrix)
+            self.norm_laplacian = D_inv_sqrt.dot(A).dot(D_inv_sqrt)
+            self.adj_matrix = A
+            self.ready = True
+
+            log(f"GraphEngine: Topology updated. {len(self.rooms)} Nodes. GCN Filter ready.")
+
+        except Exception as e:
+            log(f"GraphEngine Error: {e}")
+
+    def propagate_signal(self, start_room):
+        """
+        Simuliert, wie sich ein Event (Signal) durch das Haus bewegt.
+        """
+        if not self.ready or start_room not in self.rooms:
+            return {}
+
+        # Input Signal Vektor (One-Hot Encoding)
+        x = np.zeros(len(self.rooms))
+        idx = self.rooms.index(start_room)
+        x[idx] = 1.0 # Volle Energie im Startraum
+
+        # GCN Propagation: Y = Filter * X
+        y = self.norm_laplacian.dot(x)
+
+        # Ergebnis filtern (nur relevante Nachbarn > 0.05)
+        result = {}
+        for i, val in enumerate(y):
+            if val > 0.05 and self.rooms[i] != start_room:
+                result[self.rooms[i]] = round(val, 3)
+
+        # Sortieren nach Signalstärke
+        return dict(sorted(result.items(), key=lambda item: item[1], reverse=True))
 
 # --- MODULE 3: HEALTH (With Gait Speed) ---
 class HealthBrain:
@@ -415,6 +484,7 @@ health_brain = HealthBrain()
 energy_brain = EnergyBrain()
 comfort_brain = ComfortBrain()
 topology_brain = TopologyBrain()
+graph_brain = GraphEngine() # <--- NEW Singleton
 
 def process_message(msg):
     try:
@@ -446,6 +516,15 @@ def process_message(msg):
         elif cmd == "BUILD_TOPOLOGY":
             res = topology_brain.build_matrix(data.get("sequences", []))
             if res: send_result("TOPOLOGY_RESULT", {"data": res})
+
+        # --- NEW GCN HANDLERS ---
+        elif cmd == "SET_TOPOLOGY":
+            graph_brain.update_topology(data)
+            send_result("TOPOLOGY_ACK", {"success": True})
+        elif cmd == "SIMULATE_SIGNAL":
+            # Optional: Wenn du das Frontend irgendwann anbindest für den GCN Test
+            neighbors = graph_brain.propagate_signal(data.get("room"))
+            send_result("SIGNAL_RESULT", {"room": data.get("room"), "propagation": neighbors})
 
     except Exception as e: log(f"Err: {e}")
 
