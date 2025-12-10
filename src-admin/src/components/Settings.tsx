@@ -302,7 +302,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         if (!bulkLoading && showBulkDialog) {
             const allKeys = Object.keys(bulkAllObjects).sort();
 
+            // --- SMART SEARCH LOGIC ---
+            // 1. Suche in Kleinbuchstaben
             const lowerFilter = bulkFilter.toLowerCase();
+            // 2. Suche aufteilen in Begriffe ("licht julia" -> ["licht", "julia"])
             const filterParts = lowerFilter.split(' ').filter(part => part.trim().length > 0);
 
             if (filterParts.length === 0 && allKeys.length > 5000) {
@@ -315,7 +318,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     const name = obj?.common?.name ? (typeof obj.common.name === 'object' ? JSON.stringify(obj.common.name) : obj.common.name) : '';
                     const fullString = (id + " " + name).toLowerCase();
 
-                    // Alle Begriffe müssen enthalten sein
+                    // 3. ALLE Begriffe müssen enthalten sein (AND-Logik)
+                    // Beispiel: "licht" muss drin sein UND "julia" muss drin sein.
                     const isMatch = filterParts.every(part => fullString.includes(part));
 
                     if (isMatch) {
@@ -422,10 +426,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     <Table size="small">
                         <TableHead>
                             <TableRow>
-                                <TableCell sx={{ minWidth: 300 }}><Tooltip title="ioBroker Objekt-ID (Pfad)"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_sensor_id')}</span></Tooltip></TableCell>
-                                <TableCell sx={{ minWidth: 250 }}><Tooltip title="Name für die KI (z.B. 'Küche Licht')"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_name')}</span></Tooltip></TableCell>
-                                <TableCell sx={{ minWidth: 200 }}><Tooltip title="Raum/Ort (Wichtig für Kontext)"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_location')}</span></Tooltip></TableCell>
-                                <TableCell sx={{ minWidth: 200 }}><Tooltip title="Art des Sensors"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_type')}</span></Tooltip></TableCell>
+                                <TableCell><Tooltip title="ioBroker Objekt-ID (Pfad)"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_sensor_id')}</span></Tooltip></TableCell>
+                                <TableCell><Tooltip title="Name für die KI (z.B. 'Küche Licht')"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_name')}</span></Tooltip></TableCell>
+                                <TableCell><Tooltip title="Raum/Ort (Wichtig für Kontext)"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_location')}</span></Tooltip></TableCell>
+                                <TableCell><Tooltip title="Art des Sensors"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_type')}</span></Tooltip></TableCell>
                                 <TableCell><Tooltip title={I18n.t('table_is_exit_tooltip')}><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_is_exit')}</span></Tooltip></TableCell>
                                 <TableCell><Tooltip title={I18n.t('table_log_duplicates_tooltip')}><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_log_duplicates')}</span></Tooltip></TableCell>
                                 <TableCell></TableCell>
