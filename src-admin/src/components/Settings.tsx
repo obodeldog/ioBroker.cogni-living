@@ -302,7 +302,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         if (!bulkLoading && showBulkDialog) {
             const allKeys = Object.keys(bulkAllObjects).sort();
 
-            // --- SMART SEARCH LOGIC (Google Style) ---
             const lowerFilter = bulkFilter.toLowerCase();
             const filterParts = lowerFilter.split(' ').filter(part => part.trim().length > 0);
 
@@ -507,27 +506,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </Box>
                     {this.state.devices.length > 0 && <Button color="error" size="small" onClick={() => this.setState({showDeleteConfirm: true})}>Alle löschen</Button>}
                 </Box>
-            </Box>
-        );
-    }
-
-    render() {
-        const { expandedAccordion } = this.state;
-        const isDark = this.props.themeType === 'dark';
-        const cardBg = isDark ? '#1e1e1e' : '#fff';
-        const textColor = isDark ? '#fff' : 'text.primary';
-        const accordionStyle = { bgcolor: cardBg, color: textColor };
-        const titleStyle = { display: 'flex', alignItems: 'center', gap: 2, fontWeight: 'bold' };
-        const tooltipProps = { componentsProps: { tooltip: { sx: { fontSize: '0.9rem' } } }, arrow: true };
-
-        return (
-            <Box sx={{ p: 2, maxWidth: '100%', margin: '0 auto' }}>
-                {this.renderDialogs()}
-                <Accordion expanded={expandedAccordion === 'panel1'} onChange={this.handleAccordionChange('panel1')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Lizenz & KI-Verbindung</Typography></AccordionSummary><AccordionDetails>{this.renderLicenseSection(tooltipProps)}</AccordionDetails></Accordion>
-                <Accordion expanded={expandedAccordion === 'panel2'} onChange={this.handleAccordionChange('panel2')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>KI-Verhalten & Kontext</Typography></AccordionSummary><AccordionDetails>{this.renderAIBehaviorSection(tooltipProps)}</AccordionDetails></Accordion>
-                <Accordion expanded={expandedAccordion === 'panel5'} onChange={this.handleAccordionChange('panel5')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Reporting & Family Link</Typography></AccordionSummary><AccordionDetails>{this.renderReportingSection(tooltipProps)}</AccordionDetails></Accordion>
-                <Accordion expanded={expandedAccordion === 'panel3'} onChange={this.handleAccordionChange('panel3')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Benachrichtigungen</Typography></AccordionSummary><AccordionDetails>{this.renderNotificationsSection()}</AccordionDetails></Accordion>
-                <Accordion expanded={expandedAccordion === 'panel4'} onChange={this.handleAccordionChange('panel4')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Sensoren</Typography></AccordionSummary><AccordionDetails>{this.renderSensorsSection(isDark)}</AccordionDetails></Accordion>
             </Box>
         );
     }
