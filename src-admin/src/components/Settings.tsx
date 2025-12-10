@@ -8,7 +8,7 @@ import type { Connection } from '@iobroker/socket-client';
 // Icons
 import VerifiedIcon from '@mui/icons-material/Verified';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd'; // Icon für Massen-Add
 
 interface SettingsProps { native: Record<string, any>; onChange: (attr: string, value: any) => void; socket: Connection; themeType: ThemeType; adapterName: string; instance: number; theme: IobTheme; }
 interface DeviceConfig { id: string; name: string; location: string; type: string; logDuplicates: boolean; isExit: boolean; }
@@ -242,6 +242,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     // --- BULK ADD LOGIC ---
     handleOpenBulkDialog = () => {
         this.setState({ showBulkDialog: true, bulkSelected: [] });
+        // Nur laden wenn noch nicht geladen
         if (Object.keys(this.state.bulkAllObjects).length === 0) {
             this.setState({ bulkLoading: true });
             this.props.socket.getForeignObjects('*', 'state').then(objects => {
@@ -271,6 +272,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         let added = 0;
 
         bulkSelected.forEach(id => {
+            // Check duplicates
             if (!currentDevices.find(d => d.id === id)) {
                 const obj = bulkAllObjects[id];
                 let name = id;
@@ -281,8 +283,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 currentDevices.push({
                     id: id,
                     name: name,
-                    location: '',
-                    type: '',
+                    location: '', // LEER lassen wie gewünscht
+                    type: '',     // LEER lassen wie gewünscht
                     logDuplicates: false,
                     isExit: false
                 });
@@ -298,31 +300,22 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     renderBulkDialog() {
         const { showBulkDialog, bulkLoading, bulkAllObjects, bulkFilter, bulkSelected } = this.state;
 
+        // Filtern & Begrenzen für Performance
         let filteredKeys: string[] = [];
         if (!bulkLoading && showBulkDialog) {
+            const lowerFilter = bulkFilter.toLowerCase();
             const allKeys = Object.keys(bulkAllObjects).sort();
 
-            // --- SMART SEARCH LOGIC ---
-            // 1. Suche in Kleinbuchstaben
-            const lowerFilter = bulkFilter.toLowerCase();
-            // 2. Suche aufteilen in Begriffe ("licht julia" -> ["licht", "julia"])
-            const filterParts = lowerFilter.split(' ').filter(part => part.trim().length > 0);
-
-            if (filterParts.length === 0 && allKeys.length > 5000) {
-                // Warte auf Input
+            // Nur wenn Filter > 1 Zeichen oder Liste klein, sonst zu langsam
+            if (bulkFilter.length < 2 && allKeys.length > 5000) {
+                // Warte auf mehr Input
             } else {
                 for (const id of allKeys) {
-                    if (filteredKeys.length > 100) break; // Limit
-
+                    if (filteredKeys.length > 100) break; // Limit Anzeige
                     const obj = bulkAllObjects[id];
                     const name = obj?.common?.name ? (typeof obj.common.name === 'object' ? JSON.stringify(obj.common.name) : obj.common.name) : '';
-                    const fullString = (id + " " + name).toLowerCase();
 
-                    // 3. ALLE Begriffe müssen enthalten sein (AND-Logik)
-                    // Beispiel: "licht" muss drin sein UND "julia" muss drin sein.
-                    const isMatch = filterParts.every(part => fullString.includes(part));
-
-                    if (isMatch) {
+                    if (!lowerFilter || id.toLowerCase().includes(lowerFilter) || name.toLowerCase().includes(lowerFilter)) {
                         filteredKeys.push(id);
                     }
                 }
@@ -341,8 +334,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             value={bulkFilter}
                             onChange={(e) => this.setState({ bulkFilter: e.target.value })}
                             autoFocus
-                            placeholder="z.B. 'licht wohnzimmer' (findet beides)"
-                            helperText="Leerzeichen trennt Begriffe (AND-Suche)"
+                            placeholder="z.B. knx oder licht"
                         />
                     </Box>
 
@@ -351,6 +343,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     ) : (
                         <List dense>
                             {filteredKeys.length === 0 && bulkFilter.length > 1 && <ListItem><ListItemText primary="Keine Treffer" /></ListItem>}
+                            {filteredKeys.length === 0 && bulkFilter.length <= 1 && Object.keys(bulkAllObjects).length > 5000 && <ListItem><ListItemText primary="Bitte Suchbegriff eingeben..." /></ListItem>}
 
                             {filteredKeys.map(id => {
                                 const obj = bulkAllObjects[id];
@@ -414,6 +407,73 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     renderContextDialog() { return ( <Dialog open={this.state.showContextDialog} onClose={() => this.setState({ showContextDialog: false })} maxWidth="sm" fullWidth><DialogTitle>Kontext-Daten (Live-Check)</DialogTitle><DialogContent dividers><Typography variant="subtitle2" color="primary" gutterBottom>Wetter-Status</Typography><Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}><Typography variant="body2" style={{ fontFamily: 'monospace' }}>{this.state.contextResult?.weather || 'Lade...'}</Typography></Paper><Typography variant="subtitle2" color="primary" gutterBottom>Kalender-Status (Gefiltert)</Typography><Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default', maxHeight: 200, overflow: 'auto' }}><Typography variant="body2" style={{ fontFamily: 'monospace' }}>{this.state.contextResult?.calendar || 'Lade...'}</Typography></Paper></DialogContent><DialogActions><Button onClick={() => this.setState({ showContextDialog: false })}>Schließen</Button></DialogActions></Dialog> ); }
 
+    renderWizardDialog() {
+        const { showWizard, wizardStep, scanFilters, scannedDevices, availableEnums, showEnumList } = this.state;
+
+        return (
+            <Dialog open={showWizard} onClose={() => wizardStep !== 1 && this.setState({ showWizard: false })} maxWidth="md" fullWidth>
+                <DialogTitle>Auto-Discovery Wizard {wizardStep !== 1 && <IconButton onClick={() => this.setState({ showWizard: false })} sx={{ position: 'absolute', right: 8, top: 8 }}>x</IconButton>}</DialogTitle>
+                <DialogContent dividers>
+                    {wizardStep === 0 && <Box sx={{ p: 2 }}><Typography variant="h6" gutterBottom>Was soll gescannt werden?</Typography><Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>Die KI kann automatisch Sensoren in Ihrer ioBroker-Installation finden.</Typography>
+                        <FormGroup>
+                            <FormControlLabel control={<Checkbox checked={scanFilters.motion} onChange={() => this.handleFilterChange('motion')} />} label="Bewegungsmelder" />
+                            <FormControlLabel control={<Checkbox checked={scanFilters.doors} onChange={() => this.handleFilterChange('doors')} />} label="Fenster & Türen" />
+                            <FormControlLabel control={<Checkbox checked={scanFilters.lights} onChange={() => this.handleFilterChange('lights')} />} label="Lichter & Schalter" />
+
+                            <Box sx={{ mt: 1, mb: 1 }}>
+                                <FormControlLabel control={<Checkbox checked={scanFilters.temperature} onChange={() => this.handleFilterChange('temperature')} />} label="Temperatur / Klima" />
+                                <FormControlLabel control={<Checkbox checked={scanFilters.weather} onChange={() => this.handleFilterChange('weather')} color="warning" />} label="Wetterdaten (Alle Adapter)" />
+                            </Box>
+
+                            {availableEnums.length > 0 && (<Box sx={{ mt: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}><ListItemButton onClick={() => this.setState({ showEnumList: !showEnumList })}><ListItemText primary="Spezifische Funktionen" secondary={`${scanFilters.selectedFunctionIds.length} ausgewählt`} />{showEnumList ? <span>^</span> : <span>v</span>}</ListItemButton><Collapse in={showEnumList} timeout="auto" unmountOnExit><List component="div" disablePadding dense sx={{ maxHeight: 200, overflow: 'auto' }}>{availableEnums.map((en) => (<ListItem key={en.id} dense disablePadding><ListItemButton onClick={() => this.handleEnumToggle(en.id)}><ListItemIcon><Checkbox edge="start" checked={scanFilters.selectedFunctionIds.indexOf(en.id) !== -1} tabIndex={-1} disableRipple /></ListItemIcon><ListItemText primary={en.name} secondary={en.id} /></ListItemButton></ListItem>))}</List></Collapse></Box>)}
+                        </FormGroup></Box>}
+
+                    {wizardStep === 1 && <Box sx={{ width: '100%', mt: 4, mb: 4, textAlign: 'center' }}><LinearProgress /><Typography variant="h6" sx={{ mt: 2 }}>Suche Sensoren & analysiere Namen...</Typography></Box>}
+                    {wizardStep === 2 && <Box><List dense sx={{ width: '100%', bgcolor: 'background.paper', maxHeight: 400, overflow: 'auto' }}>
+                        {scannedDevices.map(d => {
+                            if(d.exists) return null;
+                            const isEnum = d._source && d._source === "Enum";
+                            const confidence = d._score || 50;
+                            const color = confidence >= 80 ? "success" : (confidence >= 50 ? "warning" : "error");
+
+                            return (
+                                <ListItem key={d.id} disablePadding divider>
+                                    <ListItemButton onClick={() => this.handleToggleScannedDevice(scannedDevices.indexOf(d))} dense>
+                                        <ListItemIcon><Checkbox edge="start" checked={d.selected} tabIndex={-1} /></ListItemIcon>
+                                        <ListItemText
+                                            primary={
+                                                <Box sx={{display:'flex', alignItems:'center', gap: 1}}>
+                                                    {d.name || d.id}
+                                                    <Chip label={isEnum ? "Enum" : "AI-Scan"} size="small" color={isEnum ? "success" : "default"} variant="outlined" style={{height: 20, fontSize: '0.7rem'}}/>
+                                                    {d._source && d._source.includes("Heuristic") && <Chip label={`${confidence}%`} size="small" color={color} variant="outlined" style={{height: 20, fontSize: '0.7rem'}} icon={confidence<60 ? <HelpOutlineIcon style={{fontSize:14}}/> : <VerifiedIcon style={{fontSize:14}}/>}/>}
+                                                </Box>
+                                            }
+                                            secondary={`${d.type} • ${d.location || '(Kein Raum)'}`}
+                                        />
+                                    </ListItemButton>
+                                </ListItem>
+                            );
+                        })}
+                        {scannedDevices.filter(d => d.exists).length > 0 && <Box sx={{p: 1, bgcolor: '#f0f0f0', color: '#666', fontSize:'0.8rem', fontWeight:'bold'}}>Bereits konfiguriert:</Box>}
+                        {scannedDevices.filter(d => d.exists).map(d => (
+                            <ListItem key={d.id} disablePadding divider>
+                                <ListItemButton dense disabled>
+                                    <ListItemIcon><span>OK</span></ListItemIcon>
+                                    <ListItemText primary={d.name || d.id} secondary="Bereits aktiv" />
+                                </ListItemButton>
+                            </ListItem>
+                        ))}
+                    </List></Box>}
+                </DialogContent>
+                <DialogActions>{wizardStep === 0 && <Button variant="contained" onClick={this.handleStartScan}>Scan Starten</Button>}{wizardStep === 2 && (<><Button onClick={() => this.setState({ wizardStep: 0 })}>Zurück</Button><Button onClick={this.handleSelectAll}>Alle</Button><Button onClick={this.handleDeselectAll}>Keine</Button><Box sx={{ flexGrow: 1 }} /><Button variant="contained" onClick={this.handleImportDevices} color="primary">{this.state.scannedDevices.filter(d => d.selected).length} Importieren</Button></>)}</DialogActions>
+            </Dialog>
+        );
+    }
+
+    renderDialogs() { return ( <>{this.state.showSelectId && (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={this.state.selectIdContext === 'outdoor' ? this.state.outdoorSensorId : (this.state.selectIdContext === 'device' && this.state.devices[this.state.selectIdIndex]?.id) || ''} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />)}{this.renderWizardDialog()}{this.renderBulkDialog()}{this.renderContextDialog()}<Dialog open={this.state.showDeleteConfirm} onClose={() => this.setState({showDeleteConfirm:false})}><DialogTitle>Sicher?</DialogTitle><DialogContent><Typography>Alle Sensoren löschen?</Typography></DialogContent><DialogActions><Button onClick={()=>this.setState({showDeleteConfirm:false})}>Abbrechen</Button><Button onClick={this.onDeleteAllDevices} color="error">Löschen</Button></DialogActions></Dialog><Snackbar open={this.state.snackbarOpen} autoHideDuration={6000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity}>{this.state.snackbarMessage}</Alert></Snackbar></> ); }
+    renderLicenseSection(tooltipProps: any) { return ( <Grid container spacing={3}><Grid item xs={12} md={6}><Tooltip title="Ihr Pro-Lizenzschlüssel." {...tooltipProps}><TextField fullWidth label={I18n.t('license_key')} value={this.state.licenseKey} type="password" onChange={e => this.updateNativeValue('licenseKey', e.target.value)} helperText="Für vollen Funktionsumfang" variant="outlined" size="small" /></Tooltip></Grid><Grid item xs={12} md={6}><Box sx={{display: 'flex', gap: 1}}><Tooltip title="Gemini API Key." {...tooltipProps}><TextField fullWidth label={I18n.t('gemini_api_key')} value={this.state.geminiApiKey} type="password" onChange={e => this.updateNativeValue('geminiApiKey', e.target.value)} variant="outlined" size="small" /></Tooltip><Button variant="outlined" onClick={() => this.handleTestApiClick()} disabled={this.state.isTestingApi || !this.state.geminiApiKey}>{this.state.isTestingApi ? <CircularProgress size={20} /> : "(Test)"}</Button></Box></Grid></Grid> ); }
+    renderAIBehaviorSection(tooltipProps: any) { return ( <Grid container spacing={3}><Grid item xs={12} md={6}><Tooltip title="Fokus der Analyse." {...tooltipProps}><FormControl fullWidth size="small"><InputLabel>{I18n.t('ai_persona')}</InputLabel><Select value={this.state.aiPersona} label={I18n.t('ai_persona')} onChange={e => this.updateNativeValue('aiPersona', e.target.value)}><MenuItem value="generic">Ausgewogen</MenuItem><MenuItem value="senior_aal">Senioren-Schutz</MenuItem><MenuItem value="family">Familie</MenuItem><MenuItem value="single_comfort">Single</MenuItem><MenuItem value="security">Sicherheit</MenuItem></Select></FormControl></Tooltip></Grid><Grid item xs={12} md={6}><Tooltip title="Analyse-Intervall in Minuten." {...tooltipProps}><TextField fullWidth label={I18n.t('analysis_interval')} value={this.state.analysisInterval} type="number" onChange={e => this.updateNativeValue('analysisInterval', parseInt(e.target.value))} size="small" /></Tooltip></Grid><Grid item xs={12}><Tooltip title="Wohnkontext." {...tooltipProps}><TextField fullWidth multiline rows={4} label="Kontext" value={this.state.livingContext} onChange={e => this.updateNativeValue('livingContext', e.target.value)} helperText="max 5000 Zeichen" inputProps={{maxLength: 5000}} /></Tooltip></Grid><Grid item xs={6} md={3}><Tooltip title="Lernphase in Tagen." {...tooltipProps}><TextField fullWidth label="Lernphase" value={this.state.minDaysForBaseline} type="number" onChange={e => this.updateNativeValue('minDaysForBaseline', parseInt(e.target.value))} size="small" /></Tooltip></Grid><Grid item xs={6} md={3}><Tooltip title="STM Fenster." {...tooltipProps}><TextField fullWidth label="STM (Tage)" value={this.state.ltmStbWindowDays} type="number" onChange={e => this.updateNativeValue('ltmStbWindowDays', parseInt(e.target.value))} size="small" /></Tooltip></Grid><Grid item xs={6} md={3}><Tooltip title="LTM Fenster." {...tooltipProps}><TextField fullWidth label="LTM (Tage)" value={this.state.ltmLtbWindowDays} type="number" onChange={e => this.updateNativeValue('ltmLtbWindowDays', parseInt(e.target.value))} size="small" /></Tooltip></Grid><Grid item xs={12}><Divider textAlign="left"><Typography variant="caption" sx={{color:'text.secondary', display:'flex', alignItems:'center', gap:1}}>AAL / Inactivity Monitor</Typography></Divider></Grid><Grid item xs={12} md={6}><FormControlLabel control={<Checkbox checked={this.state.inactivityMonitoringEnabled} onChange={e => this.updateNativeValue('inactivityMonitoringEnabled', e.target.checked)} />} label={I18n.t('inactivity_monitoring_enabled')} /></Grid><Grid item xs={12} md={6}><Tooltip title="Stunden ohne Event bis Alarm." {...tooltipProps}><TextField fullWidth label={I18n.t('inactivity_threshold_hours')} value={this.state.inactivityThresholdHours} type="number" disabled={!this.state.inactivityMonitoringEnabled} onChange={e => this.updateNativeValue('inactivityThresholdHours', parseFloat(e.target.value))} size="small" inputProps={{step: 0.1}} /></Tooltip></Grid><Grid item xs={12}><Divider textAlign="left"><Typography variant="caption" sx={{color:'text.secondary', display:'flex', alignItems:'center', gap:1}}>Butler Simulation (Test)</Typography></Divider></Grid><Grid item xs={12}><Paper variant="outlined" sx={{p: 2, bgcolor: 'action.hover', display:'flex', alignItems:'center', gap: 2, flexWrap: 'wrap'}}><Box sx={{flexGrow: 1, minWidth: '200px'}}><Typography variant="caption">1. Ziel-Gerät wählen (ID)</Typography><Box sx={{display:'flex'}}><TextField fullWidth size="small" value={this.state.simTargetId} onChange={e => this.setState({simTargetId: e.target.value})} placeholder="z.B. hue.0.light" /><IconButton onClick={() => this.openSimSelectId()}>...</IconButton></Box></Box><Box sx={{minWidth: '100px'}}><Typography variant="caption">2. Wert (JSON)</Typography><TextField fullWidth size="small" value={this.state.simTargetValue} onChange={e => this.setState({simTargetValue: e.target.value})} /></Box><Box sx={{mt: 2}}><Button variant="contained" color="secondary" onClick={this.handleSimulateButler}>Vorschlag simulieren</Button></Box></Paper><Typography variant="caption" sx={{mt: 1, display:'block'}}>Erzeugt einen Fake-Vorschlag im Dashboard. Wenn Sie dort "Ausführen" klicken, wird dieser Wert an diese ID gesendet.</Typography></Grid></Grid> ); }
+    renderReportingSection(tooltipProps: any) { return ( <Grid container spacing={3}><Grid item xs={12}><Alert severity="info">Der "Family Link" sendet automatisch Berichte an die unten konfigurierten Empfänger.</Alert></Grid><Grid item xs={12} md={6}><FormControlLabel control={<Checkbox checked={this.state.briefingEnabled} onChange={e => this.updateNativeValue('briefingEnabled', e.target.checked)} />} label="Tägliches 'Guten Morgen' Briefing" /><Typography variant="caption" color="text.secondary" display="block">Sendet morgens eine Zusammenfassung der Nacht (Schlaf/Aktivität).</Typography></Grid><Grid item xs={12} md={6}><Tooltip title="Uhrzeit für den täglichen Bericht (Format HH:MM)." {...tooltipProps}><TextField fullWidth label="Uhrzeit" type="time" value={this.state.briefingTime} onChange={e => this.updateNativeValue('briefingTime', e.target.value)} disabled={!this.state.briefingEnabled} InputLabelProps={{ shrink: true }} size="small" /></Tooltip></Grid><Grid item xs={12}><Divider textAlign="left"><Typography variant="caption" sx={{color:'text.secondary', display:'flex', alignItems:'center', gap:1}}>Erweiterter Kontext (Sprint 29)</Typography></Divider></Grid><Grid item xs={12} md={6}><FormControlLabel control={<Checkbox checked={this.state.useWeather} onChange={e => this.updateNativeValue('useWeather', e.target.checked)} />} label="Wetterdaten nutzen" /><FormControl fullWidth size="small" disabled={!this.state.useWeather}><InputLabel>Wetter-Instanz (Optional)</InputLabel><Select value={this.state.weatherInstance} label="Wetter-Instanz (Optional)" onChange={(e) => this.updateNativeValue('weatherInstance', e.target.value)}><MenuItem value=""><em>Automatisch erkennen</em></MenuItem>{[...(this.state.availableInstances['accuweather'] || []), ...(this.state.availableInstances['daswetter'] || [])].map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid><Grid item xs={12} md={6}><Box sx={{display: 'flex', alignItems: 'center', gap: 1}}><Typography variant="body1">Eigener Außenfühler (Hardware):</Typography><Tooltip title="Wählen Sie einen physischen Sensor (z.B. im Garten). Dieser Wert wird bevorzugt behandelt."><IconButton onClick={() => this.openOutdoorSelectId()}>...</IconButton></Tooltip></Box><Box sx={{display: 'flex', gap: 1}}><TextField fullWidth size="small" value={this.state.outdoorSensorId} onChange={e => this.updateNativeValue('outdoorSensorId', e.target.value)} placeholder="Kein Sensor gewählt" helperText="Hat Vorrang vor Wetter-Adapter" /><IconButton onClick={() => this.openOutdoorSelectId()}>...</IconButton></Box></Grid><Grid item xs={12} md={6}><FormControlLabel control={<Checkbox checked={this.state.useCalendar} onChange={e => this.updateNativeValue('useCalendar', e.target.checked)} />} label="Kalender nutzen (iCal)" /><FormControl fullWidth size="small" disabled={!this.state.useCalendar}><InputLabel>Kalender-Instanz (Optional)</InputLabel><Select value={this.state.calendarInstance} label="Kalender-Instanz (Optional)" onChange={(e) => this.updateNativeValue('calendarInstance', e.target.value)}><MenuItem value=""><em>Automatisch erkennen</em></MenuItem>{(this.state.availableInstances['ical'] || []).map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid>{this.state.useCalendar && (<Grid item xs={12}><Paper variant="outlined" sx={{p: 2}}><Box sx={{display:'flex', justifyContent:'space-between', alignItems:'center', mb: 1}}><Typography variant="subtitle2">Relevante Kalender auswählen (Whitelist)</Typography><Button size="small" onClick={() => this.handleFetchCalendarNames()}>Kalender suchen</Button></Box>{this.state.detectedCalendars.length > 0 ? (<FormGroup row>{this.state.detectedCalendars.map(calName => (<FormControlLabel key={calName} control={<Checkbox checked={this.state.calendarSelection.includes(calName)} onChange={() => this.toggleCalendarSelection(calName)} />} label={calName} />))}</FormGroup>) : (<Typography variant="body2" color="text.secondary">Klicken Sie auf "Suchen", um Kalendernamen zu laden.</Typography>)}{this.state.calendarSelection.length === 0 && this.state.detectedCalendars.length > 0 && (<Alert severity="warning" sx={{mt: 1, py: 0}}>Achtung: Kein Kalender ausgewählt. Die KI wird alle Termine ignorieren!</Alert>)}</Paper></Grid>)}<Grid item xs={12}><Button variant="outlined" onClick={() => this.handleTestContextClick()} disabled={this.state.isTestingContext || (!this.state.useWeather && !this.state.useCalendar)}>Kontext-Daten jetzt prüfen</Button></Grid></Grid>); }
     renderNotificationRow(adapterName: string, enabledAttr: NotificationEnabledKey, instanceAttr: NotificationInstanceKey, recipientAttr: NotificationRecipientKey, recipientLabel: string) { const enabled = this.state[enabledAttr]; const instance = this.state[instanceAttr]; const recipient = this.state[recipientAttr]; let adapterKey = adapterName === 'whatsapp' ? 'whatsapp-cmb' : adapterName === 'signal' ? 'signal-cma' : adapterName; const instances = this.state.availableInstances[adapterKey] || []; return (<Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}><Grid item xs={12} sm={3}><FormControlLabel control={<Checkbox checked={enabled} onChange={e => this.updateNativeValue(enabledAttr, e.target.checked)} />} label={I18n.t(`notify_${adapterName}`)} /></Grid><Grid item xs={12} sm={4}><FormControl fullWidth size="small" disabled={!enabled}><InputLabel>{I18n.t('notify_instance')}</InputLabel><Select value={instance} label={I18n.t('notify_instance')} onChange={(e: any) => this.updateNativeValue(instanceAttr, e.target.value)}>{instances.length === 0 ? <MenuItem value="">{I18n.t('notify_no_instances')}</MenuItem> : instances.map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid><Grid item xs={12} sm={5}><TextField fullWidth size="small" label={recipientLabel} value={recipient} onChange={e => this.updateNativeValue(recipientAttr, e.target.value)} disabled={!enabled} required={adapterName === 'email' && enabled} /></Grid></Grid>); }
     renderNotificationsSection() { return ( <Box><Alert severity="info" sx={{mb: 2}}>Benachrichtigungen werden bei Alarmen und (wenn aktiviert) für Berichte verwendet.</Alert>{this.renderNotificationRow('telegram', 'notifyTelegramEnabled', 'notifyTelegramInstance', 'notifyTelegramRecipient', 'User ID')}{this.renderNotificationRow('pushover', 'notifyPushoverEnabled', 'notifyPushoverInstance', 'notifyPushoverRecipient', 'Device ID')}{this.renderNotificationRow('email', 'notifyEmailEnabled', 'notifyEmailInstance', 'notifyEmailRecipient', 'E-Mail')}{this.renderNotificationRow('whatsapp', 'notifyWhatsappEnabled', 'notifyWhatsappInstance', 'notifyWhatsappRecipient', 'Tel')}<Button variant="outlined" sx={{mt:1}} onClick={() => this.handleTestNotificationClick()} disabled={this.state.isTestingNotification}>Test</Button></Box> ); }
 
@@ -510,6 +570,27 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </Box>
                     {this.state.devices.length > 0 && <Button color="error" size="small" onClick={() => this.setState({showDeleteConfirm: true})}>Alle löschen</Button>}
                 </Box>
+            </Box>
+        );
+    }
+
+    render() {
+        const { expandedAccordion } = this.state;
+        const isDark = this.props.themeType === 'dark';
+        const cardBg = isDark ? '#1e1e1e' : '#fff';
+        const textColor = isDark ? '#fff' : 'text.primary';
+        const accordionStyle = { bgcolor: cardBg, color: textColor };
+        const titleStyle = { display: 'flex', alignItems: 'center', gap: 2, fontWeight: 'bold' };
+        const tooltipProps = { componentsProps: { tooltip: { sx: { fontSize: '0.9rem' } } }, arrow: true };
+
+        return (
+            <Box sx={{ p: 2, maxWidth: '1200px', margin: '0 auto' }}>
+                {this.renderDialogs()}
+                <Accordion expanded={expandedAccordion === 'panel1'} onChange={this.handleAccordionChange('panel1')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Lizenz & KI-Verbindung</Typography></AccordionSummary><AccordionDetails>{this.renderLicenseSection(tooltipProps)}</AccordionDetails></Accordion>
+                <Accordion expanded={expandedAccordion === 'panel2'} onChange={this.handleAccordionChange('panel2')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>KI-Verhalten & Kontext</Typography></AccordionSummary><AccordionDetails>{this.renderAIBehaviorSection(tooltipProps)}</AccordionDetails></Accordion>
+                <Accordion expanded={expandedAccordion === 'panel5'} onChange={this.handleAccordionChange('panel5')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Reporting & Family Link</Typography></AccordionSummary><AccordionDetails>{this.renderReportingSection(tooltipProps)}</AccordionDetails></Accordion>
+                <Accordion expanded={expandedAccordion === 'panel3'} onChange={this.handleAccordionChange('panel3')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Benachrichtigungen</Typography></AccordionSummary><AccordionDetails>{this.renderNotificationsSection()}</AccordionDetails></Accordion>
+                <Accordion expanded={expandedAccordion === 'panel4'} onChange={this.handleAccordionChange('panel4')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Sensoren</Typography></AccordionSummary><AccordionDetails>{this.renderSensorsSection(isDark)}</AccordionDetails></Accordion>
             </Box>
         );
     }
