@@ -7,13 +7,14 @@ import math
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.14.2 (Feature: GCN Graph Engine)"
+VERSION = "0.14.3 (Feature: GCN Behavior Training)"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
 SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
 VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "security_config.json")
 HEALTH_MODEL_PATH = os.path.join(os.path.dirname(__file__), "health_model.pkl")
 ENERGY_MODEL_PATH = os.path.join(os.path.dirname(__file__), "energy_model.pkl")
+GRAPH_MODEL_PATH = os.path.join(os.path.dirname(__file__), "graph_behavior.pkl") # NEU
 
 DEFAULT_THRESHOLD = 0.05
 LIBS_AVAILABLE = False
@@ -156,7 +157,7 @@ class SecurityBrain:
     def predict(self, sequence):
         if not self.is_ready: return None, False, "Model not ready"
         try:
-            import numpy as np # Re-import safe inside method
+            import numpy as np
             steps = sequence.get('steps', [])
             seq_vector = []
             n_classes = len(self.vocab_encoder.classes_)
@@ -205,23 +206,19 @@ class TopologyBrain:
     def build_matrix(self, sequences):
         if not LIBS_AVAILABLE: return None
         try:
-            # Extrahiere alle Übergänge (From -> To)
             transitions = []
             for seq in sequences:
                 steps = seq.get('steps', [])
                 for i in range(len(steps) - 1):
                     loc_a = steps[i].get('loc', 'Unknown')
                     loc_b = steps[i+1].get('loc', 'Unknown')
-                    if loc_a != loc_b: # Keine Selbst-Referenz
+                    if loc_a != loc_b:
                         transitions.append({'from': loc_a, 'to': loc_b})
 
             if len(transitions) < 5: return None
 
             df = pd.DataFrame(transitions)
-            # Berechne Wahrscheinlichkeiten (Row normalized)
             matrix = pd.crosstab(df['from'], df['to'], normalize='index')
-
-            # Convert to pure JSON structure
             rooms = list(matrix.columns)
             values = []
             for idx, row in matrix.iterrows():
@@ -235,13 +232,15 @@ class TopologyBrain:
             log(f"Topology Error: {e}")
             return None
 
-# --- MODULE 2.2: GRAPH ENGINE (New GCN Logic) ---
+# --- MODULE 2.2: GRAPH ENGINE (GCN Logic) ---
 class GraphEngine:
     def __init__(self):
         self.rooms = []
-        self.adj_matrix = None
+        self.adj_matrix = None # Physikalisch (User definiert)
+        self.behavior_matrix = None # Gelernt (Behavior)
         self.norm_laplacian = None
         self.ready = False
+        self.load_behavior()
 
     def update_topology(self, payload):
         try:
@@ -252,56 +251,96 @@ class GraphEngine:
                 log("GraphEngine: Received empty topology.")
                 return
 
-            # Konvertiere in Numpy Array
-            A = np.array(matrix_raw, dtype=float)
+            self.adj_matrix = np.array(matrix_raw, dtype=float)
 
-            # GCN Mathematik: Normalized Laplacian berechnen
-            # D = Degree Matrix (Summe der Verbindungen pro Knoten)
-            # Formel: D^(-0.5) * A * D^(-0.5)
-
-            # 1. Self-Loops sicherstellen (Diagonale = 1)
-            np.fill_diagonal(A, 1.0)
-
-            # 2. Degree Matrix D berechnen
-            D = np.diag(np.sum(A, axis=1))
-
-            # 3. Inverse Quadratwurzel von D
-            with np.errstate(divide='ignore'):
-                D_inv_sqrt = np.power(D, -0.5)
+            # GCN Filter berechnen (nur based on Physics)
+            np.fill_diagonal(self.adj_matrix, 1.0)
+            D = np.diag(np.sum(self.adj_matrix, axis=1))
+            with np.errstate(divide='ignore'): D_inv_sqrt = np.power(D, -0.5)
             D_inv_sqrt[np.isinf(D_inv_sqrt)] = 0.
+            self.norm_laplacian = D_inv_sqrt.dot(self.adj_matrix).dot(D_inv_sqrt)
 
-            # 4. Filter berechnen (Propagation Matrix)
-            self.norm_laplacian = D_inv_sqrt.dot(A).dot(D_inv_sqrt)
-            self.adj_matrix = A
             self.ready = True
+            log(f"GraphEngine: Topology updated. {len(self.rooms)} Nodes. Physics ready.")
 
-            log(f"GraphEngine: Topology updated. {len(self.rooms)} Nodes. GCN Filter ready.")
+        except Exception as e: log(f"GraphEngine Error: {e}")
+
+    def train_behavior(self, sequences):
+        """
+        Lernt Wahrscheinlichkeiten aus Sequenzen und kombiniert sie mit dem physikalischen Graphen.
+        """
+        if not self.ready or not sequences: return
+        log(f"🧠 GraphEngine: Learning behavior from {len(sequences)} sequences...")
+
+        try:
+            # 1. Zähle echte Übergänge
+            n = len(self.rooms)
+            count_matrix = np.zeros((n, n))
+
+            for seq in sequences:
+                steps = seq.get('steps', [])
+                for i in range(len(steps) - 1):
+                    loc_a = steps[i].get('loc')
+                    loc_b = steps[i+1].get('loc')
+
+                    if loc_a in self.rooms and loc_b in self.rooms:
+                        idx_a = self.rooms.index(loc_a)
+                        idx_b = self.rooms.index(loc_b)
+                        count_matrix[idx_a][idx_b] += 1
+
+            # 2. Normalisiere zu Wahrscheinlichkeiten (Row Stochastic)
+            row_sums = count_matrix.sum(axis=1, keepdims=True)
+            # Avoid division by zero
+            prob_matrix = np.divide(count_matrix, row_sums, out=np.zeros_like(count_matrix), where=row_sums!=0)
+
+            # 3. MASKIERUNG (Crucial Step):
+            # Multipliziere gelernte Wahrscheinlichkeiten mit physikalischer Machbarkeit.
+            # Wenn adj_matrix[a][b] == 0, dann wird auch behavior[a][b] = 0.
+            # Das verhindert "Teleportations-Lernen".
+
+            self.behavior_matrix = np.multiply(prob_matrix, self.adj_matrix)
+
+            # Re-Normalize nach Maskierung
+            row_sums_2 = self.behavior_matrix.sum(axis=1, keepdims=True)
+            self.behavior_matrix = np.divide(self.behavior_matrix, row_sums_2, out=np.zeros_like(self.behavior_matrix), where=row_sums_2!=0)
+
+            # Speichern
+            with open(GRAPH_MODEL_PATH, 'wb') as f:
+                pickle.dump(self.behavior_matrix, f)
+
+            log("🧠 GraphEngine: Behavior Matrix updated & saved.")
 
         except Exception as e:
-            log(f"GraphEngine Error: {e}")
+            log(f"Graph Training Error: {e}")
+
+    def load_behavior(self):
+        if os.path.exists(GRAPH_MODEL_PATH):
+            try:
+                with open(GRAPH_MODEL_PATH, 'rb') as f:
+                    self.behavior_matrix = pickle.load(f)
+                log("GraphEngine: Loaded learned behavior.")
+            except: pass
 
     def propagate_signal(self, start_room):
-        """
-        Simuliert, wie sich ein Event (Signal) durch das Haus bewegt.
-        """
-        if not self.ready or start_room not in self.rooms:
-            return {}
+        if not self.ready or start_room not in self.rooms: return {}
 
-        # Input Signal Vektor (One-Hot Encoding)
         x = np.zeros(len(self.rooms))
         idx = self.rooms.index(start_room)
-        x[idx] = 1.0 # Volle Energie im Startraum
+        x[idx] = 1.0
 
-        # GCN Propagation: Y = Filter * X
-        y = self.norm_laplacian.dot(x)
+        # Wenn wir gelernte Gewohnheiten haben, nutzen wir diese!
+        # Sonst Fallback auf reine Physik (Laplacian)
+        if self.behavior_matrix is not None and self.behavior_matrix.shape == self.adj_matrix.shape:
+            # P = Behavior Matrix
+            y = np.dot(x, self.behavior_matrix)
+        else:
+            y = self.norm_laplacian.dot(x)
 
-        # Ergebnis filtern (nur relevante Nachbarn > 0.05)
         result = {}
         for i, val in enumerate(y):
             if val > 0.05 and self.rooms[i] != start_room:
                 result[self.rooms[i]] = round(val, 3)
 
-        # Sortieren nach Signalstärke
         return dict(sorted(result.items(), key=lambda item: item[1], reverse=True))
 
 # --- MODULE 3: HEALTH (With Gait Speed) ---
@@ -492,7 +531,12 @@ def process_message(msg):
         cmd = data.get("command")
         if cmd == "PING": send_result("PONG", {"timestamp": time.time()})
         elif cmd == "TRAIN_SECURITY":
+            # 1. Train Security (LSTM)
             success, details, thresh = security_brain.train(data.get("sequences", []))
+
+            # 2. Train Graph Behavior (GCN) - NEU: Das passiert jetzt automatisch mit!
+            graph_brain.train_behavior(data.get("sequences", []))
+
             send_result("TRAINING_COMPLETE", {"success": success, "details": details, "threshold": thresh})
         elif cmd == "ANALYZE_SEQUENCE":
             score, is_anomaly, explanation = security_brain.predict(data.get("sequence", {}))
@@ -522,7 +566,7 @@ def process_message(msg):
             graph_brain.update_topology(data)
             send_result("TOPOLOGY_ACK", {"success": True})
         elif cmd == "SIMULATE_SIGNAL":
-            # Optional: Wenn du das Frontend irgendwann anbindest für den GCN Test
+            # Simuliert nun mit gelerntem Verhalten (wenn vorhanden)
             neighbors = graph_brain.propagate_signal(data.get("room"))
             send_result("SIGNAL_RESULT", {"room": data.get("room"), "propagation": neighbors})
 
