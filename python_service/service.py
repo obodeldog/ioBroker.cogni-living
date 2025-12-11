@@ -7,14 +7,16 @@ import math
 from datetime import datetime
 
 # LOGGING & CONFIG
-VERSION = "0.14.3 (Feature: GCN Behavior Training)"
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "security_model.keras")
-SCALER_PATH = os.path.join(os.path.dirname(__file__), "security_scaler.pkl")
-VOCAB_PATH = os.path.join(os.path.dirname(__file__), "security_vocab.pkl")
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "security_config.json")
-HEALTH_MODEL_PATH = os.path.join(os.path.dirname(__file__), "health_model.pkl")
-ENERGY_MODEL_PATH = os.path.join(os.path.dirname(__file__), "energy_model.pkl")
-GRAPH_MODEL_PATH = os.path.join(os.path.dirname(__file__), "graph_behavior.pkl") # NEU
+VERSION = "0.15.0 (Phase C: Predictive Automation)"
+# Pfade relativ zum Skript
+BASE_DIR = os.path.dirname(__file__)
+MODEL_PATH = os.path.join(BASE_DIR, "security_model.keras")
+SCALER_PATH = os.path.join(BASE_DIR, "security_scaler.pkl")
+VOCAB_PATH = os.path.join(BASE_DIR, "security_vocab.pkl")
+CONFIG_PATH = os.path.join(BASE_DIR, "security_config.json")
+HEALTH_MODEL_PATH = os.path.join(BASE_DIR, "health_model.pkl")
+ENERGY_MODEL_PATH = os.path.join(BASE_DIR, "energy_model.pkl")
+GRAPH_MODEL_PATH = os.path.join(BASE_DIR, "graph_behavior.pkl")
 
 DEFAULT_THRESHOLD = 0.05
 LIBS_AVAILABLE = False
@@ -34,7 +36,6 @@ try:
     import pandas as pd
     from sklearn.preprocessing import MinMaxScaler, LabelBinarizer
     from sklearn.ensemble import IsolationForest
-    from sklearn.linear_model import LinearRegression
     LIBS_AVAILABLE = True
 except ImportError as e:
     log(f"⚠️ CRITICAL: ML-Libs fehlen/defekt: {e}")
@@ -201,38 +202,7 @@ class SecurityBrain:
 
         except Exception as e: return 0.0, False, str(e)
 
-# --- MODULE 2.1: TOPOLOGY (Legacy Markov) ---
-class TopologyBrain:
-    def build_matrix(self, sequences):
-        if not LIBS_AVAILABLE: return None
-        try:
-            transitions = []
-            for seq in sequences:
-                steps = seq.get('steps', [])
-                for i in range(len(steps) - 1):
-                    loc_a = steps[i].get('loc', 'Unknown')
-                    loc_b = steps[i+1].get('loc', 'Unknown')
-                    if loc_a != loc_b:
-                        transitions.append({'from': loc_a, 'to': loc_b})
-
-            if len(transitions) < 5: return None
-
-            df = pd.DataFrame(transitions)
-            matrix = pd.crosstab(df['from'], df['to'], normalize='index')
-            rooms = list(matrix.columns)
-            values = []
-            for idx, row in matrix.iterrows():
-                row_dict = {'from': idx}
-                for room in rooms:
-                    row_dict[room] = float(row[room]) if room in row else 0.0
-                values.append(row_dict)
-
-            return {'rooms': rooms, 'matrix': values, 'count': len(transitions)}
-        except Exception as e:
-            log(f"Topology Error: {e}")
-            return None
-
-# --- MODULE 2.2: GRAPH ENGINE (GCN Logic) ---
+# --- MODULE 2.2: GRAPH ENGINE (Core of Phase C) ---
 class GraphEngine:
     def __init__(self):
         self.rooms = []
@@ -253,11 +223,16 @@ class GraphEngine:
 
             self.adj_matrix = np.array(matrix_raw, dtype=float)
 
-            # GCN Filter berechnen (nur based on Physics)
+            # GCN Filter berechnen (Normalized Laplacian)
+            # Wir sorgen dafür, dass die Diagonalen 1 sind (Self-Loop), um Stabilität zu garantieren
             np.fill_diagonal(self.adj_matrix, 1.0)
+
             D = np.diag(np.sum(self.adj_matrix, axis=1))
-            with np.errstate(divide='ignore'): D_inv_sqrt = np.power(D, -0.5)
+            with np.errstate(divide='ignore'):
+                D_inv_sqrt = np.power(D, -0.5)
             D_inv_sqrt[np.isinf(D_inv_sqrt)] = 0.
+
+            # L = D^-0.5 * A * D^-0.5
             self.norm_laplacian = D_inv_sqrt.dot(self.adj_matrix).dot(D_inv_sqrt)
 
             self.ready = True
@@ -267,16 +242,18 @@ class GraphEngine:
 
     def train_behavior(self, sequences):
         """
-        Lernt Wahrscheinlichkeiten aus Sequenzen und kombiniert sie mit dem physikalischen Graphen.
+        Lernt Übergangswahrscheinlichkeiten (Markov-Chain-ähnlich),
+        aber maskiert diese mit dem physikalischen Graphen.
         """
         if not self.ready or not sequences: return
-        log(f"🧠 GraphEngine: Learning behavior from {len(sequences)} sequences...")
 
         try:
-            # 1. Zähle echte Übergänge
             n = len(self.rooms)
+            if n == 0: return
+
             count_matrix = np.zeros((n, n))
 
+            # 1. Zähle Übergänge
             for seq in sequences:
                 steps = seq.get('steps', [])
                 for i in range(len(steps) - 1):
@@ -288,19 +265,21 @@ class GraphEngine:
                         idx_b = self.rooms.index(loc_b)
                         count_matrix[idx_a][idx_b] += 1
 
-            # 2. Normalisiere zu Wahrscheinlichkeiten (Row Stochastic)
+            # 2. Wahrscheinlichkeiten berechnen
             row_sums = count_matrix.sum(axis=1, keepdims=True)
-            # Avoid division by zero
             prob_matrix = np.divide(count_matrix, row_sums, out=np.zeros_like(count_matrix), where=row_sums!=0)
 
-            # 3. MASKIERUNG (Crucial Step):
-            # Multipliziere gelernte Wahrscheinlichkeiten mit physikalischer Machbarkeit.
-            # Wenn adj_matrix[a][b] == 0, dann wird auch behavior[a][b] = 0.
-            # Das verhindert "Teleportations-Lernen".
+            # 3. MASKIERUNG (Smart Masking)
+            # Nur physikalisch mögliche Wege (adj_matrix > 0) dürfen Wahrscheinlichkeiten haben.
+            # Aber: Wir erlauben eine kleine "Teleportations"-Toleranz für Messfehler,
+            # solange der physikalische Graph nicht strikt 0 ist.
+            # Hier: Hard Masking -> Wenn User sagt "Keine Tür", dann ist da keine Tür.
 
-            self.behavior_matrix = np.multiply(prob_matrix, self.adj_matrix)
+            # Wir nutzen die adj_matrix als Maske (wo > 0).
+            mask = (self.adj_matrix > 0).astype(float)
+            self.behavior_matrix = np.multiply(prob_matrix, mask)
 
-            # Re-Normalize nach Maskierung
+            # Re-Normalize
             row_sums_2 = self.behavior_matrix.sum(axis=1, keepdims=True)
             self.behavior_matrix = np.divide(self.behavior_matrix, row_sums_2, out=np.zeros_like(self.behavior_matrix), where=row_sums_2!=0)
 
@@ -308,7 +287,7 @@ class GraphEngine:
             with open(GRAPH_MODEL_PATH, 'wb') as f:
                 pickle.dump(self.behavior_matrix, f)
 
-            log("🧠 GraphEngine: Behavior Matrix updated & saved.")
+            log(f"🧠 GraphEngine: Behavior Matrix trained on {len(sequences)} sequences.")
 
         except Exception as e:
             log(f"Graph Training Error: {e}")
@@ -318,29 +297,42 @@ class GraphEngine:
             try:
                 with open(GRAPH_MODEL_PATH, 'rb') as f:
                     self.behavior_matrix = pickle.load(f)
-                log("GraphEngine: Loaded learned behavior.")
+                log("GraphEngine: Loaded persistent behavior model.")
             except: pass
 
     def propagate_signal(self, start_room):
+        """
+        PREDICTIVE AUTOMATION CORE
+        Simuliert die Ausbreitung eines Signals vom Startraum.
+        """
         if not self.ready or start_room not in self.rooms: return {}
 
-        x = np.zeros(len(self.rooms))
+        n = len(self.rooms)
+        x = np.zeros(n)
         idx = self.rooms.index(start_room)
-        x[idx] = 1.0
+        x[idx] = 1.0 # Das Signal (z.B. Person ist hier)
 
-        # Wenn wir gelernte Gewohnheiten haben, nutzen wir diese!
-        # Sonst Fallback auf reine Physik (Laplacian)
-        if self.behavior_matrix is not None and self.behavior_matrix.shape == self.adj_matrix.shape:
-            # P = Behavior Matrix
-            y = np.dot(x, self.behavior_matrix)
+        # Logik:
+        # Wenn wir gelerntes Verhalten haben, nutzen wir das (P * x).
+        # Wenn nicht, nutzen wir die Diffusion im Graphen (Laplacian * x) als Fallback.
+
+        scores = np.zeros(n)
+
+        if self.behavior_matrix is not None and self.behavior_matrix.shape == (n, n):
+            # Nutze gelerntes Verhalten (Wahrscheinlichkeit)
+            scores = np.dot(x, self.behavior_matrix)
         else:
-            y = self.norm_laplacian.dot(x)
+            # Nutze reine Graphentopologie (Nachbarschaft)
+            # Ein Schritt Diffusion
+            scores = self.norm_laplacian.dot(x)
 
         result = {}
-        for i, val in enumerate(y):
-            if val > 0.05 and self.rooms[i] != start_room:
-                result[self.rooms[i]] = round(val, 3)
+        for i, val in enumerate(scores):
+            # Filtern: Nur andere Räume, Score muss relevant sein
+            if self.rooms[i] != start_room and val > 0.05:
+                result[self.rooms[i]] = float(round(val, 3))
 
+        # Sortieren nach Wahrscheinlichkeit
         return dict(sorted(result.items(), key=lambda item: item[1], reverse=True))
 
 # --- MODULE 3: HEALTH (With Gait Speed) ---
@@ -392,6 +384,7 @@ class HealthBrain:
         for seq in sequences:
             steps = seq.get('steps', [])
             if len(steps) < 2: continue
+            # Einfache Heuristik: Ist es ein Flur?
             is_hallway = all(any(x in step['loc'].lower() for x in ['flur', 'corridor', 'hall', 'diele', 'gang', 'treppe']) for step in steps)
             if is_hallway:
                 duration = steps[-1]['t_delta']
@@ -401,7 +394,7 @@ class HealthBrain:
         slope, change = calculate_trend(durations)
         return change
 
-# --- MODULE 4: ENERGY (With Prediction) ---
+# --- MODULE 4: ENERGY ---
 class EnergyBrain:
     def __init__(self): self.scores = {}; self.heating = {}; self.is_ready = False
     def load_brain(self):
@@ -415,16 +408,13 @@ class EnergyBrain:
                 self.is_ready = True
         except: pass
 
-    def train(self, data):
-        if not LIBS_AVAILABLE: return False, "No Libs"
-        return True, "{}"
-
     def predict_cooling(self, current_temps, t_out):
         if not self.is_ready: return {}
         forecasts = {}
         for room, t_in in current_temps.items():
             k = self.scores.get(room, -0.5)
             rate = k * (t_in - t_out)
+            # Physik-Check
             if t_in > t_out and rate > 0: rate = -0.1
             if t_in < t_out and rate < 0: rate = 0.1
             t_1h = t_in + rate
@@ -443,12 +433,7 @@ class ComfortBrain:
             df = pd.DataFrame(events)
             if 'timestamp' in df.columns: df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             df = df.sort_values('timestamp')
-            patterns_2 = {}; patterns_3 = {}; event_counts = {}
-
-            def is_trivial(id1, id2):
-                if id1 == id2: return True
-                if id1.split('.')[:-1] == id2.split('.')[:-1]: return True
-                return False
+            patterns_2 = {}; event_counts = {}
 
             records = df.to_dict('records')
             n = len(records)
@@ -456,33 +441,19 @@ class ComfortBrain:
             for i in range(n):
                 evt_a = records[i]
                 id_a = evt_a.get('name', evt_a.get('id', 'unknown'))
-                type_a = str(evt_a.get('type', '')).lower()
-                if 'temp' in type_a or 'energy' in type_a or 'power' in type_a: continue
                 event_counts[id_a] = event_counts.get(id_a, 0) + 1
 
                 for j in range(i + 1, min(i + 10, n)):
                     evt_b = records[j]
                     id_b = evt_b.get('name', evt_b.get('id', 'unknown'))
                     delta_ab = (evt_b['timestamp'] - evt_a['timestamp']).total_seconds()
+
                     if delta_ab > 45: break
-                    if delta_ab < 1.0: continue
-                    if is_trivial(id_a, id_b): continue
+                    if delta_ab < 1.0 or id_a == id_b: continue
+
                     pair = f"{id_a} -> {id_b}"
                     if pair not in patterns_2: patterns_2[pair] = []
                     patterns_2[pair].append(delta_ab)
-
-                    for k in range(j + 1, min(j + 10, n)):
-                        evt_c = records[k]
-                        id_c = evt_c.get('name', evt_c.get('id', 'unknown'))
-                        delta_bc = (evt_c['timestamp'] - evt_b['timestamp']).total_seconds()
-                        if delta_bc > 45: break
-                        if delta_bc < 1.0: continue
-                        if is_trivial(id_b, id_c) or is_trivial(id_a, id_c): continue
-                        triple = f"{id_a} -> {id_b} -> {id_c}"
-                        delta_ac = (evt_c['timestamp'] - evt_a['timestamp']).total_seconds()
-                        if triple not in patterns_3: patterns_3[triple] = {'delays_b': [], 'delays_c': []}
-                        patterns_3[triple]['delays_b'].append(delta_ab)
-                        patterns_3[triple]['delays_c'].append(delta_ac)
 
             results = []
             for rule, delays in patterns_2.items():
@@ -492,29 +463,10 @@ class ComfortBrain:
                 conf = count / event_counts.get(source, 1)
                 if conf > 0.4:
                     avg = float(np.mean(delays))
-                    results.append({'rule': rule, 'confidence': conf, 'count': count, 'type': 'pair', 'timeInfo': f"Ø +{avg:.1f}s"})
-
-            for rule, data in patterns_3.items():
-                count = len(data['delays_b'])
-                if count < 3: continue
-                source = rule.split(" -> ")[0]
-                conf = count / event_counts.get(source, 1)
-                if conf > 0.3:
-                    avg_b = float(np.mean(data['delays_b']))
-                    avg_c = float(np.mean(data['delays_c']))
-                    results.append({'rule': rule, 'confidence': conf * 1.2, 'count': count, 'type': 'triple', 'timeInfo': f"+{avg_b:.1f}s → +{avg_c:.1f}s"})
+                    results.append({'rule': rule, 'confidence': conf, 'count': count, 'timeInfo': f"Ø +{avg:.1f}s"})
 
             results.sort(key=lambda x: x['confidence'], reverse=True)
-            final_results = []
-            rules_seen = set()
-            for r in results:
-                if r['type'] == 'triple':
-                    final_results.append(r); parts = r['rule'].split(" -> "); rules_seen.add(f"{parts[0]} -> {parts[1]}"); rules_seen.add(f"{parts[1]} -> {parts[2]}")
-            for r in results:
-                if r['type'] == 'pair' and r['rule'] not in rules_seen: final_results.append(r)
-
-            final_results.sort(key=lambda x: x['confidence'], reverse=True)
-            return True, final_results[:5]
+            return True, results[:5]
         except: return False, []
 
 # SINGLETONS
@@ -522,60 +474,71 @@ security_brain = SecurityBrain()
 health_brain = HealthBrain()
 energy_brain = EnergyBrain()
 comfort_brain = ComfortBrain()
-topology_brain = TopologyBrain()
-graph_brain = GraphEngine() # <--- NEW Singleton
+graph_brain = GraphEngine()
 
 def process_message(msg):
     try:
         data = json.loads(msg)
         cmd = data.get("command")
-        if cmd == "PING": send_result("PONG", {"timestamp": time.time()})
+
+        if cmd == "PING":
+            send_result("PONG", {"timestamp": time.time()})
+
         elif cmd == "TRAIN_SECURITY":
-            # 1. Train Security (LSTM)
             success, details, thresh = security_brain.train(data.get("sequences", []))
-
-            # 2. Train Graph Behavior (GCN) - NEU: Das passiert jetzt automatisch mit!
+            # Parallel Graph Training
             graph_brain.train_behavior(data.get("sequences", []))
-
             send_result("TRAINING_COMPLETE", {"success": success, "details": details, "threshold": thresh})
+
         elif cmd == "ANALYZE_SEQUENCE":
             score, is_anomaly, explanation = security_brain.predict(data.get("sequence", {}))
             if score is not None:
                 send_result("SECURITY_RESULT", {"anomaly_score": score, "is_anomaly": is_anomaly, "threshold": security_brain.dynamic_threshold, "explanation": explanation})
+
         elif cmd == "TRAIN_COMFORT":
             success, top_rules = comfort_brain.train(data.get("events", []))
             send_result("COMFORT_RESULT", {"patterns": top_rules if success else []})
+
         elif cmd == "TRAIN_HEALTH":
             success, details = health_brain.train(data.get("digests", []))
             send_result("HEALTH_TRAIN_RESULT", {"success": success, "details": details})
+
         elif cmd == "ANALYZE_HEALTH":
             res, details = health_brain.predict(data.get("digest", {}))
             send_result("HEALTH_RESULT", {"is_anomaly": (res == -1), "details": details})
+
         elif cmd == "ANALYZE_GAIT":
             trend = health_brain.analyze_gait_speed(data.get("sequences", []))
             if trend is not None: send_result("GAIT_RESULT", {"speed_trend": trend})
+
         elif cmd == "PREDICT_ENERGY":
             forecast = energy_brain.predict_cooling(data.get("current_temps", {}), data.get("t_out", 0))
             send_result("ENERGY_PREDICT_RESULT", {"forecast": forecast})
-        elif cmd == "BUILD_TOPOLOGY":
-            res = topology_brain.build_matrix(data.get("sequences", []))
-            if res: send_result("TOPOLOGY_RESULT", {"data": res})
 
-        # --- NEW GCN HANDLERS ---
+        # --- PHASE C: GRAPH & PREDICTION ---
         elif cmd == "SET_TOPOLOGY":
             graph_brain.update_topology(data)
             send_result("TOPOLOGY_ACK", {"success": True})
-        elif cmd == "SIMULATE_SIGNAL":
-            # Simuliert nun mit gelerntem Verhalten (wenn vorhanden)
-            neighbors = graph_brain.propagate_signal(data.get("room"))
-            send_result("SIGNAL_RESULT", {"room": data.get("room"), "propagation": neighbors})
 
-    except Exception as e: log(f"Err: {e}")
+        elif cmd == "SIMULATE_SIGNAL":
+            # Hier passiert die Magie der Vorhersage
+            room = data.get("room")
+            neighbors = graph_brain.propagate_signal(room)
+            # Resultat zurücksenden
+            send_result("SIGNAL_RESULT", {"room": room, "propagation": neighbors})
+
+    except Exception as e: log(f"Err processing: {e}")
 
 if __name__ == "__main__":
-    log(f"Hybrid-Engine gestartet. {VERSION}")
-    if LIBS_AVAILABLE: security_brain.load_brain(); health_brain.load_brain(); energy_brain.load_brain()
-    else: log("⚠️ Critical: ML-Libs not available.")
+    log(f"Cogni-Living Engine started. {VERSION}")
+    if LIBS_AVAILABLE:
+        security_brain.load_brain()
+        health_brain.load_brain()
+        energy_brain.load_brain()
+        graph_brain.load_behavior() # Lade Graph-Verhalten
+    else:
+        log("⚠️ Critical: ML-Libs not available.")
+
     while True:
         try:
             line = sys.stdin.readline()
