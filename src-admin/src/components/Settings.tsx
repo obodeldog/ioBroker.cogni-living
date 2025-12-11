@@ -1,19 +1,27 @@
 import React from 'react';
-import { Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText, ListItemIcon, LinearProgress, FormGroup, Collapse, Accordion, AccordionSummary, AccordionDetails, Typography, Divider, Autocomplete, createFilterOptions, Chip, Slider } from '@mui/material';
+import {
+    Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select,
+    TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog,
+    DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText,
+    ListItemIcon, LinearProgress, FormGroup, Collapse, Accordion, AccordionSummary,
+    AccordionDetails, Typography, Divider, Chip
+} from '@mui/material';
 import type { AlertColor } from '@mui/material';
 
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
 
-// --- TOPOLOGY VIEW IMPORT ---
+// --- IMPORTS FOR CLEANER UI (Local components) ---
 import TopologyView from './TopologyView';
+import AutomationView from './AutomationView';
+import SensorList from './SensorList';
 
 // Icons
-import VerifiedIcon from '@mui/icons-material/Verified';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import PsychologyIcon from '@mui/icons-material/Psychology';
+import VerifiedIcon from '@mui/icons-material/Verified';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 interface SettingsProps { native: Record<string, any>; onChange: (attr: string, value: any) => void; socket: Connection; themeType: ThemeType; adapterName: string; instance: number; theme: IobTheme; }
 interface DeviceConfig { id: string; name: string; location: string; type: string; logDuplicates: boolean; isExit: boolean; }
@@ -83,7 +91,6 @@ interface SettingsState {
     isLoadingCalendars: boolean;
     simTargetId: string;
     simTargetValue: string;
-    // BULK ADD STATES
     showBulkDialog: boolean;
     bulkLoading: boolean;
     bulkAllObjects: Record<string, any>;
@@ -98,19 +105,6 @@ interface SettingsState {
 type NotificationEnabledKey = 'notifyTelegramEnabled' | 'notifyPushoverEnabled' | 'notifyEmailEnabled' | 'notifyWhatsappEnabled' | 'notifySignalEnabled';
 type NotificationInstanceKey = 'notifyTelegramInstance' | 'notifyPushoverInstance' | 'notifyEmailInstance' | 'notifyWhatsappInstance' | 'notifySignalInstance';
 type NotificationRecipientKey = 'notifyTelegramRecipient' | 'notifyPushoverRecipient' | 'notifyEmailRecipient' | 'notifyWhatsappRecipient' | 'notifySignalRecipient';
-
-const SENSOR_TYPES = [
-    { id: 'motion', label: 'Bewegungsmelder (Motion)' },
-    { id: 'door', label: 'Tür / Fenster (Door)' },
-    { id: 'fire', label: 'Rauchmelder (Fire)' },
-    { id: 'temperature', label: 'Temperatur / Klima' },
-    { id: 'light', label: 'Licht / Schalter (Light)' },
-    { id: 'blind', label: 'Rollladen / Jalousie' },
-    { id: 'lock', label: 'Schloss (Lock)' },
-    { id: 'custom', label: 'Sonstiges (Custom)' }
-];
-
-const filter = createFilterOptions<string>();
 
 export default class Settings extends React.Component<SettingsProps, SettingsState> {
     constructor(props: SettingsProps) {
@@ -199,7 +193,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         this.loadAutomationStates();
     }
 
-    // --- NEW: Load Automation States directly from Objects ---
     loadAutomationStates() {
         const namespace = `${this.props.adapterName}.${this.props.instance}`;
         this.props.socket.getState(`${namespace}.analysis.automation.mode`).then(s => {
@@ -454,143 +447,9 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     renderDialogs() { return ( <>{this.state.showSelectId && (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={this.state.selectIdContext === 'outdoor' ? this.state.outdoorSensorId : (this.state.selectIdContext === 'device' && this.state.devices[this.state.selectIdIndex]?.id) || ''} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />)}{this.renderWizardDialog()}{this.renderBulkDialog()}{this.renderContextDialog()}<Dialog open={this.state.showDeleteConfirm} onClose={() => this.setState({showDeleteConfirm:false})}><DialogTitle>Sicher?</DialogTitle><DialogContent><Typography>Alle Sensoren löschen?</Typography></DialogContent><DialogActions><Button onClick={()=>this.setState({showDeleteConfirm:false})}>Abbrechen</Button><Button onClick={this.onDeleteAllDevices} color="error">Löschen</Button></DialogActions></Dialog><Snackbar open={this.state.snackbarOpen} autoHideDuration={6000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity}>{this.state.snackbarMessage}</Alert></Snackbar></> ); }
     renderLicenseSection(tooltipProps: any) { return ( <Grid container spacing={3}><Grid item xs={12} md={6}><Tooltip title="Ihr Pro-Lizenzschlüssel." {...tooltipProps}><TextField fullWidth label={I18n.t('license_key')} value={this.state.licenseKey} type="password" onChange={e => this.updateNativeValue('licenseKey', e.target.value)} helperText="Für vollen Funktionsumfang" variant="outlined" size="small" /></Tooltip></Grid><Grid item xs={12} md={6}><Box sx={{display: 'flex', gap: 1}}><Tooltip title="Gemini API Key." {...tooltipProps}><TextField fullWidth label={I18n.t('gemini_api_key')} value={this.state.geminiApiKey} type="password" onChange={e => this.updateNativeValue('geminiApiKey', e.target.value)} variant="outlined" size="small" /></Tooltip><Button variant="outlined" onClick={() => this.handleTestApiClick()} disabled={this.state.isTestingApi || !this.state.geminiApiKey}>{this.state.isTestingApi ? <CircularProgress size={20} /> : "(Test)"}</Button></Box></Grid></Grid> ); }
-
-    // --- NEW AUTOMATION COCKPIT RENDERER ---
-    renderAutomationSection(isDark: boolean) {
-        return (
-            <Grid container spacing={3}>
-                <Grid item xs={12}>
-                    <Alert severity={this.state.autoMode === 'active' ? 'success' : (this.state.autoMode === 'simulate' ? 'info' : 'warning')}>
-                        {this.state.autoMode === 'active' ? 'Das System steuert Lichter aktiv.' : (this.state.autoMode === 'simulate' ? 'Simulation aktiv: Aktionen werden nur geloggt, nicht ausgeführt.' : 'Autonomie deaktiviert.')}
-                    </Alert>
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                    <FormControl fullWidth variant="outlined">
-                        <InputLabel>Betriebsmodus</InputLabel>
-                        <Select
-                            value={this.state.autoMode}
-                            onChange={(e) => this.saveAutomationMode(e.target.value)}
-                            label="Betriebsmodus"
-                        >
-                            <MenuItem value="off">⛔ AUS (Inaktiv)</MenuItem>
-                            <MenuItem value="simulate">👀 Simulation (Log only)</MenuItem>
-                            <MenuItem value="active">⚡ AKTIV (Scharf geschaltet)</MenuItem>
-                        </Select>
-                    </FormControl>
-                </Grid>
-
-                <Grid item xs={12} md={8}>
-                    <Typography gutterBottom>
-                        Sicherheits-Schwelle (Confidence Threshold): {(this.state.autoThreshold * 100).toFixed(0)}%
-                    </Typography>
-                    <Box sx={{ px: 2 }}>
-                        <Slider
-                            value={this.state.autoThreshold}
-                            onChange={(e, val) => this.saveAutomationThreshold(val as number)}
-                            step={0.05}
-                            min={0.1}
-                            max={1.0}
-                            valueLabelDisplay="auto"
-                            valueLabelFormat={(val) => `${(val * 100).toFixed(0)}%`}
-                            marks={[{value: 0.1, label: 'Mutig'}, {value: 0.6, label: 'Standard'}, {value: 0.9, label: 'Sicher'}]}
-                        />
-                    </Box>
-                    <Typography variant="caption" color="text.secondary">
-                        Nur wenn die KI sich sicherer als dieser Wert ist, wird geschaltet.
-                    </Typography>
-                </Grid>
-
-                <Grid item xs={12}>
-                    <Paper variant="outlined" sx={{ p: 2, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5', display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <SmartToyIcon color={this.state.autoLastAction.includes('BLOCKED') ? 'warning' : 'primary'} />
-                        <Box sx={{ flexGrow: 1 }}>
-                            <Typography variant="caption" display="block" color="text.secondary">Letzte KI-Entscheidung (Live):</Typography>
-                            <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
-                                {this.state.autoLastAction}
-                            </Typography>
-                        </Box>
-                        <Button size="small" onClick={() => this.loadAutomationStates()}>Aktualisieren</Button>
-                    </Paper>
-                </Grid>
-
-                <Grid item xs={12}>
-                    <Divider sx={{my: 1}}/>
-                    <Typography variant="subtitle2" gutterBottom>KI-Einstellungen (Cortex)</Typography>
-                </Grid>
-
-                <Grid item xs={12} md={6}><Tooltip title="Fokus der Analyse."><FormControl fullWidth size="small"><InputLabel>{I18n.t('ai_persona')}</InputLabel><Select value={this.state.aiPersona} label={I18n.t('ai_persona')} onChange={e => this.updateNativeValue('aiPersona', e.target.value)}><MenuItem value="generic">Ausgewogen</MenuItem><MenuItem value="senior_aal">Senioren-Schutz</MenuItem><MenuItem value="family">Familie</MenuItem><MenuItem value="single_comfort">Single</MenuItem><MenuItem value="security">Sicherheit</MenuItem></Select></FormControl></Tooltip></Grid>
-                <Grid item xs={12} md={6}><Tooltip title="Wohnkontext."><TextField fullWidth multiline rows={2} label="Kontext" value={this.state.livingContext} onChange={e => this.updateNativeValue('livingContext', e.target.value)} helperText="Was soll der Butler über das Haus wissen?" inputProps={{maxLength: 5000}} size="small" /></Tooltip></Grid>
-            </Grid>
-        );
-    }
-
     renderReportingSection(tooltipProps: any) { return ( <Grid container spacing={3}><Grid item xs={12}><Alert severity="info">Der "Family Link" sendet automatisch Berichte an die unten konfigurierten Empfänger.</Alert></Grid><Grid item xs={12} md={6}><FormControlLabel control={<Checkbox checked={this.state.briefingEnabled} onChange={e => this.updateNativeValue('briefingEnabled', e.target.checked)} />} label="Tägliches 'Guten Morgen' Briefing" /><Typography variant="caption" color="text.secondary" display="block">Sendet morgens eine Zusammenfassung der Nacht (Schlaf/Aktivität).</Typography></Grid><Grid item xs={12} md={6}><Tooltip title="Uhrzeit für den täglichen Bericht (Format HH:MM)." {...tooltipProps}><TextField fullWidth label="Uhrzeit" type="time" value={this.state.briefingTime} onChange={e => this.updateNativeValue('briefingTime', e.target.value)} disabled={!this.state.briefingEnabled} InputLabelProps={{ shrink: true }} size="small" /></Tooltip></Grid><Grid item xs={12}><Divider textAlign="left"><Typography variant="caption" sx={{color:'text.secondary', display:'flex', alignItems:'center', gap:1}}>Erweiterter Kontext (Sprint 29)</Typography></Divider></Grid><Grid item xs={12} md={6}><FormControlLabel control={<Checkbox checked={this.state.useWeather} onChange={e => this.updateNativeValue('useWeather', e.target.checked)} />} label="Wetterdaten nutzen" /><FormControl fullWidth size="small" disabled={!this.state.useWeather}><InputLabel>Wetter-Instanz (Optional)</InputLabel><Select value={this.state.weatherInstance} label="Wetter-Instanz (Optional)" onChange={(e) => this.updateNativeValue('weatherInstance', e.target.value)}><MenuItem value=""><em>Automatisch erkennen</em></MenuItem>{[...(this.state.availableInstances['accuweather'] || []), ...(this.state.availableInstances['daswetter'] || [])].map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid><Grid item xs={12} md={6}><Box sx={{display: 'flex', alignItems: 'center', gap: 1}}><Typography variant="body1">Eigener Außenfühler (Hardware):</Typography><Tooltip title="Wählen Sie einen physischen Sensor (z.B. im Garten). Dieser Wert wird bevorzugt behandelt."><IconButton onClick={() => this.openOutdoorSelectId()}>...</IconButton></Tooltip></Box><Box sx={{display: 'flex', gap: 1}}><TextField fullWidth size="small" value={this.state.outdoorSensorId} onChange={e => this.updateNativeValue('outdoorSensorId', e.target.value)} placeholder="Kein Sensor gewählt" helperText="Hat Vorrang vor Wetter-Adapter" /><IconButton onClick={() => this.openOutdoorSelectId()}>...</IconButton></Box></Grid><Grid item xs={12} md={6}><FormControlLabel control={<Checkbox checked={this.state.useCalendar} onChange={e => this.updateNativeValue('useCalendar', e.target.checked)} />} label="Kalender nutzen (iCal)" /><FormControl fullWidth size="small" disabled={!this.state.useCalendar}><InputLabel>Kalender-Instanz (Optional)</InputLabel><Select value={this.state.calendarInstance} label="Kalender-Instanz (Optional)" onChange={(e) => this.updateNativeValue('calendarInstance', e.target.value)}><MenuItem value=""><em>Automatisch erkennen</em></MenuItem>{(this.state.availableInstances['ical'] || []).map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid>{this.state.useCalendar && (<Grid item xs={12}><Paper variant="outlined" sx={{p: 2}}><Box sx={{display:'flex', justifyContent:'space-between', alignItems:'center', mb: 1}}><Typography variant="subtitle2">Relevante Kalender auswählen (Whitelist)</Typography><Button size="small" onClick={() => this.handleFetchCalendarNames()}>Kalender suchen</Button></Box>{this.state.detectedCalendars.length > 0 ? (<FormGroup row>{this.state.detectedCalendars.map(calName => (<FormControlLabel key={calName} control={<Checkbox checked={this.state.calendarSelection.includes(calName)} onChange={() => this.toggleCalendarSelection(calName)} />} label={calName} />))}</FormGroup>) : (<Typography variant="body2" color="text.secondary">Klicken Sie auf "Suchen", um Kalendernamen zu laden.</Typography>)}{this.state.calendarSelection.length === 0 && this.state.detectedCalendars.length > 0 && (<Alert severity="warning" sx={{mt: 1, py: 0}}>Achtung: Kein Kalender ausgewählt. Die KI wird alle Termine ignorieren!</Alert>)}</Paper></Grid>)}<Grid item xs={12}><Button variant="outlined" onClick={() => this.handleTestContextClick()} disabled={this.state.isTestingContext || (!this.state.useWeather && !this.state.useCalendar)}>Kontext-Daten jetzt prüfen</Button></Grid></Grid>); }
     renderNotificationRow(adapterName: string, enabledAttr: NotificationEnabledKey, instanceAttr: NotificationInstanceKey, recipientAttr: NotificationRecipientKey, recipientLabel: string) { const enabled = this.state[enabledAttr]; const instance = this.state[instanceAttr]; const recipient = this.state[recipientAttr]; let adapterKey = adapterName === 'whatsapp' ? 'whatsapp-cmb' : adapterName === 'signal' ? 'signal-cma' : adapterName; const instances = this.state.availableInstances[adapterKey] || []; return (<Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}><Grid item xs={12} sm={3}><FormControlLabel control={<Checkbox checked={enabled} onChange={e => this.updateNativeValue(enabledAttr, e.target.checked)} />} label={I18n.t(`notify_${adapterName}`)} /></Grid><Grid item xs={12} sm={4}><FormControl fullWidth size="small" disabled={!enabled}><InputLabel>{I18n.t('notify_instance')}</InputLabel><Select value={instance} label={I18n.t('notify_instance')} onChange={(e: any) => this.updateNativeValue(instanceAttr, e.target.value)}>{instances.length === 0 ? <MenuItem value="">{I18n.t('notify_no_instances')}</MenuItem> : instances.map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid><Grid item xs={12} sm={5}><TextField fullWidth size="small" label={recipientLabel} value={recipient} onChange={e => this.updateNativeValue(recipientAttr, e.target.value)} disabled={!enabled} required={adapterName === 'email' && enabled} /></Grid></Grid>); }
     renderNotificationsSection() { return ( <Box><Alert severity="info" sx={{mb: 2}}>Benachrichtigungen werden bei Alarmen und (wenn aktiviert) für Berichte verwendet.</Alert>{this.renderNotificationRow('telegram', 'notifyTelegramEnabled', 'notifyTelegramInstance', 'notifyTelegramRecipient', 'User ID')}{this.renderNotificationRow('pushover', 'notifyPushoverEnabled', 'notifyPushoverInstance', 'notifyPushoverRecipient', 'Device ID')}{this.renderNotificationRow('email', 'notifyEmailEnabled', 'notifyEmailInstance', 'notifyEmailRecipient', 'E-Mail')}{this.renderNotificationRow('whatsapp', 'notifyWhatsappEnabled', 'notifyWhatsappInstance', 'notifyWhatsappRecipient', 'Tel')}<Button variant="outlined" sx={{mt:1}} onClick={() => this.handleTestNotificationClick()} disabled={this.state.isTestingNotification}>Test</Button></Box> ); }
-
-    renderSensorsSection(isDark: boolean) {
-        const uniqueLocations = this.collectUniqueLocations();
-        return (
-            <Box>
-                <TableContainer component={Paper} variant="outlined" sx={{ bgcolor: isDark ? '#2d2d2d' : '#fafafa' }}>
-                    <Table size="small">
-                        <TableHead>
-                            <TableRow>
-                                <TableCell><Tooltip title="ioBroker Objekt-ID"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_sensor_id')}</span></Tooltip></TableCell>
-                                <TableCell><Tooltip title="Name"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_name')}</span></Tooltip></TableCell>
-                                <TableCell><Tooltip title="Raum/Ort"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_location')}</span></Tooltip></TableCell>
-                                <TableCell><Tooltip title="Typ"><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_type')}</span></Tooltip></TableCell>
-                                <TableCell><Tooltip title={I18n.t('table_is_exit_tooltip')}><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_is_exit')}</span></Tooltip></TableCell>
-                                <TableCell><Tooltip title={I18n.t('table_log_duplicates_tooltip')}><span style={{cursor:'help', textDecoration:'underline dotted'}}>{I18n.t('table_log_duplicates')}</span></Tooltip></TableCell>
-                                <TableCell></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {this.state.devices.map((device, index) => (
-                                <TableRow key={index}>
-                                    <TableCell><Box sx={{display:'flex'}}><TextField value={device.id} onChange={e => this.onDeviceChange(index, 'id', e.target.value)} size="small" variant="standard"/><IconButton size="small" onClick={() => this.openSelectIdDialog(index)}>...</IconButton></Box></TableCell>
-                                    <TableCell><TextField value={device.name} onChange={e => this.onDeviceChange(index, 'name', e.target.value)} size="small" variant="standard"/></TableCell>
-                                    <TableCell sx={{minWidth: 150}}>
-                                        <Autocomplete
-                                            freeSolo
-                                            options={uniqueLocations}
-                                            value={device.location || ''}
-                                            onChange={(event, newValue) => { if (typeof newValue === 'string') this.onDeviceChange(index, 'location', newValue); else this.onDeviceChange(index, 'location', ''); }}
-                                            onInputChange={(event, newInputValue) => { this.onDeviceChange(index, 'location', newInputValue); }}
-                                            filterOptions={(options, params) => { const filtered = filter(options, params); const { inputValue } = params; const isExisting = options.some((option) => inputValue === option); if (inputValue !== '' && !isExisting) filtered.push(inputValue); return filtered; }}
-                                            selectOnFocus clearOnBlur handleHomeEndKeys
-                                            renderOption={(props, option) => <li {...props}>{option}</li>}
-                                            renderInput={(params) => <TextField {...params} variant="standard" size="small" placeholder="Raum wählen..." />}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <FormControl fullWidth size="small" variant="standard">
-                                            <Select value={device.type} onChange={e => this.onDeviceChange(index, 'type', e.target.value)} displayEmpty>
-                                                {SENSOR_TYPES.map(type => <MenuItem key={type.id} value={type.id}>{type.label}</MenuItem>)}
-                                            </Select>
-                                        </FormControl>
-                                    </TableCell>
-                                    <TableCell><Tooltip title="Exit?"><Checkbox checked={device.isExit || false} onChange={e => this.onDeviceChange(index, 'isExit', e.target.checked)} size="small"/></Tooltip></TableCell>
-                                    <TableCell><Tooltip title="Log Duplicates?"><Checkbox checked={device.logDuplicates} onChange={e => this.onDeviceChange(index, 'logDuplicates', e.target.checked)} size="small"/></Tooltip></TableCell>
-                                    <TableCell><IconButton size="small" onClick={() => this.onDeleteDevice(index)}>(X)</IconButton></TableCell>
-                                </TableRow>
-                            ))}
-                            {this.state.devices.length === 0 && <TableRow><TableCell colSpan={7} align="center">Keine Sensoren.</TableCell></TableRow>}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-                <Box sx={{ display: 'flex', gap: 2, mt: 2, justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                        <Button variant="contained" color="secondary" onClick={this.handleOpenWizard} sx={{ mr: 1 }}>Auto-Discovery</Button>
-                        <Button variant="outlined" onClick={this.handleOpenBulkDialog} sx={{ mr: 1 }} startIcon={<PlaylistAddIcon />}>Massen-Add</Button>
-                        <Button variant="outlined" onClick={() => this.onAddDevice()}>[+] NEU</Button>
-                    </Box>
-                    {this.state.devices.length > 0 && <Button color="error" size="small" onClick={() => this.setState({showDeleteConfirm: true})}>Alle löschen</Button>}
-                </Box>
-            </Box>
-        );
-    }
 
     render() {
         const { expandedAccordion } = this.state;
@@ -606,12 +465,24 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 {this.renderDialogs()}
                 <Accordion expanded={expandedAccordion === 'panel1'} onChange={this.handleAccordionChange('panel1')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Lizenz & KI-Verbindung</Typography></AccordionSummary><AccordionDetails>{this.renderLicenseSection(tooltipProps)}</AccordionDetails></Accordion>
 
-                {/* --- NEU: AUTOMATION COCKPIT --- */}
+                {/* --- AUTOMATION COCKPIT (Refactored) --- */}
                 <Accordion expanded={expandedAccordion === 'panelAutomation'} onChange={this.handleAccordionChange('panelAutomation')} sx={accordionStyle}>
                     <AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}><SmartToyIcon/> 🤖 Autonomie & Vorhersage</Typography></AccordionSummary>
-                    <AccordionDetails>{this.renderAutomationSection(isDark)}</AccordionDetails>
+                    <AccordionDetails>
+                        <AutomationView
+                            mode={this.state.autoMode}
+                            threshold={this.state.autoThreshold}
+                            lastAction={this.state.autoLastAction}
+                            aiPersona={this.state.aiPersona}
+                            livingContext={this.state.livingContext}
+                            isDark={isDark}
+                            onModeChange={(m) => this.saveAutomationMode(m)}
+                            onThresholdChange={(t) => this.saveAutomationThreshold(t)}
+                            onRefreshLog={() => this.loadAutomationStates()}
+                            onContextChange={(attr, val) => this.updateNativeValue(attr, val)}
+                        />
+                    </AccordionDetails>
                 </Accordion>
-                {/* ------------------------------- */}
 
                 <Accordion expanded={expandedAccordion === 'panelTopology'} onChange={this.handleAccordionChange('panelTopology')} sx={accordionStyle}>
                     <AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}><PsychologyIcon/> Haus-Topologie (Graph)</Typography></AccordionSummary>
@@ -622,7 +493,25 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
                 <Accordion expanded={expandedAccordion === 'panel5'} onChange={this.handleAccordionChange('panel5')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Reporting & Family Link</Typography></AccordionSummary><AccordionDetails>{this.renderReportingSection(tooltipProps)}</AccordionDetails></Accordion>
                 <Accordion expanded={expandedAccordion === 'panel3'} onChange={this.handleAccordionChange('panel3')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Benachrichtigungen</Typography></AccordionSummary><AccordionDetails>{this.renderNotificationsSection()}</AccordionDetails></Accordion>
-                <Accordion expanded={expandedAccordion === 'panel4'} onChange={this.handleAccordionChange('panel4')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Sensoren</Typography></AccordionSummary><AccordionDetails>{this.renderSensorsSection(isDark)}</AccordionDetails></Accordion>
+
+                {/* --- SENSOR LIST (Refactored) --- */}
+                <Accordion expanded={expandedAccordion === 'panel4'} onChange={this.handleAccordionChange('panel4')} sx={accordionStyle}>
+                    <AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Sensoren</Typography></AccordionSummary>
+                    <AccordionDetails>
+                        <SensorList
+                            devices={this.state.devices}
+                            isDark={isDark}
+                            uniqueLocations={this.collectUniqueLocations()}
+                            onDeviceChange={(i, a, v) => this.onDeviceChange(i, a, v)}
+                            onDelete={(i) => this.onDeleteDevice(i)}
+                            onAdd={() => this.onAddDevice()}
+                            onSelectId={(i) => this.openSelectIdDialog(i)}
+                            onWizard={this.handleOpenWizard}
+                            onBulk={this.handleOpenBulkDialog}
+                            onDeleteAll={() => this.setState({showDeleteConfirm: true})}
+                        />
+                    </AccordionDetails>
+                </Accordion>
             </Box>
         );
     }
