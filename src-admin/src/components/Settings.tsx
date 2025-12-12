@@ -11,12 +11,13 @@ import type { AlertColor } from '@mui/material';
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
 
-// --- UPDATED IMPORTS (Subfolder Structure) ---
+// --- IMPORTS (Subfolder Structure) ---
 import TopologyView from './settings/TopologyView';
 import AutomationView from './settings/AutomationView';
 import SensorList from './settings/SensorList';
 import NotificationsView from './settings/NotificationsView';
 import BulkDialog from './settings/BulkDialog';
+import SafetyView from './settings/SafetyView';
 
 // Icons
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
@@ -24,6 +25,7 @@ import SmartToyIcon from '@mui/icons-material/SmartToy';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 
 interface SettingsProps { native: Record<string, any>; onChange: (attr: string, value: any) => void; socket: Connection; themeType: ThemeType; adapterName: string; instance: number; theme: IobTheme; }
 interface DeviceConfig { id: string; name: string; location: string; type: string; logDuplicates: boolean; isExit: boolean; }
@@ -94,7 +96,7 @@ interface SettingsState {
     simTargetId: string;
     simTargetValue: string;
 
-    // BULK DIALOG STATE (Reduced to just visibility)
+    // BULK DIALOG STATE
     showBulkDialog: boolean;
 
     // AUTOMATION COCKPIT STATES
@@ -163,7 +165,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             showEnumList: false,
             snackbarOpen: false,
             snackbarMessage: '',
-            snackbarSeverity: 'info', // FIX: Duplicate removed
+            snackbarSeverity: 'info',
             expandedAccordion: 'panel1',
             showContextDialog: false,
             contextResult: null,
@@ -173,7 +175,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             simTargetId: '',
             simTargetValue: 'true',
 
-            showBulkDialog: false, // Only visibility state remains here
+            showBulkDialog: false,
 
             // AUTOMATION
             autoMode: 'off',
@@ -269,7 +271,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'simulateButler', { targetId: this.state.simTargetId, targetValue: this.state.simTargetValue }).then((res: any) => { if(res && res.success) this.showSnackbar('Vorschlag simuliert! Bitte in Übersicht prüfen.', 'success'); else this.showSnackbar('Fehler bei Simulation', 'error'); });
     }
 
-    // --- BULK ADD CALLBACK (Logic moved from internal to callback) ---
+    // --- BULK ADD CALLBACK ---
     handleImportBulk = (selectedIds: string[], allObjects: Record<string, any>) => {
         if (selectedIds.length === 0) return;
 
@@ -300,6 +302,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         this.setState({ showBulkDialog: false });
     }
 
+    // --- WIZARD LOGIC (Must stay here for now as it depends on devices state) ---
     handleOpenWizard = () => { this.setState({ showWizard: true, wizardStep: 0, scannedDevices: [] }); }
     handleFilterChange = (key: keyof ScanFilters) => { this.setState(prevState => ({ scanFilters: { ...prevState.scanFilters, [key]: !prevState.scanFilters[key] } })); }
     handleEnumToggle = (enumId: string) => { const current = [...this.state.scanFilters.selectedFunctionIds]; const index = current.indexOf(enumId); if (index === -1) current.push(enumId); else current.splice(index, 1); this.setState(prevState => ({ scanFilters: { ...prevState.scanFilters, selectedFunctionIds: current } })); }
@@ -308,6 +311,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     handleSelectAll = () => { const devices = this.state.scannedDevices.map(d => ({ ...d, selected: !d.exists })); this.setState({ scannedDevices: devices }); }
     handleDeselectAll = () => { const devices = this.state.scannedDevices.map(d => ({ ...d, selected: false })); this.setState({ scannedDevices: devices }); }
     handleImportDevices = () => { const selected = this.state.scannedDevices.filter(d => d.selected); if(selected.length === 0) { this.setState({ showWizard: false }); return; } const currentDevices = [...this.state.devices]; let addedCount = 0; selected.forEach(newItem => { if(!currentDevices.find(d => d.id === newItem.id)) { const { selected, _score, _source, exists, ...deviceConfig } = newItem; currentDevices.push(deviceConfig); addedCount++; } }); this.updateDevices(currentDevices); this.showSnackbar(`${addedCount} Sensoren importiert.`, 'success'); this.setState({ showWizard: false }); }
+
+    // --- TESTING & NOTIFICATIONS ---
     handleTestApiClick() { if (!this.state.geminiApiKey) return this.showSnackbar(I18n.t('msg_api_key_empty'), 'warning'); this.setState({ isTestingApi: true }); this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testApiKey', { apiKey: this.state.geminiApiKey }).then((res: any) => { this.setState({ isTestingApi: false }); this.showSnackbar(res?.success ? res.message : `${I18n.t('msg_connection_failed')}: ${res?.message}`, res?.success ? 'success' : 'error'); }); }
     handleTestNotificationClick() { this.setState({ isTestingNotification: true }); this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testNotification', {}).then((res: any) => { this.setState({ isTestingNotification: false }); this.showSnackbar(res?.success ? res.message : `${I18n.t('msg_notification_failed')}: ${res?.message}`, res?.success ? 'success' : 'warning'); }); }
     handleTestContextClick() { this.setState({ isTestingContext: true }); this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'testContext', {}).then((res: any) => { this.setState({ isTestingContext: false }); if (res && res.success) { this.setState({ showContextDialog: true, contextResult: { weather: res.weather, calendar: res.calendar } }); } else { this.showSnackbar('Fehler beim Abrufen der Kontext-Daten.', 'error'); } }); }
@@ -412,6 +417,19 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     <AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}><PsychologyIcon/> Haus-Topologie (Graph)</Typography></AccordionSummary>
                     <AccordionDetails>
                         <TopologyView socket={this.props.socket} adapterName={this.props.adapterName} instance={this.props.instance} themeType={this.props.themeType} />
+                    </AccordionDetails>
+                </Accordion>
+
+                {/* --- NEW SAFETY SECTION (Dead Man Switch) --- */}
+                <Accordion expanded={expandedAccordion === 'panelSafety'} onChange={this.handleAccordionChange('panelSafety')} sx={accordionStyle}>
+                    <AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}><HealthAndSafetyIcon color="success"/> Sicherheit & Notfall</Typography></AccordionSummary>
+                    <AccordionDetails>
+                        <SafetyView
+                            socket={this.props.socket}
+                            adapterName={this.props.adapterName}
+                            instance={this.props.instance}
+                            isDark={isDark}
+                        />
                     </AccordionDetails>
                 </Accordion>
 
