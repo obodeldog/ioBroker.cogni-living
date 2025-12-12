@@ -11,10 +11,12 @@ import type { AlertColor } from '@mui/material';
 import { I18n, DialogSelectID, type IobTheme, type ThemeType } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
 
-// --- IMPORTS FOR CLEANER UI (Local components) ---
-import TopologyView from './TopologyView';
-import AutomationView from './AutomationView';
-import SensorList from './SensorList';
+// --- UPDATED IMPORTS (Subfolder Structure) ---
+import TopologyView from './settings/TopologyView';
+import AutomationView from './settings/AutomationView';
+import SensorList from './settings/SensorList';
+import NotificationsView from './settings/NotificationsView';
+import BulkDialog from './settings/BulkDialog';
 
 // Icons
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
@@ -91,20 +93,15 @@ interface SettingsState {
     isLoadingCalendars: boolean;
     simTargetId: string;
     simTargetValue: string;
+
+    // BULK DIALOG STATE (Reduced to just visibility)
     showBulkDialog: boolean;
-    bulkLoading: boolean;
-    bulkAllObjects: Record<string, any>;
-    bulkFilter: string;
-    bulkSelected: string[];
+
     // AUTOMATION COCKPIT STATES
     autoMode: string;
     autoThreshold: number;
     autoLastAction: string;
 }
-
-type NotificationEnabledKey = 'notifyTelegramEnabled' | 'notifyPushoverEnabled' | 'notifyEmailEnabled' | 'notifyWhatsappEnabled' | 'notifySignalEnabled';
-type NotificationInstanceKey = 'notifyTelegramInstance' | 'notifyPushoverInstance' | 'notifyEmailInstance' | 'notifyWhatsappInstance' | 'notifySignalInstance';
-type NotificationRecipientKey = 'notifyTelegramRecipient' | 'notifyPushoverRecipient' | 'notifyEmailRecipient' | 'notifyWhatsappRecipient' | 'notifySignalRecipient';
 
 export default class Settings extends React.Component<SettingsProps, SettingsState> {
     constructor(props: SettingsProps) {
@@ -166,7 +163,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             showEnumList: false,
             snackbarOpen: false,
             snackbarMessage: '',
-            snackbarSeverity: 'info',
+            snackbarSeverity: 'info', // FIX: Duplicate removed
             expandedAccordion: 'panel1',
             showContextDialog: false,
             contextResult: null,
@@ -175,11 +172,9 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             isLoadingCalendars: false,
             simTargetId: '',
             simTargetValue: 'true',
-            showBulkDialog: false,
-            bulkLoading: false,
-            bulkAllObjects: {},
-            bulkFilter: '',
-            bulkSelected: [],
+
+            showBulkDialog: false, // Only visibility state remains here
+
             // AUTOMATION
             autoMode: 'off',
             autoThreshold: 0.6,
@@ -274,40 +269,16 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'simulateButler', { targetId: this.state.simTargetId, targetValue: this.state.simTargetValue }).then((res: any) => { if(res && res.success) this.showSnackbar('Vorschlag simuliert! Bitte in Übersicht prüfen.', 'success'); else this.showSnackbar('Fehler bei Simulation', 'error'); });
     }
 
-    // --- BULK ADD LOGIC ---
-    handleOpenBulkDialog = () => {
-        this.setState({ showBulkDialog: true, bulkSelected: [] });
-        if (Object.keys(this.state.bulkAllObjects).length === 0) {
-            this.setState({ bulkLoading: true });
-            this.props.socket.getForeignObjects('*', 'state').then(objects => {
-                this.setState({ bulkAllObjects: objects, bulkLoading: false });
-            }).catch(e => {
-                this.setState({ bulkLoading: false });
-                this.showSnackbar('Fehler beim Laden der Objekte: ' + e, 'error');
-            });
-        }
-    }
+    // --- BULK ADD CALLBACK (Logic moved from internal to callback) ---
+    handleImportBulk = (selectedIds: string[], allObjects: Record<string, any>) => {
+        if (selectedIds.length === 0) return;
 
-    handleToggleBulkItem = (id: string) => {
-        const selected = [...this.state.bulkSelected];
-        const idx = selected.indexOf(id);
-        if (idx === -1) selected.push(id);
-        else selected.splice(idx, 1);
-        this.setState({ bulkSelected: selected });
-    }
-
-    handleImportBulk = () => {
-        const { bulkSelected, bulkAllObjects } = this.state;
-        if (bulkSelected.length === 0) {
-            this.setState({ showBulkDialog: false });
-            return;
-        }
         const currentDevices = [...this.state.devices];
         let added = 0;
 
-        bulkSelected.forEach(id => {
+        selectedIds.forEach(id => {
             if (!currentDevices.find(d => d.id === id)) {
-                const obj = bulkAllObjects[id];
+                const obj = allObjects[id];
                 let name = id;
                 if (obj && obj.common && obj.common.name) {
                     name = typeof obj.common.name === 'object' ? (obj.common.name[I18n.getLanguage()] || obj.common.name.de || obj.common.name.en) : obj.common.name;
@@ -326,79 +297,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
         this.updateDevices(currentDevices);
         this.showSnackbar(`${added} Objekte hinzugefügt.`, 'success');
-        this.setState({ showBulkDialog: false, bulkSelected: [] });
-    }
-
-    renderBulkDialog() {
-        const { showBulkDialog, bulkLoading, bulkAllObjects, bulkFilter, bulkSelected } = this.state;
-        let filteredKeys: string[] = [];
-        if (!bulkLoading && showBulkDialog) {
-            const lowerFilter = bulkFilter.toLowerCase();
-            // Split filter by spaces to support multi-word search (e.g. "julia temp")
-            const searchTerms = lowerFilter.split(/\s+/).filter(t => t.length > 0);
-
-            const allKeys = Object.keys(bulkAllObjects).sort();
-            if (bulkFilter.length < 2 && allKeys.length > 5000) { } else {
-                for (const id of allKeys) {
-                    if (filteredKeys.length > 100) break;
-                    const obj = bulkAllObjects[id];
-                    const name = obj?.common?.name ? (typeof obj.common.name === 'object' ? JSON.stringify(obj.common.name) : obj.common.name) : '';
-
-                    // NEW SMART SEARCH: Check if ALL terms are present in ID OR Name
-                    const targetString = (id + ' ' + name).toLowerCase();
-                    const isMatch = searchTerms.every(term => targetString.includes(term));
-
-                    if (isMatch) {
-                        filteredKeys.push(id);
-                    }
-                }
-            }
-        }
-
-        return (
-            <Dialog open={showBulkDialog} onClose={() => this.setState({ showBulkDialog: false })} maxWidth="md" fullWidth>
-                <DialogTitle>Massen-Auswahl (Bulk Add)</DialogTitle>
-                <DialogContent dividers style={{minHeight: '400px'}}>
-                    <Box sx={{ mb: 2 }}>
-                        <TextField
-                            fullWidth
-                            label="Suche (Smart Search)..."
-                            variant="outlined"
-                            value={bulkFilter}
-                            onChange={(e) => this.setState({ bulkFilter: e.target.value })}
-                            autoFocus
-                            placeholder="z.B. 'julia temp' findet 'Julia Zimmer Temperatur'"
-                            helperText="Tipp: Mehrere Begriffe mit Leerzeichen trennen."
-                        />
-                    </Box>
-                    {bulkLoading ? (
-                        <Box sx={{display: 'flex', justifyContent: 'center', p: 4}}><CircularProgress /><Typography sx={{ml:2}}>Lade Objekte...</Typography></Box>
-                    ) : (
-                        <List dense>
-                            {filteredKeys.length === 0 && bulkFilter.length > 1 && <ListItem><ListItemText primary="Keine Treffer" /></ListItem>}
-                            {filteredKeys.map(id => {
-                                const obj = bulkAllObjects[id];
-                                let name = id;
-                                if(obj?.common?.name) name = typeof obj.common.name === 'object' ? (obj.common.name.de || JSON.stringify(obj.common.name)) : obj.common.name;
-                                return (
-                                    <ListItem key={id} disablePadding>
-                                        <ListItemButton onClick={() => this.handleToggleBulkItem(id)}>
-                                            <ListItemIcon><Checkbox edge="start" checked={bulkSelected.indexOf(id) !== -1} tabIndex={-1} disableRipple /></ListItemIcon>
-                                            <ListItemText primary={name} secondary={id} primaryTypographyProps={{ style: { fontWeight: 'bold' } }} secondaryTypographyProps={{ style: { fontSize: '0.8rem', fontFamily: 'monospace' } }} />
-                                        </ListItemButton>
-                                    </ListItem>
-                                );
-                            })}
-                        </List>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Typography sx={{flexGrow: 1, ml: 2}} variant="caption">{bulkSelected.length} ausgewählt</Typography>
-                    <Button onClick={() => this.setState({ showBulkDialog: false })}>Abbrechen</Button>
-                    <Button onClick={this.handleImportBulk} variant="contained" color="primary" disabled={bulkSelected.length === 0}>Übernehmen</Button>
-                </DialogActions>
-            </Dialog>
-        );
+        this.setState({ showBulkDialog: false });
     }
 
     handleOpenWizard = () => { this.setState({ showWizard: true, wizardStep: 0, scannedDevices: [] }); }
@@ -462,11 +361,19 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         );
     }
 
-    renderDialogs() { return ( <>{this.state.showSelectId && (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={this.state.selectIdContext === 'outdoor' ? this.state.outdoorSensorId : (this.state.selectIdContext === 'device' && this.state.devices[this.state.selectIdIndex]?.id) || ''} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />)}{this.renderWizardDialog()}{this.renderBulkDialog()}{this.renderContextDialog()}<Dialog open={this.state.showDeleteConfirm} onClose={() => this.setState({showDeleteConfirm:false})}><DialogTitle>Sicher?</DialogTitle><DialogContent><Typography>Alle Sensoren löschen?</Typography></DialogContent><DialogActions><Button onClick={()=>this.setState({showDeleteConfirm:false})}>Abbrechen</Button><Button onClick={this.onDeleteAllDevices} color="error">Löschen</Button></DialogActions></Dialog><Snackbar open={this.state.snackbarOpen} autoHideDuration={6000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity}>{this.state.snackbarMessage}</Alert></Snackbar></> ); }
+    renderDialogs() { return ( <>{this.state.showSelectId && (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={this.state.selectIdContext === 'outdoor' ? this.state.outdoorSensorId : (this.state.selectIdContext === 'device' && this.state.devices[this.state.selectIdIndex]?.id) || ''} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />)}{this.renderWizardDialog()}{this.renderContextDialog()}<Dialog open={this.state.showDeleteConfirm} onClose={() => this.setState({showDeleteConfirm:false})}><DialogTitle>Sicher?</DialogTitle><DialogContent><Typography>Alle Sensoren löschen?</Typography></DialogContent><DialogActions><Button onClick={()=>this.setState({showDeleteConfirm:false})}>Abbrechen</Button><Button onClick={this.onDeleteAllDevices} color="error">Löschen</Button></DialogActions></Dialog><Snackbar open={this.state.snackbarOpen} autoHideDuration={6000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity}>{this.state.snackbarMessage}</Alert></Snackbar>
+
+        {/* --- NEW BULK DIALOG --- */}
+        <BulkDialog
+            open={this.state.showBulkDialog}
+            onClose={() => this.setState({ showBulkDialog: false })}
+            onImport={this.handleImportBulk}
+            socket={this.props.socket}
+        />
+    </> ); }
+
     renderLicenseSection(tooltipProps: any) { return ( <Grid container spacing={3}><Grid item xs={12} md={6}><Tooltip title="Ihr Pro-Lizenzschlüssel." {...tooltipProps}><TextField fullWidth label={I18n.t('license_key')} value={this.state.licenseKey} type="password" onChange={e => this.updateNativeValue('licenseKey', e.target.value)} helperText="Für vollen Funktionsumfang" variant="outlined" size="small" /></Tooltip></Grid><Grid item xs={12} md={6}><Box sx={{display: 'flex', gap: 1}}><Tooltip title="Gemini API Key." {...tooltipProps}><TextField fullWidth label={I18n.t('gemini_api_key')} value={this.state.geminiApiKey} type="password" onChange={e => this.updateNativeValue('geminiApiKey', e.target.value)} variant="outlined" size="small" /></Tooltip><Button variant="outlined" onClick={() => this.handleTestApiClick()} disabled={this.state.isTestingApi || !this.state.geminiApiKey}>{this.state.isTestingApi ? <CircularProgress size={20} /> : "(Test)"}</Button></Box></Grid></Grid> ); }
     renderReportingSection(tooltipProps: any) { return ( <Grid container spacing={3}><Grid item xs={12}><Alert severity="info">Der "Family Link" sendet automatisch Berichte an die unten konfigurierten Empfänger.</Alert></Grid><Grid item xs={12} md={6}><FormControlLabel control={<Checkbox checked={this.state.briefingEnabled} onChange={e => this.updateNativeValue('briefingEnabled', e.target.checked)} />} label="Tägliches 'Guten Morgen' Briefing" /><Typography variant="caption" color="text.secondary" display="block">Sendet morgens eine Zusammenfassung der Nacht (Schlaf/Aktivität).</Typography></Grid><Grid item xs={12} md={6}><Tooltip title="Uhrzeit für den täglichen Bericht (Format HH:MM)." {...tooltipProps}><TextField fullWidth label="Uhrzeit" type="time" value={this.state.briefingTime} onChange={e => this.updateNativeValue('briefingTime', e.target.value)} disabled={!this.state.briefingEnabled} InputLabelProps={{ shrink: true }} size="small" /></Tooltip></Grid><Grid item xs={12}><Divider textAlign="left"><Typography variant="caption" sx={{color:'text.secondary', display:'flex', alignItems:'center', gap:1}}>Erweiterter Kontext (Sprint 29)</Typography></Divider></Grid><Grid item xs={12} md={6}><FormControlLabel control={<Checkbox checked={this.state.useWeather} onChange={e => this.updateNativeValue('useWeather', e.target.checked)} />} label="Wetterdaten nutzen" /><FormControl fullWidth size="small" disabled={!this.state.useWeather}><InputLabel>Wetter-Instanz (Optional)</InputLabel><Select value={this.state.weatherInstance} label="Wetter-Instanz (Optional)" onChange={(e) => this.updateNativeValue('weatherInstance', e.target.value)}><MenuItem value=""><em>Automatisch erkennen</em></MenuItem>{[...(this.state.availableInstances['accuweather'] || []), ...(this.state.availableInstances['daswetter'] || [])].map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid><Grid item xs={12} md={6}><Box sx={{display: 'flex', alignItems: 'center', gap: 1}}><Typography variant="body1">Eigener Außenfühler (Hardware):</Typography><Tooltip title="Wählen Sie einen physischen Sensor (z.B. im Garten). Dieser Wert wird bevorzugt behandelt."><IconButton onClick={() => this.openOutdoorSelectId()}>...</IconButton></Tooltip></Box><Box sx={{display: 'flex', gap: 1}}><TextField fullWidth size="small" value={this.state.outdoorSensorId} onChange={e => this.updateNativeValue('outdoorSensorId', e.target.value)} placeholder="Kein Sensor gewählt" helperText="Hat Vorrang vor Wetter-Adapter" /><IconButton onClick={() => this.openOutdoorSelectId()}>...</IconButton></Box></Grid><Grid item xs={12} md={6}><FormControlLabel control={<Checkbox checked={this.state.useCalendar} onChange={e => this.updateNativeValue('useCalendar', e.target.checked)} />} label="Kalender nutzen (iCal)" /><FormControl fullWidth size="small" disabled={!this.state.useCalendar}><InputLabel>Kalender-Instanz (Optional)</InputLabel><Select value={this.state.calendarInstance} label="Kalender-Instanz (Optional)" onChange={(e) => this.updateNativeValue('calendarInstance', e.target.value)}><MenuItem value=""><em>Automatisch erkennen</em></MenuItem>{(this.state.availableInstances['ical'] || []).map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid>{this.state.useCalendar && (<Grid item xs={12}><Paper variant="outlined" sx={{p: 2}}><Box sx={{display:'flex', justifyContent:'space-between', alignItems:'center', mb: 1}}><Typography variant="subtitle2">Relevante Kalender auswählen (Whitelist)</Typography><Button size="small" onClick={() => this.handleFetchCalendarNames()}>Kalender suchen</Button></Box>{this.state.detectedCalendars.length > 0 ? (<FormGroup row>{this.state.detectedCalendars.map(calName => (<FormControlLabel key={calName} control={<Checkbox checked={this.state.calendarSelection.includes(calName)} onChange={() => this.toggleCalendarSelection(calName)} />} label={calName} />))}</FormGroup>) : (<Typography variant="body2" color="text.secondary">Klicken Sie auf "Suchen", um Kalendernamen zu laden.</Typography>)}{this.state.calendarSelection.length === 0 && this.state.detectedCalendars.length > 0 && (<Alert severity="warning" sx={{mt: 1, py: 0}}>Achtung: Kein Kalender ausgewählt. Die KI wird alle Termine ignorieren!</Alert>)}</Paper></Grid>)}<Grid item xs={12}><Button variant="outlined" onClick={() => this.handleTestContextClick()} disabled={this.state.isTestingContext || (!this.state.useWeather && !this.state.useCalendar)}>Kontext-Daten jetzt prüfen</Button></Grid></Grid>); }
-    renderNotificationRow(adapterName: string, enabledAttr: NotificationEnabledKey, instanceAttr: NotificationInstanceKey, recipientAttr: NotificationRecipientKey, recipientLabel: string) { const enabled = this.state[enabledAttr]; const instance = this.state[instanceAttr]; const recipient = this.state[recipientAttr]; let adapterKey = adapterName === 'whatsapp' ? 'whatsapp-cmb' : adapterName === 'signal' ? 'signal-cma' : adapterName; const instances = this.state.availableInstances[adapterKey] || []; return (<Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}><Grid item xs={12} sm={3}><FormControlLabel control={<Checkbox checked={enabled} onChange={e => this.updateNativeValue(enabledAttr, e.target.checked)} />} label={I18n.t(`notify_${adapterName}`)} /></Grid><Grid item xs={12} sm={4}><FormControl fullWidth size="small" disabled={!enabled}><InputLabel>{I18n.t('notify_instance')}</InputLabel><Select value={instance} label={I18n.t('notify_instance')} onChange={(e: any) => this.updateNativeValue(instanceAttr, e.target.value)}>{instances.length === 0 ? <MenuItem value="">{I18n.t('notify_no_instances')}</MenuItem> : instances.map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid><Grid item xs={12} sm={5}><TextField fullWidth size="small" label={recipientLabel} value={recipient} onChange={e => this.updateNativeValue(recipientAttr, e.target.value)} disabled={!enabled} required={adapterName === 'email' && enabled} /></Grid></Grid>); }
-    renderNotificationsSection() { return ( <Box><Alert severity="info" sx={{mb: 2}}>Benachrichtigungen werden bei Alarmen und (wenn aktiviert) für Berichte verwendet.</Alert>{this.renderNotificationRow('telegram', 'notifyTelegramEnabled', 'notifyTelegramInstance', 'notifyTelegramRecipient', 'User ID')}{this.renderNotificationRow('pushover', 'notifyPushoverEnabled', 'notifyPushoverInstance', 'notifyPushoverRecipient', 'Device ID')}{this.renderNotificationRow('email', 'notifyEmailEnabled', 'notifyEmailInstance', 'notifyEmailRecipient', 'E-Mail')}{this.renderNotificationRow('whatsapp', 'notifyWhatsappEnabled', 'notifyWhatsappInstance', 'notifyWhatsappRecipient', 'Tel')}<Button variant="outlined" sx={{mt:1}} onClick={() => this.handleTestNotificationClick()} disabled={this.state.isTestingNotification}>Test</Button></Box> ); }
 
     render() {
         const { expandedAccordion } = this.state;
@@ -509,7 +416,15 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 </Accordion>
 
                 <Accordion expanded={expandedAccordion === 'panel5'} onChange={this.handleAccordionChange('panel5')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Reporting & Family Link</Typography></AccordionSummary><AccordionDetails>{this.renderReportingSection(tooltipProps)}</AccordionDetails></Accordion>
-                <Accordion expanded={expandedAccordion === 'panel3'} onChange={this.handleAccordionChange('panel3')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Benachrichtigungen</Typography></AccordionSummary><AccordionDetails>{this.renderNotificationsSection()}</AccordionDetails></Accordion>
+                <Accordion expanded={expandedAccordion === 'panel3'} onChange={this.handleAccordionChange('panel3')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Benachrichtigungen</Typography></AccordionSummary><AccordionDetails>
+                    <NotificationsView
+                        settings={this.state as any}
+                        availableInstances={this.state.availableInstances}
+                        isTesting={this.state.isTestingNotification}
+                        onChange={(attr, val) => this.updateNativeValue(attr, val)}
+                        onTest={() => this.handleTestNotificationClick()}
+                    />
+                </AccordionDetails></Accordion>
 
                 {/* --- SENSOR LIST (Refactored) --- */}
                 <Accordion expanded={expandedAccordion === 'panel4'} onChange={this.handleAccordionChange('panel4')} sx={accordionStyle}>
@@ -524,7 +439,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             onAdd={() => this.onAddDevice()}
                             onSelectId={(i) => this.openSelectIdDialog(i)}
                             onWizard={this.handleOpenWizard}
-                            onBulk={this.handleOpenBulkDialog}
+                            onBulk={() => this.setState({ showBulkDialog: true })}
                             onDeleteAll={() => this.setState({showDeleteConfirm: true})}
                         />
                     </AccordionDetails>
