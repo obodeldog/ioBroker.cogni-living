@@ -334,13 +334,21 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         let filteredKeys: string[] = [];
         if (!bulkLoading && showBulkDialog) {
             const lowerFilter = bulkFilter.toLowerCase();
+            // Split filter by spaces to support multi-word search (e.g. "julia temp")
+            const searchTerms = lowerFilter.split(/\s+/).filter(t => t.length > 0);
+
             const allKeys = Object.keys(bulkAllObjects).sort();
             if (bulkFilter.length < 2 && allKeys.length > 5000) { } else {
                 for (const id of allKeys) {
                     if (filteredKeys.length > 100) break;
                     const obj = bulkAllObjects[id];
                     const name = obj?.common?.name ? (typeof obj.common.name === 'object' ? JSON.stringify(obj.common.name) : obj.common.name) : '';
-                    if (!lowerFilter || id.toLowerCase().includes(lowerFilter) || name.toLowerCase().includes(lowerFilter)) {
+
+                    // NEW SMART SEARCH: Check if ALL terms are present in ID OR Name
+                    const targetString = (id + ' ' + name).toLowerCase();
+                    const isMatch = searchTerms.every(term => targetString.includes(term));
+
+                    if (isMatch) {
                         filteredKeys.push(id);
                     }
                 }
@@ -352,7 +360,16 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 <DialogTitle>Massen-Auswahl (Bulk Add)</DialogTitle>
                 <DialogContent dividers style={{minHeight: '400px'}}>
                     <Box sx={{ mb: 2 }}>
-                        <TextField fullWidth label="Suche (ID oder Name)..." variant="outlined" value={bulkFilter} onChange={(e) => this.setState({ bulkFilter: e.target.value })} autoFocus placeholder="z.B. knx oder licht" />
+                        <TextField
+                            fullWidth
+                            label="Suche (Smart Search)..."
+                            variant="outlined"
+                            value={bulkFilter}
+                            onChange={(e) => this.setState({ bulkFilter: e.target.value })}
+                            autoFocus
+                            placeholder="z.B. 'julia temp' findet 'Julia Zimmer Temperatur'"
+                            helperText="Tipp: Mehrere Begriffe mit Leerzeichen trennen."
+                        />
                     </Box>
                     {bulkLoading ? (
                         <Box sx={{display: 'flex', justifyContent: 'center', p: 4}}><CircularProgress /><Typography sx={{ml:2}}>Lade Objekte...</Typography></Box>
