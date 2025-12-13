@@ -68,7 +68,7 @@ class App extends GenericApp<any, AppState> {
                     styleOverrides: {
                         root: {
                             textTransform: 'none', fontWeight: 'bold', minWidth: 100,
-                            flex: 1, // ZENTRIERUNG: Verteilt Tabs gleichmäßig
+                            flex: 1,
                             opacity: 0.7,
                             transition: 'all 0.3s',
                             '&.Mui-selected': { opacity: 1, backgroundColor: 'rgba(255,255,255,0.1)' }
@@ -78,35 +78,30 @@ class App extends GenericApp<any, AppState> {
             }
         });
 
-        // Styles für farbige Tabs (Hintergrund + Border)
         const pillarStyle = (color: string) => ({
             borderBottom: `4px solid ${color}`,
-            '&.Mui-selected': { backgroundColor: `${color}22`, color: color } // Leichter Hintergrund-Schimmer
+            '&.Mui-selected': { backgroundColor: `${color}22`, color: color }
         });
 
         return (
             <ThemeProvider theme={cogniTheme}>
                 <div className="App" style={{ background: cogniTheme.palette.background.default, color: cogniTheme.palette.text.primary, minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                     <AppBar position="sticky" elevation={2}>
-                        {/* ZENTRIERUNG: Container füllt Breite */}
                         <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center' }}>
                             <Tabs
                                 value={this.state.selectedTab}
                                 onChange={(_e, newVal) => this.setState({ selectedTab: newVal })}
                                 indicatorColor="secondary"
                                 textColor="inherit"
-                                variant="fullWidth" // ZENTRIERUNG: Volle Breite nutzen
-                                centered={false}    // Muss false sein für fullWidth
-                                sx={{ flexGrow: 1, maxWidth: 1400 }} // Begrenzung auf großen Bildschirmen
+                                variant="fullWidth"
+                                centered={false}
+                                sx={{ flexGrow: 1, maxWidth: 1400 }}
                             >
                                 <Tab value="overview" label="Dashboard" icon={<DashboardIcon />} iconPosition="start" />
-
-                                {/* 4 SÄULEN (Ohne Nummern, Farbig) */}
                                 <Tab value="comfort" label="Komfort" icon={<SmartToyIcon />} iconPosition="start" sx={pillarStyle('#2196f3')} />
                                 <Tab value="security" label="Sicherheit" icon={<HealthAndSafetyIcon />} iconPosition="start" sx={pillarStyle('#4caf50')} />
                                 <Tab value="energy" label="Energie" icon={<BoltIcon />} iconPosition="start" sx={pillarStyle('#ff9800')} />
                                 <Tab value="health" label="Gesundheit" icon={<MonitorHeartIcon />} iconPosition="start" sx={pillarStyle('#f44336')} />
-
                                 <Tab value="system" label="System" icon={<SettingsIcon />} iconPosition="start" />
                                 <Tab value="help" label="Handbuch" icon={<MenuBookIcon />} iconPosition="start" />
                             </Tabs>
@@ -123,7 +118,20 @@ class App extends GenericApp<any, AppState> {
                         {this.state.selectedTab === 'overview' && <Overview socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
                         {this.state.selectedTab === 'comfort' && <ComfortTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
                         {this.state.selectedTab === 'security' && <SecurityTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
-                        {this.state.selectedTab === 'energy' && <EnergyTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+
+                        {/* HIER WAR DER FEHLER: DEVICES UND NATIVE WURDEN NICHT ÜBERGEBEN */}
+                        {this.state.selectedTab === 'energy' && (
+                            <EnergyTab
+                                socket={this.socket}
+                                adapterName={this.adapterName}
+                                instance={this.instance}
+                                theme={this.state.theme}
+                                themeType={themeType}
+                                devices={native.devices || []} // WICHTIG: Sensoren übergeben
+                                native={native} // WICHTIG: Config für Außenfühler übergeben
+                            />
+                        )}
+
                         {this.state.selectedTab === 'health' && <HealthTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
                         {this.state.selectedTab === 'system' && <SystemTab native={native} onChange={(attr:string, val:any) => this.updateNativeValue(attr, val)} socket={this.socket} themeType={themeType} theme={this.state.theme} adapterName={this.adapterName} instance={this.instance} />}
                         {this.state.selectedTab === 'help' && <Help themeType={themeType} />}
