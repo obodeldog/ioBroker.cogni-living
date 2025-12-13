@@ -18,6 +18,7 @@ import SensorList from './settings/SensorList';
 import NotificationsView from './settings/NotificationsView';
 import BulkDialog from './settings/BulkDialog';
 import SafetyView from './settings/SafetyView';
+import HealthView from './settings/HealthView'; // <--- NEUER IMPORT
 
 // Icons
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
@@ -26,6 +27,7 @@ import PsychologyIcon from '@mui/icons-material/Psychology';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart'; // <--- NEUES ICON
 
 interface SettingsProps { native: Record<string, any>; onChange: (attr: string, value: any) => void; socket: Connection; themeType: ThemeType; adapterName: string; instance: number; theme: IobTheme; }
 interface DeviceConfig { id: string; name: string; location: string; type: string; logDuplicates: boolean; isExit: boolean; }
@@ -420,7 +422,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </AccordionDetails>
                 </Accordion>
 
-                {/* --- NEW SAFETY SECTION (Dead Man Switch) --- */}
+                {/* --- SAFETY SECTION (Dead Man Switch) --- */}
                 <Accordion expanded={expandedAccordion === 'panelSafety'} onChange={this.handleAccordionChange('panelSafety')} sx={accordionStyle}>
                     <AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}><HealthAndSafetyIcon color="success"/> Sicherheit & Notfall</Typography></AccordionSummary>
                     <AccordionDetails>
@@ -433,7 +435,20 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </AccordionDetails>
                 </Accordion>
 
-                <Accordion expanded={expandedAccordion === 'panel5'} onChange={this.handleAccordionChange('panel5')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Reporting & Family Link</Typography></AccordionSummary><AccordionDetails>{this.renderReportingSection(tooltipProps)}</AccordionDetails></Accordion>
+                {/* --- NEW HEALTH & FAMILY LINK SECTION --- */}
+                <Accordion expanded={expandedAccordion === 'panelHealth'} onChange={this.handleAccordionChange('panelHealth')} sx={accordionStyle}>
+                    <AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}><MonitorHeartIcon color="error"/> Gesundheit & Family Link</Typography></AccordionSummary>
+                    <AccordionDetails>
+                        <HealthView
+                            socket={this.props.socket}
+                            adapterName={this.props.adapterName}
+                            instance={this.props.instance}
+                            isDark={isDark}
+                        />
+                    </AccordionDetails>
+                </Accordion>
+
+                <Accordion expanded={expandedAccordion === 'panel5'} onChange={this.handleAccordionChange('panel5')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Reporting</Typography></AccordionSummary><AccordionDetails>{this.renderReportingSection(tooltipProps)}</AccordionDetails></Accordion>
                 <Accordion expanded={expandedAccordion === 'panel3'} onChange={this.handleAccordionChange('panel3')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Benachrichtigungen</Typography></AccordionSummary><AccordionDetails>
                     <NotificationsView
                         settings={this.state as any}
