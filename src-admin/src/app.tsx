@@ -2,19 +2,25 @@ import React from 'react';
 import { Box, AppBar, Tabs, Tab, ThemeProvider, createTheme, IconButton, Tooltip, CircularProgress, Fab, Zoom } from '@mui/material';
 import { GenericApp, I18n, type IobTheme, type GenericAppState, type ThemeType } from '@iobroker/adapter-react-v5';
 
-import Settings from './components/Settings';
-import Overview from './components/Overview';
-import Activities from './components/Activities';
-import Help from './components/Help';
-// NEW IMPORT
-import NeuralCockpit from './components/NeuralCockpit';
+// NEW TABS
+import SystemTab from './components/tabs/SystemTab';
+import ComfortTab from './components/tabs/ComfortTab';
+import SecurityTab from './components/tabs/SecurityTab';
+import EnergyTab from './components/tabs/EnergyTab';
+import HealthTab from './components/tabs/HealthTab';
 
+import Overview from './components/Overview'; // Dashboard
+import Help from './components/Help';
+
+// ICONS
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import ListAltIcon from '@mui/icons-material/ListAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SaveIcon from '@mui/icons-material/Save';
-import PsychologyIcon from '@mui/icons-material/Psychology'; // Icon für Neural Net
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import BoltIcon from '@mui/icons-material/Bolt';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 
 import enLang from './i18n/en.json';
 import deLang from './i18n/de.json';
@@ -62,9 +68,8 @@ class App extends GenericApp<any, AppState> {
                 MuiTab: {
                     styleOverrides: {
                         root: {
-                            textTransform: 'none', fontWeight: 'bold', minWidth: 140,
+                            textTransform: 'none', fontWeight: 'bold', minWidth: 100,
                             borderRight: '1px solid rgba(255,255,255,0.1)',
-                            '&:last-child': { borderRight: 'none' },
                             '&.Mui-selected': { backgroundColor: 'rgba(255,255,255,0.1)', color: '#fff' }
                         }
                     }
@@ -77,12 +82,21 @@ class App extends GenericApp<any, AppState> {
                 <div className="App" style={{ background: cogniTheme.palette.background.default, color: cogniTheme.palette.text.primary, minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                     <AppBar position="sticky" elevation={2}>
                         <Box sx={{ display: 'flex', width: '100%', alignItems: 'center' }}>
-                            <Tabs value={this.state.selectedTab} onChange={(_e, newVal) => this.setState({ selectedTab: newVal })} indicatorColor="secondary" textColor="inherit" variant="standard" centered sx={{ flexGrow: 1 }}>
-                                <Tab value="overview" label={I18n.t('Übersicht')} icon={<DashboardIcon />} iconPosition="start" />
-                                {/* NEW TAB */}
-                                <Tab value="neural" label="Neural Network" icon={<PsychologyIcon />} iconPosition="start" />
-                                <Tab value="activities" label={I18n.t('Aktivitäten')} icon={<ListAltIcon />} iconPosition="start" />
-                                <Tab value="settings" label={I18n.t('Einstellungen')} icon={<SettingsIcon />} iconPosition="start" />
+                            <Tabs
+                                value={this.state.selectedTab}
+                                onChange={(_e, newVal) => this.setState({ selectedTab: newVal })}
+                                indicatorColor="secondary"
+                                textColor="inherit"
+                                variant="scrollable"
+                                scrollButtons="auto"
+                                sx={{ flexGrow: 1 }}
+                            >
+                                <Tab value="overview" label="Dashboard" icon={<DashboardIcon />} iconPosition="start" />
+                                <Tab value="comfort" label="2. Komfort" icon={<SmartToyIcon />} iconPosition="start" />
+                                <Tab value="security" label="3. Sicherheit" icon={<HealthAndSafetyIcon />} iconPosition="start" />
+                                <Tab value="energy" label="4. Energie" icon={<BoltIcon />} iconPosition="start" />
+                                <Tab value="health" label="5. Gesundheit" icon={<MonitorHeartIcon />} iconPosition="start" />
+                                <Tab value="system" label="System" icon={<SettingsIcon />} iconPosition="start" />
                                 <Tab value="help" label="Handbuch" icon={<MenuBookIcon />} iconPosition="start" />
                             </Tabs>
                             <Box sx={{ position: 'absolute', right: 16 }}>
@@ -95,10 +109,16 @@ class App extends GenericApp<any, AppState> {
 
                     <Box sx={{ p: 0, pb: 12, flexGrow: 1, overflowY: 'auto' }}>
                         {this.state.selectedTab === 'overview' && <Overview socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
-                        {/* RENDER NEW TAB */}
-                        {this.state.selectedTab === 'neural' && <NeuralCockpit socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
-                        {this.state.selectedTab === 'activities' && <Activities socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
-                        {this.state.selectedTab === 'settings' && <Settings native={native} onChange={(attr, val) => this.updateNativeValue(attr, val)} socket={this.socket} themeType={themeType} theme={this.state.theme} adapterName={this.adapterName} instance={this.instance} />}
+
+                        {/* NEW PILLAR TABS */}
+                        {this.state.selectedTab === 'comfort' && <ComfortTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+                        {this.state.selectedTab === 'security' && <SecurityTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+                        {this.state.selectedTab === 'energy' && <EnergyTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+                        {this.state.selectedTab === 'health' && <HealthTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+
+                        {/* SYSTEM & CONFIG */}
+                        {this.state.selectedTab === 'system' && <SystemTab native={native} onChange={(attr:string, val:any) => this.updateNativeValue(attr, val)} socket={this.socket} themeType={themeType} theme={this.state.theme} adapterName={this.adapterName} instance={this.instance} />}
+
                         {this.state.selectedTab === 'help' && <Help themeType={themeType} />}
                     </Box>
 
