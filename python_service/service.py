@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 # LOGGING
-VERSION = "0.17.2 (Robust Energy Training)"
+VERSION = "0.17.3 (Ventilation & Warmup)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -78,7 +78,7 @@ def process_message(msg):
             trend = health_brain.analyze_gait_speed(data.get("sequences", []))
             if trend is not None: send_result("GAIT_RESULT", {"speed_trend": trend})
 
-        # 3. ENERGY (Classic & PINN)
+        # 3. ENERGY
         elif cmd == "TRAIN_ENERGY":
             points = data.get("points", [])
 
@@ -87,7 +87,7 @@ def process_message(msg):
             log(f"Classic Energy Train: {success}")
 
             # --- PINN Training ---
-            if points and len(points) > 20: # Lowered threshold slightly
+            if points and len(points) > 20:
                 try:
                     df = pd.DataFrame(points)
                     df['ts'] = pd.to_datetime(df['ts'], unit='ms')
@@ -102,7 +102,7 @@ def process_message(msg):
 
                         for idx, row in valid.iterrows():
                             t_in = row['t_in']
-                            t_out = 10.0 # Placeholder (ToDo: Historical Weather)
+                            t_out = 10.0
                             valve = row.get('valve', 0)
                             solar = False
                             rate = row['d_temp'] / row['dt_h']
@@ -126,7 +126,7 @@ def process_message(msg):
             is_sunny = data.get("is_sunny", False)
             solar_flags = data.get("solar_flags", {})
 
-            # 1. Classic
+            # A. Classic Prediction
             forecast = energy_brain.predict_cooling(
                 current_temps, t_out,
                 data.get("t_forecast", None),
@@ -134,7 +134,16 @@ def process_message(msg):
             )
             send_result("ENERGY_PREDICT_RESULT", {"forecast": forecast})
 
-            # 2. PINN
+            # B. NEU: Ventilation Check
+            vent_alerts = energy_brain.check_ventilation(current_temps)
+            if vent_alerts:
+                send_result("VENTILATION_ALERT", {"alerts": vent_alerts})
+
+            # C. NEU: Warm-Up Times (Smart Return)
+            warmup_times = energy_brain.calculate_warmup_times(current_temps, 21.0)
+            send_result("WARMUP_RESULT", {"times": warmup_times})
+
+            # D. PINN Prediction
             pinn_results = {}
             for room, t_in in current_temps.items():
                 solar_active = is_sunny and solar_flags.get(room, False)

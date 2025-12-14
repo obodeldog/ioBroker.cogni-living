@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import json
 import math
+import time
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENERGY_MODEL_PATH = os.path.join(BASE_DIR, "energy_model.pkl")
@@ -13,6 +14,10 @@ class EnergyBrain:
         self.scores = {}
         self.heating = {}
         self.is_ready = False
+
+        # NEU: Speicher für Live-Gradienten (Lüftungs-Detektiv)
+        # Format: { 'RoomName': { 'ts': timestamp, 'val': temperature } }
+        self.last_state = {}
 
     def load_brain(self):
         try:
@@ -37,33 +42,35 @@ class EnergyBrain:
             results_heat = {}
 
             for room, group in df.groupby('room'):
-                # TWEAK: Min Samples reduziert von 10 auf 5 für schnelleres Feedback
-                if len(group) < 5: continue
+                # UPDATE: Zurück auf 10 Samples (Statistische Sicherheit)
+                if len(group) < 10: continue
+
                 group = group.sort_values('ts')
                 group['dt_h'] = group['ts'].diff().dt.total_seconds() / 3600.0
                 group['d_temp'] = group['t_in'].diff()
                 group['gradient'] = group['d_temp'] / group['dt_h']
 
                 valid = group[(group['gradient'] > -5) & (group['gradient'] < 5) & (group['dt_h'] > 0.1)].copy()
-                if len(valid) < 3: continue
+                if len(valid) < 5: continue
 
                 if has_valves:
+                    # Isolations-Check (Ventil fast zu)
                     cooling_phase = valid[valid['valve'] < 5]
-                    # TWEAK: Schwelle gesenkt von 20 auf 15, damit auch träge Heizungen zählen
-                    heating_phase = valid[valid['valve'] > 15]
+
+                    # UPDATE: Ventil-Schwelle auf 10% gesenkt (Realismus für Teillast)
+                    heating_phase = valid[valid['valve'] > 10]
                 else:
                     cooling_phase = valid
                     heating_phase = valid
 
                 # Cooling (Verlust)
                 cooling_events = cooling_phase[cooling_phase['gradient'] < -0.05]
-                if len(cooling_events) > 3:
+                if len(cooling_events) > 5:
                     results_insu[room] = float(cooling_events['gradient'].median())
 
                 # Heating (Power)
-                # TWEAK: Auch hier Samples reduziert
                 heating_events = heating_phase[heating_phase['gradient'] > 0.1]
-                if len(heating_events) > 3:
+                if len(heating_events) > 5:
                     results_heat[room] = float(heating_events['gradient'].median())
 
             self.scores = results_insu
@@ -78,6 +85,68 @@ class EnergyBrain:
     def _get_effective_temp(self, t_out, t_forecast):
         if t_forecast is None: return t_out
         return (t_out + t_forecast) / 2
+
+    # --- NEU: VENTILATION DETECTIVE (Lüftungs-Erkennung) ---
+    def check_ventilation(self, current_temps):
+        alerts = []
+        now = time.time()
+
+        for room, t_now in current_temps.items():
+            if room in self.last_state:
+                last_entry = self.last_state[room]
+                t_last = last_entry['val']
+                ts_last = last_entry['ts']
+
+                dt_hours = (now - ts_last) / 3600.0
+
+                # Wir prüfen nur, wenn mindestens 5 Minuten vergangen sind (um Rauschen zu vermeiden)
+                if dt_hours > 0.08: # ca. 5 min
+                    d_temp = t_now - t_last
+                    gradient = d_temp / dt_hours
+
+                    # SCHWELLE: Wenn Temperatur schneller als 3 Grad pro Stunde fällt
+                    # Das ist physikalisch durch geschlossene Wände fast unmöglich -> Fenster muss offen sein.
+                    if gradient < -3.0:
+                        alerts.append({
+                            'room': room,
+                            'gradient': round(gradient, 2),
+                            'drop': round(d_temp, 1),
+                            'msg': f"Starker Temperatursturz ({round(gradient,1)}°C/h). Fenster offen?"
+                        })
+
+            # Update State
+            self.last_state[room] = {'ts': now, 'val': t_now}
+
+        return alerts
+
+    # --- NEU: SMART WARM-UP (Rückkehr-Rechner) ---
+    def calculate_warmup_times(self, current_temps, target_temp_default=21.0):
+        warmup_times = {}
+        if not self.is_ready: return {}
+
+        for room, t_in in current_temps.items():
+            # Standard Zieltemperatur (kann später dynamisch werden)
+            target = target_temp_default
+
+            if t_in >= target:
+                warmup_times[room] = 0
+                continue
+
+            # Wir holen uns die "Power" des Raumes (Heating Score)
+            # Default: 2 Grad pro Stunde (konservative Schätzung)
+            power = self.heating.get(room, 2.0)
+            if power <= 0.1: power = 1.0 # Safety gegen Division durch Null
+
+            diff = target - t_in
+            hours_needed = diff / power
+            minutes_needed = int(hours_needed * 60)
+
+            # Realismus-Check: Max 12 Stunden
+            if minutes_needed > 720: minutes_needed = 720
+
+            warmup_times[room] = minutes_needed
+
+        return warmup_times
 
     def predict_cooling(self, current_temps, t_out, t_forecast=None, is_sunny=False, solar_flags=None):
         if not self.is_ready: return {}
