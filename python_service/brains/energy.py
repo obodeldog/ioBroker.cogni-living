@@ -37,30 +37,33 @@ class EnergyBrain:
             results_heat = {}
 
             for room, group in df.groupby('room'):
-                if len(group) < 10: continue
+                # TWEAK: Min Samples reduziert von 10 auf 5 für schnelleres Feedback
+                if len(group) < 5: continue
                 group = group.sort_values('ts')
                 group['dt_h'] = group['ts'].diff().dt.total_seconds() / 3600.0
                 group['d_temp'] = group['t_in'].diff()
                 group['gradient'] = group['d_temp'] / group['dt_h']
 
                 valid = group[(group['gradient'] > -5) & (group['gradient'] < 5) & (group['dt_h'] > 0.1)].copy()
-                if len(valid) < 5: continue
+                if len(valid) < 3: continue
 
                 if has_valves:
                     cooling_phase = valid[valid['valve'] < 5]
-                    heating_phase = valid[valid['valve'] > 20]
+                    # TWEAK: Schwelle gesenkt von 20 auf 15, damit auch träge Heizungen zählen
+                    heating_phase = valid[valid['valve'] > 15]
                 else:
                     cooling_phase = valid
                     heating_phase = valid
 
                 # Cooling (Verlust)
                 cooling_events = cooling_phase[cooling_phase['gradient'] < -0.05]
-                if len(cooling_events) > 5:
+                if len(cooling_events) > 3:
                     results_insu[room] = float(cooling_events['gradient'].median())
 
                 # Heating (Power)
+                # TWEAK: Auch hier Samples reduziert
                 heating_events = heating_phase[heating_phase['gradient'] > 0.1]
-                if len(heating_events) > 5:
+                if len(heating_events) > 3:
                     results_heat[room] = float(heating_events['gradient'].median())
 
             self.scores = results_insu
@@ -73,47 +76,27 @@ class EnergyBrain:
         except Exception as e: return False, str(e)
 
     def _get_effective_temp(self, t_out, t_forecast):
-        """Helper: Berechnet den Durchschnitt aus Jetzt und Forecast"""
         if t_forecast is None: return t_out
         return (t_out + t_forecast) / 2
 
-    # UPDATE: New signature to support solar data
     def predict_cooling(self, current_temps, t_out, t_forecast=None, is_sunny=False, solar_flags=None):
-        """
-        Berechnet den Temperaturabfall für 1h und 4h.
-        UPGRADE: Nutzt jetzt auch den Forecast + Solar Gain!
-        """
         if not self.is_ready: return {}
         if solar_flags is None: solar_flags = {}
 
-        # Wir nutzen die effektive Temperatur für die Simulation
         t_eff = self._get_effective_temp(t_out, t_forecast)
-
         forecasts = {}
         for room, t_in in current_temps.items():
             k = self.scores.get(room, -0.2)
             rate = k
 
-            # --- NEU: SOLAR GAIN LOGIC ---
-            # Wenn die Sonne scheint und der Raum als "is_solar" (Südfenster) markiert ist,
-            # addieren wir einen Wärme-Bonus auf die Rate.
-            # Ein positiver Wert wirkt der Auskühlung entgegen (oder heizt sogar auf).
             if is_sunny and solar_flags.get(room, False):
-                # +0.5 Grad pro Stunde Bonus bei direkter Sonne
-                rate += 0.5 
+                rate += 0.5
 
-            # Physik-Korrektheit:
-            # Wenn es draußen wärmer ist als drinnen, wärmt sich der Raum auf (rate > 0)
             if t_eff > t_in:
-                if rate < 0: rate = abs(rate) * 0.5 # Aufwärmen geht langsamer als Abkühlen (Isolation wirkt beidseitig)
+                if rate < 0: rate = abs(rate) * 0.5
             else:
-                # Normalfall: Abkühlen
-                if rate > 0: 
-                    # Wenn wir hier noch positiv sind (trotz kälterer Außentemp), 
-                    # dann nur wegen massivem Solar-Gain! Das erlauben wir.
-                    pass 
+                if rate > 0: pass
 
-            # Berechnung
             t_1h = t_in + rate
             t_4h = t_in + (rate * 4)
 
@@ -125,42 +108,29 @@ class EnergyBrain:
         return forecasts
 
     def get_optimization_advice(self, current_temps, t_out, targets=None, t_forecast=None):
-        """
-        Berechnet Coasting Time (MPC).
-        """
         if not self.is_ready: return []
         if targets is None: targets = {}
 
         t_eff = self._get_effective_temp(t_out, t_forecast)
-
         proposals = []
 
         for room, t_in in current_temps.items():
             t_target = targets.get(room, 21.0)
-
-            # Nur wenn wir wärmer als Ziel sind
             if t_in <= t_target: continue
 
             base_k = self.scores.get(room, -0.5)
             if base_k >= 0: base_k = -0.5
 
             loss_per_hour = abs(base_k)
-
-            # Buffer berechnen
             buffer = t_in - t_target
             hours_left = buffer / loss_per_hour
             minutes_left = int(hours_left * 60)
-
-            # Forecast Einfluss (Explizit)
-            # Wenn es draußen kälter wird (t_eff < t_out), kühlt es schneller aus -> weniger Minuten.
-            # Wenn es wärmer wird, hält es länger.
-            # Wir modellieren das über das Delta.
 
             delta_now = t_in - t_out
             delta_eff = t_in - t_eff
 
             if delta_eff != 0 and delta_now != 0:
-                factor = delta_now / delta_eff # Z.B. 10 / 12 = 0.83 (Es wird kälter, Zeit schrumpft)
+                factor = delta_now / delta_eff
                 minutes_left = int(minutes_left * factor)
 
             if minutes_left > 15:
