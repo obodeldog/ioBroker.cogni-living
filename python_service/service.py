@@ -4,7 +4,7 @@ import time
 import os
 
 # LOGGING
-VERSION = "0.16.2 (MPC Upgrade)"
+VERSION = "0.16.3 (Forecast MPC)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -14,8 +14,6 @@ def send_result(type, payload):
     print(f"[RESULT] {json.dumps(msg)}")
     sys.stdout.flush()
 
-# --- DYNAMIC IMPORTS ---
-# Wir fügen das aktuelle Verzeichnis zum Pfad hinzu, damit 'brains' gefunden wird
 sys.path.append(os.path.dirname(__file__))
 
 LIBS_AVAILABLE = False
@@ -24,14 +22,13 @@ try:
     from brains.health import HealthBrain
     from brains.energy import EnergyBrain
     from brains.comfort import ComfortBrain
-    import numpy as np # Check if core libs exist
+    import numpy as np
     LIBS_AVAILABLE = True
 except ImportError as e:
-    log(f"⚠️ Import Error (Modules or Libs missing): {e}")
+    log(f"⚠️ Import Error: {e}")
 except Exception as e:
     log(f"⚠️ Critical Startup Error: {e}")
 
-# SINGLETONS
 if LIBS_AVAILABLE:
     security_brain = SecurityBrain()
     health_brain = HealthBrain()
@@ -50,7 +47,6 @@ def process_message(msg):
             return
 
         if not LIBS_AVAILABLE:
-            log("⚠️ Befehl ignoriert (System läuft im Safe Mode ohne ML-Libs)")
             return
 
         # 1. SECURITY
@@ -68,7 +64,7 @@ def process_message(msg):
             neighbors = security_brain.graph.propagate_signal(room)
             send_result("SIGNAL_RESULT", {"room": room, "propagation": neighbors})
 
-        # 2. HEALTH (Family Link)
+        # 2. HEALTH
         elif cmd == "TRAIN_HEALTH":
             success, details = health_brain.train(data.get("digests", []))
             send_result("HEALTH_TRAIN_RESULT", {"success": success, "details": details})
@@ -79,7 +75,7 @@ def process_message(msg):
             trend = health_brain.analyze_gait_speed(data.get("sequences", []))
             if trend is not None: send_result("GAIT_RESULT", {"speed_trend": trend})
 
-        # 3. ENERGY (MPC Upgrade)
+        # 3. ENERGY
         elif cmd == "TRAIN_ENERGY":
             success, details = energy_brain.train(data.get("points", []))
             send_result("ENERGY_TRAIN_RESULT", {"success": success, "details": details})
@@ -87,11 +83,12 @@ def process_message(msg):
             forecast = energy_brain.predict_cooling(data.get("current_temps", {}), data.get("t_out", 0))
             send_result("ENERGY_PREDICT_RESULT", {"forecast": forecast})
         elif cmd == "OPTIMIZE_ENERGY":
-            # MPC: Coasting Calculation
+            # MPC mit Forecast Parameter
             proposals = energy_brain.get_optimization_advice(
                 data.get("current_temps", {}),
                 data.get("t_out", 0),
-                data.get("targets", {})
+                data.get("targets", {}),
+                data.get("t_forecast", None)
             )
             send_result("ENERGY_OPTIMIZE_RESULT", {"proposals": proposals})
 
