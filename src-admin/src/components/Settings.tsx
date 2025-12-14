@@ -4,25 +4,22 @@ import {
     TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog,
     DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText,
     ListItemIcon, LinearProgress, FormGroup, Collapse, Accordion, AccordionSummary,
-    AccordionDetails, Typography, Divider, Chip
+    AccordionDetails, Typography, Divider, Chip, Table, TableBody, TableCell, TableHead, TableRow
 } from '@mui/material';
 import type { AlertColor } from '@mui/material';
-
-// --- FIX: TYPE-ONLY IMPORT ---
 import { type IobTheme, type ThemeType, I18n, DialogSelectID } from '@iobroker/adapter-react-v5';
 import type { Connection } from '@iobroker/socket-client';
 
-// NUR NOCH INFRASTRUKTUR IMPORTS (Die Brains sind jetzt in den Tabs)
 import SensorList from './settings/SensorList';
 import NotificationsView from './settings/NotificationsView';
 import BulkDialog from './settings/BulkDialog';
 
-// ICONS
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import VerifiedIcon from '@mui/icons-material/Verified';
-import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd'; // Added missing import
-import SmartToyIcon from '@mui/icons-material/SmartToy';       // Added missing import
-import PsychologyIcon from '@mui/icons-material/Psychology';   // Added missing import
+import BuildIcon from '@mui/icons-material/Build';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import EditIcon from '@mui/icons-material/Edit';
+import SaveIcon from '@mui/icons-material/Save';
 
 interface SettingsProps { native: Record<string, any>; onChange: (attr: string, value: any) => void; socket: Connection; themeType: ThemeType; adapterName: string; instance: number; theme: IobTheme; onlySystem?: boolean; }
 interface DeviceConfig { id: string; name: string; location: string; type: string; logDuplicates: boolean; isExit: boolean; }
@@ -30,7 +27,8 @@ interface ScannedDevice { id: string; name: string; location: string; type: stri
 interface ScanFilters { motion: boolean; doors: boolean; lights: boolean; temperature: boolean; weather: boolean; selectedFunctionIds: string[]; }
 interface EnumItem { id: string; name: string; }
 
-// STATE INTERFACE (Gekürzt für Übersicht, Logik bleibt identisch)
+interface ThermostatDiagItem { room: string; sensorId: string; setpointId: string; source: string; isManual: boolean; status: string; }
+
 interface SettingsState {
     devices: DeviceConfig[]; presenceDevices: string[]; outdoorSensorId: string; geminiApiKey: string; analysisInterval: number; minDaysForBaseline: number;
     aiPersona: string; livingContext: string; licenseKey: string; ltmStbWindowDays: number; ltmLtbWindowDays: number; ltmDriftCheckIntervalHours: number;
@@ -43,6 +41,12 @@ interface SettingsState {
     availableRooms: string[]; showEnumList: boolean; snackbarOpen: boolean; snackbarMessage: string; snackbarSeverity: AlertColor; expandedAccordion: string | false; showContextDialog: boolean;
     contextResult: { weather: string; calendar: string; } | null; isTestingContext: boolean; detectedCalendars: string[]; isLoadingCalendars: boolean; simTargetId: string; simTargetValue: string;
     showBulkDialog: boolean; autoMode: string; autoThreshold: number; autoLastAction: string;
+    // NEW FOR THERMOSTAT DIAG
+    thermostatMapping: Record<string, string>;
+    thermostatDiagResults: ThermostatDiagItem[];
+    isScanningThermostats: boolean;
+    editMappingId: string | null;
+    editMappingValue: string;
 }
 
 export default class Settings extends React.Component<SettingsProps, SettingsState> {
@@ -51,6 +55,11 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         const native = props.native;
         let calSel = native.calendarSelection || [];
         if (typeof calSel === 'string') calSel = calSel.split(',').filter((s:string) => s);
+
+        let tMap = {};
+        if (native.thermostatMapping) {
+            try { tMap = typeof native.thermostatMapping === 'string' ? JSON.parse(native.thermostatMapping) : native.thermostatMapping; } catch(e){}
+        }
 
         this.state = {
             devices: native.devices || [], presenceDevices: native.presenceDevices || [], outdoorSensorId: native.outdoorSensorId || '', geminiApiKey: native.geminiApiKey || '',
@@ -67,16 +76,22 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             selectIdContext: null, isTestingApi: false, showWizard: false, wizardStep: 0, scanFilters: { motion: true, doors: true, lights: true, temperature: true, weather: true, selectedFunctionIds: [] },
             scannedDevices: [], showDeleteConfirm: false, availableEnums: [], availableRooms: [], showEnumList: false, snackbarOpen: false, snackbarMessage: '', snackbarSeverity: 'info',
             expandedAccordion: 'panel1', showContextDialog: false, contextResult: null, isTestingContext: false, detectedCalendars: [], isLoadingCalendars: false, simTargetId: '',
-            simTargetValue: 'true', showBulkDialog: false, autoMode: 'off', autoThreshold: 0.6, autoLastAction: 'Lade...'
+            simTargetValue: 'true', showBulkDialog: false, autoMode: 'off', autoThreshold: 0.6, autoLastAction: 'Lade...',
+            thermostatMapping: tMap, thermostatDiagResults: [], isScanningThermostats: false, editMappingId: null, editMappingValue: ''
         };
     }
 
     componentDidMount() { this.fetchAvailableInstances(); this.fetchEnums(); }
 
-    updateNativeValue(attr: string, value: any) { if (attr === 'livingContext' && typeof value === 'string' && value.length > 5000) value = value.substring(0, 1000); this.setState({ [attr]: value } as Pick<SettingsState, keyof SettingsState>, () => { this.props.onChange(attr, value); }); }
+    updateNativeValue(attr: string, value: any) {
+        if (attr === 'livingContext' && typeof value === 'string' && value.length > 5000) value = value.substring(0, 1000);
+        this.setState({ [attr]: value } as any, () => { this.props.onChange(attr, value); });
+    }
     updateDevices(newDevices: DeviceConfig[]) { this.setState({ devices: newDevices }); this.props.onChange('devices', newDevices); }
     updatePresenceDevices(newPresenceDevices: string[]) { this.setState({ presenceDevices: newPresenceDevices }); this.props.onChange('presenceDevices', newPresenceDevices); }
     handleAccordionChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => { this.setState({ expandedAccordion: isExpanded ? panel : false }); };
+
+    // ... EXISTING HANDLERS (Omitted for brevity, kept structure identical) ...
     onAddDevice() { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices.push({ id: '', name: '', location: '', type: 'motion', logDuplicates: false, isExit: false }); this.updateDevices(devices); }
     onDeviceChange(index: number, attr: keyof DeviceConfig, value: any) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices[index][attr] = value; this.updateDevices(devices); }
     onDeleteDevice(index: number) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices.splice(index, 1); this.updateDevices(devices); }
@@ -85,7 +100,23 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     openOutdoorSelectId() { this.setState({ showSelectId: true, selectIdContext: 'outdoor', selectIdIndex: -1 }); }
     openSelectIdDialog(index: number) { this.setState({ showSelectId: true, selectIdIndex: index, selectIdContext: 'device' }); }
     openSimSelectId() { this.setState({ showSelectId: true, selectIdContext: 'simulation' }); }
-    onSelectId(selectedId?: string) { if (selectedId) { if (this.state.selectIdContext === 'device' && this.state.selectIdIndex !== -1) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices[this.state.selectIdIndex].id = selectedId; this.props.socket.getObject(selectedId).then(obj => { if (obj && obj.common && obj.common.name) { let name: any = obj.common.name; if (typeof name === 'object') name = name[I18n.getLanguage()] || name.en || name.de || JSON.stringify(name); devices[this.state.selectIdIndex].name = name as string; this.updateDevices(devices); } else { this.updateDevices(devices); } }).catch(e => { this.updateDevices(devices); }); } else if (this.state.selectIdContext === 'presence') { const p = [...this.state.presenceDevices]; if (!p.includes(selectedId)) { p.push(selectedId); this.updatePresenceDevices(p); } } else if (this.state.selectIdContext === 'simulation') { this.setState({ simTargetId: selectedId }); } else if (this.state.selectIdContext === 'outdoor') { this.updateNativeValue('outdoorSensorId', selectedId); } } this.setState({ showSelectId: false, selectIdIndex: -1, selectIdContext: null }); }
+
+    onSelectId(selectedId?: string) {
+        if (selectedId) {
+            if (this.state.selectIdContext === 'device' && this.state.selectIdIndex !== -1) {
+                const devices = JSON.parse(JSON.stringify(this.state.devices)); devices[this.state.selectIdIndex].id = selectedId;
+                this.props.socket.getObject(selectedId).then(obj => { if (obj && obj.common && obj.common.name) { let name: any = obj.common.name; if (typeof name === 'object') name = name[I18n.getLanguage()] || name.en || name.de || JSON.stringify(name); devices[this.state.selectIdIndex].name = name as string; this.updateDevices(devices); } else { this.updateDevices(devices); } }).catch(e => { this.updateDevices(devices); });
+            } else if (this.state.selectIdContext === 'presence') {
+                const p = [...this.state.presenceDevices]; if (!p.includes(selectedId)) { p.push(selectedId); this.updatePresenceDevices(p); }
+            } else if (this.state.selectIdContext === 'simulation') {
+                this.setState({ simTargetId: selectedId });
+            } else if (this.state.selectIdContext === 'outdoor') {
+                this.updateNativeValue('outdoorSensorId', selectedId);
+            }
+        }
+        this.setState({ showSelectId: false, selectIdIndex: -1, selectIdContext: null });
+    }
+
     handleSimulateButler = () => { if(!this.state.simTargetId) return this.showSnackbar('Bitte zuerst eine ID auswählen', 'warning'); this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'simulateButler', { targetId: this.state.simTargetId, targetValue: this.state.simTargetValue }).then((res: any) => { if(res && res.success) this.showSnackbar('Vorschlag simuliert! Bitte in Übersicht prüfen.', 'success'); else this.showSnackbar('Fehler bei Simulation', 'error'); }); }
     handleImportBulk = (selectedIds: string[], allObjects: Record<string, any>) => { if (selectedIds.length === 0) return; const currentDevices = [...this.state.devices]; let added = 0; selectedIds.forEach(id => { if (!currentDevices.find(d => d.id === id)) { const obj = allObjects[id]; let name = id; if (obj && obj.common && obj.common.name) { name = typeof obj.common.name === 'object' ? (obj.common.name[I18n.getLanguage()] || obj.common.name.de || obj.common.name.en) : obj.common.name; } currentDevices.push({ id: id, name: name, location: '', type: '', logDuplicates: false, isExit: false }); added++; } }); this.updateDevices(currentDevices); this.showSnackbar(`${added} Objekte hinzugefügt.`, 'success'); this.setState({ showBulkDialog: false }); }
     handleOpenWizard = () => { this.setState({ showWizard: true, wizardStep: 0, scannedDevices: [] }); }
@@ -107,8 +138,108 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     fetchAvailableInstances() { const adapters = ['telegram', 'pushover', 'email', 'whatsapp-cmb', 'signal-cma', 'accuweather', 'daswetter', 'ical']; const instances: Record<string, string[]> = {}; const promises = adapters.map(adapter => this.props.socket.getAdapterInstances(adapter).then(objs => { instances[adapter] = objs.map(obj => obj._id.replace('system.adapter.', '')); }).catch(e => console.error(`Error fetching instances for ${adapter}:`, e))); Promise.all(promises).then(() => { this.setState({ availableInstances: instances }); }); }
     fetchEnums() { this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'getEnums', {}).then((res: any) => { if(res && res.success) { this.setState({ availableEnums: res.enums || [], availableRooms: res.rooms || [] }); } }); }
 
+    // --- NEW: THERMOSTAT DIAGNOSTICS ---
+    handleScanThermostats = () => {
+        this.setState({ isScanningThermostats: true });
+        this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'checkThermostats', {})
+            .then((res: any) => {
+                this.setState({ isScanningThermostats: false });
+                if(res && res.results) {
+                    this.setState({ thermostatDiagResults: res.results });
+                } else {
+                    this.showSnackbar('Keine Ergebnisse oder Timeout.', 'warning');
+                }
+            })
+            .catch(e => {
+                this.setState({ isScanningThermostats: false });
+                this.showSnackbar(`Fehler: ${e.message}`, 'error');
+            });
+    }
+
+    handleEditMapping = (sensorId: string, currentVal: string) => {
+        this.setState({ editMappingId: sensorId, editMappingValue: currentVal });
+    }
+
+    handleSaveMapping = (sensorId: string) => {
+        const newVal = this.state.editMappingValue.trim();
+        const newMap = { ...this.state.thermostatMapping };
+
+        if (newVal) newMap[sensorId] = newVal;
+        else delete newMap[sensorId]; // Delete if empty
+
+        this.setState({ thermostatMapping: newMap, editMappingId: null });
+        this.updateNativeValue('thermostatMapping', JSON.stringify(newMap));
+
+        // Refresh List locally
+        const list = [...this.state.thermostatDiagResults];
+        const item = list.find(x => x.sensorId === sensorId);
+        if (item) {
+            item.setpointId = newVal || '-';
+            item.isManual = !!newVal;
+            item.source = newVal ? 'Manuelles Mapping' : 'Refresh nötig...';
+            item.status = newVal ? 'OK' : 'Fehlt';
+        }
+        this.setState({ thermostatDiagResults: list });
+    }
+
+    renderThermostatSection(tooltipProps: any) {
+        return (
+            <Box sx={{p: 2}}>
+                <Alert severity="info" sx={{mb: 2}}>
+                    Überprüfen Sie hier, ob das System den richtigen Soll-Wert (Setpoint) für Ihre Temperatur-Sensoren gefunden hat.
+                    Dies ist wichtig für die Energie-Sparfunktionen (MPC).
+                </Alert>
+                <Button variant="contained" startIcon={<RefreshIcon/>} onClick={this.handleScanThermostats} disabled={this.state.isScanningThermostats}>
+                    {this.state.isScanningThermostats ? 'Scanne...' : 'Diagnose Starten'}
+                </Button>
+
+                {this.state.thermostatDiagResults.length > 0 && (
+                    <Table size="small" sx={{mt: 2}}>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Raum</TableCell>
+                                <TableCell>Sensor (Ist)</TableCell>
+                                <TableCell>Setpoint (Soll)</TableCell>
+                                <TableCell>Quelle</TableCell>
+                                <TableCell>Status</TableCell>
+                                <TableCell>Action</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {this.state.thermostatDiagResults.map(row => (
+                                <TableRow key={row.sensorId}>
+                                    <TableCell>{row.room}</TableCell>
+                                    <TableCell sx={{fontSize:'0.8rem', color:'text.secondary'}}>{row.sensorId}</TableCell>
+                                    <TableCell>
+                                        {this.state.editMappingId === row.sensorId ? (
+                                            <TextField size="small" fullWidth value={this.state.editMappingValue} onChange={e => this.setState({editMappingValue: e.target.value})} />
+                                        ) : (
+                                            <span style={{fontWeight: row.isManual ? 'bold' : 'normal'}}>{row.setpointId}</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>{row.source}</TableCell>
+                                    <TableCell>
+                                        <Chip label={row.status} color={row.status === 'OK' ? 'success' : 'error'} size="small" variant="outlined"/>
+                                    </TableCell>
+                                    <TableCell>
+                                        {this.state.editMappingId === row.sensorId ? (
+                                            <IconButton size="small" color="primary" onClick={() => this.handleSaveMapping(row.sensorId)}><SaveIcon/></IconButton>
+                                        ) : (
+                                            <IconButton size="small" onClick={() => this.handleEditMapping(row.sensorId, row.setpointId === '-' ? '' : row.setpointId)}><EditIcon/></IconButton>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </Box>
+        );
+    }
+
     renderContextDialog() { return ( <Dialog open={this.state.showContextDialog} onClose={() => this.setState({ showContextDialog: false })} maxWidth="sm" fullWidth><DialogTitle>Kontext-Daten (Live-Check)</DialogTitle><DialogContent dividers><Typography variant="subtitle2" color="primary" gutterBottom>Wetter-Status</Typography><Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}><Typography variant="body2" style={{ fontFamily: 'monospace' }}>{this.state.contextResult?.weather || 'Lade...'}</Typography></Paper><Typography variant="subtitle2" color="primary" gutterBottom>Kalender-Status (Gefiltert)</Typography><Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default', maxHeight: 200, overflow: 'auto' }}><Typography variant="body2" style={{ fontFamily: 'monospace' }}>{this.state.contextResult?.calendar || 'Lade...'}</Typography></Paper></DialogContent><DialogActions><Button onClick={() => this.setState({ showContextDialog: false })}>Schließen</Button></DialogActions></Dialog> ); }
     renderWizardDialog() {
+        // ... (Existing Wizard Code - Kept identical, just hidden for brevity in this response but MUST be in file) ...
         const { showWizard, wizardStep, scanFilters, scannedDevices, availableEnums, showEnumList } = this.state;
         return ( <Dialog open={showWizard} onClose={() => wizardStep !== 1 && this.setState({ showWizard: false })} maxWidth="md" fullWidth><DialogTitle>Auto-Discovery Wizard {wizardStep !== 1 && <IconButton onClick={() => this.setState({ showWizard: false })} sx={{ position: 'absolute', right: 8, top: 8 }}>x</IconButton>}</DialogTitle><DialogContent dividers>{wizardStep === 0 && <Box sx={{ p: 2 }}><Typography variant="h6" gutterBottom>Was soll gescannt werden?</Typography><FormGroup><FormControlLabel control={<Checkbox checked={scanFilters.motion} onChange={() => this.handleFilterChange('motion')} />} label="Bewegungsmelder" /><FormControlLabel control={<Checkbox checked={scanFilters.doors} onChange={() => this.handleFilterChange('doors')} />} label="Fenster & Türen" /><FormControlLabel control={<Checkbox checked={scanFilters.lights} onChange={() => this.handleFilterChange('lights')} />} label="Lichter & Schalter" /><Box sx={{ mt: 1, mb: 1 }}><FormControlLabel control={<Checkbox checked={scanFilters.temperature} onChange={() => this.handleFilterChange('temperature')} />} label="Temperatur / Klima" /><FormControlLabel control={<Checkbox checked={scanFilters.weather} onChange={() => this.handleFilterChange('weather')} color="warning" />} label="Wetterdaten (Alle Adapter)" /></Box>{availableEnums.length > 0 && (<Box sx={{ mt: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}><ListItemButton onClick={() => this.setState({ showEnumList: !showEnumList })}><ListItemText primary="Spezifische Funktionen" secondary={`${scanFilters.selectedFunctionIds.length} ausgewählt`} />{showEnumList ? <span>^</span> : <span>v</span>}</ListItemButton><Collapse in={showEnumList} timeout="auto" unmountOnExit><List component="div" disablePadding dense sx={{ maxHeight: 200, overflow: 'auto' }}>{availableEnums.map((en) => (<ListItem key={en.id} dense disablePadding><ListItemButton onClick={() => this.handleEnumToggle(en.id)}><ListItemIcon><Checkbox edge="start" checked={scanFilters.selectedFunctionIds.indexOf(en.id) !== -1} tabIndex={-1} disableRipple /></ListItemIcon><ListItemText primary={en.name} secondary={en.id} /></ListItemButton></ListItem>))}</List></Collapse></Box>)}</FormGroup></Box>}{wizardStep === 1 && <Box sx={{ width: '100%', mt: 4, mb: 4, textAlign: 'center' }}><LinearProgress /><Typography variant="h6" sx={{ mt: 2 }}>Suche Sensoren & analysiere Namen...</Typography></Box>}{wizardStep === 2 && <Box><List dense sx={{ width: '100%', bgcolor: 'background.paper', maxHeight: 400, overflow: 'auto' }}>{scannedDevices.map(d => { if(d.exists) return null; const isEnum = d._source && d._source === "Enum"; const confidence = d._score || 50; const color = confidence >= 80 ? "success" : (confidence >= 50 ? "warning" : "error"); return ( <ListItem key={d.id} disablePadding divider><ListItemButton onClick={() => this.handleToggleScannedDevice(scannedDevices.indexOf(d))} dense><ListItemIcon><Checkbox edge="start" checked={d.selected} tabIndex={-1} /></ListItemIcon><ListItemText primary={<Box sx={{display:'flex', alignItems:'center', gap: 1}}>{d.name || d.id}<Chip label={isEnum ? "Enum" : "AI-Scan"} size="small" color={isEnum ? "success" : "default"} variant="outlined" style={{height: 20, fontSize: '0.7rem'}}/>{d._source && d._source.includes("Heuristic") && <Chip label={`${confidence}%`} size="small" color={color} variant="outlined" style={{height: 20, fontSize: '0.7rem'}} icon={confidence<60 ? <HelpOutlineIcon style={{fontSize:14}}/> : <VerifiedIcon style={{fontSize:14}}/>}/>}</Box>} secondary={`${d.type} • ${d.location || '(Kein Raum)'}`} /></ListItemButton></ListItem> ); })}{scannedDevices.filter(d => d.exists).length > 0 && <Box sx={{p: 1, bgcolor: '#f0f0f0', color: '#666', fontSize:'0.8rem', fontWeight:'bold'}}>Bereits konfiguriert:</Box>}{scannedDevices.filter(d => d.exists).map(d => (<ListItem key={d.id} disablePadding divider><ListItemButton dense disabled><ListItemIcon><span>OK</span></ListItemIcon><ListItemText primary={d.name || d.id} secondary="Bereits aktiv" /></ListItemButton></ListItem>))}</List></Box>}</DialogContent><DialogActions>{wizardStep === 0 && <Button variant="contained" onClick={this.handleStartScan}>Scan Starten</Button>}{wizardStep === 2 && (<><Button onClick={() => this.setState({ wizardStep: 0 })}>Zurück</Button><Button onClick={this.handleSelectAll}>Alle</Button><Button onClick={this.handleDeselectAll}>Keine</Button><Box sx={{ flexGrow: 1 }} /><Button variant="contained" onClick={this.handleImportDevices} color="primary">{this.state.scannedDevices.filter(d => d.selected).length} Importieren</Button></>)}</DialogActions></Dialog> );
     }
@@ -135,6 +266,9 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
                 {/* REPORTING */}
                 <Accordion expanded={expandedAccordion === 'panel5'} onChange={this.handleAccordionChange('panel5')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Reporting & Kontext</Typography></AccordionSummary><AccordionDetails>{this.renderReportingSection(tooltipProps)}</AccordionDetails></Accordion>
+
+                {/* THERMOSTAT DIAGNOSE (NEU) */}
+                <Accordion expanded={expandedAccordion === 'panel6'} onChange={this.handleAccordionChange('panel6')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}><BuildIcon /> Thermostat-Diagnose (Experte)</Typography></AccordionSummary><AccordionDetails>{this.renderThermostatSection(tooltipProps)}</AccordionDetails></Accordion>
 
                 {/* NOTIFICATIONS */}
                 <Accordion expanded={expandedAccordion === 'panel3'} onChange={this.handleAccordionChange('panel3')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Benachrichtigungen</Typography></AccordionSummary><AccordionDetails>
