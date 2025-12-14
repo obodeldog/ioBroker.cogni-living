@@ -4,7 +4,7 @@ import time
 import os
 
 # LOGGING
-VERSION = "0.16.0 (Modular Micro-Kernel)"
+VERSION = "0.16.2 (MPC Upgrade)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -79,13 +79,21 @@ def process_message(msg):
             trend = health_brain.analyze_gait_speed(data.get("sequences", []))
             if trend is not None: send_result("GAIT_RESULT", {"speed_trend": trend})
 
-        # 3. ENERGY
+        # 3. ENERGY (MPC Upgrade)
         elif cmd == "TRAIN_ENERGY":
             success, details = energy_brain.train(data.get("points", []))
             send_result("ENERGY_TRAIN_RESULT", {"success": success, "details": details})
         elif cmd == "PREDICT_ENERGY":
             forecast = energy_brain.predict_cooling(data.get("current_temps", {}), data.get("t_out", 0))
             send_result("ENERGY_PREDICT_RESULT", {"forecast": forecast})
+        elif cmd == "OPTIMIZE_ENERGY":
+            # MPC: Coasting Calculation
+            proposals = energy_brain.get_optimization_advice(
+                data.get("current_temps", {}),
+                data.get("t_out", 0),
+                data.get("targets", {})
+            )
+            send_result("ENERGY_OPTIMIZE_RESULT", {"proposals": proposals})
 
         # 4. COMFORT
         elif cmd == "TRAIN_COMFORT":

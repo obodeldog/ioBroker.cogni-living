@@ -3,6 +3,7 @@ import pickle
 import pandas as pd
 import numpy as np
 import json
+import math
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENERGY_MODEL_PATH = os.path.join(BASE_DIR, "energy_model.pkl")
@@ -86,8 +87,7 @@ class EnergyBrain:
 
                 # B) Berechnung Heiz-Power (Heating)
                 # Wir suchen positive Gradienten (Aufwärmen)
-                heating_events = heating_phase[heating_phase['gradient'] < -0.05] # Warte, heating muss positiv sein!
-                # KORREKTUR: Heating muss > 0.1 sein
+                # KORREKTUR v0.16.1: Heating muss > 0.1 sein
                 heating_events = heating_phase[heating_phase['gradient'] > 0.1]
 
                 if len(heating_events) > 5:
@@ -118,7 +118,6 @@ class EnergyBrain:
             # Newtonsche Abkühlung (Vereinfacht): dT/dt = k * (T_in - T_out)
             # Da k bei uns schon der Gradient ist (z.B. -0.5), skalieren wir das leicht
             # Adaptiver Ansatz: Wenn es draußen sehr kalt ist, fällt Temp schneller.
-            # Unser k ist der "Basis-Verlust".
 
             rate = k
 
@@ -137,3 +136,58 @@ class EnergyBrain:
             }
 
         return forecasts
+
+    # --- MPC UPGRADE v0.16.2 ---
+    def get_optimization_advice(self, current_temps, t_out, targets=None):
+        """
+        Berechnet die 'Coasting Time': Wie lange bleibt der Raum warm,
+        wenn wir JETZT die Heizung abschalten?
+        """
+        if not self.is_ready:
+            return []
+
+        if targets is None:
+            targets = {} # Fallback
+
+        proposals = []
+
+        for room, t_in in current_temps.items():
+            # Standard-Zieltemperatur 21°C falls nicht anders definiert
+            t_target = targets.get(room, 21.0)
+
+            # Nur optimieren, wenn wir WÄRMER als Ziel sind
+            if t_in <= t_target:
+                continue
+
+            # Hole Isolations-Score (Grad pro Stunde Verlust)
+            loss_rate_per_hour = self.scores.get(room, -0.5)
+
+            # Sicherheits-Check: Rate muss negativ sein (Verlust)
+            if loss_rate_per_hour >= 0:
+                loss_rate_per_hour = -0.5
+
+            # Wie viel Puffer haben wir?
+            buffer = t_in - t_target
+
+            # Berechnung der Zeit (in Minuten)
+            # Formel: Zeit = Puffer / Verlustrate
+            # Bsp: Puffer 1.0°C / Verlust 0.5°C/h = 2h = 120min
+            hours_left = buffer / abs(loss_rate_per_hour)
+            minutes_left = int(hours_left * 60)
+
+            # Wir schlagen nur vor, wenn es sich lohnt (> 15 min)
+            if minutes_left > 15:
+                # Limit auf 4h, um unrealistische Werte bei Super-Isolation zu vermeiden
+                if minutes_left > 240: minutes_left = 240
+
+                proposals.append({
+                    "room": room,
+                    "minutes_safe": minutes_left,
+                    "target": t_target,
+                    "current": t_in,
+                    "savings_msg": f"Heizung kann {minutes_left} min ausbleiben."
+                })
+
+        # Sortieren nach höchstem Sparpotenzial
+        proposals.sort(key=lambda x: x['minutes_safe'], reverse=True)
+        return proposals
