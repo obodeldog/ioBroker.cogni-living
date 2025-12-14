@@ -58,7 +58,7 @@ class EnergyBrain:
                 if len(cooling_events) > 5:
                     results_insu[room] = float(cooling_events['gradient'].median())
 
-                # Heating (Power) - muss positiv sein
+                # Heating (Power)
                 heating_events = heating_phase[heating_phase['gradient'] > 0.1]
                 if len(heating_events) > 5:
                     results_heat[room] = float(heating_events['gradient'].median())
@@ -72,32 +72,58 @@ class EnergyBrain:
             return True, json.dumps({'insulation': self.scores, 'heating': self.heating})
         except Exception as e: return False, str(e)
 
-    def predict_cooling(self, current_temps, t_out):
+    def _get_effective_temp(self, t_out, t_forecast):
+        """Helper: Berechnet den Durchschnitt aus Jetzt und Forecast"""
+        if t_forecast is None: return t_out
+        return (t_out + t_forecast) / 2
+
+    def predict_cooling(self, current_temps, t_out, t_forecast=None):
+        """
+        Berechnet den Temperaturabfall für 1h und 4h.
+        UPGRADE: Nutzt jetzt auch den Forecast!
+        """
         if not self.is_ready: return {}
+
+        # Wir nutzen die effektive Temperatur für die Simulation
+        t_eff = self._get_effective_temp(t_out, t_forecast)
+
         forecasts = {}
         for room, t_in in current_temps.items():
             k = self.scores.get(room, -0.2)
+
+            # Newton: dT = k * (T_in - T_out)
+            # Wir nehmen an, k ist für ein delta von ca 15 Grad gelernt.
+            # Wir skalieren es grob für die aktuelle Situation.
+            # Einfachheitshalber: Wir nutzen k als Basis-Rate.
+
             rate = k
-            # Physik-Check
-            if t_in > t_out and rate > 0: rate = -0.1
-            if t_in < t_out and rate < 0: rate = 0.1
-            forecasts[room] = { "1h": round(t_in + rate, 1), "4h": round(t_in + (rate * 4), 1) }
+
+            # Physik-Korrektheit:
+            # Wenn es draußen wärmer ist als drinnen, wärmt sich der Raum auf (rate > 0)
+            if t_eff > t_in:
+                if rate < 0: rate = abs(rate) * 0.5 # Aufwärmen geht langsamer als Abkühlen (Isolation wirkt beidseitig)
+            else:
+                # Normalfall: Abkühlen
+                if rate > 0: rate = -0.2 # Fallback
+
+            # Berechnung
+            t_1h = t_in + rate
+            t_4h = t_in + (rate * 4)
+
+            forecasts[room] = {
+                "1h": round(t_1h, 1),
+                "4h": round(t_4h, 1)
+            }
         return forecasts
 
-    # --- MPC UPGRADE v0.16.3: Forecast Aware ---
     def get_optimization_advice(self, current_temps, t_out, targets=None, t_forecast=None):
         """
-        Berechnet Coasting Time.
-        t_forecast: Die vorhergesagte Außentemperatur in 1-2h.
+        Berechnet Coasting Time (MPC).
         """
         if not self.is_ready: return []
         if targets is None: targets = {}
 
-        # Wenn wir keinen Forecast haben, nehmen wir die aktuelle Temperatur (konservativ)
-        # Wenn Forecast da ist, nutzen wir den Mittelwert aus Jetzt und Später für die Simulation
-        effective_t_out = t_out
-        if t_forecast is not None:
-            effective_t_out = (t_out + t_forecast) / 2
+        t_eff = self._get_effective_temp(t_out, t_forecast)
 
         proposals = []
 
@@ -107,26 +133,8 @@ class EnergyBrain:
             # Nur wenn wir wärmer als Ziel sind
             if t_in <= t_target: continue
 
-            # Verlustrate (Score) gilt für Delta T = 1 Kelvin (vereinfacht)
-            # Wir müssen skalieren: Verlust ist höher, wenn es draußen kälter ist.
-            # dT/dt = k * (T_in - T_out)
-            # Unser 'k' im Model ist bereits dT/dt für den Durchschnitt.
-            # Wir verfeinern das:
-
             base_k = self.scores.get(room, -0.5)
-            if base_k >= 0: base_k = -0.5 # Safety
-
-            # Simulation: Wie verhält sich der Raum JETZT bei effective_t_out?
-            # Wir nehmen an, base_k wurde bei ca. 10 Grad Delta gelernt.
-            # Scaling Factor (Physik-Näherung)
-            current_delta = t_in - effective_t_out
-            if current_delta < 1: current_delta = 1 # Vermeide Division/Logic Fehler im Sommer
-
-            # Dynamische Verlustrate für die aktuelle Situation
-            # Wenn Delta riesig (Winter), verlieren wir schneller.
-            # Wir nehmen base_k als Referenz (z.B. bei Delta 15)
-            # estimated_loss = base_k * (current_delta / 15.0)
-            # Einfacher: Wir nutzen base_k direkt, da es der Median aller Messungen ist.
+            if base_k >= 0: base_k = -0.5
 
             loss_per_hour = abs(base_k)
 
@@ -135,9 +143,17 @@ class EnergyBrain:
             hours_left = buffer / loss_per_hour
             minutes_left = int(hours_left * 60)
 
-            # Forecast Bonus: Wenn es draußen wärmer wird als jetzt, hält es länger
-            if t_forecast is not None and t_forecast > t_out:
-                minutes_left += int((t_forecast - t_out) * 10) # Bonus Minuten
+            # Forecast Einfluss (Explizit)
+            # Wenn es draußen kälter wird (t_eff < t_out), kühlt es schneller aus -> weniger Minuten.
+            # Wenn es wärmer wird, hält es länger.
+            # Wir modellieren das über das Delta.
+
+            delta_now = t_in - t_out
+            delta_eff = t_in - t_eff
+
+            if delta_eff != 0 and delta_now != 0:
+                factor = delta_now / delta_eff # Z.B. 10 / 12 = 0.83 (Es wird kälter, Zeit schrumpft)
+                minutes_left = int(minutes_left * factor)
 
             if minutes_left > 15:
                 if minutes_left > 240: minutes_left = 240

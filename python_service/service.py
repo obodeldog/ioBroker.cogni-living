@@ -4,7 +4,7 @@ import time
 import os
 
 # LOGGING
-VERSION = "0.16.3 (Forecast MPC)"
+VERSION = "0.16.5 (Full Forecast Integration)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -79,11 +79,17 @@ def process_message(msg):
         elif cmd == "TRAIN_ENERGY":
             success, details = energy_brain.train(data.get("points", []))
             send_result("ENERGY_TRAIN_RESULT", {"success": success, "details": details})
+
         elif cmd == "PREDICT_ENERGY":
-            forecast = energy_brain.predict_cooling(data.get("current_temps", {}), data.get("t_out", 0))
+            # UPGRADE: Nutzt jetzt auch Forecast für Trägheit
+            forecast = energy_brain.predict_cooling(
+                data.get("current_temps", {}),
+                data.get("t_out", 0),
+                data.get("t_forecast", None)
+            )
             send_result("ENERGY_PREDICT_RESULT", {"forecast": forecast})
+
         elif cmd == "OPTIMIZE_ENERGY":
-            # MPC mit Forecast Parameter
             proposals = energy_brain.get_optimization_advice(
                 data.get("current_temps", {}),
                 data.get("t_out", 0),
