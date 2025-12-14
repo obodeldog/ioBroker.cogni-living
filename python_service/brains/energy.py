@@ -77,12 +77,14 @@ class EnergyBrain:
         if t_forecast is None: return t_out
         return (t_out + t_forecast) / 2
 
-    def predict_cooling(self, current_temps, t_out, t_forecast=None):
+    # UPDATE: New signature to support solar data
+    def predict_cooling(self, current_temps, t_out, t_forecast=None, is_sunny=False, solar_flags=None):
         """
         Berechnet den Temperaturabfall für 1h und 4h.
-        UPGRADE: Nutzt jetzt auch den Forecast!
+        UPGRADE: Nutzt jetzt auch den Forecast + Solar Gain!
         """
         if not self.is_ready: return {}
+        if solar_flags is None: solar_flags = {}
 
         # Wir nutzen die effektive Temperatur für die Simulation
         t_eff = self._get_effective_temp(t_out, t_forecast)
@@ -90,13 +92,15 @@ class EnergyBrain:
         forecasts = {}
         for room, t_in in current_temps.items():
             k = self.scores.get(room, -0.2)
-
-            # Newton: dT = k * (T_in - T_out)
-            # Wir nehmen an, k ist für ein delta von ca 15 Grad gelernt.
-            # Wir skalieren es grob für die aktuelle Situation.
-            # Einfachheitshalber: Wir nutzen k als Basis-Rate.
-
             rate = k
+
+            # --- NEU: SOLAR GAIN LOGIC ---
+            # Wenn die Sonne scheint und der Raum als "is_solar" (Südfenster) markiert ist,
+            # addieren wir einen Wärme-Bonus auf die Rate.
+            # Ein positiver Wert wirkt der Auskühlung entgegen (oder heizt sogar auf).
+            if is_sunny and solar_flags.get(room, False):
+                # +0.5 Grad pro Stunde Bonus bei direkter Sonne
+                rate += 0.5 
 
             # Physik-Korrektheit:
             # Wenn es draußen wärmer ist als drinnen, wärmt sich der Raum auf (rate > 0)
@@ -104,7 +108,10 @@ class EnergyBrain:
                 if rate < 0: rate = abs(rate) * 0.5 # Aufwärmen geht langsamer als Abkühlen (Isolation wirkt beidseitig)
             else:
                 # Normalfall: Abkühlen
-                if rate > 0: rate = -0.2 # Fallback
+                if rate > 0: 
+                    # Wenn wir hier noch positiv sind (trotz kälterer Außentemp), 
+                    # dann nur wegen massivem Solar-Gain! Das erlauben wir.
+                    pass 
 
             # Berechnung
             t_1h = t_in + rate
@@ -112,7 +119,8 @@ class EnergyBrain:
 
             forecasts[room] = {
                 "1h": round(t_1h, 1),
-                "4h": round(t_4h, 1)
+                "4h": round(t_4h, 1),
+                "solar_bonus": is_sunny and solar_flags.get(room, False)
             }
         return forecasts
 
