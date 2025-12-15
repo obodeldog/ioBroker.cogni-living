@@ -2,93 +2,89 @@
 
 ![Logo](admin/cogni-living.png)
 
-**Künstliche Intelligenz für Ihr Zuhause: Sicherheit, Gesundheit & Komfort in einem System.**
+**Neuro-Symbolische Autonomie für Ihr Zuhause.**
+*Beyond Automation: Sicherheit, Energie, Gesundheit & Komfort – getrieben von Deep Learning & Gemini.*
 
-> **"Ein Smart Home ist erst dann smart, wenn es sich um Sie sorgt."**
-
-Cogni-Living ist weit mehr als eine einfache Automation. Es ist ein intelligenter Wächter, der Google Gemini KI nutzt, um die komplexen Verhaltensmuster in Ihrem Haushalt zu verstehen. Es erkennt nicht nur, *dass* sich etwas bewegt – es versteht, *ob* diese Bewegung normal, ungewöhnlich oder sogar gefährlich ist.
-
-## 🎯 Wofür ist dieses System gedacht?
-
-Cogni-Living wurde entwickelt, um drei zentrale Bedürfnisse abzudecken:
-
-1.  **Ambient Assisted Living (AAL) & Senioren-Schutz:**
-    Ermöglicht älteren Menschen, länger sicher allein zu wohnen. Das System erkennt Stürze (durch Inaktivität an ungewöhnlichen Orten) oder schleichende Veränderungen im Tagesablauf, ohne dass Kameras oder tragbare Notrufknöpfe nötig sind.
-
-2.  **Sicherheit & Einbruchschutz:**
-    Unterscheidet zwischen "Bewohner steht nachts auf" und "Fremder im Haus". Im Urlaubsmodus wird jede Aktivität sofort gemeldet.
-
-3.  **Komfort & Der Butler:**
-    Lernt Ihre Gewohnheiten ("Immer wenn ich ins Bad gehe, mache ich das Licht an") und bietet Ihnen an, diese Aufgaben künftig automatisch zu erledigen.
+> **"Regelbasierte Smart Homes waren gestern. Cogni-Living ist ein adaptiver Organismus, der die Physik Ihres Hauses versteht und Ihre Intentionen vorausahnt."**
 
 ---
 
-## 🛡️ Wie es funktioniert: Das 3-Phasen Neuro-Modell
+## 🧠 Was macht dieses System einzigartig?
 
-Das System analysiert Daten auf drei Zeitebenen gleichzeitig, ähnlich wie das menschliche Gehirn:
+Cogni-Living ist kein gewöhnlicher Adapter. Es ist eine **Hybrid-AI Engine**, die klassische IoT-Steuerung mit modernster Forschung aus den Bereichen **Deep Learning** und **Large Language Models (LLM)** verbindet.
 
-### Phase 1: Der Sofort-Wächter (Ad-Hoc)
-* **Reagiert:** Sofort (Echtzeit).
-* **Erkennt:** Akute Notfälle.
-* *Beispiel:* Jemand geht ins Bad, aber kommt nach 60 Minuten immer noch nicht heraus. Oder: Es ist 09:00 Uhr morgens und noch keine Bewegung im Haus (obwohl der Bewohner gewöhnlich um 07:00 Uhr aufsteht).
-* **Aktion:** Sendet sofort Alarm per Telegram/Pushover ("Verdächtige Stille!").
+Anstatt manuell Skripte zu schreiben ("Wenn Bewegung, dann Licht"), trainiert Cogni-Living **drei spezialisierte neuronale Netze** direkt auf Ihrer Hardware:
 
-### Phase 2: Der Gesundheits-Check (Short-Term Baseline)
-* **Reagiert:** Betrachtet die letzten 14 Tage.
-* **Erkennt:** Akute Erkrankungen oder Stress.
-* *Beispiel:* Der Bewohner muss nachts plötzlich 5x auf die Toilette (Normalwert: 1x). Dies deutet auf einen Infekt oder Schlafstörungen hin.
-* **Aktion:** Hinweis im "Guten Morgen"-Briefing.
-
-### Phase 3: Die Langzeit-Analyse (Long-Term Drift)
-* **Reagiert:** Vergleicht die letzten 60 Tage.
-* **Erkennt:** Schleichenden Verfall (Drift).
-* *Beispiel:* Die Mobilität nimmt über Monate hinweg um 20% ab. Die Zeit im Bett steigt stetig an. Solche Änderungen fallen im Alltag oft nicht auf, sind aber medizinisch hochrelevant.
-* **Aktion:** Bericht im Dashboard (Pro Feature).
+1.  **LSTM Autoencoder (Long Short-Term Memory):** Lernt komplexe zeitliche Muster ("Normalität") und erkennt Anomalien (Einbruch, Krankheit) anhand des Rekonstruktionsfehlers.
+2.  **GCN (Graph Neural Networks):** Versteht die Topologie Ihres Hauses. Es weiß, dass Küche und Flur verbunden sind und filtert "Teleportations-Fehler" oder Geister-Bewegungen heraus.
+3.  **PINN (Physics-Informed Neural Networks):** Ein KI-Modell, das die Thermodynamik Ihres Gebäudes lernt. Es versteht Dämmwerte, solare Gewinne und Heizkurven physikalisch korrekt.
 
 ---
 
-## 💎 Free vs. Pro Version
+## 🏛️ Die 4 Säulen der Autonomie
 
-Der Adapter ist voll funktionsfähig und kostenlos. Für Nutzer, die tiefgehende Langzeit-Analysen benötigen, gibt es erweiterte Funktionen.
+### 1. 🛡️ SECURITY: Adaptive Immunität
+*Mehr als nur ein Alarmsystem. Ein Wächter, der den Kontext versteht.*
 
-| Funktion | Free Version (Standard) | Pro Version (Lizenz) |
+* **Spatio-Temporal Awareness:** Das System unterscheidet nicht nur "Bewegung ja/nein", sondern analysiert die *Sequenz* und *Geschwindigkeit*. Ein Einbrecher bewegt sich anders als ein Bewohner.
+* **Few-Shot Learning (Party-Modus):** Dank adaptiver Overlay-Modelle lernt das System temporäre Abweichungen (Gäste, Handwerker) in Sekunden, ohne das Langzeitgedächtnis zu verwässern.
+* **Zero-Trust Architektur:** Im Urlaubsmodus gelten verschärfte Regeln. Jede Anomalie wird sofort an die KI zur Bewertung gesendet.
+
+### 2. 🍃 ENERGY: Der Physikalische Zwilling
+*Heizen mit Prädiktion statt Reaktion. Spart Energie, bevor sie verschwendet wird.*
+
+* **PINN-Technologie:** Das System berechnet live den **Isolations-Score** (Wie schnell kühlt der Raum aus?) und den **Heating-Score** (Wie schnell heizt er auf?).
+* **Smart Schedule Automation:** Verknüpft Ihren Kalender mit der Physik. Wenn Sie "Urlaub Ende 18:00" eintragen, berechnet die KI exakt: "Ich muss um 14:23 Uhr starten, damit es punktgenau 21°C hat".
+* **Virtual Sensing (Ventilation Detective):** Erkennt offene Fenster rein durch die Analyse von Temperaturstürzen (>3°C/h), selbst ohne physische Fenstersensoren.
+* **MPC (Model Predictive Control):** Nutzt Wettervorhersagen und thermische Trägheit ("Coasting"), um die Heizung früher abzuschalten und Restwärme zu nutzen.
+
+### 3. 🛋️ COMFORT: Der unsichtbare Butler
+*Zero-UI: Das beste Interface ist kein Interface.*
+
+* **Prädiktive Automation:** Das GCN berechnet die Wahrscheinlichkeit Ihres nächsten Raums. Das Licht im Bad geht schon an, *bevor* Sie die Tür öffnen.
+* **Intent Learning:** Erkennt komplexe Zusammenhänge ("Wenn TV an und Uhrzeit > 20:00, dann Licht gedimmt").
+* **LLM-Agenten:** Google Gemini fungiert als "Cortex", der komplexe Situationen bewertet und Entscheidungen in natürlicher Sprache erklärt.
+
+### 4. ❤️ HEALTH: Digital Phenotyping
+*Medizinische Frühwarnung ohne Kameras oder Wearables.*
+
+* **Gait Speed Proxy:** Misst schleichende Veränderungen in der Gehgeschwindigkeit über Monate hinweg – ein wichtiger Vitalindikator.
+* **Langzeit-Drift-Analyse:** Erkennt, wenn sich Schlafmuster oder Aktivitätsniveaus subtil verschlechtern (z.B. Anzeichen von Depression oder beginnender Demenz).
+* **Kontext-Sensitiver Totmann-Schalter:** Ein Notruf, der nicht stur nach Zeit geht, sondern nach Wahrscheinlichkeit. ("Bewohner ist im Bad, kommt statistisch nach 15 min zurück. Nach 45 min -> Alarm").
+
+---
+
+## 🚀 Technologie-Stack
+
+Dieses Projekt ist "State of the Art" Engineering:
+
+* **Backend:** Node.js (ioBroker) als Orchestrator.
+* **AI Core:** Python Sidecar (voll integriert, installiert sich selbst).
+* **Libraries:** TensorFlow/PyTorch (für PINNs), Scikit-Learn (für Anomalie-Erkennung), NetworkX (für Graphen).
+* **Cloud AI:** Google Gemini Pro/Flash (für semantisches Verstehen & Reporting).
+
+---
+
+## 💎 Features & Versionen
+
+| Feature | Standard (Free) | Pro (Neural Link) |
 | :--- | :---: | :---: |
-| **KI-Analyse (Gemini)** | ✅ Ja | ✅ Ja |
-| **Notfall-Erkennung (Phase 1)** | ✅ Ja | ✅ Ja |
+| **Google Gemini Integration** | ✅ Ja | ✅ Ja |
 | **Auto-Discovery Wizard** | ✅ Ja | ✅ Ja |
-| **Family Link (Telegram Alarme)** | ✅ Ja | ✅ Ja |
-| **Der Butler (Automation)** | ✅ Ja | ✅ Ja |
-| **Langzeit-Gedächtnis (LTM)** | ❌ Nein (Nur Live-Logs) | ✅ Ja (Datenbank) |
-| **Drift-Analyse (Phase 3)** | ❌ Nein | ✅ Ja |
-| **Python Statistik-Engine** | ❌ Nein | ✅ Ja |
-| **Arzt-Export (PDF Report)** | ❌ Nein | ✅ Ja |
+| **LSTM Anomaly Detection** | ✅ Ja | ✅ Ja |
+| **Ventilation Detective (Virtual Sensing)** | ✅ Ja | ✅ Ja |
+| **Energy: Smart Warm-Up (Kalender)** | ❌ Nein | ✅ Ja |
+| **Energy: PINN (Physics AI)** | ❌ Nein | ✅ Ja |
+| **Health: Drift-Analyse & GCN-Filter** | ❌ Nein | ✅ Ja |
+| **Security: Few-Shot Learning (Party)** | ❌ Nein | ✅ Ja |
 
 ---
 
-## 🚀 Installation & Einrichtung (Zero-Config)
+## ⚖️ Disclaimer & Sicherheit
 
-### 1. Adapter installieren
-Installieren Sie den Adapter wie gewohnt über ioBroker. Das System prüft automatisch, ob Python vorhanden ist und installiert es bei Bedarf nach (Linux).
-
-### 2. KI verbinden
-Holen Sie sich einen kostenlosen API-Key im [Google AI Studio](https://aistudio.google.com/) und tragen Sie ihn in den Einstellungen ein.
-
-### 3. Sensoren finden
-Starten Sie im Tab "Sensoren" den **Auto-Discovery Wizard**. Der Adapter durchsucht Ihr Haus nach Bewegungsmeldern, Türsensoren und Lichtern und fügt diese automatisch hinzu.
-
-### 4. Hybrid-Engine (Selbstheilung)
-Beim ersten Start prüft der Adapter, ob alle KI-Bibliotheken (Numpy, Pandas) vorhanden sind. Falls nicht, lädt er diese **automatisch** im Hintergrund nach. Sie müssen in der Regel keine Linux-Befehle eingeben.
-
----
-
-## ⚖️ WICHTIGER RECHTLICHER HINWEIS (Disclaimer)
-
-**BITTE SORGFÄLTIG LESEN:**
-
-1.  **Kein Medizinprodukt:** Diese Software ist **KEIN** Medizinprodukt gemäß der Verordnung (EU) 2017/745. Sie dient ausschließlich Informations- und Komfortzwecken im Bereich "Smart Home".
-2.  **Keine Notfall-Garantie:** Verlassen Sie sich in gesundheitlichen Notfällen oder bei Lebensgefahr **NIEMALS** allein auf diese Software. Technik kann ausfallen (Stromausfall, Internetabbruch, Softwarefehler).
-3.  **Haftungsausschluss:** Der Entwickler übernimmt keinerlei Haftung für Schäden, die aus der Nutzung, Fehlfunktion oder Interpretation der Daten entstehen.
-4.  **Datenschutz:** Die Analyse erfolgt über die Google Gemini API. Sensordaten werden zur Auswertung an Google gesendet. Stellen Sie sicher, dass dies mit Ihren Datenschutzanforderungen vereinbar ist.
+1.  **Kein Medizinprodukt:** Software ersetzt keinen Arzt. Dient zur Unterstützung (AAL).
+2.  **Privacy First:** Lokale Modelle (Random Forest, LSTM) laufen auf Ihrer Hardware. Nur für komplexe Text-Analysen werden anonymisierte Daten an Gemini gesendet.
+3.  **Haftung:** Nutzung auf eigene Gefahr. Verlassen Sie sich bei Lebensgefahr nicht auf Smart-Home-Technik.
 
 ---
 
