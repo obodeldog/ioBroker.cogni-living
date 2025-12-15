@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 # LOGGING
-VERSION = "0.17.3 (Ventilation & Warmup)"
+VERSION = "0.17.5 (Adaptive Security)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -56,16 +56,28 @@ def process_message(msg):
         if cmd == "TRAIN_SECURITY":
             success, details, thresh = security_brain.train(data.get("sequences", []))
             send_result("TRAINING_COMPLETE", {"success": success, "details": details, "threshold": thresh})
+
         elif cmd == "ANALYZE_SEQUENCE":
             score, is_anomaly, explanation = security_brain.predict(data.get("sequence", {}))
             send_result("SECURITY_RESULT", {"anomaly_score": score, "is_anomaly": is_anomaly, "explanation": explanation})
+
         elif cmd == "SET_TOPOLOGY":
             security_brain.graph.update_topology(data)
             send_result("TOPOLOGY_ACK", {"success": True})
+
         elif cmd == "SIMULATE_SIGNAL":
             room = data.get("room")
             neighbors = security_brain.graph.propagate_signal(room)
             send_result("SIGNAL_RESULT", {"room": room, "propagation": neighbors})
+
+        # --- NEU: FEW-SHOT LEARNING TRIGGER ---
+        elif cmd == "SET_LEARNING_MODE":
+            active = data.get("active", False)
+            duration = data.get("duration", 0) # Minuten
+            label = data.get("label", "manual")
+            security_brain.set_learning_mode(active, duration, label)
+            log(f"Security Learning Mode set to {active} ({label})")
+        # --------------------------------------
 
         # 2. HEALTH
         elif cmd == "TRAIN_HEALTH":
