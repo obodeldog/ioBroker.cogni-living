@@ -7,88 +7,85 @@
 **Neuro-Symbolic Autonomy for your Smart Home.**
 *Beyond Automation: Security, Energy, Health & Comfort – powered by Deep Learning & Gemini.*
 
-> **"A smart home that simply follows rules is dumb. Cogni-Living is a cognitive organism that understands the physics of your building, learns your habits, and acts proactively."**
+> **"Rule-based smart homes are history. Cogni-Living is an adaptive organism that understands the physics of your building and anticipates your intentions."**
 
 ---
 
-## 🔬 The Technology: Deep Tech "Under the Hood"
+## 🧠 What makes this system unique?
 
-Cogni-Living is fundamentally different from traditional adapters. It is not a collection of `if/else` scripts, but a **Hybrid-AI Engine** connecting Node.js (for I/O) with a high-performance Python sidecar (for Data Science).
+Cogni-Living is not just another adapter. It is a **Hybrid-AI Engine** that bridges the gap between classic IoT control and cutting-edge research in **Deep Learning** and **Large Language Models (LLM)**.
 
-We utilize algorithms typically found in **Autonomous Driving** or **Medical Technology**:
+Instead of manually writing scripts ("If motion, then light"), Cogni-Living trains **three specialized neural networks** directly on your local hardware:
 
-### 1. Spatio-Temporal Graph Convolutional Networks (ST-GCN)
-Traditional alarm systems see sensors as isolated points. Cogni-Living sees them as a **Graph**.
-* **The Matrix:** The system learns the topology of your home (which room connects to which?).
-* **The Benefit:** It detects "Teleportation". If a motion sensor triggers in the basement, and 1 second later in the attic, the GCN knows: This is physically impossible (Ghost/False Alarm) because the path through the hallway is missing.
-
-### 2. LSTM Autoencoder (Anomaly Detection)
-A neural network (Long Short-Term Memory) trained to reconstruct your **normal daily life**.
-* **The Logic:** The network compresses the daily routine and attempts to reproduce it.
-* **The Alarm:** In case of break-ins or medical emergencies, the "Reconstruction Error" spikes. The system alerts you because the situation *mathematically* does not fit the learned model – without rigid thresholds.
-
-### 3. Physics-Informed Neural Networks (PINNs)
-We combine AI with the laws of thermodynamics.
-* **The Model:** A neural network learns your home's heating curve but is penalized by a physical "Loss Function" if it violates thermodynamic laws.
-* **The Result:** Extremely precise predictions of temperature trends, insulation, and solar gains, even with sparse data points.
+1.  **LSTM Autoencoder (Long Short-Term Memory):** Learns complex temporal patterns ("Normality") and detects anomalies based on reconstruction errors.
+2.  **GCN (Graph Neural Networks):** Understands the topology of your home. It knows that the kitchen connects to the hallway, filtering out "teleportation errors" or ghost movements.
+3.  **PINN (Physics-Informed Neural Networks):** An AI model that learns the thermodynamics of your building. It understands insulation values, solar gains, and heating curves with physical accuracy.
 
 ---
 
 ## 🏛️ The 4 Pillars of Autonomy
 
 ### 1. 🛡️ SECURITY: Adaptive Immunity
-*A guardian that understands context and doesn't annoy.*
+*More than just an alarm system. A guardian that understands context.*
 
-* **Few-Shot Learning (Party Mode):** Classical AI takes weeks to learn. Our "Adaptive Immunity" learns temporary patterns (guests, workmen) in seconds. One click on "Party", and the system tolerates deviations for that evening without diluting long-term memory.
-* **Zero-Trust Vacation:** In vacation mode, tolerance is set to zero. Every sensory anomaly is sent to **Google Gemini** for a semantic threat assessment.
+* **Spatio-Temporal Awareness:** Analyzes the *sequence* and *velocity* of movements. An intruder moves differently than a resident.
+* **Few-Shot Learning (Party Mode):** Thanks to adaptive overlay models, the system tolerates temporary deviations (guests, workmen) instantly without diluting its long-term memory.
+* **Zero-Trust Architecture:** In vacation mode, strict rules apply. Any anomaly is immediately sent to the AI for evaluation.
 
 ### 2. 🍃 ENERGY: The Thermodynamic Twin
-*Heating with precision instead of general assumptions.*
+*Heating by prediction, not reaction. Saves energy before it's wasted.*
 
-* **Smart Schedule Automation:** Reads your **iCal calendar**.
-    * Entry *"Vacation End 18:00"*: The PINN calculates the exact lead time based on outside temp and insulation. Heating starts e.g., at 14:23 to reach exactly 21°C upon arrival.
-    * Entry *"Jana arriving"*: The system recognizes the room name and pre-heats only the child's room.
-* **Ventilation Detective (Virtual Sensing):** Detects open windows purely by analyzing temperature gradients (>3°C/h drop), even in rooms without window contacts.
-* **Valve-Health-Check:** Permanently monitors if valve actuators respond plausibly to room temperature to identify defects or hydraulic issues.
+* **PINN Technology:** Calculates live **Insulation Scores** (passive cooling rate) and **Heating Scores** (active heating rate).
+* **Smart Schedule Automation:** Links your calendar with physics. If you enter "Vacation End 18:00", the AI calculates: "I need to start at 14:23 to reach exactly 21°C."
+* **Virtual Sensing (Ventilation Detective):** Detects open windows purely by analyzing temperature gradients (>3°C/h), even without physical window sensors.
+* **MPC (Model Predictive Control):** Uses weather forecasts and thermal inertia ("Coasting") to cut heating early and utilize residual heat.
 
 ### 3. 🛋️ COMFORT: The Invisible Butler
-*Zero-UI: The house acts before you command it.*
+*Zero-UI: The best interface is no interface.*
 
-* **Predictive Path Automation:** Based on GCN probabilities, the house knows where you are going. The hallway light dims up *before* you open the living room door.
-* **Intent Recognition:** Learns complex contexts ("If TV is on AND time > 8 PM AND brightness < 100 lux -> Set Scene 'Cinema'").
-* **LLM Agent (The Cortex):** You can chat with your home. Ask: *"Why is the bathroom heating on?"* and get a logical answer: *"Because, according to the calendar, I expect you home in 30 minutes."*
+* **Predictive Automation:** The GCN calculates the probability of your next room. The bathroom light turns on *before* you even open the door.
+* **Intent Learning:** Recognizes complex contexts ("If TV is on AND time > 8 PM, then dim lights").
+* **LLM Agents:** Google Gemini acts as the "Cortex", evaluating complex situations and explaining decisions in natural language.
 
 ### 4. ❤️ HEALTH: Digital Phenotyping
-*Preventive medicine via behavioral analysis (Ambient Assisted Living).*
+*Medical-grade monitoring without cameras or wearables.*
 
-* **Gait Speed Proxy:** Subtly measures walking speed in transit areas (hallways). A gradual slowdown over months can be an early warning sign of health issues.
-* **Long-Term Drift Analysis:** Detects changes in biorhythms (sleep disorders, nocturnal restlessness, social isolation) and visualizes these trends in the dashboard.
-* **Context-Aware Dead Man Switch:** An emergency alarm using probabilities. If someone enters the bathroom, the system statistically expects a return after X minutes. If absent, a gentle query follows, then an alarm.
-
----
-
-## 🚀 Installation & Setup
-
-1.  **Install Adapter:** Via ioBroker Admin or GitHub. (Python environment is set up automatically).
-2.  **API Key:** Get a free Google Gemini API Key and save it in settings.
-3.  **Auto-Discovery:** Start the wizard in the "Sensors" tab. It automatically finds lights, thermostats, and window contacts.
-4.  **Calendar (Optional):** Link your iCal instance for Smart Schedule control.
+* **Gait Speed Proxy:** Measures subtle changes in walking speed over months – a vital health indicator.
+* **Long-Term Drift Analysis:** Detects if sleep patterns or activity levels deteriorate over time (e.g., signs of depression or early dementia).
+* **Context-Aware Dead Man Switch:** An emergency alarm based on probability, not just time. ("Resident is in the bath, statistically returns after 15 min. After 45 min -> Alarm").
 
 ---
 
-## 📊 The Mission Control Dashboard
+## 🚀 Tech Stack
 
-Cogni-Living comes with its own professional React frontend:
-* **Real-time Matrix:** Watch the neural networks fire live.
-* **Thermodynamic Visualization:** Graphic representation of the building envelope (Insulation vs. Power).
-* **Diagnostic Tools:** Check if valves and sensors are correctly mapped.
+This project is state-of-the-art engineering:
+
+* **Backend:** Node.js (ioBroker) as Orchestrator.
+* **AI Core:** Python Sidecar (fully integrated, auto-installing).
+* **Libraries:** TensorFlow/PyTorch (for PINNs), Scikit-Learn (for Anomaly Detection), NetworkX (for Graphs).
+* **Cloud AI:** Google Gemini Pro/Flash (for semantic reasoning & reporting).
 
 ---
 
-## ⚖️ Disclaimer & Safety
+## 💎 Features & Versions
+
+| Feature | Standard (Free) | Pro (Neural Link) |
+| :--- | :---: | :---: |
+| **Google Gemini Integration** | ✅ Yes | ✅ Yes |
+| **Auto-Discovery Wizard** | ✅ Yes | ✅ Yes |
+| **LSTM Anomaly Detection** | ✅ Yes | ✅ Yes |
+| **Ventilation Detective (Virtual Sensing)** | ✅ Yes | ✅ Yes |
+| **Energy: Smart Warm-Up (Calendar)** | ❌ No | ✅ Yes |
+| **Energy: PINN (Physics AI)** | ❌ No | ✅ Yes |
+| **Health: Drift Analysis & GCN Filter** | ❌ No | ✅ Yes |
+| **Security: Few-Shot Learning (Party)** | ❌ No | ✅ Yes |
+
+---
+
+## ⚖️ Disclaimer
 
 1.  **Not a Medical Device:** Software does not replace a doctor. Intended for assistance (AAL).
-2.  **Privacy First:** Local models (Random Forest, LSTM) run on your hardware (Edge Computing). Only anonymized metadata is sent to Gemini for complex text analysis.
+2.  **Privacy First:** Local models (Random Forest, LSTM) run on your hardware. Only anonymized data is sent to Gemini for complex text analysis.
 3.  **Liability:** Use at your own risk. Never rely solely on smart home tech in life-threatening situations.
 
 ---
