@@ -27,7 +27,8 @@ interface ScannedDevice { id: string; name: string; location: string; type: stri
 interface ScanFilters { motion: boolean; doors: boolean; lights: boolean; temperature: boolean; weather: boolean; selectedFunctionIds: string[]; }
 interface EnumItem { id: string; name: string; }
 
-interface ThermostatDiagItem { room: string; sensorId: string; setpointId: string; source: string; isManual: boolean; status: string; }
+// UPDATE: Added valveId
+interface ThermostatDiagItem { room: string; sensorId: string; setpointId: string; valveId?: string; source: string; isManual: boolean; status: string; }
 
 interface SettingsState {
     devices: DeviceConfig[]; presenceDevices: string[]; outdoorSensorId: string; geminiApiKey: string; analysisInterval: number; minDaysForBaseline: number;
@@ -134,7 +135,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     handleSnackbarClose = (event?: React.SyntheticEvent | Event, reason?: string) => { if (reason === 'clickaway') return; this.setState({ snackbarOpen: false }); };
     collectUniqueLocations() { const fromDevices = this.state.devices.map(d => d.location).filter(l => l); const fromIoBroker = this.state.availableRooms; return Array.from(new Set([...fromIoBroker, ...fromDevices])).sort(); }
 
-    // UPDATE: Added weatherunderground to scan list
     fetchAvailableInstances() { const adapters = ['telegram', 'pushover', 'email', 'whatsapp-cmb', 'signal-cma', 'accuweather', 'daswetter', 'weatherunderground', 'ical']; const instances: Record<string, string[]> = {}; const promises = adapters.map(adapter => this.props.socket.getAdapterInstances(adapter).then(objs => { instances[adapter] = objs.map(obj => obj._id.replace('system.adapter.', '')); }).catch(e => console.error(`Error fetching instances for ${adapter}:`, e))); Promise.all(promises).then(() => { this.setState({ availableInstances: instances }); }); }
 
     fetchEnums() { this.props.socket.sendTo(`${this.props.adapterName}.${this.props.instance}`, 'getEnums', {}).then((res: any) => { if(res && res.success) { this.setState({ availableEnums: res.enums || [], availableRooms: res.rooms || [] }); } }); }
@@ -187,11 +187,11 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         return (
             <Box sx={{p: 2}}>
                 <Alert severity="info" sx={{mb: 2}}>
-                    Überprüfen Sie hier, ob das System den richtigen Soll-Wert (Setpoint) für Ihre Temperatur-Sensoren gefunden hat.
-                    Dies ist wichtig für die Energie-Sparfunktionen (MPC).
+                    Hier sehen Sie, ob Cogni-Living die Verbindung zwischen Temperatur (Ist), Setpoint (Soll) UND <b>Ventil (Stellgröße)</b> gefunden hat.
+                    <br/>Ohne Ventil-Erkennung kann die KI keine Heizkurven (Power) lernen, da sie nicht weiß, ob geheizt wird!
                 </Alert>
                 <Button variant="contained" startIcon={<RefreshIcon/>} onClick={this.handleScanThermostats} disabled={this.state.isScanningThermostats}>
-                    {this.state.isScanningThermostats ? 'Scanne...' : 'Diagnose Starten'}
+                    {this.state.isScanningThermostats ? 'Scanne...' : 'Vollständige Diagnose Starten'}
                 </Button>
 
                 {this.state.thermostatDiagResults.length > 0 && (
@@ -201,7 +201,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                 <TableCell>Raum</TableCell>
                                 <TableCell>Sensor (Ist)</TableCell>
                                 <TableCell>Setpoint (Soll)</TableCell>
-                                <TableCell>Quelle</TableCell>
+                                <TableCell>Ventil (Stellgröße)</TableCell>
                                 <TableCell>Status</TableCell>
                                 <TableCell>Action</TableCell>
                             </TableRow>
@@ -211,6 +211,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                 <TableRow key={row.sensorId}>
                                     <TableCell>{row.room}</TableCell>
                                     <TableCell sx={{fontSize:'0.8rem', color:'text.secondary'}}>{row.sensorId}</TableCell>
+
+                                    {/* SETPOINT CELL */}
                                     <TableCell>
                                         {this.state.editMappingId === row.sensorId ? (
                                             <TextField size="small" fullWidth value={this.state.editMappingValue} onChange={e => this.setState({editMappingValue: e.target.value})} />
@@ -218,9 +220,24 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                             <span style={{fontWeight: row.isManual ? 'bold' : 'normal'}}>{row.setpointId}</span>
                                         )}
                                     </TableCell>
-                                    <TableCell>{row.source}</TableCell>
+
+                                    {/* VALVE CELL (NEU) */}
                                     <TableCell>
-                                        <Chip label={row.status} color={row.status === 'OK' ? 'success' : 'error'} size="small" variant="outlined"/>
+                                        {row.valveId === '-' || !row.valveId ? (
+                                            <Chip label="Fehlt" size="small" color="error" variant="outlined" style={{height:20}}/>
+                                        ) : (
+                                            <span style={{fontSize:'0.8rem', fontFamily:'monospace'}}>{row.valveId}</span>
+                                        )}
+                                    </TableCell>
+
+                                    <TableCell>
+                                        {/* Status erweitert: PERFECT wenn alles da ist */}
+                                        <Chip
+                                            label={row.status}
+                                            color={row.status === 'PERFECT' ? 'success' : (row.status === 'OK' ? 'warning' : 'error')}
+                                            size="small"
+                                            variant={row.status === 'PERFECT' ? 'filled' : 'outlined'}
+                                        />
                                     </TableCell>
                                     <TableCell>
                                         {this.state.editMappingId === row.sensorId ? (
