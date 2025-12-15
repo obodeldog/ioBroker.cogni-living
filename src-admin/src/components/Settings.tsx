@@ -27,7 +27,6 @@ interface ScannedDevice { id: string; name: string; location: string; type: stri
 interface ScanFilters { motion: boolean; doors: boolean; lights: boolean; temperature: boolean; weather: boolean; selectedFunctionIds: string[]; }
 interface EnumItem { id: string; name: string; }
 
-// UPDATE: Added valveId
 interface ThermostatDiagItem { room: string; sensorId: string; setpointId: string; valveId?: string; source: string; isManual: boolean; status: string; }
 
 interface SettingsState {
@@ -43,9 +42,12 @@ interface SettingsState {
     contextResult: { weather: string; calendar: string; } | null; isTestingContext: boolean; detectedCalendars: string[]; isLoadingCalendars: boolean; simTargetId: string; simTargetValue: string;
     showBulkDialog: boolean; autoMode: string; autoThreshold: number; autoLastAction: string;
     thermostatMapping: Record<string, string>;
+    valveMapping: Record<string, string>; // NEU: Valve Mapping State
     thermostatDiagResults: ThermostatDiagItem[];
     isScanningThermostats: boolean;
-    editMappingId: string | null;
+
+    // Updated Edit State
+    editMappingContext: { sensorId: string, field: 'setpoint' | 'valve' } | null;
     editMappingValue: string;
 }
 
@@ -59,6 +61,12 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         let tMap = {};
         if (native.thermostatMapping) {
             try { tMap = typeof native.thermostatMapping === 'string' ? JSON.parse(native.thermostatMapping) : native.thermostatMapping; } catch(e){}
+        }
+
+        // NEU: Valve Mapping laden
+        let vMap = {};
+        if (native.valveMapping) {
+            try { vMap = typeof native.valveMapping === 'string' ? JSON.parse(native.valveMapping) : native.valveMapping; } catch(e){}
         }
 
         this.state = {
@@ -77,7 +85,13 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             scannedDevices: [], showDeleteConfirm: false, availableEnums: [], availableRooms: [], showEnumList: false, snackbarOpen: false, snackbarMessage: '', snackbarSeverity: 'info',
             expandedAccordion: 'panel1', showContextDialog: false, contextResult: null, isTestingContext: false, detectedCalendars: [], isLoadingCalendars: false, simTargetId: '',
             simTargetValue: 'true', showBulkDialog: false, autoMode: 'off', autoThreshold: 0.6, autoLastAction: 'Lade...',
-            thermostatMapping: tMap, thermostatDiagResults: [], isScanningThermostats: false, editMappingId: null, editMappingValue: ''
+
+            thermostatMapping: tMap,
+            valveMapping: vMap, // NEU
+            thermostatDiagResults: [],
+            isScanningThermostats: false,
+            editMappingContext: null, // NEU (Ersetzt editMappingId)
+            editMappingValue: ''
         };
     }
 
@@ -157,28 +171,39 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             });
     }
 
-    handleEditMapping = (sensorId: string, currentVal: string) => {
-        this.setState({ editMappingId: sensorId, editMappingValue: currentVal });
+    handleEditMapping = (sensorId: string, currentVal: string, field: 'setpoint' | 'valve' = 'setpoint') => {
+        this.setState({ editMappingContext: { sensorId, field }, editMappingValue: currentVal });
     }
 
-    handleSaveMapping = (sensorId: string) => {
+    handleSaveMapping = () => {
+        if (!this.state.editMappingContext) return;
+        const { sensorId, field } = this.state.editMappingContext;
         const newVal = this.state.editMappingValue.trim();
-        const newMap = { ...this.state.thermostatMapping };
 
-        if (newVal) newMap[sensorId] = newVal;
-        else delete newMap[sensorId]; // Delete if empty
+        if (field === 'setpoint') {
+            const newMap = { ...this.state.thermostatMapping };
+            if (newVal) newMap[sensorId] = newVal;
+            else delete newMap[sensorId];
+            this.setState({ thermostatMapping: newMap });
+            this.updateNativeValue('thermostatMapping', JSON.stringify(newMap));
+        } else {
+            const newMap = { ...this.state.valveMapping };
+            if (newVal) newMap[sensorId] = newVal;
+            else delete newMap[sensorId];
+            this.setState({ valveMapping: newMap });
+            this.updateNativeValue('valveMapping', JSON.stringify(newMap));
+        }
 
-        this.setState({ thermostatMapping: newMap, editMappingId: null });
-        this.updateNativeValue('thermostatMapping', JSON.stringify(newMap));
+        this.setState({ editMappingContext: null });
 
-        // Refresh List locally
+        // Update list locally for immediate feedback
         const list = [...this.state.thermostatDiagResults];
         const item = list.find(x => x.sensorId === sensorId);
         if (item) {
-            item.setpointId = newVal || '-';
-            item.isManual = !!newVal;
-            item.source = newVal ? 'Manuelles Mapping' : 'Refresh nötig...';
-            item.status = newVal ? 'OK' : 'Fehlt';
+            if (field === 'setpoint') item.setpointId = newVal || '-';
+            else item.valveId = newVal || '-';
+            item.isManual = true;
+            item.source = 'Manuelles Mapping';
         }
         this.setState({ thermostatDiagResults: list });
     }
@@ -207,47 +232,62 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {this.state.thermostatDiagResults.map(row => (
-                                <TableRow key={row.sensorId}>
-                                    <TableCell>{row.room}</TableCell>
-                                    <TableCell sx={{fontSize:'0.8rem', color:'text.secondary'}}>{row.sensorId}</TableCell>
+                            {this.state.thermostatDiagResults.map(row => {
+                                const isEditingSetpoint = this.state.editMappingContext?.sensorId === row.sensorId && this.state.editMappingContext?.field === 'setpoint';
+                                const isEditingValve = this.state.editMappingContext?.sensorId === row.sensorId && this.state.editMappingContext?.field === 'valve';
+                                const isEditingAny = isEditingSetpoint || isEditingValve;
 
-                                    {/* SETPOINT CELL */}
-                                    <TableCell>
-                                        {this.state.editMappingId === row.sensorId ? (
-                                            <TextField size="small" fullWidth value={this.state.editMappingValue} onChange={e => this.setState({editMappingValue: e.target.value})} />
-                                        ) : (
-                                            <span style={{fontWeight: row.isManual ? 'bold' : 'normal'}}>{row.setpointId}</span>
-                                        )}
-                                    </TableCell>
+                                return (
+                                    <TableRow key={row.sensorId}>
+                                        <TableCell>{row.room}</TableCell>
+                                        <TableCell sx={{fontSize:'0.8rem', color:'text.secondary'}}>{row.sensorId}</TableCell>
 
-                                    {/* VALVE CELL (NEU) */}
-                                    <TableCell>
-                                        {row.valveId === '-' || !row.valveId ? (
-                                            <Chip label="Fehlt" size="small" color="error" variant="outlined" style={{height:20}}/>
-                                        ) : (
-                                            <span style={{fontSize:'0.8rem', fontFamily:'monospace'}}>{row.valveId}</span>
-                                        )}
-                                    </TableCell>
+                                        {/* SETPOINT */}
+                                        <TableCell>
+                                            {isEditingSetpoint ? (
+                                                <TextField size="small" fullWidth value={this.state.editMappingValue} onChange={e => this.setState({editMappingValue: e.target.value})} autoFocus />
+                                            ) : (
+                                                <Box sx={{display:'flex', alignItems:'center'}}>
+                                                    <span style={{fontWeight: row.isManual ? 'bold' : 'normal', marginRight: 4}}>{row.setpointId}</span>
+                                                    <IconButton size="small" onClick={() => this.handleEditMapping(row.sensorId, row.setpointId === '-' ? '' : row.setpointId, 'setpoint')} disabled={!!this.state.editMappingContext && !isEditingSetpoint}>
+                                                        <EditIcon fontSize="small" style={{fontSize:14}}/>
+                                                    </IconButton>
+                                                </Box>
+                                            )}
+                                        </TableCell>
 
-                                    <TableCell>
-                                        {/* Status erweitert: PERFECT wenn alles da ist */}
-                                        <Chip
-                                            label={row.status}
-                                            color={row.status === 'PERFECT' ? 'success' : (row.status === 'OK' ? 'warning' : 'error')}
-                                            size="small"
-                                            variant={row.status === 'PERFECT' ? 'filled' : 'outlined'}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        {this.state.editMappingId === row.sensorId ? (
-                                            <IconButton size="small" color="primary" onClick={() => this.handleSaveMapping(row.sensorId)}><SaveIcon/></IconButton>
-                                        ) : (
-                                            <IconButton size="small" onClick={() => this.handleEditMapping(row.sensorId, row.setpointId === '-' ? '' : row.setpointId)}><EditIcon/></IconButton>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                                        {/* VALVE */}
+                                        <TableCell>
+                                            {isEditingValve ? (
+                                                <TextField size="small" fullWidth value={this.state.editMappingValue} onChange={e => this.setState({editMappingValue: e.target.value})} autoFocus />
+                                            ) : (
+                                                <Box sx={{display:'flex', alignItems:'center'}}>
+                                                    <span style={{fontWeight: row.isManual ? 'bold' : 'normal', fontFamily: 'monospace', marginRight: 4}}>
+                                                        {row.valveId || '-'}
+                                                    </span>
+                                                    <IconButton size="small" onClick={() => this.handleEditMapping(row.sensorId, row.valveId === '-' ? '' : (row.valveId || ''), 'valve')} disabled={!!this.state.editMappingContext && !isEditingValve}>
+                                                        <EditIcon fontSize="small" style={{fontSize:14}}/>
+                                                    </IconButton>
+                                                </Box>
+                                            )}
+                                        </TableCell>
+
+                                        <TableCell>
+                                            <Chip
+                                                label={row.status}
+                                                color={row.status === 'PERFECT' ? 'success' : (row.status === 'OK' ? 'warning' : 'error')}
+                                                size="small"
+                                                variant={row.status === 'PERFECT' ? 'filled' : 'outlined'}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            {isEditingAny && (
+                                                <IconButton size="small" color="primary" onClick={() => this.handleSaveMapping()}><SaveIcon/></IconButton>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 )}
