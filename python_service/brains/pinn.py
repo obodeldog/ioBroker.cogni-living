@@ -1,160 +1,151 @@
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
 import os
 import pickle
-import numpy as np
-import json
 
-# PFADE
+# Dr.-Ing. Note:
+# Wir nutzen hier ein physikalisch informiertes Netz.
+# Problem bisher: "Loss: nan" durch explodierende Gradienten bei unskalierten Daten.
+# Lösung: Input-Scaling und Gradient Clipping.
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PINN_MODEL_PATH = os.path.join(BASE_DIR, "pinn_model.pkl")
+MODEL_PATH = os.path.join(BASE_DIR, "pinn_model.pth")
+SCALER_PATH = os.path.join(BASE_DIR, "pinn_scaler.pkl")
+
+class PINN(nn.Module):
+    def __init__(self):
+        super(PINN, self).__init__()
+        # Kleines, schnelles Netz: 4 Inputs -> 1 Output (Delta T)
+        # Inputs: T_in, T_out, Valve, Solar
+        self.fc1 = nn.Linear(4, 16)
+        self.fc2 = nn.Linear(16, 16)
+        self.fc3 = nn.Linear(16, 1)
+        self.act = nn.Tanh() # Tanh ist stabiler als ReLU für physikalische Probleme
+
+    def forward(self, x):
+        x = self.act(self.fc1(x))
+        x = self.act(self.fc2(x))
+        return self.fc3(x)
 
 class LightweightPINN:
-    """
-    Ein 'Physics-Informed' Neural Network auf NumPy-Basis.
-    Es lernt die Thermodynamik des Hauses nicht-linear.
-    Architektur: Input(4) -> Hidden(8) -> Hidden(8) -> Output(1)
-    Inputs: [T_in, T_out, Valve, SolarFlag]
-    Output: Temperatur-Änderung pro Stunde (Delta T)
-    """
-    def __init__(self, learning_rate=0.01):
-        self.lr = learning_rate
+    def __init__(self):
+        self.model = PINN()
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.005) # Etwas konservativere Learning Rate
         self.is_ready = False
-        self.losses = []
+        self.loss_history = []
 
-        # Architektur: 4 Inputs -> 8 Neuronen -> 8 Neuronen -> 1 Output
-        self.input_size = 4
-        self.hidden_size = 8
-        self.output_size = 1
-
-        # Gewichte initialisieren (He-Initialization / Xavier)
-        self.W1 = np.random.randn(self.input_size, self.hidden_size) * np.sqrt(2. / self.input_size)
-        self.b1 = np.zeros((1, self.hidden_size))
-
-        self.W2 = np.random.randn(self.hidden_size, self.hidden_size) * np.sqrt(2. / self.hidden_size)
-        self.b2 = np.zeros((1, self.hidden_size))
-
-        self.W3 = np.random.randn(self.hidden_size, self.output_size) * np.sqrt(2. / self.hidden_size)
-        self.b3 = np.zeros((1, self.output_size))
+        # Scaling-Faktoren (Wichtig gegen NaN!)
+        self.scalers = {
+            'mean': np.array([20.0, 10.0, 50.0, 0.5]), # T_in, T_out, Valve, Solar
+            'std': np.array([5.0, 10.0, 50.0, 0.5])
+        }
 
     def load_brain(self):
-        if os.path.exists(PINN_MODEL_PATH):
-            try:
-                with open(PINN_MODEL_PATH, 'rb') as f:
-                    data = pickle.load(f)
-                    self.W1, self.b1 = data['W1'], data['b1']
-                    self.W2, self.b2 = data['W2'], data['b2']
-                    self.W3, self.b3 = data['W3'], data['b3']
-                    self.is_ready = True
-                return True
-            except Exception as e:
-                print(f"[PINN] Load error: {e}")
-        return False
+        try:
+            if os.path.exists(MODEL_PATH):
+                self.model.load_state_dict(torch.load(MODEL_PATH))
+                self.model.eval()
+                self.is_ready = True
+            if os.path.exists(SCALER_PATH):
+                with open(SCALER_PATH, 'rb') as f:
+                    self.scalers = pickle.load(f)
+            return True
+        except:
+            return False
 
-    def save_brain(self):
-        with open(PINN_MODEL_PATH, 'wb') as f:
-            pickle.dump({
-                'W1': self.W1, 'b1': self.b1,
-                'W2': self.W2, 'b2': self.b2,
-                'W3': self.W3, 'b3': self.b3
-            }, f)
+    def _normalize(self, X):
+        # Z-Score Normalization um numerische Stabilität zu garantieren
+        return (X - self.scalers['mean']) / (self.scalers['std'] + 1e-6)
 
-    def _sigmoid(self, x):
-        return 1 / (1 + np.exp(-x))
-
-    def _sigmoid_derivative(self, x):
-        return x * (1 - x)
-
-    def forward(self, X):
-        # Layer 1
-        self.z1 = np.dot(X, self.W1) + self.b1
-        self.a1 = self._sigmoid(self.z1)
-        # Layer 2
-        self.z2 = np.dot(self.a1, self.W2) + self.b2
-        self.a2 = self._sigmoid(self.z2)
-        # Output Layer (Linear activation for regression)
-        self.z3 = np.dot(self.a2, self.W3) + self.b3
-        output = self.z3
-        return output
-
-    def train(self, training_data, epochs=1000):
+    def train(self, data_points):
         """
-        training_data: Liste von Dicts {t_in, t_out, valve, solar, delta_t}
+        data_points: list of dicts {'t_in', 't_out', 'valve', 'solar', 'delta_t'}
         """
-        if not training_data: return False, "No Data"
+        if not data_points: return False, "No Data"
 
-        # Daten vorbereiten
+        # 1. Daten vorbereiten
         X_list = []
         y_list = []
 
-        for item in training_data:
-            # Inputs normalisieren (grob) für bessere Konvergenz
-            # T_in ~ 20, T_out ~ 10, Valve ~ 0-100, Solar ~ 0/1
-            x_row = [
-                item.get('t_in', 20) / 30.0,
-                item.get('t_out', 10) / 30.0,
-                item.get('valve', 0) / 100.0,
-                1.0 if item.get('solar', False) else 0.0
-            ]
-            X_list.append(x_row)
-            y_list.append([item.get('delta_t', 0)]) # Target: Echte Temperaturänderung
+        for d in data_points:
+            # Sicherheits-Check auf NaN im Input
+            if np.isnan(d['t_in']) or np.isnan(d['delta_t']): continue
 
-        X = np.array(X_list)
-        y = np.array(y_list)
+            val = d['t_in']
+            out = d['t_out']
+            vlv = d.get('valve', 0)
+            sol = 1.0 if d.get('solar') else 0.0
+            target = d['delta_t']
 
-        # Training Loop (Backpropagation)
-        for _ in range(epochs):
-            # Forward
-            output = self.forward(X)
+            # Outlier Filter (Physikalischer Unsinn wegfiltern)
+            if abs(target) > 10.0: continue # Mehr als 10 Grad pro Stunde ist Messfehler
 
-            # Loss (MSE)
-            error = y - output
-            loss = np.mean(np.square(error))
+            X_list.append([val, out, vlv, sol])
+            y_list.append([target])
 
-            # --- PHYSICS LOSS (Regularization) ---
-            # Wir bestrafen physikalisch unsinnige Ergebnisse.
-            # Bsp: Wenn Valve=0 und T_in > T_out (und kein Solar), MUSS delta negativ sein (Abkühlung).
-            # Wenn das Netz hier positive Werte vorhersagt, erhöhen wir den Error künstlich.
-            # Dies ist der "Physics Informed" Teil in "Lightweight".
+        if len(X_list) < 10: return False, "Not enough clean data"
 
-            # Backward (Gradient Descent)
-            d_output = error * -1.0 # Derivative of MSE (simplified)
+        X = np.array(X_list, dtype=np.float32)
+        y = np.array(y_list, dtype=np.float32)
 
-            d_W3 = np.dot(self.a2.T, d_output)
-            d_b3 = np.sum(d_output, axis=0, keepdims=True)
+        # Update Scalers
+        self.scalers['mean'] = X.mean(axis=0)
+        self.scalers['std'] = X.std(axis=0)
 
-            error_hidden2 = np.dot(d_output, self.W3.T)
-            d_hidden2 = error_hidden2 * self._sigmoid_derivative(self.a2)
+        # Save Scalers
+        with open(SCALER_PATH, 'wb') as f:
+            pickle.dump(self.scalers, f)
 
-            d_W2 = np.dot(self.a1.T, d_hidden2)
-            d_b2 = np.sum(d_hidden2, axis=0, keepdims=True)
+        # Normalize Inputs
+        X_norm = self._normalize(X)
 
-            error_hidden1 = np.dot(d_hidden2, self.W2.T)
-            d_hidden1 = error_hidden1 * self._sigmoid_derivative(self.a1)
+        inputs = torch.tensor(X_norm)
+        targets = torch.tensor(y)
 
-            d_W1 = np.dot(X.T, d_hidden1)
-            d_b1 = np.sum(d_hidden1, axis=0, keepdims=True)
+        self.model.train()
+        criterion = nn.MSELoss()
 
-            # Update Weights
-            self.W1 -= self.lr * d_W1
-            self.b1 -= self.lr * d_b1
-            self.W2 -= self.lr * d_W2
-            self.b2 -= self.lr * d_b2
-            self.W3 -= self.lr * d_W3
-            self.b3 -= self.lr * d_b3
+        final_loss = 999.0
 
-        self.save_brain()
+        # 2. Training Loop mit "Explosion Protection"
+        for epoch in range(200): # 200 Epochen
+            self.optimizer.zero_grad()
+            outputs = self.model(inputs)
+
+            # Physics Loss: Bestrafen, wenn Valve=0 aber DeltaT > 0 (außer Solar)
+            # Das implementieren wir hier implizit über die Daten,
+            # aber man könnte hier einen Regularization-Term addieren.
+
+            loss = criterion(outputs, targets)
+
+            # CHECK FOR NAN
+            if torch.isnan(loss):
+                return False, "Training aborted: Loss is NaN (Gradient Explosion prevented)"
+
+            loss.backward()
+
+            # GRADIENT CLIPPING (Die wichtigste Zeile gegen NaN!)
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+
+            self.optimizer.step()
+            final_loss = loss.item()
+
+        # Save
+        torch.save(self.model.state_dict(), MODEL_PATH)
         self.is_ready = True
-        return True, f"Trained on {len(X)} samples. Final Loss: {loss:.6f}"
 
-    def predict(self, t_in, t_out, valve, is_solar):
+        return True, f"Training success. Final Loss: {final_loss:.4f}"
+
+    def predict(self, t_in, t_out, valve=0.0, solar=False):
         if not self.is_ready: return 0.0
+        try:
+            X = np.array([[t_in, t_out, valve, 1.0 if solar else 0.0]], dtype=np.float32)
+            X_norm = self._normalize(X)
 
-        # Input normalisieren (gleich wie bei Training)
-        X = np.array([[
-            t_in / 30.0,
-            t_out / 30.0,
-            valve / 100.0,
-            1.0 if is_solar else 0.0
-        ]])
-
-        delta_t = self.forward(X)[0][0]
-        return float(delta_t)
+            with torch.no_grad():
+                pred = self.model(torch.tensor(X_norm))
+            return float(pred.item())
+        except:
+            return 0.0

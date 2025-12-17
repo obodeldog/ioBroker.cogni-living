@@ -48,16 +48,21 @@ class EnergyBrain:
                 group = group.sort_values('ts')
                 group['dt_h'] = group['ts'].diff().dt.total_seconds() / 3600.0
                 group['d_temp'] = group['t_in'].diff()
-                group['gradient'] = group['d_temp'] / group['dt_h']
 
-                valid = group[(group['gradient'] > -5) & (group['gradient'] < 5) & (group['dt_h'] > 0.1)].copy()
+                # FIX: Verhindere Division durch Null oder extrem kleine Zeitabstände
+                valid = group[group['dt_h'] > 0.1].copy()
                 if len(valid) < 5: continue
+
+                valid['gradient'] = valid['d_temp'] / valid['dt_h']
+
+                # Ausreißer entfernen
+                valid = valid[(valid['gradient'] > -5) & (valid['gradient'] < 5)]
 
                 if has_valves:
                     # Isolations-Check (Ventil fast zu)
                     cooling_phase = valid[valid['valve'] < 5]
 
-                    # UPDATE: Ventil-Schwelle auf 10% gesenkt (Realismus für Teillast)
+                    # UPDATE: Ventil-Schwelle auf 10% (Realismus für Teillast)
                     heating_phase = valid[valid['valve'] > 10]
                 else:
                     cooling_phase = valid
@@ -65,16 +70,22 @@ class EnergyBrain:
 
                 # Cooling (Verlust)
                 cooling_events = cooling_phase[cooling_phase['gradient'] < -0.05]
-                if len(cooling_events) > 5:
+                if len(cooling_events) > 3: # Reduziert von 5 auf 3 für schnellere Ergebnisse
                     results_insu[room] = float(cooling_events['gradient'].median())
 
-                # Heating (Power)
-                heating_events = heating_phase[heating_phase['gradient'] > 0.1]
-                if len(heating_events) > 5:
-                    results_heat[room] = float(heating_events['gradient'].median())
+                # Heating (Power) - FIX FÜR LEERE SPALTEN
+                # Wir senken die Schwelle drastisch. Auch langsames Aufheizen (0.02) zählt.
+                heating_events = heating_phase[heating_phase['gradient'] > 0.02]
 
-            self.scores = results_insu
-            self.heating = results_heat
+                if len(heating_events) > 2: # Schon ab 2 Events akzeptieren wir es
+                    val = float(heating_events['gradient'].median())
+                    # Plausibilitäts-Check: Power muss positiv sein
+                    if val > 0: results_heat[room] = val
+
+            # Bestehende Werte behalten, wenn neue Berechnung fehlschlägt
+            self.scores.update(results_insu)
+            self.heating.update(results_heat)
+
             with open(ENERGY_MODEL_PATH, 'wb') as f:
                 pickle.dump({'scores': self.scores, 'heating': self.heating}, f)
 
@@ -86,7 +97,7 @@ class EnergyBrain:
         if t_forecast is None: return t_out
         return (t_out + t_forecast) / 2
 
-    # --- NEU: VENTILATION DETECTIVE (Lüftungs-Erkennung) ---
+    # --- VENTILATION DETECTIVE ---
     def check_ventilation(self, current_temps):
         alerts = []
         now = time.time()
@@ -99,13 +110,12 @@ class EnergyBrain:
 
                 dt_hours = (now - ts_last) / 3600.0
 
-                # Wir prüfen nur, wenn mindestens 5 Minuten vergangen sind (um Rauschen zu vermeiden)
+                # Wir prüfen nur, wenn mindestens 5 Minuten vergangen sind
                 if dt_hours > 0.08: # ca. 5 min
                     d_temp = t_now - t_last
                     gradient = d_temp / dt_hours
 
                     # SCHWELLE: Wenn Temperatur schneller als 3 Grad pro Stunde fällt
-                    # Das ist physikalisch durch geschlossene Wände fast unmöglich -> Fenster muss offen sein.
                     if gradient < -3.0:
                         alerts.append({
                             'room': room,
@@ -119,13 +129,12 @@ class EnergyBrain:
 
         return alerts
 
-    # --- NEU: SMART WARM-UP (Rückkehr-Rechner) ---
+    # --- SMART WARM-UP (Rückkehr-Rechner) ---
     def calculate_warmup_times(self, current_temps, target_temp_default=21.0):
         warmup_times = {}
-        if not self.is_ready: return {}
+        # FIX: Fallback auch wenn is_ready False sein sollte
 
         for room, t_in in current_temps.items():
-            # Standard Zieltemperatur (kann später dynamisch werden)
             target = target_temp_default
 
             if t_in >= target:
@@ -133,9 +142,9 @@ class EnergyBrain:
                 continue
 
             # Wir holen uns die "Power" des Raumes (Heating Score)
-            # Default: 2 Grad pro Stunde (konservative Schätzung)
-            power = self.heating.get(room, 2.0)
-            if power <= 0.1: power = 1.0 # Safety gegen Division durch Null
+            # FIX: Fallback auf 1.0 (konservativ), falls noch keine Power gelernt wurde
+            power = self.heating.get(room, 1.0)
+            if power <= 0.05: power = 0.5 # Safety gegen Division durch Null
 
             diff = target - t_in
             hours_needed = diff / power
