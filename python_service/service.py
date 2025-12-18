@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 # LOGGING
-VERSION = "0.17.5 (Adaptive Security)"
+VERSION = "0.18.0 (Stone Soup Tracker)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -24,6 +24,7 @@ try:
     from brains.energy import EnergyBrain
     from brains.comfort import ComfortBrain
     from brains.pinn import LightweightPINN
+    from brains.tracker import ParticleFilter
     import numpy as np
     LIBS_AVAILABLE = True
 except ImportError as e:
@@ -37,6 +38,7 @@ if LIBS_AVAILABLE:
     energy_brain = EnergyBrain()
     comfort_brain = ComfortBrain()
     pinn_brain = LightweightPINN()
+    tracker_brain = ParticleFilter()
 else:
     security_brain = None
 
@@ -62,7 +64,14 @@ def process_message(msg):
             send_result("SECURITY_RESULT", {"anomaly_score": score, "is_anomaly": is_anomaly, "explanation": explanation})
 
         elif cmd == "SET_TOPOLOGY":
+            # Update Security Graph
             security_brain.graph.update_topology(data)
+
+            # Update Tracker Topology (Stone Soup)
+            rooms = data.get('rooms', [])
+            matrix = data.get('matrix', [])
+            tracker_brain.set_topology(rooms, matrix)
+
             send_result("TOPOLOGY_ACK", {"success": True})
 
         elif cmd == "SIMULATE_SIGNAL":
@@ -70,7 +79,7 @@ def process_message(msg):
             neighbors = security_brain.graph.propagate_signal(room)
             send_result("SIGNAL_RESULT", {"room": room, "propagation": neighbors})
 
-        # --- NEU: FEW-SHOT LEARNING TRIGGER ---
+        # --- NEW: RAPID ADAPTATION LAYER (Few-Shot Learning) ---
         elif cmd == "SET_LEARNING_MODE":
             active = data.get("active", False)
             duration = data.get("duration", 0) # Minuten
@@ -78,6 +87,17 @@ def process_message(msg):
             security_brain.set_learning_mode(active, duration, label)
             log(f"Security Learning Mode set to {active} ({label})")
         # --------------------------------------
+
+        # --- NEW: TRACKER (STONE SOUP) ---
+        elif cmd == "TRACK_EVENT":
+            # Wird bei jeder Bewegung oder Heartbeat aufgerufen
+            # data: { "room": "Kitchen", "dt": 1.5 }
+            room = data.get("room") # Kann None sein
+            dt = data.get("dt", 0.0)
+
+            probs = tracker_brain.update(room, dt)
+            send_result("TRACKER_RESULT", {"probabilities": probs})
+        # ---------------------------------
 
         # 2. HEALTH
         elif cmd == "TRAIN_HEALTH":
@@ -192,6 +212,7 @@ if __name__ == "__main__":
         health_brain.load_brain()
         energy_brain.load_brain()
         pinn_brain.load_brain()
+        tracker_brain.load_brain()
 
     while True:
         try:
