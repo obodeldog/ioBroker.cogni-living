@@ -6,8 +6,17 @@ import json
 import math
 import time
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ENERGY_MODEL_PATH = os.path.join(BASE_DIR, "energy_model.pkl")
+# Dr.-Ing. Update: PERSISTENTE SPEICHERUNG
+ADAPTER_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(ADAPTER_DIR)), 'iobroker-data', 'cogni-living')
+
+if not os.path.exists(DATA_DIR):
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+    except:
+        DATA_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+ENERGY_MODEL_PATH = os.path.join(DATA_DIR, "energy_model.pkl")
 
 class EnergyBrain:
     def __init__(self):
@@ -38,56 +47,42 @@ class EnergyBrain:
             results_insu = {}
             results_heat = {}
 
-            # Wir gehen Raum für Raum durch
             for room, group in df.groupby('room'):
-                # FIX: Schon ab 2 Datenpunkten rechnen (für schnelles Feedback)
                 if len(group) < 2: continue
 
                 group = group.sort_values('ts')
                 group['dt_h'] = group['ts'].diff().dt.total_seconds() / 3600.0
                 group['d_temp'] = group['t_in'].diff()
 
-                # Nur Zeitabstände > 1 min betrachten (Rauschen filtern)
                 valid = group[group['dt_h'] > 0.01].copy()
                 if len(valid) < 1: continue
 
                 valid['gradient'] = valid['d_temp'] / valid['dt_h']
-
-                # RADIATOR FIX: Filter massiv erweitert!
-                # Heizkörper können 20-30 Grad pro Stunde schaffen.
-                # Wir erlauben [-10 (Lüften) bis +50 (Power-Heizen)]
                 valid = valid[(valid['gradient'] > -15) & (valid['gradient'] < 50)]
 
                 if has_valves:
-                    # Cooling: Ventil muss zu sein (< 5%)
                     cooling_phase = valid[valid['valve'] < 5]
-
-                    # Heating: Ventil offen (> 5%)
                     heating_phase = valid[valid['valve'] >= 5]
                 else:
                     cooling_phase = valid
                     heating_phase = valid
 
-                # --- 1. ISOLATION ---
+                # Isolation
                 cooling_events = cooling_phase[cooling_phase['gradient'] < -0.01]
                 if len(cooling_events) >= 1:
                     results_insu[room] = float(cooling_events['gradient'].median())
 
-                # --- 2. POWER (Heizkörper) ---
+                # Power (Heizkörper)
                 heating_events = heating_phase[heating_phase['gradient'] > 0.1]
-
                 if len(heating_events) >= 1:
                     val = float(heating_events['gradient'].median())
                     if val > 0: results_heat[room] = val
                 else:
-                    # FALLBACK: Wenn keine Daten da sind, nehmen wir alte Werte
                     if room in self.heating:
                         results_heat[room] = self.heating[room]
                     else:
-                        # Startwert für Heizkörper: 3.0 °C/h (Aggressiver als FBH)
                         results_heat[room] = 3.0
 
-            # Speichern
             self.scores.update(results_insu)
             self.heating.update(results_heat)
 
@@ -102,7 +97,6 @@ class EnergyBrain:
         if t_forecast is None: return t_out
         return (t_out + t_forecast) / 2
 
-    # --- VENTILATION DETECTIVE ---
     def check_ventilation(self, current_temps):
         alerts = []
         now = time.time()
@@ -112,10 +106,9 @@ class EnergyBrain:
                 t_last = last_entry['val']
                 ts_last = last_entry['ts']
                 dt_hours = (now - ts_last) / 3600.0
-                if dt_hours > 0.08: # > 5 min
+                if dt_hours > 0.08:
                     d_temp = t_now - t_last
                     gradient = d_temp / dt_hours
-                    # Heizkörper kühlen auch schneller ab beim Lüften
                     if gradient < -5.0:
                         alerts.append({
                             'room': room,
@@ -126,32 +119,22 @@ class EnergyBrain:
             self.last_state[room] = {'ts': now, 'val': t_now}
         return alerts
 
-    # --- SMART WARM-UP (Rückkehr-Rechner) ---
     def calculate_warmup_times(self, current_temps, target_temp_default=21.0):
         warmup_times = {}
-
         for room, t_in in current_temps.items():
             target = target_temp_default
-
-            # WICHTIG: Wenn Ist >= Soll -> 0 Minuten
             if t_in >= target:
                 warmup_times[room] = 0
                 continue
-
-            # Power holen (oder Fallback 3.0 für Heizkörper)
             power = self.heating.get(room, 3.0)
             if power <= 0.1: power = 1.0
-
             diff = target - t_in
             hours_needed = diff / power
             minutes_needed = int(hours_needed * 60)
-
             if minutes_needed > 720: minutes_needed = 720
             warmup_times[room] = minutes_needed
-
         return warmup_times
 
-    # (Methoden predict_cooling und get_optimization_advice bleiben gleich...)
     def predict_cooling(self, current_temps, t_out, t_forecast=None, is_sunny=False, solar_flags=None):
         if not self.is_ready: return {}
         if solar_flags is None: solar_flags = {}
