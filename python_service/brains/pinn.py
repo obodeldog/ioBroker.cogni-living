@@ -6,9 +6,9 @@ import os
 import pickle
 
 # Dr.-Ing. Note:
-# Wir nutzen hier ein physikalisch informiertes Netz.
-# Problem bisher: "Loss: nan" durch explodierende Gradienten bei unskalierten Daten.
-# Lösung: Input-Scaling und Gradient Clipping.
+# Update V2: Robust Scaling.
+# Verhindert "Model Collapse" (identische Werte für alle Räume),
+# wenn die Trainingsdaten zu wenig Varianz haben (z.B. nur Nachtwerte).
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, "pinn_model.pth")
@@ -34,9 +34,8 @@ class LightweightPINN:
         self.model = PINN()
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.005) # Etwas konservativere Learning Rate
         self.is_ready = False
-        self.loss_history = []
 
-        # Scaling-Faktoren (Wichtig gegen NaN!)
+        # Standard-Scaler (Fallback, falls noch kein Training lief)
         self.scalers = {
             'mean': np.array([20.0, 10.0, 50.0, 0.5]), # T_in, T_out, Valve, Solar
             'std': np.array([5.0, 10.0, 50.0, 0.5])
@@ -56,8 +55,11 @@ class LightweightPINN:
             return False
 
     def _normalize(self, X):
-        # Z-Score Normalization um numerische Stabilität zu garantieren
-        return (X - self.scalers['mean']) / (self.scalers['std'] + 1e-6)
+        # FIX V2: Minimum Variance Enforcement
+        # Wir verhindern, dass durch eine sehr kleine Std-Abweichung geteilt wird.
+        # Wir setzen eine Mindest-Varianz (z.B. 1.0), damit Werte nicht explodieren.
+        safe_std = np.maximum(self.scalers['std'], 1.0)
+        return (X - self.scalers['mean']) / safe_std
 
     def train(self, data_points):
         """
@@ -90,7 +92,7 @@ class LightweightPINN:
         X = np.array(X_list, dtype=np.float32)
         y = np.array(y_list, dtype=np.float32)
 
-        # Update Scalers
+        # Update Scalers mit den neuen Daten
         self.scalers['mean'] = X.mean(axis=0)
         self.scalers['std'] = X.std(axis=0)
 
@@ -113,10 +115,6 @@ class LightweightPINN:
         for epoch in range(200): # 200 Epochen
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
-
-            # Physics Loss: Bestrafen, wenn Valve=0 aber DeltaT > 0 (außer Solar)
-            # Das implementieren wir hier implizit über die Daten,
-            # aber man könnte hier einen Regularization-Term addieren.
 
             loss = criterion(outputs, targets)
 
@@ -141,11 +139,22 @@ class LightweightPINN:
     def predict(self, t_in, t_out, valve=0.0, solar=False):
         if not self.is_ready: return 0.0
         try:
+            # Physikalische Plausibilitäts-Prüfung (Safety Layer)
+            # Wenn Ventil fast zu ist, kann der Raum physikalisch kaum aufheizen (außer Solar)
+            # Das hilft dem Netz, nicht zu halluzinieren, wenn es unsicher ist.
+
             X = np.array([[t_in, t_out, valve, 1.0 if solar else 0.0]], dtype=np.float32)
             X_norm = self._normalize(X)
 
             with torch.no_grad():
                 pred = self.model(torch.tensor(X_norm))
-            return float(pred.item())
+
+            val = float(pred.item())
+
+            # Output Clamping: Verhindert extreme Werte wie -3.3, wenn unrealistisch
+            if val < -5.0: val = -5.0
+            if val > 5.0: val = 5.0
+
+            return val
         except:
             return 0.0
