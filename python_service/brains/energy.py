@@ -40,56 +40,52 @@ class EnergyBrain:
 
             # Wir gehen Raum für Raum durch
             for room, group in df.groupby('room'):
-                # NEU: Auch kleine Datenmengen akzeptieren (ab 5 Punkte)
-                if len(group) < 5: continue
+                # FIX: Schon ab 2 Datenpunkten rechnen (für schnelles Feedback)
+                if len(group) < 2: continue
 
                 group = group.sort_values('ts')
                 group['dt_h'] = group['ts'].diff().dt.total_seconds() / 3600.0
                 group['d_temp'] = group['t_in'].diff()
 
-                # Nur Zeitabstände > 3 min betrachten (Rauschen filtern)
-                valid = group[group['dt_h'] > 0.05].copy()
-                if len(valid) < 2: continue
+                # Nur Zeitabstände > 1 min betrachten (Rauschen filtern)
+                valid = group[group['dt_h'] > 0.01].copy()
+                if len(valid) < 1: continue
 
                 valid['gradient'] = valid['d_temp'] / valid['dt_h']
 
-                # Plausibilitäts-Filter (+/- 10 Grad pro Stunde ist Maximum)
-                valid = valid[(valid['gradient'] > -10) & (valid['gradient'] < 10)]
+                # RADIATOR FIX: Filter massiv erweitert!
+                # Heizkörper können 20-30 Grad pro Stunde schaffen.
+                # Wir erlauben [-10 (Lüften) bis +50 (Power-Heizen)]
+                valid = valid[(valid['gradient'] > -15) & (valid['gradient'] < 50)]
 
                 if has_valves:
-                    # Cooling: Ventil muss fast zu sein (< 5%)
+                    # Cooling: Ventil muss zu sein (< 5%)
                     cooling_phase = valid[valid['valve'] < 5]
 
-                    # HEATING FIX: Schwelle massiv gesenkt!
-                    # Ab 1% Ventilöffnung schauen wir schon hin.
-                    heating_phase = valid[valid['valve'] >= 1]
+                    # Heating: Ventil offen (> 5%)
+                    heating_phase = valid[valid['valve'] >= 5]
                 else:
                     cooling_phase = valid
                     heating_phase = valid
 
-                # --- 1. ISOLATION BERECHNEN ---
-                # Wir suchen Phasen, wo es kälter wurde
+                # --- 1. ISOLATION ---
                 cooling_events = cooling_phase[cooling_phase['gradient'] < -0.01]
                 if len(cooling_events) >= 1:
                     results_insu[room] = float(cooling_events['gradient'].median())
 
-                # --- 2. POWER BERECHNEN (FIX) ---
-                # Wir suchen Phasen, wo es wärmer wurde (Gradient positiv)
-                # Schwelle auf 0.01 gesenkt (für träge FBH)
-                heating_events = heating_phase[heating_phase['gradient'] > 0.01]
+                # --- 2. POWER (Heizkörper) ---
+                heating_events = heating_phase[heating_phase['gradient'] > 0.1]
 
                 if len(heating_events) >= 1:
                     val = float(heating_events['gradient'].median())
                     if val > 0: results_heat[room] = val
                 else:
-                    # FALLBACK: Wenn wir absolut keine Aufheiz-Phase finden,
-                    # aber wissen, dass es der Raum ist, behalten wir alte Werte
-                    # oder setzen einen Standard, damit die UI nicht leer bleibt.
+                    # FALLBACK: Wenn keine Daten da sind, nehmen wir alte Werte
                     if room in self.heating:
                         results_heat[room] = self.heating[room]
                     else:
-                        # Startwert: 1.0 °C/h (Konservativer Wert für FBH)
-                        results_heat[room] = 1.0
+                        # Startwert für Heizkörper: 3.0 °C/h (Aggressiver als FBH)
+                        results_heat[room] = 3.0
 
             # Speichern
             self.scores.update(results_insu)
@@ -119,7 +115,8 @@ class EnergyBrain:
                 if dt_hours > 0.08: # > 5 min
                     d_temp = t_now - t_last
                     gradient = d_temp / dt_hours
-                    if gradient < -3.0:
+                    # Heizkörper kühlen auch schneller ab beim Lüften
+                    if gradient < -5.0:
                         alerts.append({
                             'room': room,
                             'gradient': round(gradient, 2),
@@ -136,14 +133,14 @@ class EnergyBrain:
         for room, t_in in current_temps.items():
             target = target_temp_default
 
-            # WICHTIG: Wenn Ist > Soll -> Keine Aufheizzeit (0 min)
+            # WICHTIG: Wenn Ist >= Soll -> 0 Minuten
             if t_in >= target:
                 warmup_times[room] = 0
                 continue
 
-            # Power holen (oder Fallback 1.0)
-            power = self.heating.get(room, 1.0)
-            if power <= 0.05: power = 0.5
+            # Power holen (oder Fallback 3.0 für Heizkörper)
+            power = self.heating.get(room, 3.0)
+            if power <= 0.1: power = 1.0
 
             diff = target - t_in
             hours_needed = diff / power
@@ -154,6 +151,7 @@ class EnergyBrain:
 
         return warmup_times
 
+    # (Methoden predict_cooling und get_optimization_advice bleiben gleich...)
     def predict_cooling(self, current_temps, t_out, t_forecast=None, is_sunny=False, solar_flags=None):
         if not self.is_ready: return {}
         if solar_flags is None: solar_flags = {}
