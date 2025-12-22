@@ -5,13 +5,9 @@ import time
 import json
 
 # PFAD-LOGIK (Konsistent mit energy.py/security.py)
-# Wir navigieren vom brains-Ordner zwei Ebenen hoch zum Adapter-Root
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# Wir speichern den State im persistenten ioBroker-Data Ordner
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(BASE_DIR)), 'iobroker-data', 'cogni-living')
 
-# Fallback
 if not os.path.exists(DATA_DIR):
     try:
         os.makedirs(DATA_DIR, exist_ok=True)
@@ -27,12 +23,11 @@ class ParticleFilter:
         self.adj_matrix = None    # Numpy Array (N x N)
         self.particles = None     # Array der Länge N (Raum-Indizes)
         self.weights = None       # Array der Länge N (Gewichte)
-        self.monitored_mask = None # NEU: Boolean Array (True = Raum hat Bewegungsmelder)
+        self.monitored_mask = None # Boolean Array (True = Raum hat Bewegungsmelder)
         self.is_ready = False
         self.last_update = 0
 
     def load_brain(self):
-        """Lädt den letzten bekannten Zustand"""
         try:
             if os.path.exists(TRACKER_STATE_PATH):
                 with open(TRACKER_STATE_PATH, 'rb') as f:
@@ -52,7 +47,6 @@ class ParticleFilter:
             return False
 
     def save_brain(self):
-        """Persistiert den Zustand"""
         try:
             state = {
                 'rooms': self.rooms,
@@ -67,7 +61,6 @@ class ParticleFilter:
             pass
 
     def _initialize_particles(self):
-        """Verteilt Partikel gleichmäßig (Reset)"""
         if not self.rooms:
             return
         num_rooms = len(self.rooms)
@@ -76,24 +69,16 @@ class ParticleFilter:
         self.is_ready = True
 
     def set_topology(self, rooms, matrix_raw, monitored_rooms=[]):
-        """
-        Initialisiert die Weltkarte und die Sensoren.
-        monitored_rooms: Liste der Räume, die einen Bewegungsmelder haben.
-        """
         self.rooms = rooms
         self.adj_matrix = np.array(matrix_raw, dtype=float)
-
-        # Diagonale auf 1 setzen
         np.fill_diagonal(self.adj_matrix, 1.0)
 
-        # NEU: Maske für überwachte Räume erstellen
         self.monitored_mask = np.zeros(len(rooms), dtype=bool)
         for r in monitored_rooms:
             if r in rooms:
                 idx = rooms.index(r)
                 self.monitored_mask[idx] = True
 
-        # Reset falls nötig
         if self.particles is None or len(self.rooms) != len(rooms):
             self._initialize_particles()
 
@@ -102,7 +87,6 @@ class ParticleFilter:
         self.save_brain()
 
     def _resample(self):
-        """Survival of the fittest"""
         positions = (np.arange(self.num_particles) + np.random.random()) / self.num_particles
         indexes = np.zeros(self.num_particles, 'i')
         cumulative_sum = np.cumsum(self.weights)
@@ -117,9 +101,6 @@ class ParticleFilter:
         self.weights.fill(1.0 / self.num_particles)
 
     def update(self, event_room_name, delta_t=0.0):
-        """
-        Der Kern-Algorithmus (Stone Soup) mit Negative Information.
-        """
         if not self.is_ready or self.adj_matrix is None:
             return {}
 
@@ -127,11 +108,11 @@ class ParticleFilter:
 
         # --- 1. PREDICTION (Diffusion) ---
         if delta_t > 0:
-            # Virtuelle Schritte im Graphen
+            # Virtuelle Schritte (Diffusions-Geschwindigkeit)
             steps = max(1, int(delta_t / 2.0))
 
             for _ in range(steps):
-                # 20% der Partikel bewegen sich
+                # 20% der Partikel bewegen sich pro Schritt
                 move_mask = np.random.random(self.num_particles) < 0.2
                 affected_indices = np.where(move_mask)[0]
 
@@ -141,47 +122,33 @@ class ParticleFilter:
                     if len(neighbors) > 0:
                         self.particles[idx] = np.random.choice(neighbors)
 
-            # --- NEU: NEGATIVE INFORMATION PENALTY ---
-            # Wir sind hier im Schritt "Zeit vergeht".
-            # Wenn Partikel in überwachten Räumen (monitored_mask) landen,
-            # aber dieser Raum NICHT gefeuert hat (event_room_name != Raum),
-            # dann ist das Partikel dort höchstwahrscheinlich falsch.
-
+            # --- NEGATIVE INFORMATION PENALTY (Sanftes Vergessen) ---
             if self.monitored_mask is not None:
-                # Wir definieren, welche Räume "leise" sein müssen
                 silent_mask = self.monitored_mask.copy()
 
-                # Falls wir gerade ein Event haben, ist DIESER Raum nicht leise
+                # Wenn gerade ein Event in einem Raum ist, ist er NICHT leise
                 if event_room_name and event_room_name in self.rooms:
                     active_idx = self.rooms.index(event_room_name)
                     silent_mask[active_idx] = False
 
-                # Finde Partikel, die in "leisen aber überwachten" Räumen sitzen
-                # self.particles ist ein Array von Indizes [0, 5, 2, ...]
-                # silent_mask ist Bool Array [True, False, ...]
-                # Numpy Magic: Wir nutzen die Partikel-Position als Index für die Maske
+                # Finde Partikel in "leisen aber überwachten" Räumen
                 particles_in_silent_monitored_rooms = silent_mask[self.particles]
 
-                # BESTRAFUNG:
-                # Partikel in überwachten Räumen, die schweigen, werden bestraft.
-                # Partikel in blinden Räumen (Büro) bleiben verschont.
-                # Faktor 0.05 = Drastische Reduktion der Wahrscheinlichkeit
-                self.weights[particles_in_silent_monitored_rooms] *= 0.05
+                # FIX v0.18.6: Faktor entschärft! (0.05 -> 0.95)
+                # Das verhindert, dass die Wahrscheinlichkeit sofort auf 0 fällt.
+                self.weights[particles_in_silent_monitored_rooms] *= 0.95
 
-        # --- 2. UPDATE (Correction / Measurement) ---
-
+        # --- 2. UPDATE (Correction) ---
         if event_room_name and event_room_name in self.rooms:
-            # POSITIVE INFORMATION
+            # POSITIVE INFORMATION (Sensor hat gefeuert)
             target_idx = self.rooms.index(event_room_name)
             is_target = (self.particles == target_idx)
 
-            # Bonus für Treffer, Strafe für Rest
+            # Starker Bonus für den aktiven Raum
             self.weights[is_target] *= 50.0
             self.weights[~is_target] *= 0.02
 
         else:
-            # NEGATIVE INFO (Nur Zeit vergangen)
-            # Die Bestrafung wurde oben bereits im Diffusions-Schritt angewendet.
             pass
 
         # Normalisierung
@@ -207,7 +174,6 @@ class ParticleFilter:
 
         sorted_result = dict(sorted(result.items(), key=lambda item: item[1], reverse=True))
 
-        # Persistieren
         if time.time() - self.last_update > 60:
             self.save_brain()
             self.last_update = time.time()
