@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 # LOGGING
-VERSION = "0.18.0 (Stone Soup Tracker)"
+VERSION = "0.18.5 (Stone Soup + Active Sensor Penalty)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -70,7 +70,9 @@ def process_message(msg):
             # Update Tracker Topology (Stone Soup)
             rooms = data.get('rooms', [])
             matrix = data.get('matrix', [])
-            tracker_brain.set_topology(rooms, matrix)
+            # NEU: Liste der überwachten Räume für Negative Information
+            monitored = data.get('monitored', [])
+            tracker_brain.set_topology(rooms, matrix, monitored)
 
             send_result("TOPOLOGY_ACK", {"success": True})
 
