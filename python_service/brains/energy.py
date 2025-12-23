@@ -119,20 +119,35 @@ class EnergyBrain:
             self.last_state[room] = {'ts': now, 'val': t_now}
         return alerts
 
-    def calculate_warmup_times(self, current_temps, target_temp_default=21.0):
+    def calculate_warmup_times(self, current_temps, targets_config=None):
+        """
+        Berechnet die Zeit bis zur Wunschtemperatur.
+        targets_config: JSON Dict { "default": 20, "Bad": 23, ... }
+        """
+        if targets_config is None: targets_config = {}
         warmup_times = {}
+
+        # Standard-Ziel ermitteln
+        default_target = targets_config.get("default", 21.0)
+
         for room, t_in in current_temps.items():
-            target = target_temp_default
+            # Spezifisches Ziel für den Raum oder Default
+            target = targets_config.get(room, default_target)
+
             if t_in >= target:
                 warmup_times[room] = 0
                 continue
+
             power = self.heating.get(room, 3.0)
-            if power <= 0.1: power = 1.0
+            if power <= 0.1: power = 1.0 # Schutz vor Division durch 0
+
             diff = target - t_in
             hours_needed = diff / power
             minutes_needed = int(hours_needed * 60)
-            if minutes_needed > 720: minutes_needed = 720
+
+            if minutes_needed > 720: minutes_needed = 720 # Cap bei 12h
             warmup_times[room] = minutes_needed
+
         return warmup_times
 
     def predict_cooling(self, current_temps, t_out, t_forecast=None, is_sunny=False, solar_flags=None):

@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 # LOGGING
-VERSION = "0.18.5 (Stone Soup + Active Sensor Penalty)"
+VERSION = "0.18.7 (Smart Warm-Up Config)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -70,7 +70,6 @@ def process_message(msg):
             # Update Tracker Topology (Stone Soup)
             rooms = data.get('rooms', [])
             matrix = data.get('matrix', [])
-            # NEU: Liste der überwachten Räume für Negative Information
             monitored = data.get('monitored', [])
             tracker_brain.set_topology(rooms, matrix, monitored)
 
@@ -81,20 +80,16 @@ def process_message(msg):
             neighbors = security_brain.graph.propagate_signal(room)
             send_result("SIGNAL_RESULT", {"room": room, "propagation": neighbors})
 
-        # --- NEW: RAPID ADAPTATION LAYER (Few-Shot Learning) ---
         elif cmd == "SET_LEARNING_MODE":
             active = data.get("active", False)
             duration = data.get("duration", 0) # Minuten
             label = data.get("label", "manual")
             security_brain.set_learning_mode(active, duration, label)
             log(f"Security Learning Mode set to {active} ({label})")
-        # --------------------------------------
 
         # --- NEW: TRACKER (STONE SOUP) ---
         elif cmd == "TRACK_EVENT":
-            # Wird bei jeder Bewegung oder Heartbeat aufgerufen
-            # data: { "room": "Kitchen", "dt": 1.5 }
-            room = data.get("room") # Kann None sein
+            room = data.get("room")
             dt = data.get("dt", 0.0)
 
             probs = tracker_brain.update(room, dt)
@@ -160,6 +155,9 @@ def process_message(msg):
             is_sunny = data.get("is_sunny", False)
             solar_flags = data.get("solar_flags", {})
 
+            # NEU: Individuelle Ziele für Warmup
+            warmup_targets = data.get("warmup_targets", {})
+
             # A. Classic Prediction
             forecast = energy_brain.predict_cooling(
                 current_temps, t_out,
@@ -168,13 +166,14 @@ def process_message(msg):
             )
             send_result("ENERGY_PREDICT_RESULT", {"forecast": forecast})
 
-            # B. NEU: Ventilation Check
+            # B. Ventilation Check
             vent_alerts = energy_brain.check_ventilation(current_temps)
             if vent_alerts:
                 send_result("VENTILATION_ALERT", {"alerts": vent_alerts})
 
-            # C. NEU: Warm-Up Times (Smart Return)
-            warmup_times = energy_brain.calculate_warmup_times(current_temps, 21.0)
+            # C. Warm-Up Times (Smart Return)
+            # Hier nutzen wir jetzt die Config
+            warmup_times = energy_brain.calculate_warmup_times(current_temps, warmup_targets)
             send_result("WARMUP_RESULT", {"times": warmup_times})
 
             # D. PINN Prediction
