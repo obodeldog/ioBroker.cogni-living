@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 # LOGGING
-VERSION = "0.18.7 (Smart Warm-Up Config)"
+VERSION = "0.18.19 (Hybrid Fusion)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -64,15 +64,11 @@ def process_message(msg):
             send_result("SECURITY_RESULT", {"anomaly_score": score, "is_anomaly": is_anomaly, "explanation": explanation})
 
         elif cmd == "SET_TOPOLOGY":
-            # Update Security Graph
             security_brain.graph.update_topology(data)
-
-            # Update Tracker Topology (Stone Soup)
             rooms = data.get('rooms', [])
             matrix = data.get('matrix', [])
             monitored = data.get('monitored', [])
             tracker_brain.set_topology(rooms, matrix, monitored)
-
             send_result("TOPOLOGY_ACK", {"success": True})
 
         elif cmd == "SIMULATE_SIGNAL":
@@ -82,19 +78,16 @@ def process_message(msg):
 
         elif cmd == "SET_LEARNING_MODE":
             active = data.get("active", False)
-            duration = data.get("duration", 0) # Minuten
+            duration = data.get("duration", 0)
             label = data.get("label", "manual")
             security_brain.set_learning_mode(active, duration, label)
             log(f"Security Learning Mode set to {active} ({label})")
 
-        # --- NEW: TRACKER (STONE SOUP) ---
         elif cmd == "TRACK_EVENT":
             room = data.get("room")
             dt = data.get("dt", 0.0)
-
             probs = tracker_brain.update(room, dt)
             send_result("TRACKER_RESULT", {"probabilities": probs})
-        # ---------------------------------
 
         # 2. HEALTH
         elif cmd == "TRAIN_HEALTH":
@@ -110,43 +103,29 @@ def process_message(msg):
         # 3. ENERGY
         elif cmd == "TRAIN_ENERGY":
             points = data.get("points", [])
-
-            # --- Classic Training ---
             success, details = energy_brain.train(points)
             log(f"Classic Energy Train: {success}")
 
-            # --- PINN Training ---
             if points and len(points) > 20:
                 try:
                     df = pd.DataFrame(points)
                     df['ts'] = pd.to_datetime(df['ts'], unit='ms')
                     pinn_data = []
-
                     for room, group in df.groupby('room'):
                         group = group.sort_values('ts')
                         group['dt_h'] = group['ts'].diff().dt.total_seconds() / 3600.0
                         group['d_temp'] = group['t_in'].diff()
-
                         valid = group[(group['dt_h'] > 0.1) & (group['dt_h'] < 2.0)].copy()
-
                         for idx, row in valid.iterrows():
                             t_in = row['t_in']
                             t_out = 10.0
                             valve = row.get('valve', 0)
                             solar = False
                             rate = row['d_temp'] / row['dt_h']
-
-                            pinn_data.append({
-                                't_in': t_in, 't_out': t_out,
-                                'valve': valve, 'solar': solar,
-                                'delta_t': rate
-                            })
-
+                            pinn_data.append({ 't_in': t_in, 't_out': t_out, 'valve': valve, 'solar': solar, 'delta_t': rate })
                     p_success, p_msg = pinn_brain.train(pinn_data)
                     log(f"PINN Training: {p_msg}")
-                except Exception as e:
-                    log(f"PINN Train Error: {e}")
-
+                except Exception as e: log(f"PINN Train Error: {e}")
             send_result("ENERGY_TRAIN_RESULT", {"success": success, "details": details})
 
         elif cmd == "PREDICT_ENERGY":
@@ -154,41 +133,36 @@ def process_message(msg):
             t_out = data.get("t_out", 0)
             is_sunny = data.get("is_sunny", False)
             solar_flags = data.get("solar_flags", {})
-
-            # NEU: Individuelle Ziele für Warmup
             warmup_targets = data.get("warmup_targets", {})
 
             # A. Classic Prediction
-            forecast = energy_brain.predict_cooling(
-                current_temps, t_out,
-                data.get("t_forecast", None),
-                is_sunny, solar_flags
-            )
+            forecast = energy_brain.predict_cooling(current_temps, t_out, data.get("t_forecast", None), is_sunny, solar_flags)
             send_result("ENERGY_PREDICT_RESULT", {"forecast": forecast})
 
             # B. Ventilation Check
             vent_alerts = energy_brain.check_ventilation(current_temps)
-            if vent_alerts:
-                send_result("VENTILATION_ALERT", {"alerts": vent_alerts})
+            if vent_alerts: send_result("VENTILATION_ALERT", {"alerts": vent_alerts})
 
-            # C. Warm-Up Times (Smart Return)
-            # Hier nutzen wir jetzt die Config
-            warmup_times = energy_brain.calculate_warmup_times(current_temps, warmup_targets)
-            send_result("WARMUP_RESULT", {"times": warmup_times})
+            # C. Warm-Up Times (HYBRID UPDATE)
+            # Wir übergeben jetzt PINN und Umwelt-Faktoren an die Berechnung
+            times, sources = energy_brain.calculate_warmup_times(
+                current_temps,
+                warmup_targets,
+                pinn_brain,
+                t_out,
+                is_sunny,
+                solar_flags
+            )
+            # Sende BEIDES: Zeiten und die Info, wer es berechnet hat
+            send_result("WARMUP_RESULT", {"times": times, "sources": sources})
 
-            # D. PINN Prediction
+            # D. PINN Raw Prediction (fürs Frontend Diagramm)
             pinn_results = {}
             for room, t_in in current_temps.items():
                 solar_active = is_sunny and solar_flags.get(room, False)
                 rate = pinn_brain.predict(t_in, t_out, 0.0, solar_active)
-
-                pinn_results[room] = {
-                    "rate_per_hour": round(rate, 2),
-                    "predicted_1h": round(t_in + rate, 1)
-                }
-
-            if pinn_results:
-                send_result("PINN_PREDICT_RESULT", {"forecast": pinn_results})
+                pinn_results[room] = { "rate_per_hour": round(rate, 2), "predicted_1h": round(t_in + rate, 1) }
+            if pinn_results: send_result("PINN_PREDICT_RESULT", {"forecast": pinn_results})
 
         elif cmd == "OPTIMIZE_ENERGY":
             proposals = energy_brain.get_optimization_advice(
