@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 # LOGGING
-VERSION = "0.18.19 (Hybrid Fusion)"
+VERSION = "0.18.22 (Warmup Comparison Details)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -144,8 +144,7 @@ def process_message(msg):
             if vent_alerts: send_result("VENTILATION_ALERT", {"alerts": vent_alerts})
 
             # C. Warm-Up Times (HYBRID UPDATE)
-            # Wir übergeben jetzt PINN und Umwelt-Faktoren an die Berechnung
-            times, sources = energy_brain.calculate_warmup_times(
+            times, sources, details = energy_brain.calculate_warmup_times(
                 current_temps,
                 warmup_targets,
                 pinn_brain,
@@ -153,10 +152,10 @@ def process_message(msg):
                 is_sunny,
                 solar_flags
             )
-            # Sende BEIDES: Zeiten und die Info, wer es berechnet hat
-            send_result("WARMUP_RESULT", {"times": times, "sources": sources})
+            # Send TIMES, SOURCES, and DETAILS (Comparison)
+            send_result("WARMUP_RESULT", {"times": times, "sources": sources, "details": details})
 
-            # D. PINN Raw Prediction (fürs Frontend Diagramm)
+            # D. PINN Raw Prediction
             pinn_results = {}
             for room, t_in in current_temps.items():
                 solar_active = is_sunny and solar_flags.get(room, False)

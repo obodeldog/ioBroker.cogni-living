@@ -123,19 +123,23 @@ class EnergyBrain:
     def calculate_warmup_times(self, current_temps, targets_config=None, pinn_brain=None, t_out=10.0, is_sunny=False, solar_flags=None):
         """
         Berechnet Zeit bis Zieltemperatur.
-        Nutzt Hybrid-Ansatz: Wenn PINN plausible Werte liefert, wird PINN priorisiert.
+        Return: (final_times, sources, details_dict)
         """
         if targets_config is None: targets_config = {}
         if solar_flags is None: solar_flags = {}
 
         warmup_times = {}
         sources = {}
+        details = {} # Holds comparison (Phys vs AI)
 
         default_target = targets_config.get("default", 21.0)
 
         for room, t_in in current_temps.items():
             target = targets_config.get(room, default_target)
             diff = target - t_in
+
+            # Default structure
+            details[room] = { "phys": 0, "ai": None }
 
             # Fall 1: Schon warm
             if diff <= 0:
@@ -147,35 +151,31 @@ class EnergyBrain:
             power_phys = self.heating.get(room, 3.0)
             if power_phys <= 0.1: power_phys = 1.0
             minutes_phys = int((diff / power_phys) * 60)
+            if minutes_phys > 720: minutes_phys = 720
 
             final_minutes = minutes_phys
             final_source = "Physics"
+            details[room]["phys"] = minutes_phys
 
             # --- B. PINN CALCULATION (AI) ---
             if pinn_brain and pinn_brain.is_ready:
-                # Wir simulieren: "Was wäre, wenn wir voll aufdrehen (Valve=100)?"
                 solar_active = is_sunny and solar_flags.get(room, False)
-
-                # PINN liefert °C pro Stunde bei Vollast
                 predicted_rate = pinn_brain.predict(t_in, t_out, valve=100.0, solar=solar_active)
 
-                # Plausibilitäts-Check:
-                # Wenn das PINN sagt "Heizt gar nicht" (<= 0.2) oder "Explodiert" (> 10),
-                # trauen wir ihm nicht und bleiben bei Physik.
                 if predicted_rate > 0.2 and predicted_rate < 10.0:
                     minutes_ai = int((diff / predicted_rate) * 60)
+                    if minutes_ai > 720: minutes_ai = 720
 
-                    # FUSION: Wir nehmen die AI-Zeit, da sie Wetter (Solar) kennt
+                    details[room]["ai"] = minutes_ai # Store for transparency
+
+                    # FUSION: Use AI
                     final_minutes = minutes_ai
                     final_source = "AI (PINN)"
-
-            # Cap bei 12h
-            if final_minutes > 720: final_minutes = 720
 
             warmup_times[room] = final_minutes
             sources[room] = final_source
 
-        return warmup_times, sources
+        return warmup_times, sources, details
 
     def predict_cooling(self, current_temps, t_out, t_forecast=None, is_sunny=False, solar_flags=None):
         if not self.is_ready: return {}
