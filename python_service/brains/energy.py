@@ -5,8 +5,9 @@ import numpy as np
 import json
 import math
 import time
+from datetime import datetime
 
-# Dr.-Ing. Update: PERSISTENTE SPEICHERUNG
+# Dr.-Ing. Update: PERSISTENTE SPEICHERUNG & RL-PENALTIES
 ADAPTER_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(ADAPTER_DIR)), 'iobroker-data', 'cogni-living')
 
@@ -24,6 +25,8 @@ class EnergyBrain:
         self.heating = {}
         self.is_ready = False
         self.last_state = {}
+        # RL: Feedback Loops - Stores { "Room_Hour": penalty_score }
+        self.penalties = {}
 
     def load_brain(self):
         try:
@@ -32,10 +35,43 @@ class EnergyBrain:
                     data = pickle.load(f)
                     self.scores = data.get('scores', {})
                     self.heating = data.get('heating', {})
+                    self.penalties = data.get('penalties', {}) # Load penalties
                 self.is_ready = True
             return True
         except:
             return False
+
+    def save_brain(self):
+        try:
+            with open(ENERGY_MODEL_PATH, 'wb') as f:
+                pickle.dump({
+                    'scores': self.scores,
+                    'heating': self.heating,
+                    'penalties': self.penalties
+                }, f)
+        except Exception as e: print(f"[ERROR] Save Brain: {e}")
+
+    # --- NEW: RL-FEEDBACK MECHANISM ---
+    def train_penalty(self, room):
+        """
+        Received negative reward (User manually overrode MPC).
+        Learn that 'room' at 'current_hour' is sensitive.
+        """
+        try:
+            now = datetime.now()
+            hour = now.hour
+            key = f"{room}_{hour}"
+
+            # 1.0 = Full Block. Could implement decay later.
+            self.penalties[key] = 1.0
+
+            self.save_brain()
+            return True, f"Penalty learned for {key}"
+        except Exception as e:
+            return False, str(e)
+
+    def get_penalties(self):
+        return self.penalties
 
     def train(self, points):
         try:
@@ -86,8 +122,7 @@ class EnergyBrain:
             self.scores.update(results_insu)
             self.heating.update(results_heat)
 
-            with open(ENERGY_MODEL_PATH, 'wb') as f:
-                pickle.dump({'scores': self.scores, 'heating': self.heating}, f)
+            self.save_brain()
 
             self.is_ready = True
             return True, json.dumps({'insulation': self.scores, 'heating': self.heating})
@@ -198,7 +233,18 @@ class EnergyBrain:
         if targets is None: targets = {}
         t_eff = self._get_effective_temp(t_out, t_forecast)
         proposals = []
+
+        current_hour = datetime.now().hour
+
         for room, t_in in current_temps.items():
+            # --- RL CHECK ---
+            # Check if we have a penalty for this room at this time
+            penalty_key = f"{room}_{current_hour}"
+            if self.penalties.get(penalty_key, 0) > 0.5:
+                # RL BLOCKS THIS
+                continue
+            # ----------------
+
             t_target = targets.get(room, 21.0)
             if t_in <= t_target: continue
             base_k = self.scores.get(room, -0.5)
@@ -215,5 +261,6 @@ class EnergyBrain:
             if minutes_left > 15:
                 if minutes_left > 240: minutes_left = 240
                 proposals.append({ "room": room, "minutes_safe": minutes_left, "target": t_target, "current": t_in, "savings_msg": f"Heizung kann {minutes_left} min ausbleiben." })
+
         proposals.sort(key=lambda x: x['minutes_safe'], reverse=True)
         return proposals

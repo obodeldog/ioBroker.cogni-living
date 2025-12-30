@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 # LOGGING
-VERSION = "0.18.25 (Fix: Clear Vent Alerts)"
+VERSION = "0.18.26 (RL-Feedback Added)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -128,6 +128,15 @@ def process_message(msg):
                 except Exception as e: log(f"PINN Train Error: {e}")
             send_result("ENERGY_TRAIN_RESULT", {"success": success, "details": details})
 
+        # --- NEW: RL PENALTY TRAINING ---
+        elif cmd == "TRAIN_RL_PENALTY":
+            room = data.get("room")
+            success, msg = energy_brain.train_penalty(room)
+            log(f"RL Penalty: {msg}")
+            # Immediately send back updated penalties for frontend
+            send_result("RL_PENALTY_UPDATE", {"penalties": energy_brain.get_penalties()})
+        # --------------------------------
+
         elif cmd == "PREDICT_ENERGY":
             current_temps = data.get("current_temps", {})
             t_out = data.get("t_out", 0)
@@ -161,6 +170,9 @@ def process_message(msg):
                 rate = pinn_brain.predict(t_in, t_out, 0.0, solar_active)
                 pinn_results[room] = { "rate_per_hour": round(rate, 2), "predicted_1h": round(t_in + rate, 1) }
             if pinn_results: send_result("PINN_PREDICT_RESULT", {"forecast": pinn_results})
+
+            # E. (NEW) Sync Penalties on Prediction too
+            send_result("RL_PENALTY_UPDATE", {"penalties": energy_brain.get_penalties()})
 
         elif cmd == "OPTIMIZE_ENERGY":
             proposals = energy_brain.get_optimization_advice(
