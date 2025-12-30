@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 # LOGGING
-VERSION = "0.18.22 (Warmup Comparison Details)"
+VERSION = "0.18.25 (Fix: Clear Vent Alerts)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -139,11 +139,11 @@ def process_message(msg):
             forecast = energy_brain.predict_cooling(current_temps, t_out, data.get("t_forecast", None), is_sunny, solar_flags)
             send_result("ENERGY_PREDICT_RESULT", {"forecast": forecast})
 
-            # B. Ventilation Check
+            # B. Ventilation Check (FIXED: Send always to clear alerts)
             vent_alerts = energy_brain.check_ventilation(current_temps)
-            if vent_alerts: send_result("VENTILATION_ALERT", {"alerts": vent_alerts})
+            send_result("VENTILATION_ALERT", {"alerts": vent_alerts})
 
-            # C. Warm-Up Times (HYBRID UPDATE)
+            # C. Warm-Up Times
             times, sources, details = energy_brain.calculate_warmup_times(
                 current_temps,
                 warmup_targets,
@@ -152,7 +152,6 @@ def process_message(msg):
                 is_sunny,
                 solar_flags
             )
-            # Send TIMES, SOURCES, and DETAILS (Comparison)
             send_result("WARMUP_RESULT", {"times": times, "sources": sources, "details": details})
 
             # D. PINN Raw Prediction
