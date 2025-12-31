@@ -7,7 +7,7 @@ import math
 import time
 from datetime import datetime
 
-# Dr.-Ing. Update: PERSISTENTE SPEICHERUNG & RL-PENALTIES
+# Dr.-Ing. Update: PERSISTENTE SPEICHERUNG & SANITY CHECKS (v0.18.27)
 ADAPTER_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(ADAPTER_DIR)), 'iobroker-data', 'cogni-living')
 
@@ -35,7 +35,7 @@ class EnergyBrain:
                     data = pickle.load(f)
                     self.scores = data.get('scores', {})
                     self.heating = data.get('heating', {})
-                    self.penalties = data.get('penalties', {}) # Load penalties
+                    self.penalties = data.get('penalties', {})
                 self.is_ready = True
             return True
         except:
@@ -51,7 +51,7 @@ class EnergyBrain:
                 }, f)
         except Exception as e: print(f"[ERROR] Save Brain: {e}")
 
-    # --- NEW: RL-FEEDBACK MECHANISM ---
+    # --- RL-FEEDBACK MECHANISM ---
     def train_penalty(self, room):
         """
         Received negative reward (User manually overrode MPC).
@@ -61,10 +61,7 @@ class EnergyBrain:
             now = datetime.now()
             hour = now.hour
             key = f"{room}_{hour}"
-
-            # 1.0 = Full Block. Could implement decay later.
             self.penalties[key] = 1.0
-
             self.save_brain()
             return True, f"Penalty learned for {key}"
         except Exception as e:
@@ -94,7 +91,13 @@ class EnergyBrain:
                 if len(valid) < 1: continue
 
                 valid['gradient'] = valid['d_temp'] / valid['dt_h']
-                valid = valid[(valid['gradient'] > -15) & (valid['gradient'] < 50)]
+
+                # --- SANITY CHECK / PHYSICS CAP ---
+                # Wir filtern unrealistische Extremwerte (Rebound/Fenster) VOR dem Training.
+                # Heizen: Alles über +8.0 ist Rebound/Fehler.
+                # Kühlen: Alles unter -2.5 ist offenes Fenster.
+                valid = valid[(valid['gradient'] > -2.5) & (valid['gradient'] < 8.0)]
+                # ----------------------------------
 
                 if has_valves:
                     cooling_phase = valid[valid['valve'] < 5]
@@ -144,6 +147,8 @@ class EnergyBrain:
                 if dt_hours > 0.08:
                     d_temp = t_now - t_last
                     gradient = d_temp / dt_hours
+                    # Hinweis: Der Ventilation Check sieht weiterhin die "echten" extremen Werte,
+                    # um Alarm zu schlagen. Das Training sieht sie nicht mehr.
                     if gradient < -5.0:
                         alerts.append({
                             'room': room,
@@ -165,7 +170,7 @@ class EnergyBrain:
 
         warmup_times = {}
         sources = {}
-        details = {} # Holds comparison (Phys vs AI)
+        details = {}
 
         default_target = targets_config.get("default", 21.0)
 
@@ -173,10 +178,8 @@ class EnergyBrain:
             target = targets_config.get(room, default_target)
             diff = target - t_in
 
-            # Default structure
             details[room] = { "phys": 0, "ai": None }
 
-            # Fall 1: Schon warm
             if diff <= 0:
                 warmup_times[room] = 0
                 sources[room] = "TargetReached"
@@ -201,9 +204,8 @@ class EnergyBrain:
                     minutes_ai = int((diff / predicted_rate) * 60)
                     if minutes_ai > 720: minutes_ai = 720
 
-                    details[room]["ai"] = minutes_ai # Store for transparency
+                    details[room]["ai"] = minutes_ai
 
-                    # FUSION: Use AI
                     final_minutes = minutes_ai
                     final_source = "AI (PINN)"
 
@@ -238,10 +240,8 @@ class EnergyBrain:
 
         for room, t_in in current_temps.items():
             # --- RL CHECK ---
-            # Check if we have a penalty for this room at this time
             penalty_key = f"{room}_{current_hour}"
             if self.penalties.get(penalty_key, 0) > 0.5:
-                # RL BLOCKS THIS
                 continue
             # ----------------
 
