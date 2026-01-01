@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 # LOGGING
-VERSION = "0.22.1 (Full Logic Impl)"
+VERSION = "0.24.0 (Full Logic Impl)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -102,25 +102,16 @@ def process_message(msg):
             trend = health_brain.analyze_gait_speed(data.get("sequences", []))
             if trend is not None: send_result("GAIT_RESULT", {"speed_trend": trend})
 
-        # --- UPDATE: ECHTE LOGIK FÜR TREND-ANALYSE ---
         elif cmd == "ANALYZE_TREND":
             values = data.get("values", [])
             tag = data.get("tag", "Activity")
-
-            # Aufruf der neuen echten Mathematik-Funktion
             trend_percent, debug_msg = health_brain.analyze_activity_trend(values)
-
-            # Log für Debugging
             log(f"Trend Analysis ({tag}): {debug_msg}")
-
-            # Senden des echten Ergebnisses zurück an den Adapter
-            # Damit wird der 'lastCheck' Zeitstempel im ioBroker aktualisiert!
             send_result("HEALTH_TREND_RESULT", {
                 "trend_percent": trend_percent,
                 "details": debug_msg,
-                "is_anomaly": False # Ein Trend ist per se keine Anomalie, sondern eine Metrik
+                "is_anomaly": False
             })
-        # ---------------------------------------------
 
         # 3. ENERGY
         elif cmd == "TRAIN_ENERGY":
