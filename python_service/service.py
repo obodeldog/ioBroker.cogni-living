@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 # LOGGING
-VERSION = "0.18.26 (RL-Feedback Added)"
+VERSION = "0.22.1 (Full Logic Impl)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -93,12 +93,34 @@ def process_message(msg):
         elif cmd == "TRAIN_HEALTH":
             success, details = health_brain.train(data.get("digests", []))
             send_result("HEALTH_TRAIN_RESULT", {"success": success, "details": details})
+
         elif cmd == "ANALYZE_HEALTH":
             res, details = health_brain.predict(data.get("digest", {}))
             send_result("HEALTH_RESULT", {"is_anomaly": (res == -1), "details": details})
+
         elif cmd == "ANALYZE_GAIT":
             trend = health_brain.analyze_gait_speed(data.get("sequences", []))
             if trend is not None: send_result("GAIT_RESULT", {"speed_trend": trend})
+
+        # --- UPDATE: ECHTE LOGIK FÜR TREND-ANALYSE ---
+        elif cmd == "ANALYZE_TREND":
+            values = data.get("values", [])
+            tag = data.get("tag", "Activity")
+
+            # Aufruf der neuen echten Mathematik-Funktion
+            trend_percent, debug_msg = health_brain.analyze_activity_trend(values)
+
+            # Log für Debugging
+            log(f"Trend Analysis ({tag}): {debug_msg}")
+
+            # Senden des echten Ergebnisses zurück an den Adapter
+            # Damit wird der 'lastCheck' Zeitstempel im ioBroker aktualisiert!
+            send_result("HEALTH_TREND_RESULT", {
+                "trend_percent": trend_percent,
+                "details": debug_msg,
+                "is_anomaly": False # Ein Trend ist per se keine Anomalie, sondern eine Metrik
+            })
+        # ---------------------------------------------
 
         # 3. ENERGY
         elif cmd == "TRAIN_ENERGY":
@@ -128,14 +150,11 @@ def process_message(msg):
                 except Exception as e: log(f"PINN Train Error: {e}")
             send_result("ENERGY_TRAIN_RESULT", {"success": success, "details": details})
 
-        # --- NEW: RL PENALTY TRAINING ---
         elif cmd == "TRAIN_RL_PENALTY":
             room = data.get("room")
             success, msg = energy_brain.train_penalty(room)
             log(f"RL Penalty: {msg}")
-            # Immediately send back updated penalties for frontend
             send_result("RL_PENALTY_UPDATE", {"penalties": energy_brain.get_penalties()})
-        # --------------------------------
 
         elif cmd == "PREDICT_ENERGY":
             current_temps = data.get("current_temps", {})
@@ -144,15 +163,12 @@ def process_message(msg):
             solar_flags = data.get("solar_flags", {})
             warmup_targets = data.get("warmup_targets", {})
 
-            # A. Classic Prediction
             forecast = energy_brain.predict_cooling(current_temps, t_out, data.get("t_forecast", None), is_sunny, solar_flags)
             send_result("ENERGY_PREDICT_RESULT", {"forecast": forecast})
 
-            # B. Ventilation Check (FIXED: Send always to clear alerts)
             vent_alerts = energy_brain.check_ventilation(current_temps)
             send_result("VENTILATION_ALERT", {"alerts": vent_alerts})
 
-            # C. Warm-Up Times
             times, sources, details = energy_brain.calculate_warmup_times(
                 current_temps,
                 warmup_targets,
@@ -163,7 +179,6 @@ def process_message(msg):
             )
             send_result("WARMUP_RESULT", {"times": times, "sources": sources, "details": details})
 
-            # D. PINN Raw Prediction
             pinn_results = {}
             for room, t_in in current_temps.items():
                 solar_active = is_sunny and solar_flags.get(room, False)
@@ -171,7 +186,6 @@ def process_message(msg):
                 pinn_results[room] = { "rate_per_hour": round(rate, 2), "predicted_1h": round(t_in + rate, 1) }
             if pinn_results: send_result("PINN_PREDICT_RESULT", {"forecast": pinn_results})
 
-            # E. (NEW) Sync Penalties on Prediction too
             send_result("RL_PENALTY_UPDATE", {"penalties": energy_brain.get_penalties()})
 
         elif cmd == "OPTIMIZE_ENERGY":
