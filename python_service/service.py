@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 # LOGGING
-VERSION = "0.24.0 (Full Logic Impl)"
+VERSION = "0.27.0 (Sensor Tracking Impl)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -98,9 +98,15 @@ def process_message(msg):
             res, details = health_brain.predict(data.get("digest", {}))
             send_result("HEALTH_RESULT", {"is_anomaly": (res == -1), "details": details})
 
+        # --- UPDATE: GAIT SENSORS ---
         elif cmd == "ANALYZE_GAIT":
-            trend = health_brain.analyze_gait_speed(data.get("sequences", []))
-            if trend is not None: send_result("GAIT_RESULT", {"speed_trend": trend})
+            trend, sensors = health_brain.analyze_gait_speed(data.get("sequences", []))
+            if trend is not None:
+                send_result("GAIT_RESULT", {
+                    "speed_trend": trend,
+                    "sensors": sensors  # Die Liste der beteiligten Räume
+                })
+        # -----------------------------
 
         elif cmd == "ANALYZE_TREND":
             values = data.get("values", [])
