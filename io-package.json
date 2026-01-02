@@ -1,11 +1,11 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.24.0",
+        "version": "0.26.0",
         "news": {
-            "0.24.0": {
-                "en": "Fix: Python Bridge Path & Trend Analysis Logic",
-                "de": "Fix: Python Bridge Pfad & Trend-Analyse Logik"
+            "0.26.0": {
+                "en": "Fix: Split Gait Speed and Activity Trend into separate states",
+                "de": "Fix: Trennung von Gehgeschwindigkeit und Aktivitäts-Trend in separate Datenpunkte"
             }
         },
         "titleLang": {
