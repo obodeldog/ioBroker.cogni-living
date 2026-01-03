@@ -1,11 +1,11 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.26.0",
+        "version": "0.28.0",
         "news": {
-            "0.26.0": {
-                "en": "Fix: Split Gait Speed and Activity Trend into separate states",
-                "de": "Fix: Trennung von Gehgeschwindigkeit und Aktivitäts-Trend in separate Datenpunkte"
+            "0.28.0": {
+                "en": "Feature: Gait Analysis Debug/Proof Data",
+                "de": "Feature: Geh-Analyse Debug/Beweis-Daten"
             }
         },
         "titleLang": {

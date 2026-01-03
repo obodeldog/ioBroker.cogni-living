@@ -2,8 +2,8 @@ import os
 import pickle
 import numpy as np
 
-# Dr.-Ing. Update: Gait Speed mit Sensor-Tracking
-# Version: 0.27.0 (Sensor Source Tracking)
+# Dr.-Ing. Update: Gait Speed mit Debug-Proof (Transparenz)
+# Version: 0.28.0 (Math Proof)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HEALTH_MODEL_PATH = os.path.join(BASE_DIR, "health_if_model.pkl")
@@ -55,18 +55,17 @@ class HealthBrain:
 
     def analyze_gait_speed(self, sequences):
         """
-        Berechnet den Trend der Gehgeschwindigkeit UND identifiziert die Sensoren.
-        Output: (percent_change, list_of_sensors)
+        Berechnet Trend, Sensoren UND einen mathematischen Beweis.
+        Output: (percent_change, list_of_sensors, debug_proof_string)
         """
         try:
             durations = []
-            used_sensors = set() # Set für einzigartige Sensoren
+            used_sensors = set()
 
             for seq in sequences:
                 steps = seq.get('steps', [])
                 if len(steps) < 2: continue
 
-                # Topologie-Check & Sensor-Collection
                 is_hallway = False
                 seq_sensors = []
 
@@ -74,19 +73,18 @@ class HealthBrain:
                     loc = step['loc'].lower()
                     if any(x in loc for x in ['flur', 'diele', 'gang']):
                         is_hallway = True
-                        # Versuchen, den Sensor-Namen etwas zu bereinigen (optional)
-                        # Wir nehmen hier einfach den Location-Namen
                         seq_sensors.append(step['loc'])
 
                 if is_hallway:
                     duration = steps[-1]['t_delta']
                     if duration > 1 and duration < 20:
                         durations.append(duration)
-                        # Wenn diese Sequenz gültig war, fügen wir die Sensoren zur Liste hinzu
                         for s in seq_sensors: used_sensors.add(s)
 
-            if len(durations) < 5: return None, []
+            if len(durations) < 5:
+                return None, [], "Zu wenig Datenpunkte (<5 Sequenzen)"
 
+            # Mathematik (Lineare Regression)
             x = np.arange(len(durations))
             y = np.array(durations)
             slope, intercept = np.polyfit(x, y, 1)
@@ -97,8 +95,14 @@ class HealthBrain:
             if start_val == 0: start_val = 0.01
             percent_change = ((end_val - start_val) / start_val) * 100
 
-            return percent_change, list(used_sensors)
-        except: return None, []
+            # --- DER BEWEIS ---
+            # Wir formatieren die letzten 5 Messwerte und die Regressions-Parameter
+            last_5 = [round(d, 2) for d in durations[-5:]]
+            proof = (f"n={len(durations)} Events. Regression y=mx+b: m={slope:.4f}, b={intercept:.2f}. "
+                     f"Letzte 5 Messwerte (Sekunden): {last_5}")
+
+            return percent_change, list(used_sensors), proof
+        except Exception as e: return None, [], f"Error: {str(e)}"
 
     def analyze_activity_trend(self, values):
         try:
