@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.28.0",
+        "version": "0.29.5",
         "news": {
+            "0.29.5": {
+                "en": "Feature: Smart Calendar Matching & Profile Enforcement",
+                "de": "Feature: Intelligentes Kalender-Matching & Profil-Durchsetzung"
+            },
             "0.28.0": {
                 "en": "Feature: Gait Analysis Debug/Proof Data",
                 "de": "Feature: Geh-Analyse Debug/Beweis-Daten"
