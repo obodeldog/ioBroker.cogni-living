@@ -38,33 +38,19 @@
         "extIcon": "https://raw.githubusercontent.com/obodeldog/ioBroker.cogni-living/main/admin/cogni-living.png",
         "readme": "https://github.com/obodeldog/ioBroker.cogni-living/blob/main/README.md",
         "loglevel": "info",
-        "tier": 3,
         "mode": "daemon",
-        "type": "logic",
-        "compact": false,
-        "connectionType": "cloud",
+        "type": "iot-systems",
+        "compact": true,
+        "connectionType": "local",
         "dataSource": "push",
-        "messagebox": true,
-        "osDependencies": {
-            "linux": [
-                "python3",
-                "python3-pip",
-                "python3-venv"
-            ],
-            "win32": []
-        },
-        "adminUI": {
-            "config": "html"
-        },
-        "eraseOnUpload": true,
+        "materialize": true,
         "dependencies": [
             {
                 "js-controller": ">=6.0.11"
             }
         ],
         "globalDependencies": [
-            {
-                "admin": ">=7.0.23"
+            {\n                "admin": ">=7.0.23"
             }
         ]
     },
@@ -104,7 +90,12 @@
         "weatherInstance": "",
         "useCalendar": false,
         "calendarInstance": "",
-        "calendarSelection": []
+        "calendarProfileMatching": false,
+        "infrasoundEnabled": false,
+        "infrasoundSensorId": "",
+        "infrasoundThreshold": 0.04,
+        "infrasoundArmingId": "",
+        "infrasoundEntryDelay": 0
     },
     "objects": [],
     "instanceObjects": []
