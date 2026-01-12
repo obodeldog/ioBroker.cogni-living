@@ -1,19 +1,15 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.29.7",
+        "version": "0.29.8",
         "news": {
+            "0.29.8": {
+                "en": "Feature: Bidirectional Forensic Calibration (Window to Pressure)",
+                "de": "Feature: Bidirektionale Forensische Kalibrierung (Fenster zu Druck)"
+            },
             "0.29.7": {
                 "en": "Feature: Infrasound Forensic Correlation",
                 "de": "Feature: Infraschall Forensische Korrelation"
-            },
-            "0.29.6": {
-                "en": "Feature: Infrasound Security Layer",
-                "de": "Feature: Infraschall Sicherheits-Layer"
-            },
-            "0.29.5": {
-                "en": "Feature: Smart Calendar Matching & Profile Enforcement",
-                "de": "Feature: Intelligentes Kalender-Matching & Profil-Durchsetzung"
             }
         },
         "titleLang": {
