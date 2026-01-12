@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.29.6",
+        "version": "0.29.7",
         "news": {
+            "0.29.7": {
+                "en": "Feature: Infrasound Forensic Correlation",
+                "de": "Feature: Infraschall Forensische Korrelation"
+            },
             "0.29.6": {
                 "en": "Feature: Infrasound Security Layer",
                 "de": "Feature: Infraschall Sicherheits-Layer"
