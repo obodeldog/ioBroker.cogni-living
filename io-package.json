@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.29.8",
+        "version": "0.29.9",
         "news": {
+            "0.29.9": {
+                "en": "Feature: Presence-aware Infrasound Debugging & Dashboard Fix",
+                "de": "Feature: Anwesenheits-abhängiges Infraschall-Debugging & Dashboard Fix"
+            },
             "0.29.8": {
                 "en": "Feature: Bidirectional Forensic Calibration (Window to Pressure)",
                 "de": "Feature: Bidirektionale Forensische Kalibrierung (Fenster zu Druck)"
