@@ -3,9 +3,10 @@ import json
 import time
 import os
 import pandas as pd
+import pickle # HINZUGEFÜGT für Speicherfunktion
 
 # LOGGING
-VERSION = "0.28.0 (Proof Transport)"
+VERSION = "0.29.1 (Graph Learning Patch)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -58,6 +59,52 @@ def process_message(msg):
         if cmd == "TRAIN_SECURITY":
             success, details, thresh = security_brain.train(data.get("sequences", []))
             send_result("TRAINING_COMPLETE", {"success": success, "details": details, "threshold": thresh})
+
+        # --- NEU: GRAPH BRAIN TRAINING (Markov-Ketten) ---
+        elif cmd == "TRAIN_TOPOLOGY":
+            sequences = data.get("sequences", [])
+            rooms = security_brain.graph.rooms
+
+            if not rooms:
+                log("⚠️ Cannot train topology: No rooms defined (Manual Map missing).")
+                send_result("TRAINING_COMPLETE", {"success": False, "details": "No rooms defined"})
+            else:
+                # 1. Matrix berechnen (Zählen der Übergänge)
+                room_map = {r: i for i, r in enumerate(rooms)}
+                n = len(rooms)
+                mat = np.zeros((n, n), dtype=float)
+                count = 0
+
+                for seq in sequences:
+                    # Filtere Räume, die wir kennen
+                    valid_seq = [r for r in seq if r in room_map]
+                    for i in range(len(valid_seq) - 1):
+                        u, v = valid_seq[i], valid_seq[i+1]
+                        if u == v: continue # Keine Selbst-Referenz
+                        mat[room_map[u], room_map[v]] += 1
+                        count += 1
+
+                # 2. Normalisieren (Wahrscheinlichkeiten)
+                row_sums = mat.sum(axis=1, keepdims=True)
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    mat_norm = mat / row_sums
+                mat_norm = np.nan_to_num(mat_norm) # NaN zu 0.0 machen
+
+                # 3. Speichern (Memory Implant)
+                security_brain.graph.behavior_matrix = mat_norm
+                try:
+                    p_path = os.path.join(os.path.dirname(__file__), "graph_behavior.pkl")
+                    with open(p_path, 'wb') as f:
+                        pickle.dump(mat_norm, f)
+                    log(f"✅ Graph Behavior trained on {count} transitions and saved to {p_path}")
+
+                    # 4. Ergebnis senden
+                    send_result("GRAPH_TRAINED", {"matrix": mat_norm.tolist(), "rooms": rooms})
+                    send_result("TRAINING_COMPLETE", {"success": True, "details": f"Graph trained ({count} steps)"})
+                except Exception as e:
+                    log(f"❌ Error saving graph behavior: {e}")
+                    send_result("TRAINING_COMPLETE", {"success": False, "details": str(e)})
+        # ---------------------------------------------------
 
         elif cmd == "ANALYZE_SEQUENCE":
             score, is_anomaly, explanation = security_brain.predict(data.get("sequence", {}))
