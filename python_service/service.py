@@ -3,10 +3,10 @@ import json
 import time
 import os
 import pandas as pd
-import pickle # HINZUGEFÜGT für Speicherfunktion
+import pickle
 
 # LOGGING
-VERSION = "0.29.1 (Graph Learning Patch)"
+VERSION = "0.29.18 (Debug Probe)"
 def log(msg):
     print(f"[LOG] {msg}")
     sys.stdout.flush()
@@ -60,16 +60,21 @@ def process_message(msg):
             success, details, thresh = security_brain.train(data.get("sequences", []))
             send_result("TRAINING_COMPLETE", {"success": success, "details": details, "threshold": thresh})
 
-        # --- NEU: GRAPH BRAIN TRAINING (Markov-Ketten) ---
+        # --- GRAPH BRAIN TRAINING (DEBUG EDITION) ---
         elif cmd == "TRAIN_TOPOLOGY":
             sequences = data.get("sequences", [])
             rooms = security_brain.graph.rooms
+
+            # DIAGNOSE
+            log(f"🔍 DEBUG: Graph Training started.")
+            log(f"🔍 DEBUG: Python knows {len(rooms)} rooms: {rooms[:5]}...")
+            if len(sequences) > 0:
+                log(f"🔍 DEBUG: First sequence from Bridge: {sequences[0]}")
 
             if not rooms:
                 log("⚠️ Cannot train topology: No rooms defined (Manual Map missing).")
                 send_result("TRAINING_COMPLETE", {"success": False, "details": "No rooms defined"})
             else:
-                # 1. Matrix berechnen (Zählen der Übergänge)
                 room_map = {r: i for i, r in enumerate(rooms)}
                 n = len(rooms)
                 mat = np.zeros((n, n), dtype=float)
@@ -78,19 +83,22 @@ def process_message(msg):
                 for seq in sequences:
                     # Filtere Räume, die wir kennen
                     valid_seq = [r for r in seq if r in room_map]
+
+                    # DEBUGGING FIRST MATCH FAILURE
+                    if count == 0 and len(seq) > 1 and len(valid_seq) < 2:
+                         log(f"⚠️ DEBUG: Sequence dropped! '{seq[0]}' not found in room map?")
+
                     for i in range(len(valid_seq) - 1):
                         u, v = valid_seq[i], valid_seq[i+1]
-                        if u == v: continue # Keine Selbst-Referenz
+                        if u == v: continue
                         mat[room_map[u], room_map[v]] += 1
                         count += 1
 
-                # 2. Normalisieren (Wahrscheinlichkeiten)
                 row_sums = mat.sum(axis=1, keepdims=True)
                 with np.errstate(divide='ignore', invalid='ignore'):
                     mat_norm = mat / row_sums
-                mat_norm = np.nan_to_num(mat_norm) # NaN zu 0.0 machen
+                mat_norm = np.nan_to_num(mat_norm)
 
-                # 3. Speichern (Memory Implant)
                 security_brain.graph.behavior_matrix = mat_norm
                 try:
                     p_path = os.path.join(os.path.dirname(__file__), "graph_behavior.pkl")
@@ -98,7 +106,6 @@ def process_message(msg):
                         pickle.dump(mat_norm, f)
                     log(f"✅ Graph Behavior trained on {count} transitions and saved to {p_path}")
 
-                    # 4. Ergebnis senden
                     send_result("GRAPH_TRAINED", {"matrix": mat_norm.tolist(), "rooms": rooms})
                     send_result("TRAINING_COMPLETE", {"success": True, "details": f"Graph trained ({count} steps)"})
                 except Exception as e:
@@ -111,6 +118,8 @@ def process_message(msg):
             send_result("SECURITY_RESULT", {"anomaly_score": score, "is_anomaly": is_anomaly, "explanation": explanation})
 
         elif cmd == "SET_TOPOLOGY":
+            # DIAGNOSE
+            log(f"🔍 DEBUG: Setting Topology with {len(data.get('rooms', []))} rooms.")
             security_brain.graph.update_topology(data)
             rooms = data.get('rooms', [])
             matrix = data.get('matrix', [])
