@@ -253,7 +253,10 @@ def process_message(msg):
 
         # 4. COMFORT
         elif cmd == "TRAIN_COMFORT":
-            success, top_rules = comfort_brain.train(data.get("events", []))
+            # UPDATE: ACCEPT DEVICE MAP
+            events = data.get("events", [])
+            device_map = data.get("deviceMap", {}) # Neue Map
+            success, top_rules = comfort_brain.train(events, device_map)
             send_result("COMFORT_RESULT", {"patterns": top_rules if success else []})
 
     except Exception as e: log(f"Err processing: {e}")
