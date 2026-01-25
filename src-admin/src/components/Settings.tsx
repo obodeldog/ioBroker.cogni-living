@@ -4,7 +4,7 @@ import {
     TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog,
     DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemButton, ListItemText,
     ListItemIcon, LinearProgress, FormGroup, Collapse, Accordion, AccordionSummary,
-    AccordionDetails, Typography, Divider, Chip, Table, TableBody, TableCell, TableHead, TableRow
+    AccordionDetails, Typography, Divider, Chip, Table, TableBody, TableCell, TableHead, TableRow, Switch
 } from '@mui/material';
 import type { AlertColor } from '@mui/material';
 import { type IobTheme, type ThemeType, I18n, DialogSelectID } from '@iobroker/adapter-react-v5';
@@ -20,6 +20,11 @@ import BuildIcon from '@mui/icons-material/Build';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import SecurityIcon from '@mui/icons-material/Security';
+import BoltIcon from '@mui/icons-material/Bolt';
+import WeekendIcon from '@mui/icons-material/Weekend';
 
 interface SettingsProps { native: Record<string, any>; onChange: (attr: string, value: any) => void; socket: Connection; themeType: ThemeType; adapterName: string; instance: number; theme: IobTheme; onlySystem?: boolean; }
 interface DeviceConfig { id: string; name: string; location: string; type: string; logDuplicates: boolean; isExit: boolean; isSolar?: boolean; }
@@ -42,11 +47,10 @@ interface SettingsState {
     contextResult: { weather: string; calendar: string; } | null; isTestingContext: boolean; detectedCalendars: string[]; isLoadingCalendars: boolean; simTargetId: string;
     simTargetValue: string; showBulkDialog: boolean; autoMode: string; autoThreshold: number; autoLastAction: string;
     thermostatMapping: Record<string, string>;
-    valveMapping: Record<string, string>; // NEU: Valve Mapping State
+    valveMapping: Record<string, string>;
     thermostatDiagResults: ThermostatDiagItem[];
     isScanningThermostats: boolean;
 
-    // Updated Edit State
     editMappingContext: { sensorId: string, field: 'setpoint' | 'valve' } | null;
     editMappingValue: string;
 }
@@ -63,7 +67,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             try { tMap = typeof native.thermostatMapping === 'string' ? JSON.parse(native.thermostatMapping) : native.thermostatMapping; } catch(e){}
         }
 
-        // NEU: Valve Mapping laden
         let vMap = {};
         if (native.valveMapping) {
             try { vMap = typeof native.valveMapping === 'string' ? JSON.parse(native.valveMapping) : native.valveMapping; } catch(e){}
@@ -83,14 +86,14 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             calendarInstance: native.calendarInstance || '', calendarSelection: calSel, availableInstances: {}, isTestingNotification: false, showSelectId: false, selectIdIndex: -1,
             selectIdContext: null, isTestingApi: false, showWizard: false, wizardStep: 0, scanFilters: { motion: true, doors: true, lights: true, temperature: true, weather: true, selectedFunctionIds: [] },
             scannedDevices: [], showDeleteConfirm: false, availableEnums: [], availableRooms: [], showEnumList: false, snackbarOpen: false, snackbarMessage: '', snackbarSeverity: 'info',
-            expandedAccordion: 'panel1', showContextDialog: false, contextResult: null, isTestingContext: false, detectedCalendars: [], isLoadingCalendars: false, simTargetId: '',
+            expandedAccordion: 'panel0', showContextDialog: false, contextResult: null, isTestingContext: false, detectedCalendars: [], isLoadingCalendars: false, simTargetId: '',
             simTargetValue: 'true', showBulkDialog: false, autoMode: 'off', autoThreshold: 0.6, autoLastAction: 'Lade...',
 
             thermostatMapping: tMap,
-            valveMapping: vMap, // NEU
+            valveMapping: vMap,
             thermostatDiagResults: [],
             isScanningThermostats: false,
-            editMappingContext: null, // NEU (Ersetzt editMappingId)
+            editMappingContext: null,
             editMappingValue: ''
         };
     }
@@ -394,13 +397,11 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     renderDialogs() { return ( <>{this.state.showSelectId && (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={this.state.selectIdContext === 'outdoor' ? this.state.outdoorSensorId : (this.state.selectIdContext === 'device' && this.state.devices[this.state.selectIdIndex]?.id) || ''} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />)}{this.renderWizardDialog()}{this.renderContextDialog()}<Dialog open={this.state.showDeleteConfirm} onClose={() => this.setState({showDeleteConfirm:false})}><DialogTitle>Sicher?</DialogTitle><DialogContent><Typography>Alle Sensoren löschen?</Typography></DialogContent><DialogActions><Button onClick={()=>this.setState({showDeleteConfirm:false})}>Abbrechen</Button><Button onClick={this.onDeleteAllDevices} color="error">Löschen</Button></DialogActions></Dialog><Snackbar open={this.state.snackbarOpen} autoHideDuration={6000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity}>{this.state.snackbarMessage}</Alert></Snackbar><BulkDialog open={this.state.showBulkDialog} onClose={() => this.setState({ showBulkDialog: false })} onImport={this.handleImportBulk} socket={this.props.socket} /></> ); }
     renderLicenseSection(tooltipProps: any) { return ( <Grid container spacing={3}><Grid item xs={12} md={6}><Tooltip title="Ihr Pro-Lizenzschlüssel." {...tooltipProps}><TextField fullWidth label={I18n.t('license_key')} value={this.state.licenseKey} type="password" onChange={e => this.updateNativeValue('licenseKey', e.target.value)} helperText="Für vollen Funktionsumfang" variant="outlined" size="small" /></Tooltip></Grid><Grid item xs={12} md={6}><Box sx={{display: 'flex', gap: 1}}><Tooltip title="Gemini API Key." {...tooltipProps}><TextField fullWidth label={I18n.t('gemini_api_key')} value={this.state.geminiApiKey} type="password" onChange={e => this.updateNativeValue('geminiApiKey', e.target.value)} variant="outlined" size="small" /></Tooltip><Button variant="outlined" onClick={() => this.handleTestApiClick()} disabled={this.state.isTestingApi || !this.state.geminiApiKey}>{this.state.isTestingApi ? <CircularProgress size={20} /> : "(Test)"}</Button></Box></Grid></Grid> ); }
 
-    // --- RESTORED: Living Context Input ---
     renderReportingSection(tooltipProps: any) {
         return (
             <Grid container spacing={3}>
                 <Grid item xs={12}><Alert severity="info">Konfigurieren Sie hier Wetter & Kontext für alle Säulen.</Alert></Grid>
 
-                {/* --- RESTORED TEXTFIELD --- */}
                 <Grid item xs={12}>
                     <Tooltip title="Beschreiben Sie Ihre Wohnsituation für die KI (z.B. '4 Personen, Homeoffice, Hund')." {...tooltipProps}>
                         <TextField
@@ -415,9 +416,51 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         />
                     </Tooltip>
                 </Grid>
-                {/* --------------------------- */}
 
                 <Grid item xs={12} md={6}><FormControlLabel control={<Checkbox checked={this.state.briefingEnabled} onChange={e => this.updateNativeValue('briefingEnabled', e.target.checked)} />} label="Tägliches 'Guten Morgen' Briefing" /><Typography variant="caption" color="text.secondary" display="block">Sendet morgens eine Zusammenfassung der Nacht (Schlaf/Aktivität).</Typography></Grid><Grid item xs={12} md={6}><Tooltip title="Uhrzeit für den täglichen Bericht (Format HH:MM)." {...tooltipProps}><TextField fullWidth label="Uhrzeit" type="time" value={this.state.briefingTime} onChange={e => this.updateNativeValue('briefingTime', e.target.value)} disabled={!this.state.briefingEnabled} InputLabelProps={{ shrink: true }} size="small" /></Tooltip></Grid><Grid item xs={12}><Divider textAlign="left"><Typography variant="caption" sx={{color:'text.secondary', display:'flex', alignItems:'center', gap:1}}>Erweiterter Kontext</Typography></Divider></Grid><Grid item xs={12} md={6}><FormControlLabel control={<Checkbox checked={this.state.useWeather} onChange={e => this.updateNativeValue('useWeather', e.target.checked)} />} label="Wetterdaten nutzen" /><FormControl fullWidth size="small" disabled={!this.state.useWeather}><InputLabel>Wetter-Instanz (Optional)</InputLabel><Select value={this.state.weatherInstance} label="Wetter-Instanz (Optional)" onChange={(e) => this.updateNativeValue('weatherInstance', e.target.value)}><MenuItem value=""><em>Automatisch erkennen</em></MenuItem>{[...(this.state.availableInstances['accuweather'] || []), ...(this.state.availableInstances['daswetter'] || []), ...(this.state.availableInstances['weatherunderground'] || [])].map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid><Grid item xs={12} md={6}><Box sx={{display: 'flex', alignItems: 'center', gap: 1}}><Typography variant="body1">Eigener Außenfühler (Hardware):</Typography><Tooltip title="Wählen Sie einen physischen Sensor (z.B. im Garten). Dieser Wert wird bevorzugt behandelt."><IconButton onClick={() => this.openOutdoorSelectId()}>...</IconButton></Tooltip></Box><Box sx={{display: 'flex', gap: 1}}><TextField fullWidth size="small" value={this.state.outdoorSensorId} onChange={e => this.updateNativeValue('outdoorSensorId', e.target.value)} placeholder="Kein Sensor gewählt" helperText="Hat Vorrang vor Wetter-Adapter" /><IconButton onClick={() => this.openOutdoorSelectId()}>...</IconButton></Box></Grid><Grid item xs={12} md={6}><FormControlLabel control={<Checkbox checked={this.state.useCalendar} onChange={e => this.updateNativeValue('useCalendar', e.target.checked)} />} label="Kalender nutzen (iCal)" /><FormControl fullWidth size="small" disabled={!this.state.useCalendar}><InputLabel>Kalender-Instanz (Optional)</InputLabel><Select value={this.state.calendarInstance} label="Kalender-Instanz (Optional)" onChange={(e) => this.updateNativeValue('calendarInstance', e.target.value)}><MenuItem value=""><em>Automatisch erkennen</em></MenuItem>{(this.state.availableInstances['ical'] || []).map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}</Select></FormControl></Grid>{this.state.useCalendar && (<Grid item xs={12}><Paper variant="outlined" sx={{p: 2}}><Box sx={{display:'flex', justifyContent:'space-between', alignItems:'center', mb: 1}}><Typography variant="subtitle2">Relevante Kalender auswählen (Whitelist)</Typography><Button size="small" onClick={() => this.handleFetchCalendarNames()}>Kalender suchen</Button></Box>{this.state.detectedCalendars.length > 0 ? (<FormGroup row>{this.state.detectedCalendars.map(calName => (<FormControlLabel key={calName} control={<Checkbox checked={this.state.calendarSelection.includes(calName)} onChange={() => this.toggleCalendarSelection(calName)} />} label={calName} />))}</FormGroup>) : (<Typography variant="body2" color="text.secondary">Klicken Sie auf "Suchen", um Kalendernamen zu laden.</Typography>)}{this.state.calendarSelection.length === 0 && this.state.detectedCalendars.length > 0 && (<Alert severity="warning" sx={{mt: 1, py: 0}}>Achtung: Kein Kalender ausgewählt. Die KI wird alle Termine ignorieren!</Alert>)}</Paper></Grid>)}<Grid item xs={12}><Button variant="outlined" onClick={() => this.handleTestContextClick()} disabled={this.state.isTestingContext || (!this.state.useWeather && !this.state.useCalendar)}>Kontext-Daten jetzt prüfen</Button></Grid></Grid>
+        );
+    }
+
+    // --- NEU: MODUL STEUERUNG ---
+    renderModuleControl() {
+        const { native } = this.props;
+        // Check for undefined to support older configs (default true)
+        const mh = native.moduleHealth !== false;
+        const ms = native.moduleSecurity !== false;
+        const me = native.moduleEnergy !== false;
+        const mc = native.moduleComfort !== false;
+
+        return (
+            <Grid container spacing={2}>
+                <Grid item xs={12} sm={6} md={3}>
+                    <Paper variant="outlined" sx={{p: 2, display:'flex', flexDirection:'column', alignItems:'center', gap: 1, opacity: mh ? 1 : 0.6}}>
+                        <MonitorHeartIcon fontSize="large" color={mh ? "error" : "disabled"}/>
+                        <Typography variant="subtitle2">Gesundheit (AAL)</Typography>
+                        <Switch checked={mh} onChange={(e) => this.updateNativeValue('moduleHealth', e.target.checked)} />
+                    </Paper>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <Paper variant="outlined" sx={{p: 2, display:'flex', flexDirection:'column', alignItems:'center', gap: 1, opacity: ms ? 1 : 0.6}}>
+                        <SecurityIcon fontSize="large" color={ms ? "primary" : "disabled"}/>
+                        <Typography variant="subtitle2">Sicherheit</Typography>
+                        <Switch checked={ms} onChange={(e) => this.updateNativeValue('moduleSecurity', e.target.checked)} />
+                    </Paper>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <Paper variant="outlined" sx={{p: 2, display:'flex', flexDirection:'column', alignItems:'center', gap: 1, opacity: me ? 1 : 0.6}}>
+                        <BoltIcon fontSize="large" style={{color: me ? '#ff9800' : 'grey'}}/>
+                        <Typography variant="subtitle2">Energie</Typography>
+                        <Switch checked={me} onChange={(e) => this.updateNativeValue('moduleEnergy', e.target.checked)} />
+                    </Paper>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <Paper variant="outlined" sx={{p: 2, display:'flex', flexDirection:'column', alignItems:'center', gap: 1, opacity: mc ? 1 : 0.6}}>
+                        <WeekendIcon fontSize="large" style={{color: mc ? '#9c27b0' : 'grey'}}/>
+                        <Typography variant="subtitle2">Komfort</Typography>
+                        <Switch checked={mc} onChange={(e) => this.updateNativeValue('moduleComfort', e.target.checked)} />
+                    </Paper>
+                </Grid>
+            </Grid>
         );
     }
 
@@ -433,6 +476,15 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         return (
             <Box sx={{ p: 0 }}>
                 {this.renderDialogs()}
+
+                {/* MODUL STEUERUNG (NEU GANZ OBEN) */}
+                <Accordion expanded={expandedAccordion === 'panel0'} onChange={this.handleAccordionChange('panel0')} sx={accordionStyle} defaultExpanded>
+                    <AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}><ViewModuleIcon color="primary"/> AURA Module & Fokus</Typography></AccordionSummary>
+                    <AccordionDetails>
+                        <Alert severity="info" sx={{mb: 2}}>Deaktivieren Sie nicht benötigte Module, um die Ansicht zu vereinfachen und Ressourcen zu sparen.</Alert>
+                        {this.renderModuleControl()}
+                    </AccordionDetails>
+                </Accordion>
 
                 {/* LIZENZ */}
                 <Accordion expanded={expandedAccordion === 'panel1'} onChange={this.handleAccordionChange('panel1')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Lizenz & KI-Verbindung</Typography></AccordionSummary><AccordionDetails>{this.renderLicenseSection(tooltipProps)}</AccordionDetails></Accordion>

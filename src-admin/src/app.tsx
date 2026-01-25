@@ -55,6 +55,12 @@ class App extends GenericApp<any, AppState> {
         const { themeType, native } = this.state;
         const isDark = themeType === 'dark';
 
+        // FEATURE TOGGLES (Fallback to true if undefined)
+        const showHealth = native.moduleHealth !== false;
+        const showSecurity = native.moduleSecurity !== false;
+        const showEnergy = native.moduleEnergy !== false;
+        const showComfort = native.moduleComfort !== false;
+
         const cogniTheme = createTheme({
             palette: {
                 mode: isDark ? 'dark' : 'light',
@@ -98,10 +104,10 @@ class App extends GenericApp<any, AppState> {
                                 sx={{ flexGrow: 1, maxWidth: 1400 }}
                             >
                                 <Tab value="overview" label="Dashboard" icon={<DashboardIcon />} iconPosition="start" />
-                                <Tab value="comfort" label="Komfort" icon={<SmartToyIcon />} iconPosition="start" sx={pillarStyle('#2196f3')} />
-                                <Tab value="security" label="Sicherheit" icon={<HealthAndSafetyIcon />} iconPosition="start" sx={pillarStyle('#4caf50')} />
-                                <Tab value="energy" label="Energie" icon={<BoltIcon />} iconPosition="start" sx={pillarStyle('#ff9800')} />
-                                <Tab value="health" label="Gesundheit" icon={<MonitorHeartIcon />} iconPosition="start" sx={pillarStyle('#f44336')} />
+                                {showComfort && <Tab value="comfort" label="Komfort" icon={<SmartToyIcon />} iconPosition="start" sx={pillarStyle('#2196f3')} />}
+                                {showSecurity && <Tab value="security" label="Sicherheit" icon={<HealthAndSafetyIcon />} iconPosition="start" sx={pillarStyle('#4caf50')} />}
+                                {showEnergy && <Tab value="energy" label="Energie" icon={<BoltIcon />} iconPosition="start" sx={pillarStyle('#ff9800')} />}
+                                {showHealth && <Tab value="health" label="Gesundheit" icon={<MonitorHeartIcon />} iconPosition="start" sx={pillarStyle('#f44336')} />}
                                 <Tab value="system" label="System" icon={<SettingsIcon />} iconPosition="start" />
                                 <Tab value="help" label="Handbuch" icon={<MenuBookIcon />} iconPosition="start" />
                             </Tabs>
@@ -115,24 +121,32 @@ class App extends GenericApp<any, AppState> {
                     </AppBar>
 
                     <Box sx={{ p: 0, pb: 12, flexGrow: 1, overflowY: 'auto' }}>
-                        {this.state.selectedTab === 'overview' && <Overview socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
-                        {this.state.selectedTab === 'comfort' && <ComfortTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
-                        {this.state.selectedTab === 'security' && <SecurityTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+                        {this.state.selectedTab === 'overview' && (
+                            <Overview
+                                socket={this.socket}
+                                adapterName={this.adapterName}
+                                instance={this.instance}
+                                theme={this.state.theme}
+                                themeType={themeType}
+                                activeModules={native} // Pass config to overview
+                            />
+                        )}
+                        {showComfort && this.state.selectedTab === 'comfort' && <ComfortTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+                        {showSecurity && this.state.selectedTab === 'security' && <SecurityTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
 
-                        {/* HIER WAR DER FEHLER: DEVICES UND NATIVE WURDEN NICHT ÜBERGEBEN */}
-                        {this.state.selectedTab === 'energy' && (
+                        {showEnergy && this.state.selectedTab === 'energy' && (
                             <EnergyTab
                                 socket={this.socket}
                                 adapterName={this.adapterName}
                                 instance={this.instance}
                                 theme={this.state.theme}
                                 themeType={themeType}
-                                devices={native.devices || []} // WICHTIG: Sensoren übergeben
-                                native={native} // WICHTIG: Config für Außenfühler übergeben
+                                devices={native.devices || []}
+                                native={native}
                             />
                         )}
 
-                        {this.state.selectedTab === 'health' && <HealthTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+                        {showHealth && this.state.selectedTab === 'health' && <HealthTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
                         {this.state.selectedTab === 'system' && <SystemTab native={native} onChange={(attr:string, val:any) => this.updateNativeValue(attr, val)} socket={this.socket} themeType={themeType} theme={this.state.theme} adapterName={this.adapterName} instance={this.instance} />}
                         {this.state.selectedTab === 'help' && <Help themeType={themeType} />}
                     </Box>
