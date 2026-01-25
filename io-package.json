@@ -1,15 +1,15 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.29.12",
+        "version": "0.30.3",
         "news": {
+            "0.30.3": {
+                "en": "Phase E: Added Room Integrator & Feature Toggles",
+                "de": "Phase E: Raum-Integrator & Modul-Schalter hinzugefügt"
+            },
             "0.29.12": {
                 "en": "Feature: RL Penalty Auto-Expiration (3 Days)",
                 "de": "Feature: Automatischer Ablauf von Lern-Sperren (3 Tage)"
-            },
-            "0.29.11": {
-                "en": "Fix: Morning Briefing Logic (Calendar Integration & Priority)",
-                "de": "Fix: Morning Briefing Logik (Kalender-Integration & Priorität)"
             }
         },
         "titleLang": {
@@ -56,6 +56,10 @@
         ]
     },
     "native": {
+        "moduleHealth": true,
+        "moduleSecurity": true,
+        "moduleEnergy": true,
+        "moduleComfort": true,
         "devices": [],
         "presenceDevices": [],
         "outdoorSensorId": "",
