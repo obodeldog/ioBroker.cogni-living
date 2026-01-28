@@ -48,6 +48,9 @@
         "build/",
         "python_service/",
         "lib/",
+        "install_python.sh",
+        "src/",
+        "tasks.js",
         "main.js",
         "io-package.json",
         "LICENSE",
@@ -56,7 +59,7 @@
     ],
     "scripts": {
         "prebuild": "rimraf admin/build",
-        "build:react": "node tasks",
+        "build:react": "cd src-admin && npm install && npm run build && cd .. && rimraf admin && xcopy src-admin\\build admin /s /e /y /i",
         "build:backend:dev": "copy src\\main.js main.js && xcopy src\\lib lib /I /Y",
         "build:backend:prod": "javascript-obfuscator src/main.js --output main.js --compact true --self-defending true --disable-console-output false --debug-protection false && javascript-obfuscator src/lib --output lib --compact true --self-defending true --disable-console-output false --debug-protection false",
         "build": "npm run build:react && npm run build:backend:dev",
