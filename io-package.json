@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.35",
+        "version": "0.30.36",
         "news": {
+            "0.30.36": {
+                "en": "Feature: Activity Heatmap (7 days × 24 hours)",
+                "de": "Feature: Aktivitäts-Heatmap (7 Tage × 24 Stunden)"
+            },
             "0.30.35": {
                 "en": "Fix: Unified activity calculation (Day & Week view)",
                 "de": "Fix: Vereinheitlichte Aktivitäts-Berechnung (Tag & Woche)"
