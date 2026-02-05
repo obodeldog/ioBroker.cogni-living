@@ -183,10 +183,25 @@ class HealthBrain:
             else:
                 baseline = np.zeros(24)
             
-            # Schritt 3: Anomalie-Scores (IsolationForest wenn Modell vorhanden)
+            # Schritt 3: Anomalie-Scores + Baseline-relative Aktivität
             for date_str, hourly_counts in daily_vectors.items():
                 anomaly_scores = [0.0] * 24
                 rule_flags = ['NORMAL'] * 24
+                activity_percent = [0] * 24
+                
+                # Berechne Aktivität RELATIV zur Baseline (adaptiv!)
+                for hour in range(24):
+                    count = hourly_counts[hour]
+                    base = baseline[hour]
+                    
+                    # Aktivität als Prozent relativ zur Baseline
+                    if base > 1.0:
+                        activity_percent[hour] = int(round((count / base) * 100))
+                    elif count > 0:
+                        # Fallback: Wenn keine Baseline, nutze absolute Zählung
+                        activity_percent[hour] = min(100, count * 2)
+                    else:
+                        activity_percent[hour] = 0
                 
                 # IsolationForest: Vergleiche mit Baseline
                 if self.is_ready and self.model is not None:
@@ -231,6 +246,7 @@ class HealthBrain:
                 
                 result[date_str] = {
                     'hourly_counts': hourly_counts,
+                    'activity_percent': activity_percent,
                     'anomaly_scores': anomaly_scores,
                     'rule_flags': rule_flags,
                     'baseline': baseline.tolist()

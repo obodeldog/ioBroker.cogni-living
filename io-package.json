@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.39",
+        "version": "0.30.40",
         "news": {
+            "0.30.40": {
+                "en": "Adaptive Activity Calculation (Baseline-Relative) + Timeline Visibility Fix",
+                "de": "Adaptive Aktivitätsberechnung (Baseline-relativ) + Timeline-Sichtbarkeit Fix"
+            },
             "0.30.39": {
                 "en": "UX: Smart-Split Timeline + Current Time Indicator",
                 "de": "UX: Smart-Split Timeline + Aktuelle-Zeit-Anzeige"
