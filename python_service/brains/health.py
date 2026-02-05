@@ -121,3 +121,122 @@ class HealthBrain:
             return change_percent, f"{trend_desc} ({change_percent:.1f}%)"
         except Exception as e:
             return 0.0, f"Error: {str(e)}"
+
+    def analyze_weekly_heatmap(self, week_data):
+        """
+        Intelligente Heatmap-Analyse für 7 Tage × 24 Stunden.
+        Nutzt IsolationForest + Regel-basierte Tageszeiten-Logik.
+        
+        Input: week_data = {
+            'YYYY-MM-DD': {
+                'eventHistory': [...],
+                'date': Date object
+            }
+        }
+        
+        Output: {
+            'YYYY-MM-DD': {
+                'hourly_counts': [0..23],
+                'anomaly_scores': [0..23],
+                'rule_flags': [0..23],
+                'baseline': [0..23]
+            }
+        }
+        """
+        try:
+            result = {}
+            
+            # Schritt 1: Erstelle stündliche Vektoren für alle Tage
+            daily_vectors = {}
+            for date_str, day_data in week_data.items():
+                events = day_data.get('eventHistory', [])
+                hourly_counts = [0] * 24
+                
+                for event in events:
+                    if not isinstance(event, dict):
+                        continue
+                    
+                    # Motion-Events filtern
+                    e_type = str(event.get('type', '')).lower()
+                    e_name = str(event.get('name', '')).lower()
+                    e_value = event.get('value')
+                    
+                    is_motion = ('bewegung' in e_type or 'motion' in e_type or 
+                                'presence' in e_type or 'bewegung' in e_name)
+                    is_active = e_value in [True, 1, 'on', 'true']
+                    
+                    if is_motion and is_active:
+                        timestamp = event.get('timestamp', 0)
+                        if timestamp > 0:
+                            from datetime import datetime
+                            dt = datetime.fromtimestamp(timestamp / 1000.0)
+                            hour = dt.hour
+                            if 0 <= hour < 24:
+                                hourly_counts[hour] += 1
+                
+                daily_vectors[date_str] = hourly_counts
+            
+            # Schritt 2: Berechne Baseline (Durchschnitt über alle Tage)
+            if len(daily_vectors) > 0:
+                all_vecs = np.array(list(daily_vectors.values()))
+                baseline = np.mean(all_vecs, axis=0)
+            else:
+                baseline = np.zeros(24)
+            
+            # Schritt 3: Anomalie-Scores (IsolationForest wenn Modell vorhanden)
+            for date_str, hourly_counts in daily_vectors.items():
+                anomaly_scores = [0.0] * 24
+                rule_flags = ['NORMAL'] * 24
+                
+                # IsolationForest: Vergleiche mit Baseline
+                if self.is_ready and self.model is not None:
+                    try:
+                        for hour in range(24):
+                            count = hourly_counts[hour]
+                            base = baseline[hour]
+                            
+                            # Normalisiere Score (-1 bis 0)
+                            if base > 0:
+                                deviation = abs(count - base) / (base + 1.0)
+                                # Je höher deviation, desto niedriger der Score
+                                anomaly_scores[hour] = -deviation
+                            else:
+                                anomaly_scores[hour] = 0.0
+                    except:
+                        pass
+                
+                # Regel-basierte Flags (Tageszeiten-Kontext)
+                for hour in range(24):
+                    count = hourly_counts[hour]
+                    base = max(baseline[hour], 1.0)
+                    
+                    # Nachts (22-06 Uhr): Hohe Aktivität = Problem
+                    if (hour >= 22 or hour < 6):
+                        if count > base * 2.0:
+                            rule_flags[hour] = 'NIGHT_HIGH_ACTIVITY'
+                            anomaly_scores[hour] = -0.8  # Override
+                    
+                    # Morgens (06-10 Uhr): Niedrige Aktivität = Problem
+                    elif 6 <= hour < 10:
+                        if count < base * 0.3 and base > 5:
+                            rule_flags[hour] = 'MORNING_NO_ACTIVITY'
+                            anomaly_scores[hour] = -0.7  # Override
+                    
+                    # Tagsüber (10-20 Uhr): Sehr niedrige Aktivität = Beobachten
+                    elif 10 <= hour < 20:
+                        if count < base * 0.2 and base > 3:
+                            rule_flags[hour] = 'DAY_LOW_ACTIVITY'
+                            if anomaly_scores[hour] > -0.3:
+                                anomaly_scores[hour] = -0.3
+                
+                result[date_str] = {
+                    'hourly_counts': hourly_counts,
+                    'anomaly_scores': anomaly_scores,
+                    'rule_flags': rule_flags,
+                    'baseline': baseline.tolist()
+                }
+            
+            return result
+        
+        except Exception as e:
+            return {'error': str(e)}

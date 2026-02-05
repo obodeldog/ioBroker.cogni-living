@@ -176,6 +176,12 @@ def process_message(msg):
                 "is_anomaly": False
             })
 
+        elif cmd == "ANALYZE_HEATMAP":
+            week_data = data.get("weekData", {})
+            log(f"Heatmap Analysis: Processing {len(week_data)} days")
+            result = health_brain.analyze_weekly_heatmap(week_data)
+            send_result("HEATMAP_RESULT", result)
+
         # 3. ENERGY
         elif cmd == "TRAIN_ENERGY":
             points = data.get("points", [])

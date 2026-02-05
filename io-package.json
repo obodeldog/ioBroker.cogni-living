@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.36",
+        "version": "0.30.37",
         "news": {
+            "0.30.37": {
+                "en": "Feature: Intelligent Heatmap with IsolationForest + Time Rules",
+                "de": "Feature: Intelligente Heatmap mit IsolationForest + Zeitregeln"
+            },
             "0.30.36": {
                 "en": "Feature: Activity Heatmap (7 days × 24 hours)",
                 "de": "Feature: Aktivitäts-Heatmap (7 Tage × 24 Stunden)"
