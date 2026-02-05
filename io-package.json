@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.38",
+        "version": "0.30.39",
         "news": {
+            "0.30.39": {
+                "en": "UX: Smart-Split Timeline + Current Time Indicator",
+                "de": "UX: Smart-Split Timeline + Aktuelle-Zeit-Anzeige"
+            },
             "0.30.38": {
                 "en": "Fix: Python Bridge Message Handler + Callback System",
                 "de": "Fix: Python Bridge Message Handler + Callback-System"
