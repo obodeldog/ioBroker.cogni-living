@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.37",
+        "version": "0.30.38",
         "news": {
+            "0.30.38": {
+                "en": "Fix: Python Bridge Message Handler + Callback System",
+                "de": "Fix: Python Bridge Message Handler + Callback-System"
+            },
             "0.30.37": {
                 "en": "Feature: Intelligent Heatmap with IsolationForest + Time Rules",
                 "de": "Feature: Intelligente Heatmap mit IsolationForest + Zeitregeln"
