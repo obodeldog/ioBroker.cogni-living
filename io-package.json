@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.3",
+        "version": "0.30.35",
         "news": {
+            "0.30.35": {
+                "en": "Fix: Unified activity calculation (Day & Week view)",
+                "de": "Fix: Vereinheitlichte Aktivitäts-Berechnung (Tag & Woche)"
+            },
             "0.30.3": {
                 "en": "Phase E: Added Room Integrator & Feature Toggles",
                 "de": "Phase E: Raum-Integrator & Modul-Schalter hinzugefügt"
