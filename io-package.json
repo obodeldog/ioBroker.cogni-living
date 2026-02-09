@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.43",
+        "version": "0.30.44",
         "news": {
+            "0.30.44": {
+                "en": "UX: Full-Width Topology Matrix + Better Scrollbars + Graph-Brain uses current data",
+                "de": "UX: Topologie-Matrix volle Breite + Bessere Scrollbars + Graph-Brain nutzt aktuelle Daten"
+            },
             "0.30.43": {
                 "en": "Fix: Topology Matrix click bug (state preservation)",
                 "de": "Fix: Topologie-Matrix Klick-Bug (State-Erhaltung)"
