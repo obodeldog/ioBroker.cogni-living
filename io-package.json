@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.42",
+        "version": "0.30.43",
         "news": {
+            "0.30.43": {
+                "en": "Fix: Topology Matrix click bug (state preservation)",
+                "de": "Fix: Topologie-Matrix Klick-Bug (State-Erhaltung)"
+            },
             "0.30.42": {
                 "en": "Topology Auto-Update on Start + Room Hover Tooltips",
                 "de": "Topologie Auto-Update beim Start + Raum Hover-Tooltips"
