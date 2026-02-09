@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.45",
+        "version": "0.30.46",
         "news": {
+            "0.30.46": {
+                "en": "FIX: Topology Matrix multi-click (missing backend handler + optimistic update)",
+                "de": "FIX: Topologie-Matrix Mehrfach-Klick (fehlender Backend-Handler + optimistic update)"
+            },
             "0.30.45": {
                 "en": "UX: Compact Topology Matrix (narrower columns, all rooms visible)",
                 "de": "UX: Kompakte Topologie-Matrix (schmalere Spalten, alle Räume sichtbar)"
