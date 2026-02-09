@@ -181,6 +181,12 @@ def process_message(msg):
             log(f"Heatmap Analysis: Processing {len(week_data)} days")
             result = health_brain.analyze_weekly_heatmap(week_data)
             send_result("HEATMAP_RESULT", result)
+        
+        elif cmd == "ANALYZE_ROOM_SILENCE":
+            room_data = data.get("roomData", {})
+            log(f"Room Silence Analysis: Checking {len(room_data)} rooms")
+            alerts = health_brain.analyze_room_silence(room_data)
+            send_result("ROOM_SILENCE_RESULT", alerts)
 
         # 3. ENERGY
         elif cmd == "TRAIN_ENERGY":

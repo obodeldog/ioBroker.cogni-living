@@ -256,3 +256,62 @@ class HealthBrain:
         
         except Exception as e:
             return {'error': str(e)}
+    
+    def analyze_room_silence(self, room_data):
+        """
+        Erkennt stille Räume (Lebenszeichen-Alarm).
+        
+        Args:
+            room_data: Dict mit Raumnamen als Keys und Daten als Values
+                      Format: { "EG Bad": { "lastActivity": 1738759200000, "totalMinutes": 92 }, ... }
+        
+        Returns:
+            Dict mit Alarmen pro Raum: { "EG Schlafen Ingrid": { "level": "RED", "hoursSilent": 12.5 }, ... }
+        """
+        try:
+            import time
+            now_ms = int(time.time() * 1000)
+            now_hour = int(time.localtime().tm_hour)
+            
+            alerts = {}
+            
+            for room_name, data in room_data.items():
+                if not data or not isinstance(data, dict):
+                    continue
+                
+                last_activity_ms = data.get('lastActivity', 0)
+                total_minutes = data.get('totalMinutes', 0)
+                
+                # Berechne Zeit seit letzter Aktivität
+                if last_activity_ms > 0:
+                    hours_silent = (now_ms - last_activity_ms) / (1000 * 60 * 60)
+                else:
+                    hours_silent = 999  # Keine Aktivität jemals = kritisch
+                
+                # Nur tagsüber (08:00-22:00) alarmieren
+                is_daytime = 8 <= now_hour < 22
+                
+                # Nur Räume mit vorheriger Aktivität prüfen
+                if total_minutes < 10:
+                    continue  # Raum wird nicht genutzt (z.B. Garage)
+                
+                # GELB: Ungewöhnlich ruhig (4-8h tagsüber)
+                if is_daytime and 4 <= hours_silent < 8:
+                    alerts[room_name] = {
+                        'level': 'YELLOW',
+                        'hoursSilent': round(hours_silent, 1),
+                        'message': f'Ungewöhnlich ruhig seit {round(hours_silent, 1)}h'
+                    }
+                
+                # ROT: Keine Bewegung seit >8h (tagsüber) = NOTFALL?
+                elif is_daytime and hours_silent >= 8:
+                    alerts[room_name] = {
+                        'level': 'RED',
+                        'hoursSilent': round(hours_silent, 1),
+                        'message': f'NOTFALL? Keine Bewegung seit {round(hours_silent, 1)}h!'
+                    }
+            
+            return alerts
+        
+        except Exception as e:
+            return {'error': str(e)}
