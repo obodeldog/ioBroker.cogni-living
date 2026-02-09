@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.41",
+        "version": "0.30.42",
         "news": {
+            "0.30.42": {
+                "en": "Topology Auto-Update on Start + Room Hover Tooltips",
+                "de": "Topologie Auto-Update beim Start + Raum Hover-Tooltips"
+            },
             "0.30.41": {
                 "en": "Life Sign Alert System + Activity Legend + Timeline UX Cleanup",
                 "de": "Lebenszeichen-Alarmsystem + Aktivitäts-Legende + Timeline UX Bereinigung"
