@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.44",
+        "version": "0.30.45",
         "news": {
+            "0.30.45": {
+                "en": "UX: Compact Topology Matrix (narrower columns, all rooms visible)",
+                "de": "UX: Kompakte Topologie-Matrix (schmalere Spalten, alle Räume sichtbar)"
+            },
             "0.30.44": {
                 "en": "UX: Full-Width Topology Matrix + Better Scrollbars + Graph-Brain uses current data",
                 "de": "UX: Topologie-Matrix volle Breite + Bessere Scrollbars + Graph-Brain nutzt aktuelle Daten"
