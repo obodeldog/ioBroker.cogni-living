@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.46",
+        "version": "0.30.47",
         "news": {
+            "0.30.47": {
+                "en": "NEW: Garmin-Style Longterm Trends (Activity Load, Gait Speed, Night Restlessness, Room Mobility, Hygiene, Ventilation)",
+                "de": "NEU: Garmin-Style Langzeit-Trends (Aktivitäts-Belastung, Ganggeschwindigkeit, Nacht-Unruhe, Raum-Mobilität, Hygiene, Lüftung)"
+            },
             "0.30.46": {
                 "en": "FIX: Topology Matrix multi-click (missing backend handler + optimistic update)",
                 "de": "FIX: Topologie-Matrix Mehrfach-Klick (fehlender Backend-Handler + optimistic update)"

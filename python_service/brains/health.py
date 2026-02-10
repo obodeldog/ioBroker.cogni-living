@@ -315,3 +315,334 @@ class HealthBrain:
         
         except Exception as e:
             return {'error': str(e)}
+    
+    # ======================================================================
+    # LANGZEIT-TREND-ANALYSEN (Garmin-Style)
+    # ======================================================================
+    
+    def analyze_longterm_activity(self, daily_data, weeks=4):
+        """
+        Berechnet Langzeit-Aktivitäts-Trend mit Baseline-Zonen.
+        
+        Args:
+            daily_data: Liste von Dicts mit { 'date': 'YYYY-MM-DD', 'activityPercent': 85, ... }
+            weeks: Anzahl Wochen (4, 12, 26)
+        
+        Returns:
+            {
+                'timeline': ['2026-01-01', '2026-01-02', ...],
+                'values': [85, 92, 78, ...],
+                'baseline': 100,
+                'baseline_std': 15,
+                'moving_avg': [85, 88.5, 85, ...]  # 7-Tage gleitender Durchschnitt
+            }
+        """
+        try:
+            if not daily_data or len(daily_data) < 3:
+                return {'error': 'Insufficient data (<3 days)'}
+            
+            # Sortiere nach Datum (älteste zuerst)
+            sorted_data = sorted(daily_data, key=lambda x: x.get('date', ''))
+            
+            # Begrenze auf gewünschte Wochen
+            max_days = weeks * 7
+            if len(sorted_data) > max_days:
+                sorted_data = sorted_data[-max_days:]
+            
+            timeline = [d['date'] for d in sorted_data]
+            values = [d.get('activityPercent', 0) for d in sorted_data]
+            
+            # Berechne Baseline (Durchschnitt aller Werte)
+            baseline = np.mean(values)
+            baseline_std = np.std(values)
+            
+            # 7-Tage gleitender Durchschnitt
+            moving_avg = []
+            for i in range(len(values)):
+                start_idx = max(0, i - 6)
+                window = values[start_idx:i+1]
+                moving_avg.append(round(np.mean(window), 1))
+            
+            return {
+                'timeline': timeline,
+                'values': values,
+                'baseline': round(baseline, 1),
+                'baseline_std': round(baseline_std, 1),
+                'moving_avg': moving_avg
+            }
+        
+        except Exception as e:
+            return {'error': str(e)}
+    
+    def analyze_gait_speed_longterm(self, daily_data, weeks=4):
+        """
+        Berechnet Langzeit-Trend der Ganggeschwindigkeit.
+        
+        Args:
+            daily_data: Liste von Dicts mit { 'date': 'YYYY-MM-DD', 'gaitSpeed': 1.2, ... }
+        
+        Returns:
+            {
+                'timeline': ['2026-01-01', ...],
+                'values': [1.2, 1.15, 1.18, ...],  # m/s oder Sekunden
+                'trend_percent': -5.2,  # Negativ = langsamer geworden
+                'status': 'VERSCHLECHTERT'
+            }
+        """
+        try:
+            if not daily_data or len(daily_data) < 3:
+                return {'error': 'Insufficient data'}
+            
+            sorted_data = sorted(daily_data, key=lambda x: x.get('date', ''))
+            max_days = weeks * 7
+            if len(sorted_data) > max_days:
+                sorted_data = sorted_data[-max_days:]
+            
+            timeline = [d['date'] for d in sorted_data]
+            values = [d.get('gaitSpeed', 0) for d in sorted_data if d.get('gaitSpeed', 0) > 0]
+            
+            if len(values) < 3:
+                return {'error': 'Insufficient gait data'}
+            
+            # Linear Regression
+            x = np.arange(len(values))
+            y = np.array(values)
+            slope, intercept = np.polyfit(x, y, 1)
+            
+            start_val = intercept
+            end_val = (slope * (len(values)-1)) + intercept
+            
+            if start_val <= 0.01:
+                start_val = 0.01
+            
+            trend_percent = ((end_val - start_val) / start_val) * 100
+            
+            # Status
+            if trend_percent < -5:
+                status = 'VERSCHLECHTERT'
+            elif trend_percent > 5:
+                status = 'VERBESSERT'
+            else:
+                status = 'STABIL'
+            
+            return {
+                'timeline': timeline,
+                'values': values,
+                'trend_percent': round(trend_percent, 1),
+                'status': status
+            }
+        
+        except Exception as e:
+            return {'error': str(e)}
+    
+    def analyze_night_restlessness(self, daily_data, weeks=4):
+        """
+        Analysiert nächtliche Aktivität (22:00-06:00).
+        
+        Args:
+            daily_data: Liste mit { 'date': 'YYYY-MM-DD', 'nightEvents': 12, ... }
+        
+        Returns:
+            {
+                'timeline': ['2026-01-01', ...],
+                'values': [12, 8, 15, ...],  # Events pro Nacht
+                'avg': 11.3,
+                'trend': 'STEIGEND'
+            }
+        """
+        try:
+            if not daily_data or len(daily_data) < 3:
+                return {'error': 'Insufficient data'}
+            
+            sorted_data = sorted(daily_data, key=lambda x: x.get('date', ''))
+            max_days = weeks * 7
+            if len(sorted_data) > max_days:
+                sorted_data = sorted_data[-max_days:]
+            
+            timeline = [d['date'] for d in sorted_data]
+            values = [d.get('nightEvents', 0) for d in sorted_data]
+            
+            avg = np.mean(values)
+            
+            # Trend berechnen
+            if len(values) >= 7:
+                first_week = np.mean(values[:7])
+                last_week = np.mean(values[-7:])
+                
+                if last_week > first_week * 1.2:
+                    trend = 'STEIGEND'
+                elif last_week < first_week * 0.8:
+                    trend = 'FALLEND'
+                else:
+                    trend = 'STABIL'
+            else:
+                trend = 'UNBEKANNT'
+            
+            return {
+                'timeline': timeline,
+                'values': values,
+                'avg': round(avg, 1),
+                'trend': trend
+            }
+        
+        except Exception as e:
+            return {'error': str(e)}
+    
+    def analyze_room_mobility(self, daily_data, weeks=4):
+        """
+        Analysiert Raum-Diversität (wie viele verschiedene Räume pro Tag).
+        
+        Args:
+            daily_data: Liste mit { 'date': 'YYYY-MM-DD', 'uniqueRooms': 8, ... }
+        
+        Returns:
+            {
+                'timeline': ['2026-01-01', ...],
+                'values': [8, 9, 7, ...],  # Anzahl Räume
+                'avg': 8.2,
+                'trend': 'STABIL'
+            }
+        """
+        try:
+            if not daily_data or len(daily_data) < 3:
+                return {'error': 'Insufficient data'}
+            
+            sorted_data = sorted(daily_data, key=lambda x: x.get('date', ''))
+            max_days = weeks * 7
+            if len(sorted_data) > max_days:
+                sorted_data = sorted_data[-max_days:]
+            
+            timeline = [d['date'] for d in sorted_data]
+            values = [d.get('uniqueRooms', 0) for d in sorted_data]
+            
+            avg = np.mean(values)
+            
+            # Trend
+            if len(values) >= 7:
+                first_week = np.mean(values[:7])
+                last_week = np.mean(values[-7:])
+                
+                if last_week < first_week * 0.7:
+                    trend = 'IMMOBIL'
+                elif last_week > first_week * 1.3:
+                    trend = 'STEIGEND'
+                else:
+                    trend = 'STABIL'
+            else:
+                trend = 'UNBEKANNT'
+            
+            return {
+                'timeline': timeline,
+                'values': values,
+                'avg': round(avg, 1),
+                'trend': trend
+            }
+        
+        except Exception as e:
+            return {'error': str(e)}
+    
+    def analyze_hygiene_frequency(self, daily_data, weeks=4):
+        """
+        Analysiert Bad-Nutzung (Hygiene-Frequenz).
+        
+        Args:
+            daily_data: Liste mit { 'date': 'YYYY-MM-DD', 'bathroomVisits': 5, ... }
+        
+        Returns:
+            {
+                'timeline': ['2026-01-01', ...],
+                'values': [5, 6, 4, ...],
+                'avg': 5.2,
+                'trend': 'STABIL'
+            }
+        """
+        try:
+            if not daily_data or len(daily_data) < 3:
+                return {'error': 'Insufficient data'}
+            
+            sorted_data = sorted(daily_data, key=lambda x: x.get('date', ''))
+            max_days = weeks * 7
+            if len(sorted_data) > max_days:
+                sorted_data = sorted_data[-max_days:]
+            
+            timeline = [d['date'] for d in sorted_data]
+            values = [d.get('bathroomVisits', 0) for d in sorted_data]
+            
+            avg = np.mean(values)
+            
+            # Trend
+            if len(values) >= 7:
+                first_week = np.mean(values[:7])
+                last_week = np.mean(values[-7:])
+                
+                if last_week < first_week * 0.6:
+                    trend = 'RÜCKGANG'
+                elif last_week > first_week * 1.4:
+                    trend = 'STEIGEND'
+                else:
+                    trend = 'STABIL'
+            else:
+                trend = 'UNBEKANNT'
+            
+            return {
+                'timeline': timeline,
+                'values': values,
+                'avg': round(avg, 1),
+                'trend': trend
+            }
+        
+        except Exception as e:
+            return {'error': str(e)}
+    
+    def analyze_ventilation_behavior(self, daily_data, weeks=4):
+        """
+        Analysiert Lüftungsverhalten (Fenster-Öffnungen).
+        
+        Args:
+            daily_data: Liste mit { 'date': 'YYYY-MM-DD', 'windowOpenings': 3, ... }
+        
+        Returns:
+            {
+                'timeline': ['2026-01-01', ...],
+                'values': [3, 4, 2, ...],
+                'avg': 3.1,
+                'trend': 'STABIL'
+            }
+        """
+        try:
+            if not daily_data or len(daily_data) < 3:
+                return {'error': 'Insufficient data'}
+            
+            sorted_data = sorted(daily_data, key=lambda x: x.get('date', ''))
+            max_days = weeks * 7
+            if len(sorted_data) > max_days:
+                sorted_data = sorted_data[-max_days:]
+            
+            timeline = [d['date'] for d in sorted_data]
+            values = [d.get('windowOpenings', 0) for d in sorted_data]
+            
+            avg = np.mean(values)
+            
+            # Trend
+            if len(values) >= 7:
+                first_week = np.mean(values[:7])
+                last_week = np.mean(values[-7:])
+                
+                if last_week < first_week * 0.5:
+                    trend = 'RÜCKGANG'
+                elif last_week > first_week * 1.5:
+                    trend = 'STEIGEND'
+                else:
+                    trend = 'STABIL'
+            else:
+                trend = 'UNBEKANNT'
+            
+            return {
+                'timeline': timeline,
+                'values': values,
+                'avg': round(avg, 1),
+                'trend': trend
+            }
+        
+        except Exception as e:
+            return {'error': str(e)}

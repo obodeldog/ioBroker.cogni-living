@@ -187,6 +187,28 @@ def process_message(msg):
             log(f"Room Silence Analysis: Checking {len(room_data)} rooms")
             alerts = health_brain.analyze_room_silence(room_data)
             send_result("ROOM_SILENCE_RESULT", alerts)
+        
+        elif cmd == "ANALYZE_LONGTERM_TRENDS":
+            daily_data = data.get("dailyData", [])
+            weeks = data.get("weeks", 4)
+            log(f"Longterm Trends Analysis: Processing {len(daily_data)} days for {weeks} weeks")
+            
+            # Berechne alle 6 Metriken
+            activity_trend = health_brain.analyze_longterm_activity(daily_data, weeks)
+            gait_trend = health_brain.analyze_gait_speed_longterm(daily_data, weeks)
+            night_trend = health_brain.analyze_night_restlessness(daily_data, weeks)
+            mobility_trend = health_brain.analyze_room_mobility(daily_data, weeks)
+            hygiene_trend = health_brain.analyze_hygiene_frequency(daily_data, weeks)
+            ventilation_trend = health_brain.analyze_ventilation_behavior(daily_data, weeks)
+            
+            send_result("LONGTERM_TRENDS_RESULT", {
+                'activity': activity_trend,
+                'gait': gait_trend,
+                'night': night_trend,
+                'mobility': mobility_trend,
+                'hygiene': hygiene_trend,
+                'ventilation': ventilation_trend
+            })
 
         # 3. ENERGY
         elif cmd == "TRAIN_ENERGY":
