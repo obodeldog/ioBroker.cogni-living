@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.47",
+        "version": "0.30.48",
         "news": {
+            "0.30.48": {
+                "en": "DEBUG: Add extensive console logging + timeout fixes for longterm trends loading",
+                "de": "DEBUG: Umfangreiche Console-Logs + Timeout-Fixes für Langzeit-Trends-Laden"
+            },
             "0.30.47": {
                 "en": "NEW: Garmin-Style Longterm Trends (Activity Load, Gait Speed, Night Restlessness, Room Mobility, Hygiene, Ventilation)",
                 "de": "NEU: Garmin-Style Langzeit-Trends (Aktivitäts-Belastung, Ganggeschwindigkeit, Nacht-Unruhe, Raum-Mobilität, Hygiene, Lüftung)"
