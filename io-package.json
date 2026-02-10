@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.48",
+        "version": "0.30.49",
         "news": {
+            "0.30.49": {
+                "en": "FIX: Use native socket.sendTo Promises instead of callback wrappers (fixes timeout issue)",
+                "de": "FIX: Nutze native socket.sendTo Promises statt Callback-Wrapper (behebt Timeout-Problem)"
+            },
             "0.30.48": {
                 "en": "DEBUG: Add extensive console logging + timeout fixes for longterm trends loading",
                 "de": "DEBUG: Umfangreiche Console-Logs + Timeout-Fixes für Langzeit-Trends-Laden"
