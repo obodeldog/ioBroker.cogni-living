@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.52",
+        "version": "0.30.53",
         "news": {
+            "0.30.53": {
+                "en": "CRITICAL FIX: Corrected data extraction for longterm trends (roomHistory, nightEvents, windowOpenings, activity calculation)",
+                "de": "KRITISCHER FIX: Korrigierte Datenextraktion für Langzeit-Trends (roomHistory, nightEvents, windowOpenings, Aktivitätsberechnung)"
+            },
             "0.30.52": {
                 "en": "FEATURE: Adaptive night activity split (bedroom vs. outside), Event-count for trends, Briefing debug log",
                 "de": "FEATURE: Adaptive Nacht-Aktivität Split (Schlafzimmer vs. außerhalb), Event-Count für Trends, Briefing Debug-Log"
