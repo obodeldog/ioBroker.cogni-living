@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.50",
+        "version": "0.30.51",
         "news": {
+            "0.30.51": {
+                "en": "CRITICAL FIX: History files now save only today's events (not all events), Backend timeout increased to 30s",
+                "de": "KRITISCHER FIX: History-Files speichern jetzt nur heutige Events (nicht alle), Backend Timeout auf 30s erhöht"
+            },
             "0.30.50": {
                 "en": "DEBUG: Add detailed extraction logs to diagnose empty data issue",
                 "de": "DEBUG: Detaillierte Extraktions-Logs zur Diagnose leerer Daten"
