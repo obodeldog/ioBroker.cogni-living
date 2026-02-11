@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.49",
+        "version": "0.30.50",
         "news": {
+            "0.30.50": {
+                "en": "DEBUG: Add detailed extraction logs to diagnose empty data issue",
+                "de": "DEBUG: Detaillierte Extraktions-Logs zur Diagnose leerer Daten"
+            },
             "0.30.49": {
                 "en": "FIX: Use native socket.sendTo Promises instead of callback wrappers (fixes timeout issue)",
                 "de": "FIX: Nutze native socket.sendTo Promises statt Callback-Wrapper (behebt Timeout-Problem)"
