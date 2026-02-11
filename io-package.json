@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.51",
+        "version": "0.30.52",
         "news": {
+            "0.30.52": {
+                "en": "FEATURE: Adaptive night activity split (bedroom vs. outside), Event-count for trends, Briefing debug log",
+                "de": "FEATURE: Adaptive Nacht-Aktivität Split (Schlafzimmer vs. außerhalb), Event-Count für Trends, Briefing Debug-Log"
+            },
             "0.30.51": {
                 "en": "CRITICAL FIX: History files now save only today's events (not all events), Backend timeout increased to 30s",
                 "de": "KRITISCHER FIX: History-Files speichern jetzt nur heutige Events (nicht alle), Backend Timeout auf 30s erhöht"
