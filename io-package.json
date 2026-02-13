@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.53",
+        "version": "0.30.54",
         "news": {
+            "0.30.54": {
+                "en": "FEATURE: Filtered hover tooltips (bedroom vs. outside), Configurable hallway rooms, Gait speed from Gait Analysis, Baseline median fix",
+                "de": "FEATURE: Gefilterte Hover-Tooltips (Schlafzimmer vs. außerhalb), Konfigurierbare Flur-Räume, Ganggeschwindigkeit aus Gait Analysis, Baseline-Median-Fix"
+            },
             "0.30.53": {
                 "en": "CRITICAL FIX: Corrected data extraction for longterm trends (roomHistory, nightEvents, windowOpenings, activity calculation)",
                 "de": "KRITISCHER FIX: Korrigierte Datenextraktion für Langzeit-Trends (roomHistory, nightEvents, windowOpenings, Aktivitätsberechnung)"
@@ -145,6 +149,7 @@
         "aiPersona": "generic",
         "livingContext": "",
         "minDaysForBaseline": 7,
+        "flurRooms": "flur, diele, gang, treppe",
         "inactivityMonitoringEnabled": false,
         "inactivityThresholdHours": 12,
         "notifyTelegramEnabled": false,

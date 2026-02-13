@@ -36,7 +36,7 @@ interface ThermostatDiagItem { room: string; sensorId: string; setpointId: strin
 
 interface SettingsState {
     devices: DeviceConfig[]; presenceDevices: string[]; outdoorSensorId: string; geminiApiKey: string; analysisInterval: number; minDaysForBaseline: number;
-    aiPersona: string; livingContext: string; licenseKey: string; ltmStbWindowDays: number; ltmLtbWindowDays: number; ltmDriftCheckIntervalHours: number;
+    aiPersona: string; livingContext: string; licenseKey: string; ltmStbWindowDays: number; ltmLtbWindowDays: number; ltmDriftCheckIntervalHours: number; flurRooms: string;
     inactivityMonitoringEnabled: boolean; inactivityThresholdHours: number; notifyTelegramEnabled: boolean; notifyTelegramInstance: string; notifyTelegramRecipient: string;
     notifyPushoverEnabled: boolean; notifyPushoverInstance: string; notifyPushoverRecipient: string; notifyEmailEnabled: boolean; notifyEmailInstance: string; notifyEmailRecipient: string;
     notifyWhatsappEnabled: boolean; notifyWhatsappInstance: string; notifyWhatsappRecipient: string; notifySignalEnabled: boolean; notifySignalInstance: string; notifySignalRecipient: string;
@@ -75,7 +75,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         this.state = {
             devices: native.devices || [], presenceDevices: native.presenceDevices || [], outdoorSensorId: native.outdoorSensorId || '', geminiApiKey: native.geminiApiKey || '',
             analysisInterval: native.analysisInterval || 15, minDaysForBaseline: native.minDaysForBaseline || 7, aiPersona: native.aiPersona || 'generic', livingContext: native.livingContext || '',
-            licenseKey: native.licenseKey || '', ltmStbWindowDays: native.ltmStbWindowDays || 14, ltmLtbWindowDays: native.ltmLtbWindowDays || 60, ltmDriftCheckIntervalHours: native.ltmDriftCheckIntervalHours || 24,
+            licenseKey: native.licenseKey || '', ltmStbWindowDays: native.ltmStbWindowDays || 14, ltmLtbWindowDays: native.ltmLtbWindowDays || 60, ltmDriftCheckIntervalHours: native.ltmDriftCheckIntervalHours || 24, flurRooms: native.flurRooms || 'flur, diele, gang, treppe',
             inactivityMonitoringEnabled: native.inactivityMonitoringEnabled || false, inactivityThresholdHours: native.inactivityThresholdHours || 12, notifyTelegramEnabled: native.notifyTelegramEnabled || false,
             notifyTelegramInstance: native.notifyTelegramInstance || '', notifyTelegramRecipient: native.notifyTelegramRecipient || '', notifyPushoverEnabled: native.notifyPushoverEnabled || false,
             notifyPushoverInstance: native.notifyPushoverInstance || '', notifyPushoverRecipient: native.notifyPushoverRecipient || '', notifyEmailEnabled: native.notifyEmailEnabled || false,
@@ -413,6 +413,20 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             onChange={e => this.updateNativeValue('livingContext', e.target.value)}
                             helperText="Freitext für 'Soft Skills' (wird an Gemini gesendet)"
                             variant="outlined"
+                        />
+                    </Tooltip>
+                </Grid>
+
+                <Grid item xs={12}>
+                    <Tooltip title="Räume für Ganggeschwindigkeits-Analyse (komma-getrennt, z.B. 'flur, diele, gang'). Diese werden zur Berechnung der Mobilität herangezogen." {...tooltipProps}>
+                        <TextField
+                            fullWidth
+                            label="Flur-Räume (für Ganggeschwindigkeit)"
+                            value={this.state.flurRooms}
+                            onChange={e => this.updateNativeValue('flurRooms', e.target.value)}
+                            helperText="Keywords für Durchgangsräume (komma-getrennt)"
+                            variant="outlined"
+                            size="small"
                         />
                     </Tooltip>
                 </Grid>

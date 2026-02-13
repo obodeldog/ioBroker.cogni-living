@@ -352,8 +352,12 @@ class HealthBrain:
             timeline = [d['date'] for d in sorted_data]
             values = [d.get('activityPercent', 0) for d in sorted_data]
             
-            # Berechne Baseline (Durchschnitt aller Werte)
-            baseline = np.mean(values)
+            # Berechne Baseline (Median der letzten 14 Tage, robuster gegen Ausreißer)
+            if len(values) >= 14:
+                baseline = np.median(values[-14:])  # Median der letzten 14 Tage
+            else:
+                baseline = np.median(values)  # Falls < 14 Tage, nutze alle
+            
             baseline_std = np.std(values)
             
             # 7-Tage gleitender Durchschnitt
