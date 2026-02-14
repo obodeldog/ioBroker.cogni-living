@@ -27,8 +27,8 @@ import BoltIcon from '@mui/icons-material/Bolt';
 import WeekendIcon from '@mui/icons-material/Weekend';
 
 interface SettingsProps { native: Record<string, any>; onChange: (attr: string, value: any) => void; socket: Connection; themeType: ThemeType; adapterName: string; instance: number; theme: IobTheme; onlySystem?: boolean; }
-interface DeviceConfig { id: string; name: string; location: string; type: string; logDuplicates: boolean; isExit: boolean; isSolar?: boolean; }
-interface ScannedDevice { id: string; name: string; location: string; type: string; logDuplicates: boolean; isExit: boolean; selected?: boolean; _score?: number; _source?: string; exists?: boolean; }
+interface DeviceConfig { id: string; name: string; location: string; type: string; logDuplicates: boolean; isExit: boolean; isSolar?: boolean; isHallway?: boolean; }
+interface ScannedDevice { id: string; name: string; location: string; type: string; logDuplicates: boolean; isExit: boolean; isHallway?: boolean; selected?: boolean; _score?: number; _source?: string; exists?: boolean; }
 interface ScanFilters { motion: boolean; doors: boolean; lights: boolean; temperature: boolean; weather: boolean; selectedFunctionIds: string[]; }
 interface EnumItem { id: string; name: string; }
 
@@ -108,7 +108,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     updatePresenceDevices(newPresenceDevices: string[]) { this.setState({ presenceDevices: newPresenceDevices }); this.props.onChange('presenceDevices', newPresenceDevices); }
     handleAccordionChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => { this.setState({ expandedAccordion: isExpanded ? panel : false }); };
 
-    onAddDevice() { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices.push({ id: '', name: '', location: '', type: 'motion', logDuplicates: false, isExit: false }); this.updateDevices(devices); }
+    onAddDevice() { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices.push({ id: '', name: '', location: '', type: 'motion', logDuplicates: false, isExit: false, isHallway: false }); this.updateDevices(devices); }
     onDeviceChange(index: number, attr: keyof DeviceConfig, value: any) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices[index][attr] = value; this.updateDevices(devices); }
     onDeleteDevice(index: number) { const devices = JSON.parse(JSON.stringify(this.state.devices)); devices.splice(index, 1); this.updateDevices(devices); }
     onDeleteAllDevices = () => { this.updateDevices([]); this.setState({ showDeleteConfirm: false }); this.showSnackbar('Alle Sensoren gelöscht.', 'info'); }

@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.54",
+        "version": "0.30.55",
         "news": {
+            "0.30.55": {
+                "en": "UX: Hallway sensor checkbox in sensor table (replaces keyword input)",
+                "de": "UX: Flur-Sensor Checkbox in Sensor-Tabelle (ersetzt Keyword-Eingabe)"
+            },
             "0.30.54": {
                 "en": "FEATURE: Filtered hover tooltips (bedroom vs. outside), Configurable hallway rooms, Gait speed from Gait Analysis, Baseline median fix",
                 "de": "FEATURE: Gefilterte Hover-Tooltips (Schlafzimmer vs. außerhalb), Konfigurierbare Flur-Räume, Ganggeschwindigkeit aus Gait Analysis, Baseline-Median-Fix"
