@@ -90,5 +90,144 @@ Dieses Projekt ist "State of the Art" Engineering:
 
 ---
 
+---
+
+## 📊 Benutzer-Handbuch: Gesundheits-Dashboard
+
+### 🎯 Navigation: TAG / WOCHE / MONAT
+
+Oben rechts finden Sie drei Ansichten:
+
+- **TAG:** Zeigt die aktuelle 24-Stunden-Ansicht mit Schlaf-Radar, Neuro-Timeline und Raum-Nutzung.
+- **WOCHE:** Zeigt eine rollende 7-Tage-Übersicht mit Langzeit-Trends, Aktivitätsmuster und Raum-Histogrammen.
+- **MONAT:** Zeigt eine rollende 30-Tage-Übersicht mit Langzeit-Trends und Anomalie-Erkennung.
+
+#### **LIVE-Modus:**
+- Wenn aktiviert (grüner Punkt), werden Daten in Echtzeit aktualisiert.
+- Wenn deaktiviert (grauer Punkt), können Sie historische Daten durchblättern.
+
+---
+
+### 🌙 Schlaf-Radar (22:00-08:00 Uhr)
+
+Das Schlaf-Radar zeigt Ihnen zwei getrennte Aktivitätslinien:
+
+1. **UNRUHE IM SCHLAFZIMMER:** Bewegungen innerhalb des Schlafzimmers (unruhiger Schlaf, häufiges Umdrehen).
+2. **NÄCHTLICHE AKTIVITÄT (AUSSERHALB):** Bewegungen außerhalb des Schlafzimmers (z.B. Toilettengänge, Küche).
+
+#### **Farbcode (adaptiv):**
+- 🟢 **Grün:** Normal (typisch für dieses Haus)
+- 🟡 **Gelb:** Leicht erhöht
+- 🟠 **Orange:** Deutlich erhöht
+- 🔴 **Rot:** Sehr unruhig (> 2× über Durchschnitt)
+
+**Tipp:** Die Farben passen sich automatisch an Ihr Haus an. Was bei einem Haus "unruhig" ist, kann bei einem anderen "normal" sein (je nach Sensorempfindlichkeit).
+
+---
+
+### 📊 Langzeit-Trends (WOCHE/MONAT)
+
+Oben im Gesundheits-Dashboard finden Sie **6 Garmin-Style Trend-Graphen**:
+
+#### 1️⃣ **Aktivitätsbelastung**
+Zeigt Ihre tägliche Aktivität relativ zur individuellen Baseline:
+- **Grüne Zone:** Normal (±20% vom Durchschnitt)
+- **Darüber:** Sehr aktiv (kann positiv oder negativ sein, z.B. Überanstrengung)
+- **Darunter:** Ruhig (kann auf Krankheit oder Erschöpfung hinweisen)
+
+#### 2️⃣ **Ganggeschwindigkeit**
+Misst indirekt Ihre Mobilität über Flur-/Diele-Sensoren:
+- **Steigende Linie:** Schnellere Bewegung (gut!)
+- **Fallende Linie:** Langsamere Bewegung (Hinweis auf Mobilitätsverlust)
+
+**Konfiguration:** Unter "System-Tab" → "Sensor-Liste" können Sie Sensoren als "Flur?" markieren.
+
+#### 3️⃣ **Nacht-Unruhe**
+Anzahl der Bewegungen **im Schlafzimmer** während der Nacht (22:00-06:00):
+- **Niedrig:** Ruhiger Schlaf
+- **Hoch:** Unruhiger Schlaf (z.B. Schmerzen, Stress)
+
+#### 4️⃣ **Raum-Mobilität**
+Anzahl der verschiedenen Räume, die Sie pro Tag nutzen:
+- **Hoch:** Aktiv im ganzen Haus
+- **Niedrig:** Beschränkt auf wenige Räume (kann auf Isolation hinweisen)
+
+#### 5️⃣ **Bad-Nutzung**
+Anzahl der Toilettengänge pro Tag:
+- **Normal:** 5-8x (je nach Person)
+- **Sehr hoch:** Kann auf Gesundheitsprobleme hinweisen
+
+#### 6️⃣ **Frischluft-Index**
+Anzahl der Fenster-/Türöffnungen pro Tag:
+- **Gut:** 3-5x pro Tag
+- **Niedrig:** Zu wenig Lüftung (Luftqualität!)
+
+---
+
+### 📈 Raum-Nutzung Histogramme (WOCHE/MONAT)
+
+In der **Wochenansicht** und **Monatsansicht** sehen Sie **Mini-Histogramme für jeden Raum**.
+
+#### **Farbcode:**
+- 🟢 **Grün:** Normale Nutzung
+- 🔴 **Rot:** **ANOMALIE!** (< Durchschnitt - 2× Standardabweichung)
+
+**Was bedeutet das?**
+- Eine rote Anomalie bedeutet, dass der Raum **viel weniger** genutzt wurde als sonst.
+- **Beispiel:** Wenn das Schlafzimmer plötzlich rot wird, könnte das bedeuten, dass die Person die Nacht woanders verbracht hat (oder krank ist).
+
+**Technische Details:**
+- Das System berechnet für jeden Raum den **Durchschnitt** und die **Standardabweichung** (ein Maß für die Schwankung).
+- Balken, die **unter (Durchschnitt - 2× Standardabweichung)** liegen, werden rot markiert.
+- Diese Methode passt sich automatisch an jedes Haus an (keine festen Schwellwerte!).
+
+---
+
+### 🔴 Lebenszeichen-Alarm
+
+Neben den Raum-Namen sehen Sie farbige Punkte:
+- 🟢 **Keine Warnung:** Alles normal
+- 🟡 **Gelbe Warnung:** Keine Aktivität seit 6-12 Stunden (je nach Raum/Tageszeit)
+- 🔴 **Rote Warnung:** **KRITISCH!** Keine Aktivität seit >12 Stunden
+
+**Was tun bei roter Warnung?**
+1. Überprüfen Sie, ob die Person anwesend ist.
+2. Rufen Sie die Person an oder besuchen Sie sie.
+3. Bei Notfall: Notruf 112!
+
+**Wichtig:** Der Alarm passt sich an Ihren Tagesrhythmus an. Nachts im Schlafzimmer ist keine Aktivität normal!
+
+---
+
+### 🛠️ Konfiguration
+
+#### **System-Tab → Sensor-Liste:**
+- **Flur?** Checkbox: Markieren Sie Sensoren, die für Ganggeschwindigkeits-Analyse genutzt werden sollen.
+- **Exit?** Checkbox: Markieren Sie Türen/Fenster, die als Hauptausgänge gelten.
+
+#### **Reporting & Kontext:**
+- **Gemini API Key:** Für KI-generierte Zusammenfassungen
+- **Briefing-Zeit:** Wann soll das Morgen-Briefing per Pushover kommen?
+- **Pushover User/Token:** Für Benachrichtigungen
+
+---
+
+### 🎨 Tipps & Best Practices
+
+1. **Vergleichen Sie Wochen miteinander:** Nutzen Sie die Monatsansicht, um langfristige Trends zu erkennen.
+2. **Achten Sie auf rote Anomalien:** Diese sind oft die ersten Hinweise auf Veränderungen.
+3. **Schauen Sie täglich rein:** Gewöhnen Sie sich an ein kurzes "Health Check" (1 Minute).
+4. **Passen Sie Sensoren an:** Je mehr Sensoren Sie als "Flur" markieren, desto genauer die Ganggeschwindigkeit.
+
+---
+
+## ⚖️ Disclaimer & Sicherheit
+
+1.  **Kein Medizinprodukt:** Software ersetzt keinen Arzt. Dient zur Unterstützung (AAL).
+2.  **Privacy First:** Lokale Modelle (Random Forest, LSTM) laufen auf Ihrer Hardware. Nur für komplexe Text-Analysen werden anonymisierte Daten an Gemini gesendet.
+3.  **Haftung:** Nutzung auf eigene Gefahr. Verlassen Sie sich bei Lebensgefahr nicht auf Smart-Home-Technik.
+
+---
+
 ## License
 MIT License. Copyright (c) 2025 Dr.-Ing. Marc Jaeger.
