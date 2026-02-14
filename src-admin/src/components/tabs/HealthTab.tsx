@@ -179,6 +179,8 @@ export default function HealthTab(props: any) {
     const normalizeRoomName = (rawName: string, masterList: string[]): string => {
         if (!rawName) return rawName;
         const cleaned = rawName.replace(/_/g, ' ').trim();
+        // Guard: Wenn masterList leer oder undefined, nur säubern
+        if (!masterList || masterList.length === 0) return cleaned;
         // Exakter Match (case-insensitive)
         const match = masterList.find(r => r.toLowerCase() === cleaned.toLowerCase());
         return match || cleaned;
@@ -577,6 +579,11 @@ export default function HealthTab(props: any) {
             fetchData();
         }
     }, [isLive, fetchData]);
+    
+    // LADE MASTER-RÄUME beim Component Mount
+    useEffect(() => {
+        loadMasterRooms();
+    }, []);
 
     const handleDateChange = (days: number) => {
         const newDate = new Date(viewDate);
@@ -1044,7 +1051,7 @@ export default function HealthTab(props: any) {
             <div style={{ maxWidth: '80ch', margin: '0 auto' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom: `2px solid ${isDark?'#444':'#ccc'}`, marginBottom:'30px', paddingBottom:'15px', flexWrap:'wrap', gap:'10px' }}>
                     <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
-                        <strong style={{fontSize:'1.2rem'}}>AURA MONITOR (v0.30.57)</strong>
+                        <strong style={{fontSize:'1.2rem'}}>AURA MONITOR (v0.30.58)</strong>
                         <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#222':'#e0e0e0', borderRadius:'4px', padding:'2px'}}>
                             <IconButton 
                                 size="small" 
