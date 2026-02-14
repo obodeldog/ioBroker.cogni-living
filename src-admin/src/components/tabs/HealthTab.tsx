@@ -114,6 +114,8 @@ export default function HealthTab(props: any) {
     const [weekAlerts, setWeekAlerts] = useState<{text: string, severity: 'warn' | 'info'}[]>([]);
     const [heatmapAnalysis, setHeatmapAnalysis] = useState<any>(null);
     const [roomAlerts, setRoomAlerts] = useState<any>(null);
+    const [weekOffset, setWeekOffset] = useState<number>(0); // 0 = heute, -1 = vor 7 Tagen (WOCHE) bzw. 30 Tagen (MONAT)
+    const [masterRooms, setMasterRooms] = useState<string[]>([]); // Master-Liste aus System-Tab
 
     const [anomalyScore, setAnomalyScore] = useState<number>(0.1);
     const [batteryLevel, setBatteryLevel] = useState<number>(85);
@@ -152,6 +154,36 @@ export default function HealthTab(props: any) {
     const [driftStatus, setDriftStatus] = useState<string>('Unknown');
     const [driftDetails, setDriftDetails] = useState<string>('');
 
+    // MASTER-RAUMNAMEN aus System-Tab laden
+    const loadMasterRooms = async () => {
+        try {
+            const obj = await socket.getObject(`system.adapter.${adapterName}.${instance}`);
+            if (obj && obj.native && obj.native.devices) {
+                const rooms = obj.native.devices
+                    .map((d: any) => d.location)
+                    .filter((loc: string) => loc && loc.trim().length > 0)
+                    .map((loc: string) => loc.trim());
+                // Unique Räume
+                const uniqueRooms = Array.from(new Set(rooms));
+                setMasterRooms(uniqueRooms);
+                console.log('[MASTER ROOMS] Loaded from System Tab:', uniqueRooms);
+                return uniqueRooms;
+            }
+        } catch (err) {
+            console.error('[MASTER ROOMS] Load failed:', err);
+        }
+        return [];
+    };
+    
+    // Normalisiere Raumnamen (entferne Unterstriche, matche gegen Master-Liste)
+    const normalizeRoomName = (rawName: string, masterList: string[]): string => {
+        if (!rawName) return rawName;
+        const cleaned = rawName.replace(/_/g, ' ').trim();
+        // Exakter Match (case-insensitive)
+        const match = masterList.find(r => r.toLowerCase() === cleaned.toLowerCase());
+        return match || cleaned;
+    };
+    
     const loadHistory = (date: Date) => {
         setLoading(true);
         const dateStr = date.toISOString().split('T')[0];
@@ -274,13 +306,25 @@ export default function HealthTab(props: any) {
     };
 
     // Lade N-Tage-Daten für Wochenansicht / Monatsansicht
-    const loadWeekData = (days: number = 7) => {
+    const loadWeekData = async (days: number = 7) => {
         setLoading(true);
+        
+        // MASTER-RÄUME laden (wenn noch nicht geschehen)
+        let masterList = masterRooms;
+        if (masterList.length === 0) {
+            masterList = await loadMasterRooms();
+        }
+        
         const promises: Promise<any>[] = [];
         const dates: Date[] = [];
         
-        // Letzte N Tage (inkl. heute)
-        for (let i = days - 1; i >= 0; i--) {
+        // Berechne Zeitfenster basierend auf weekOffset
+        // weekOffset = 0 → heute - (days-1) bis heute
+        // weekOffset = -1 → heute - (2*days-1) bis heute - days
+        const startOffset = Math.abs(weekOffset) * days;
+        const endOffset = startOffset - days + 1;
+        
+        for (let i = startOffset; i >= endOffset; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
             dates.push(d);
@@ -334,14 +378,36 @@ export default function HealthTab(props: any) {
         
         Promise.all(promises).then((results) => {
             setLoading(false);
-            const weekDataArray = results.map(r => ({
-                date: r.date,
-                dateStr: r.date.toISOString().split('T')[0],
-                dayName: ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][r.date.getDay()],
-                hasData: r.data !== null,
-                data: r.data
-            }));
             
+            // NORMALISIERE RAUMNAMEN in jedem Snapshot
+            const weekDataArray = results.map(r => {
+                let normalizedData = r.data;
+                
+                if (r.data && r.data.roomHistory) {
+                    const roomHistoryData = r.data.roomHistory.history || r.data.roomHistory;
+                    const normalizedRoomHistory: Record<string, number[]> = {};
+                    
+                    Object.keys(roomHistoryData).forEach(rawRoomName => {
+                        const normalizedName = normalizeRoomName(rawRoomName, masterList);
+                        normalizedRoomHistory[normalizedName] = roomHistoryData[rawRoomName];
+                    });
+                    
+                    normalizedData = {
+                        ...r.data,
+                        roomHistory: { history: normalizedRoomHistory }
+                    };
+                }
+                
+                return {
+                    date: r.date,
+                    dateStr: r.date.toISOString().split('T')[0],
+                    dayName: ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][r.date.getDay()],
+                    hasData: r.data !== null,
+                    data: normalizedData
+                };
+            });
+            
+            console.log('[WEEK DATA] Loaded & normalized:', weekDataArray.length, 'days');
             setWeekData(weekDataArray);
             calculateWeekAlerts(weekDataArray);
             
@@ -525,6 +591,25 @@ export default function HealthTab(props: any) {
             loadHistory(newDate);
         }
     };
+    
+    // WOCHE/MONAT Navigation (Garmin-Style)
+    const handlePrevWeek = () => {
+        setWeekOffset(weekOffset - 1);
+    };
+    
+    const handleNextWeek = () => {
+        if (weekOffset >= 0) return; // Kann nicht in die Zukunft
+        setWeekOffset(weekOffset + 1);
+    };
+    
+    // Effect: Reload data when weekOffset changes
+    useEffect(() => {
+        if (viewMode === 'WEEK') {
+            loadWeekData(7);
+        } else if (viewMode === 'MONTH') {
+            loadWeekData(30);
+        }
+    }, [weekOffset]);
 
     const processEvents = (events: any[]) => {
         const collectedRelevantEvents: any[] = [];
@@ -959,20 +1044,44 @@ export default function HealthTab(props: any) {
             <div style={{ maxWidth: '80ch', margin: '0 auto' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom: `2px solid ${isDark?'#444':'#ccc'}`, marginBottom:'30px', paddingBottom:'15px', flexWrap:'wrap', gap:'10px' }}>
                     <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
-                        <strong style={{fontSize:'1.2rem'}}>AURA MONITOR (v0.30.56)</strong>
+                        <strong style={{fontSize:'1.2rem'}}>AURA MONITOR (v0.30.57)</strong>
                         <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#222':'#e0e0e0', borderRadius:'4px', padding:'2px'}}>
-                            <IconButton size="small" onClick={() => handleDateChange(-1)} disabled={loading || viewMode === 'WEEK' || viewMode === 'MONTH'}><ArrowBackIosIcon fontSize="small" /></IconButton>
-                            <span style={{margin:'0 10px', fontWeight:'bold', minWidth:'140px', textAlign:'center'}}>
-                                {viewMode === 'WEEK' ? 'Letzte 7 Tage' : viewMode === 'MONTH' ? 'Letzte 30 Tage' : viewDate.toLocaleDateString('de-DE', {weekday: 'long', day:'2-digit', month:'2-digit'})}
+                            <IconButton 
+                                size="small" 
+                                onClick={() => (viewMode === 'WEEK' || viewMode === 'MONTH') ? handlePrevWeek() : handleDateChange(-1)} 
+                                disabled={loading}
+                            >
+                                <ArrowBackIosIcon fontSize="small" />
+                            </IconButton>
+                            <span style={{margin:'0 10px', fontWeight:'bold', minWidth:'180px', textAlign:'center'}}>
+                                {(() => {
+                                    if (viewMode === 'DAY') {
+                                        return viewDate.toLocaleDateString('de-DE', {weekday: 'long', day:'2-digit', month:'2-digit'});
+                                    }
+                                    const days = viewMode === 'WEEK' ? 7 : 30;
+                                    const startOffset = Math.abs(weekOffset) * days;
+                                    const endOffset = startOffset - days + 1;
+                                    const startDate = new Date();
+                                    startDate.setDate(startDate.getDate() - startOffset);
+                                    const endDate = new Date();
+                                    endDate.setDate(endDate.getDate() - endOffset);
+                                    return `${startDate.getDate()}.${startDate.getMonth()+1}. - ${endDate.getDate()}.${endDate.getMonth()+1}.`;
+                                })()}
                             </span>
-                            <IconButton size="small" onClick={() => handleDateChange(1)} disabled={isLive || loading || viewMode === 'WEEK' || viewMode === 'MONTH'}><ArrowForwardIosIcon fontSize="small" /></IconButton>
+                            <IconButton 
+                                size="small" 
+                                onClick={() => (viewMode === 'WEEK' || viewMode === 'MONTH') ? handleNextWeek() : handleDateChange(1)} 
+                                disabled={loading || (viewMode === 'DAY' && isLive) || (viewMode !== 'DAY' && weekOffset >= 0)}
+                            >
+                                <ArrowForwardIosIcon fontSize="small" />
+                            </IconButton>
                         </div>
                     </div>
                     
                     <div style={{display:'flex', gap:'10px', alignItems:'center'}}>
                         <div style={{display:'flex', gap:'5px', border: `1px solid ${isDark?'#444':'#bbb'}`, borderRadius:'4px', padding:'2px'}}>
                             <button 
-                                onClick={() => {setViewMode('DAY'); if(isLive) fetchData();}}
+                                onClick={() => {setViewMode('DAY'); setWeekOffset(0); if(isLive) fetchData();}}
                                 style={{
                                     padding: '6px 16px',
                                     border: 'none',
@@ -988,7 +1097,7 @@ export default function HealthTab(props: any) {
                                 TAG
                             </button>
                             <button 
-                                onClick={() => {setViewMode('WEEK'); loadWeekData(7);}}
+                                onClick={() => {setViewMode('WEEK'); setWeekOffset(0); loadWeekData(7);}}
                                 style={{
                                     padding: '6px 16px',
                                     border: 'none',
@@ -1004,7 +1113,7 @@ export default function HealthTab(props: any) {
                                 WOCHE
                             </button>
                             <button 
-                                onClick={() => {setViewMode('MONTH'); loadWeekData(30);}}
+                                onClick={() => {setViewMode('MONTH'); setWeekOffset(0); loadWeekData(30);}}
                                 style={{
                                     padding: '6px 16px',
                                     border: 'none',
@@ -1416,66 +1525,150 @@ export default function HealthTab(props: any) {
                                     return <div style={{textAlign:'center', padding:'40px', color:'#888'}}>Keine Raumdaten verfügbar</div>;
                                 }
                                 
-                                // Render Grid (3 pro Zeile)
+                                // HYBRID-DARSTELLUNG: Top 3 = Linien, Rest = Histogramme
+                                const top3Rooms = sortedRooms.slice(0, 3);
+                                const restRooms = sortedRooms.slice(3);
+                                
                                 return (
-                                    <div style={{display:'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap:'20px', padding:'10px 0'}}>
-                                        {sortedRooms.map(({room, data, total}) => {
-                                            // Berechne Baseline & Standardabweichung
-                                            const mean = data.reduce((a,b) => a+b, 0) / data.length;
-                                            const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
-                                            const std = Math.sqrt(variance);
-                                            const anomalyThreshold = mean - (2 * std); // 2× Standardabweichung
-                                            
-                                            const maxVal = Math.max(...data);
-                                            const avg = Math.round(mean);
-                                            
-                                            return (
-                                                <div key={room} style={{
-                                                    border: `1px solid ${isDark?'#333':'#ccc'}`,
-                                                    borderRadius: '4px',
-                                                    padding: '10px',
-                                                    backgroundColor: isDark?'#1a1a1a':'#fafafa'
-                                                }}>
-                                                    <div style={{fontSize:'0.75rem', fontWeight:'bold', marginBottom:'8px', color: isDark?'#eee':'#222'}}>
-                                                        {room.toUpperCase()}
-                                                    </div>
+                                    <div style={{display:'flex', flexDirection:'column', gap:'20px', padding:'10px 0'}}>
+                                        {/* TOP 3 RÄUME: GARMIN-STYLE LINIEN + PUNKTE */}
+                                        {top3Rooms.length > 0 && (
+                                            <div style={{display:'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap:'20px'}}>
+                                                {top3Rooms.map(({room, data, total}) => {
+                                                    const mean = data.reduce((a,b) => a+b, 0) / data.length;
+                                                    const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
+                                                    const std = Math.sqrt(variance);
+                                                    const anomalyThreshold = mean - (2 * std);
+                                                    const maxVal = Math.max(...data);
+                                                    const avg = Math.round(mean);
                                                     
-                                                    {/* Mini-Histogramm */}
-                                                    <div style={{display:'flex', alignItems:'flex-end', gap:'2px', height:'80px', marginBottom:'8px'}}>
-                                                        {data.map((val, idx) => {
-                                                            const heightPercent = maxVal > 0 ? (val / maxVal) * 100 : 0;
-                                                            const isAnomaly = val < anomalyThreshold && val > 0; // Rot wenn < mean - 2*std
-                                                            const barColor = isAnomaly ? '#ff5252' : '#00e676';
+                                                    return (
+                                                        <div key={room} style={{
+                                                            border: `2px solid ${isDark?'#444':'#ddd'}`,
+                                                            borderRadius: '6px',
+                                                            padding: '12px',
+                                                            backgroundColor: isDark?'#1a1a1a':'#fafafa'
+                                                        }}>
+                                                            <div style={{fontSize:'0.8rem', fontWeight:'bold', marginBottom:'10px', color: isDark?'#00e676':'#2196f3'}}>
+                                                                {room.toUpperCase()}
+                                                            </div>
                                                             
-                                                            return (
-                                                                <div key={idx} style={{flex:1, display:'flex', flexDirection:'column', justifyContent:'flex-end', alignItems:'center'}}>
-                                                                    <div 
-                                                                        style={{
-                                                                            width: '100%',
-                                                                            height: `${heightPercent}%`,
-                                                                            backgroundColor: barColor,
-                                                                            borderRadius: '2px 2px 0 0',
-                                                                            minHeight: val > 0 ? '2px' : '0px'
-                                                                        }}
-                                                                        title={`${val}min${isAnomaly ? ' (ANOMALIE!)' : ''}`}
+                                                            {/* GARMIN-STYLE: Linie + Punkte */}
+                                                            <div style={{position:'relative', height:'90px', marginBottom:'10px'}}>
+                                                                <svg width="100%" height="100%" style={{overflow:'visible'}}>
+                                                                    {/* Raster-Linien */}
+                                                                    <line x1="0" y1="90" x2="100%" y2="90" stroke={isDark?'#333':'#ddd'} strokeWidth="1"/>
+                                                                    <line x1="0" y1="45" x2="100%" y2="45" stroke={isDark?'#222':'#eee'} strokeWidth="1" strokeDasharray="2,2"/>
+                                                                    
+                                                                    {/* Linie */}
+                                                                    <polyline
+                                                                        points={data.map((val, idx) => {
+                                                                            const x = (idx / (data.length - 1)) * 100;
+                                                                            const y = 90 - (maxVal > 0 ? (val / maxVal) * 80 : 0);
+                                                                            return `${x}%,${y}`;
+                                                                        }).join(' ')}
+                                                                        fill="none"
+                                                                        stroke="#00e676"
+                                                                        strokeWidth="2"
                                                                     />
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
+                                                                    
+                                                                    {/* Punkte */}
+                                                                    {data.map((val, idx) => {
+                                                                        const x = (idx / (data.length - 1)) * 100;
+                                                                        const y = 90 - (maxVal > 0 ? (val / maxVal) * 80 : 0);
+                                                                        const isAnomaly = val < anomalyThreshold && val > 0;
+                                                                        return (
+                                                                            <circle
+                                                                                key={idx}
+                                                                                cx={`${x}%`}
+                                                                                cy={y}
+                                                                                r="4"
+                                                                                fill={isAnomaly ? '#ff5252' : '#00e676'}
+                                                                                stroke={isDark?'#1a1a1a':'#fafafa'}
+                                                                                strokeWidth="2"
+                                                                            >
+                                                                                <title>{`Tag ${idx + 1}: ${val}min${isAnomaly ? ' (ANOMALIE!)' : ''}`}</title>
+                                                                            </circle>
+                                                                        );
+                                                                    })}
+                                                                </svg>
+                                                            </div>
+                                                            
+                                                            {/* Y-Achse Label */}
+                                                            <div style={{fontSize:'0.65rem', color:'#666', textAlign:'right', marginBottom:'4px'}}>
+                                                                Max: {maxVal}min
+                                                            </div>
+                                                            
+                                                            {/* Zusatzinfos */}
+                                                            <div style={{fontSize:'0.7rem', color:'#888', textAlign:'center'}}>
+                                                                Ø {avg}min/Tag | Σ {total}min
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                        
+                                        {/* REST: MINI-HISTOGRAMME (wie vorher) */}
+                                        {restRooms.length > 0 && (
+                                            <div style={{display:'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap:'20px'}}>
+                                                {restRooms.map(({room, data, total}) => {
+                                                    const mean = data.reduce((a,b) => a+b, 0) / data.length;
+                                                    const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
+                                                    const std = Math.sqrt(variance);
+                                                    const anomalyThreshold = mean - (2 * std);
+                                                    const maxVal = Math.max(...data);
+                                                    const avg = Math.round(mean);
                                                     
-                                                    {/* Y-Achse Label (Max-Wert) */}
-                                                    <div style={{fontSize:'0.65rem', color:'#666', textAlign:'right', marginBottom:'4px'}}>
-                                                        {maxVal}min
-                                                    </div>
-                                                    
-                                                    {/* Zusatzinfos */}
-                                                    <div style={{fontSize:'0.7rem', color:'#888', textAlign:'center'}}>
-                                                        Ø {avg}min/Tag | Σ {total}min
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                                    return (
+                                                        <div key={room} style={{
+                                                            border: `1px solid ${isDark?'#333':'#ccc'}`,
+                                                            borderRadius: '4px',
+                                                            padding: '10px',
+                                                            backgroundColor: isDark?'#1a1a1a':'#fafafa'
+                                                        }}>
+                                                            <div style={{fontSize:'0.75rem', fontWeight:'bold', marginBottom:'8px', color: isDark?'#eee':'#222'}}>
+                                                                {room.toUpperCase()}
+                                                            </div>
+                                                            
+                                                            {/* Mini-Histogramm */}
+                                                            <div style={{display:'flex', alignItems:'flex-end', gap:'2px', height:'80px', marginBottom:'8px'}}>
+                                                                {data.map((val, idx) => {
+                                                                    const heightPercent = maxVal > 0 ? (val / maxVal) * 100 : 0;
+                                                                    const isAnomaly = val < anomalyThreshold && val > 0;
+                                                                    const barColor = isAnomaly ? '#ff5252' : '#00e676';
+                                                                    
+                                                                    return (
+                                                                        <div key={idx} style={{flex:1, display:'flex', flexDirection:'column', justifyContent:'flex-end', alignItems:'center'}}>
+                                                                            <div 
+                                                                                style={{
+                                                                                    width: '100%',
+                                                                                    height: `${heightPercent}%`,
+                                                                                    backgroundColor: barColor,
+                                                                                    borderRadius: '2px 2px 0 0',
+                                                                                    minHeight: val > 0 ? '2px' : '0px'
+                                                                                }}
+                                                                                title={`${val}min${isAnomaly ? ' (ANOMALIE!)' : ''}`}
+                                                                            />
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            
+                                                            {/* Y-Achse Label */}
+                                                            <div style={{fontSize:'0.65rem', color:'#666', textAlign:'right', marginBottom:'4px'}}>
+                                                                {maxVal}min
+                                                            </div>
+                                                            
+                                                            {/* Zusatzinfos */}
+                                                            <div style={{fontSize:'0.7rem', color:'#888', textAlign:'center'}}>
+                                                                Ø {avg}min/Tag | Σ {total}min
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })()}
@@ -1580,16 +1773,57 @@ export default function HealthTab(props: any) {
                     </TerminalBox>
                 </div>
 
-                <div style={{marginTop:'40px', display:'flex', gap:'10px', opacity: 0.7}}>
-                    <Button size="small" variant="outlined" sx={{color:'#888', borderColor:'#888'}} onClick={()=>setOpenDeepDive(true)}>[ HANDBUCH ]</Button>
-                    <Button size="small" variant="outlined" sx={{color:'#888', borderColor:'#888'}} onClick={triggerAnalysis} disabled={loading}>{loading ? '[ LÄDT... ]' : '[ SYSTEM PRÜFEN ]'}</Button>
-                </div>
+                {viewMode === 'DAY' && (
+                    <div style={{marginTop:'40px', display:'flex', gap:'10px', opacity: 0.7}}>
+                        <Button size="small" variant="outlined" sx={{color:'#888', borderColor:'#888'}} onClick={triggerAnalysis} disabled={loading}>{loading ? '[ LÄDT... ]' : '[ SYSTEM PRÜFEN ]'}</Button>
+                    </div>
+                )}
                 </>)}
+                
+                {/* HANDBUCH-BUTTON: Für ALLE Ansichten sichtbar */}
+                <div style={{marginTop:'20px', display:'flex', gap:'10px', opacity: 0.7}}>
+                    <Button size="small" variant="outlined" sx={{color:'#888', borderColor:'#888'}} onClick={()=>setOpenDeepDive(true)}>[ HANDBUCH ]</Button>
+                </div>
             </div>
 
-            <Dialog open={openDeepDive} onClose={()=>setOpenDeepDive(false)} maxWidth="md" fullWidth>
-                <DialogTitle>System Handbuch</DialogTitle>
-                <DialogContent dividers><Typography variant="body2" component="div" style={{fontFamily:'monospace'}}>1. <strong>SCHLAF-RADAR</strong>: Analysiert Nachtruhe (22-08 Uhr).<br/>2. <strong>BODY BATTERY</strong>: Berechnete Energiereserve.<br/>3. <strong>HYBRID LOGIC</strong>: {aiMode === 'NEURAL' ? 'System nutzt trainierte KI-Modelle.' : 'System nutzt Heuristik (Lernphase < 14 Tage).'}</Typography></DialogContent>
+            <Dialog open={openDeepDive} onClose={()=>setOpenDeepDive(false)} maxWidth="lg" fullWidth>
+                <DialogTitle>System Handbuch - Gesundheits-Dashboard</DialogTitle>
+                <DialogContent dividers>
+                    <Typography variant="body2" component="div" style={{fontFamily:'monospace', lineHeight:'1.8'}}>
+                        <strong>🎯 NAVIGATION:</strong><br/>
+                        • <strong>TAG / WOCHE / MONAT</strong>: Umschalten der Zeitansicht<br/>
+                        • <strong>← →</strong> Pfeile: In WOCHE/MONAT um 7/30 Tage zurück/vor navigieren<br/>
+                        • <strong>LIVE-Modus</strong>: Grüner Punkt = Echtzeit-Daten<br/><br/>
+                        
+                        <strong>🌙 SCHLAF-RADAR (22:00-08:00):</strong><br/>
+                        • <strong>UNRUHE IM SCHLAFZIMMER</strong>: Bewegungen im Bett (unruhiger Schlaf)<br/>
+                        • <strong>NÄCHTLICHE AKTIVITÄT (AUSSERHALB)</strong>: Toilettengänge, Küche etc.<br/>
+                        • Farben passen sich an Ihr Haus an (adaptiv!)<br/><br/>
+                        
+                        <strong>📊 LANGZEIT-TRENDS (WOCHE/MONAT):</strong><br/>
+                        • <strong>Aktivitätsbelastung</strong>: Baseline-relativ (100% = normal für SIE)<br/>
+                        • <strong>Ganggeschwindigkeit</strong>: Mobilität über Flur-Sensoren (konfigurierbar)<br/>
+                        • <strong>Nacht-Unruhe</strong>: Nur Bewegungen im Schlafzimmer<br/>
+                        • <strong>Raum-Mobilität</strong>: Anzahl genutzter Räume pro Tag<br/>
+                        • <strong>Bad-Nutzung</strong>: Toilettengänge pro Tag<br/>
+                        • <strong>Frischluft-Index</strong>: Fenster-/Türöffnungen<br/><br/>
+                        
+                        <strong>🏠 RAUM-HISTOGRAMME:</strong><br/>
+                        • <strong>Top 3 Räume</strong>: Garmin-Style Liniendiagramm mit Punkten<br/>
+                        • <strong>Rest</strong>: Mini-Histogramme (kompakt)<br/>
+                        • <strong>🟢 Grün</strong>: Normale Nutzung<br/>
+                        • <strong>🔴 Rot</strong>: ANOMALIE! (weniger als Ø - 2×Standardabweichung)<br/><br/>
+                        
+                        <strong>🔴 LEBENSZEICHEN-ALARM:</strong><br/>
+                        • <strong>🟢</strong>: Alles normal<br/>
+                        • <strong>🟡</strong>: Warnung (6-12h keine Aktivität)<br/>
+                        • <strong>🔴</strong>: KRITISCH! (&gt;12h keine Aktivität)<br/><br/>
+                        
+                        <strong>🛠️ KONFIGURATION:</strong><br/>
+                        • System-Tab → Sensor-Liste → "Flur?" Checkbox für Ganggeschwindigkeit<br/>
+                        • System-Tab → Reporting → Briefing-Zeit, Pushover, Gemini API<br/>
+                    </Typography>
+                </DialogContent>
                 <DialogActions><Button onClick={()=>setOpenDeepDive(false)}>Schließen</Button></DialogActions>
             </Dialog>
         </Box>

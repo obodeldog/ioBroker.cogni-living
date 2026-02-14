@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.56",
+        "version": "0.30.57",
         "news": {
             "0.30.55": {
                 "en": "UX: Hallway sensor checkbox in sensor table (replaces keyword input)",
