@@ -189,13 +189,23 @@ export default function HealthTab(props: any) {
     const loadHistory = (date: Date) => {
         setLoading(true);
         const dateStr = date.toISOString().split('T')[0];
+        
+        // Berechne Vortag für Schlaf-Radar (22:00-08:00)
+        const prevDate = new Date(date);
+        prevDate.setDate(prevDate.getDate() - 1);
+        const prevDateStr = prevDate.toISOString().split('T')[0];
 
-        socket.sendTo(adapterName + '.' + instance, 'getHistoryData', { date: dateStr, _t: Date.now() })
-            .then((res: any) => {
+        // Lade BEIDE History-Files (gestern + heute)
+        Promise.all([
+            socket.sendTo(adapterName + '.' + instance, 'getHistoryData', { date: dateStr, _t: Date.now() }),
+            socket.sendTo(adapterName + '.' + instance, 'getHistoryData', { date: prevDateStr, _t: Date.now() })
+        ])
+            .then(([res, prevRes]: [any, any]) => {
                 setLoading(false);
                 if (res && res.success && res.data) {
                     setHasData(true);
                     const d = res.data;
+                    const dPrev = (prevRes && prevRes.success && prevRes.data) ? prevRes.data : null;
                     if (d.roomHistory && d.roomHistory.history) setRoomHistory(d.roomHistory.history);
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
@@ -229,10 +239,20 @@ export default function HealthTab(props: any) {
                     
                     setFreshAirCount(d.freshAirCount || 0);
 
-                    if (d.todayVector) setStressBuckets(d.todayVector);
-                    else setStressBuckets(new Array(48).fill(0));
-
-                    setYesterdayBuckets(new Array(48).fill(0));
+                    // MERGE TODAYVECTOR: Schlaf-Radar (22:00-08:00) braucht Daten von GESTERN + HEUTE
+                    if (d.todayVector) {
+                        setStressBuckets(d.todayVector);
+                        
+                        // Merge Schlaf-Radar (Slots 44-47 vom Vortag → 22:00-23:59)
+                        if (dPrev && dPrev.todayVector) {
+                            setYesterdayBuckets(dPrev.todayVector);
+                        } else {
+                            setYesterdayBuckets(new Array(48).fill(0));
+                        }
+                    } else {
+                        setStressBuckets(new Array(48).fill(0));
+                        setYesterdayBuckets(new Array(48).fill(0));
+                    }
 
                     setStressDetails(new Array(48).fill([]));
 
@@ -243,6 +263,55 @@ export default function HealthTab(props: any) {
 
                     if (d.eventHistory) {
                         processEvents(d.eventHistory);
+                        
+                        // BERECHNE NIGHT-BUCKETS aus eventHistory (HEUTE + GESTERN)
+                        const todaySleepBuckets = new Array(48).fill(0);
+                        const todayOutsideBuckets = new Array(48).fill(0);
+                        const yesterdaySleepBuckets = new Array(48).fill(0);
+                        const yesterdayOutsideBuckets = new Array(48).fill(0);
+                        
+                        // Verarbeite HEUTIGE Events
+                        d.eventHistory.forEach((e: any) => {
+                            if (!e.timestamp) return;
+                            const eventDate = new Date(e.timestamp);
+                            const hour = eventDate.getHours();
+                            const minute = eventDate.getMinutes();
+                            const slotIdx = hour * 2 + (minute >= 30 ? 1 : 0);
+                            const room = (e.location || e.name || '').toLowerCase();
+                            const isBedroom = room.includes('schlaf');
+                            
+                            if (isBedroom) todaySleepBuckets[slotIdx]++;
+                            else todayOutsideBuckets[slotIdx]++;
+                        });
+                        
+                        // Verarbeite GESTRIGE Events (nur für 22:00-23:59)
+                        if (dPrev && dPrev.eventHistory) {
+                            dPrev.eventHistory.forEach((e: any) => {
+                                if (!e.timestamp) return;
+                                const eventDate = new Date(e.timestamp);
+                                const hour = eventDate.getHours();
+                                const minute = eventDate.getMinutes();
+                                const slotIdx = hour * 2 + (minute >= 30 ? 1 : 0);
+                                const room = (e.location || e.name || '').toLowerCase();
+                                const isBedroom = room.includes('schlaf');
+                                
+                                if (isBedroom) yesterdaySleepBuckets[slotIdx]++;
+                                else yesterdayOutsideBuckets[slotIdx]++;
+                            });
+                        }
+                        
+                        // MERGE: Kombiniere gestern (44-47) + heute (0-15) für Schlaf-Radar
+                        const mergedSleepBuckets = todaySleepBuckets.map((val, idx) => {
+                            if (idx >= 44) return yesterdaySleepBuckets[idx]; // 22:00-23:59 vom VORTAG
+                            return val; // Rest von HEUTE
+                        });
+                        const mergedOutsideBuckets = todayOutsideBuckets.map((val, idx) => {
+                            if (idx >= 44) return yesterdayOutsideBuckets[idx];
+                            return val;
+                        });
+                        
+                        setSleepRoomNightBuckets(mergedSleepBuckets);
+                        setOutsideNightBuckets(mergedOutsideBuckets);
                     }
                     
                     // Lebenszeichen-Alarm checken (nur für HEUTE)
@@ -333,11 +402,14 @@ export default function HealthTab(props: any) {
             
             const dateStr = d.toISOString().split('T')[0];
             
-            // Für HEUTE: Lade Live-Daten statt History
+            // Für HEUTE: Lade Live-Daten + roomHistory
             if (i === 0) {
                 promises.push(
-                    socket.sendTo(adapterName + '.' + instance, 'getOverviewData', { _t: Date.now() })
-                        .then((res: any) => {
+                    Promise.all([
+                        socket.sendTo(adapterName + '.' + instance, 'getOverviewData', { _t: Date.now() }),
+                        socket.getState(`${namespace}.analysis.activity.roomHistory`)
+                    ])
+                        .then(([res, roomHistoryState]: [any, any]) => {
                             if (res && res.success) {
                                 // Berechne Frischluft aus eventHistory
                                 const eventHist = res.eventHistory || [];
@@ -350,11 +422,24 @@ export default function HealthTab(props: any) {
                                     return (nameLower.includes('haustür') || nameLower.includes('terrasse')) && isActive;
                                 }).length;
                                 
+                                // Parse roomHistory aus State
+                                let roomHistoryData = null;
+                                if (roomHistoryState && roomHistoryState.val) {
+                                    try {
+                                        roomHistoryData = typeof roomHistoryState.val === 'string' 
+                                            ? JSON.parse(roomHistoryState.val) 
+                                            : roomHistoryState.val;
+                                    } catch(e) {
+                                        console.warn('[WEEK DATA] Failed to parse roomHistory for today:', e);
+                                    }
+                                }
+                                
                                 // Konvertiere Live-Daten in History-Format
                                 return {
                                     date: d,
                                     data: {
                                         eventHistory: eventHist,
+                                        roomHistory: roomHistoryData,
                                         batteryLevel: res.stats?.activityTrend !== undefined 
                                             ? Math.min(100, Math.max(20, Math.round(80 + (res.stats.activityTrend * 5)))) 
                                             : 85,
@@ -1051,7 +1136,7 @@ export default function HealthTab(props: any) {
             <div style={{ maxWidth: '80ch', margin: '0 auto' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom: `2px solid ${isDark?'#444':'#ccc'}`, marginBottom:'30px', paddingBottom:'15px', flexWrap:'wrap', gap:'10px' }}>
                     <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
-                        <strong style={{fontSize:'1.2rem'}}>AURA MONITOR (v0.30.58)</strong>
+                        <strong style={{fontSize:'1.2rem'}}>AURA MONITOR (v0.30.59)</strong>
                         <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#222':'#e0e0e0', borderRadius:'4px', padding:'2px'}}>
                             <IconButton 
                                 size="small" 
@@ -1066,12 +1151,15 @@ export default function HealthTab(props: any) {
                                         return viewDate.toLocaleDateString('de-DE', {weekday: 'long', day:'2-digit', month:'2-digit'});
                                     }
                                     const days = viewMode === 'WEEK' ? 7 : 30;
-                                    const startOffset = Math.abs(weekOffset) * days;
-                                    const endOffset = startOffset - days + 1;
+                                    // weekOffset = 0 → heute bis heute-6 (7 Tage)
+                                    // weekOffset = -1 → heute-7 bis heute-13 (7 Tage)
+                                    const oldestDayOffset = (Math.abs(weekOffset) * days) + (days - 1);
+                                    const newestDayOffset = Math.abs(weekOffset) * days;
+                                    
                                     const startDate = new Date();
-                                    startDate.setDate(startDate.getDate() - startOffset);
+                                    startDate.setDate(startDate.getDate() - oldestDayOffset);
                                     const endDate = new Date();
-                                    endDate.setDate(endDate.getDate() - endOffset);
+                                    endDate.setDate(endDate.getDate() - newestDayOffset);
                                     return `${startDate.getDate()}.${startDate.getMonth()+1}. - ${endDate.getDate()}.${endDate.getMonth()+1}.`;
                                 })()}
                             </span>
@@ -1532,150 +1620,99 @@ export default function HealthTab(props: any) {
                                     return <div style={{textAlign:'center', padding:'40px', color:'#888'}}>Keine Raumdaten verfügbar</div>;
                                 }
                                 
-                                // HYBRID-DARSTELLUNG: Top 3 = Linien, Rest = Histogramme
-                                const top3Rooms = sortedRooms.slice(0, 3);
-                                const restRooms = sortedRooms.slice(3);
-                                
+                                // ALLE RÄUME: GARMIN-STYLE LINIEN + PUNKTE (keine Histogramme mehr!)
                                 return (
-                                    <div style={{display:'flex', flexDirection:'column', gap:'20px', padding:'10px 0'}}>
-                                        {/* TOP 3 RÄUME: GARMIN-STYLE LINIEN + PUNKTE */}
-                                        {top3Rooms.length > 0 && (
-                                            <div style={{display:'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap:'20px'}}>
-                                                {top3Rooms.map(({room, data, total}) => {
+                                    <div style={{display:'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap:'20px', padding:'10px 0'}}>
+                                        {sortedRooms.map(({room, data, total}, roomIdx) => {
                                                     const mean = data.reduce((a,b) => a+b, 0) / data.length;
                                                     const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
                                                     const std = Math.sqrt(variance);
                                                     const anomalyThreshold = mean - (2 * std);
                                                     const maxVal = Math.max(...data);
                                                     const avg = Math.round(mean);
+                                            
+                                            return (
+                                                <div key={room} style={{
+                                                    border: `1px solid ${isDark?'#333':'#ccc'}`,
+                                                    borderRadius: '6px',
+                                                    padding: '12px',
+                                                    backgroundColor: isDark?'#1a1a1a':'#fafafa'
+                                                }}>
+                                                    <div style={{fontSize:'0.75rem', fontWeight:'bold', marginBottom:'10px', color: isDark?'#00e676':'#2196f3'}}>
+                                                        {room.toUpperCase()}
+                                                    </div>
                                                     
-                                                    return (
-                                                        <div key={room} style={{
-                                                            border: `2px solid ${isDark?'#444':'#ddd'}`,
-                                                            borderRadius: '6px',
-                                                            padding: '12px',
-                                                            backgroundColor: isDark?'#1a1a1a':'#fafafa'
-                                                        }}>
-                                                            <div style={{fontSize:'0.8rem', fontWeight:'bold', marginBottom:'10px', color: isDark?'#00e676':'#2196f3'}}>
-                                                                {room.toUpperCase()}
-                                                            </div>
+                                                    {/* GARMIN-STYLE: Linie + Punkte (FÜR ALLE RÄUME!) */}
+                                                    <div style={{position:'relative', height:'90px', marginBottom:'5px'}}>
+                                                        <svg width="100%" height="90" viewBox="0 0 100 90" preserveAspectRatio="none" style={{overflow:'visible'}}>
+                                                            {/* Raster-Linien */}
+                                                            <line x1="0" y1="90" x2="100" y2="90" stroke={isDark?'#333':'#ddd'} strokeWidth="0.5" vectorEffect="non-scaling-stroke"/>
+                                                            <line x1="0" y1="45" x2="100" y2="45" stroke={isDark?'#222':'#eee'} strokeWidth="0.3" strokeDasharray="2,2" vectorEffect="non-scaling-stroke"/>
                                                             
-                                                            {/* GARMIN-STYLE: Linie + Punkte */}
-                                                            <div style={{position:'relative', height:'90px', marginBottom:'10px'}}>
-                                                                <svg width="100%" height="100%" style={{overflow:'visible'}}>
-                                                                    {/* Raster-Linien */}
-                                                                    <line x1="0" y1="90" x2="100%" y2="90" stroke={isDark?'#333':'#ddd'} strokeWidth="1"/>
-                                                                    <line x1="0" y1="45" x2="100%" y2="45" stroke={isDark?'#222':'#eee'} strokeWidth="1" strokeDasharray="2,2"/>
-                                                                    
-                                                                    {/* Linie */}
-                                                                    <polyline
-                                                                        points={data.map((val, idx) => {
-                                                                            const x = (idx / (data.length - 1)) * 100;
-                                                                            const y = 90 - (maxVal > 0 ? (val / maxVal) * 80 : 0);
-                                                                            return `${x}%,${y}`;
-                                                                        }).join(' ')}
-                                                                        fill="none"
-                                                                        stroke="#00e676"
-                                                                        strokeWidth="2"
-                                                                    />
-                                                                    
-                                                                    {/* Punkte */}
-                                                                    {data.map((val, idx) => {
-                                                                        const x = (idx / (data.length - 1)) * 100;
-                                                                        const y = 90 - (maxVal > 0 ? (val / maxVal) * 80 : 0);
-                                                                        const isAnomaly = val < anomalyThreshold && val > 0;
-                                                                        return (
-                                                                            <circle
-                                                                                key={idx}
-                                                                                cx={`${x}%`}
-                                                                                cy={y}
-                                                                                r="4"
-                                                                                fill={isAnomaly ? '#ff5252' : '#00e676'}
-                                                                                stroke={isDark?'#1a1a1a':'#fafafa'}
-                                                                                strokeWidth="2"
-                                                                            >
-                                                                                <title>{`Tag ${idx + 1}: ${val}min${isAnomaly ? ' (ANOMALIE!)' : ''}`}</title>
-                                                                            </circle>
-                                                                        );
-                                                                    })}
-                                                                </svg>
-                                                            </div>
+                                                            {/* Linie (OHNE %!) */}
+                                                            <polyline
+                                                                points={data.map((val, idx) => {
+                                                                    const x = (idx / Math.max(1, data.length - 1)) * 100;
+                                                                    const y = 90 - (maxVal > 0 ? (val / maxVal) * 80 : 0);
+                                                                    return `${x},${y}`;
+                                                                }).join(' ')}
+                                                                fill="none"
+                                                                stroke="#00e676"
+                                                                strokeWidth="2"
+                                                                vectorEffect="non-scaling-stroke"
+                                                            />
                                                             
-                                                            {/* Y-Achse Label */}
-                                                            <div style={{fontSize:'0.65rem', color:'#666', textAlign:'right', marginBottom:'4px'}}>
-                                                                Max: {maxVal}min
-                                                            </div>
-                                                            
-                                                            {/* Zusatzinfos */}
-                                                            <div style={{fontSize:'0.7rem', color:'#888', textAlign:'center'}}>
-                                                                Ø {avg}min/Tag | Σ {total}min
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                        
-                                        {/* REST: MINI-HISTOGRAMME (wie vorher) */}
-                                        {restRooms.length > 0 && (
-                                            <div style={{display:'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap:'20px'}}>
-                                                {restRooms.map(({room, data, total}) => {
-                                                    const mean = data.reduce((a,b) => a+b, 0) / data.length;
-                                                    const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
-                                                    const std = Math.sqrt(variance);
-                                                    const anomalyThreshold = mean - (2 * std);
-                                                    const maxVal = Math.max(...data);
-                                                    const avg = Math.round(mean);
+                                                            {/* Punkte */}
+                                                            {data.map((val, idx) => {
+                                                                const x = (idx / Math.max(1, data.length - 1)) * 100;
+                                                                const y = 90 - (maxVal > 0 ? (val / maxVal) * 80 : 0);
+                                                                const isAnomaly = val < anomalyThreshold && val > 0;
+                                                                
+                                                                // Hole Datum für Tooltip
+                                                                const dayDate = weekData[idx]?.date;
+                                                                const dateLabel = dayDate ? `${dayDate.getDate()}.${dayDate.getMonth()+1}.` : `Tag ${idx+1}`;
+                                                                
+                                                                return (
+                                                                    <circle
+                                                                        key={idx}
+                                                                        cx={x}
+                                                                        cy={y}
+                                                                        r="1.5"
+                                                                        fill={isAnomaly ? '#ff5252' : '#00e676'}
+                                                                        stroke={isDark?'#1a1a1a':'#fafafa'}
+                                                                        strokeWidth="0.5"
+                                                                        vectorEffect="non-scaling-stroke"
+                                                                    >
+                                                                        <title>{`${dateLabel}: ${val}min${isAnomaly ? ' (ANOMALIE!)' : ''}`}</title>
+                                                                    </circle>
+                                                                );
+                                                            })}
+                                                        </svg>
+                                                    </div>
                                                     
-                                                    return (
-                                                        <div key={room} style={{
-                                                            border: `1px solid ${isDark?'#333':'#ccc'}`,
-                                                            borderRadius: '4px',
-                                                            padding: '10px',
-                                                            backgroundColor: isDark?'#1a1a1a':'#fafafa'
-                                                        }}>
-                                                            <div style={{fontSize:'0.75rem', fontWeight:'bold', marginBottom:'8px', color: isDark?'#eee':'#222'}}>
-                                                                {room.toUpperCase()}
-                                                            </div>
-                                                            
-                                                            {/* Mini-Histogramm */}
-                                                            <div style={{display:'flex', alignItems:'flex-end', gap:'2px', height:'80px', marginBottom:'8px'}}>
-                                                                {data.map((val, idx) => {
-                                                                    const heightPercent = maxVal > 0 ? (val / maxVal) * 100 : 0;
-                                                                    const isAnomaly = val < anomalyThreshold && val > 0;
-                                                                    const barColor = isAnomaly ? '#ff5252' : '#00e676';
-                                                                    
-                                                                    return (
-                                                                        <div key={idx} style={{flex:1, display:'flex', flexDirection:'column', justifyContent:'flex-end', alignItems:'center'}}>
-                                                                            <div 
-                                                                                style={{
-                                                                                    width: '100%',
-                                                                                    height: `${heightPercent}%`,
-                                                                                    backgroundColor: barColor,
-                                                                                    borderRadius: '2px 2px 0 0',
-                                                                                    minHeight: val > 0 ? '2px' : '0px'
-                                                                                }}
-                                                                                title={`${val}min${isAnomaly ? ' (ANOMALIE!)' : ''}`}
-                                                                            />
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                            
-                                                            {/* Y-Achse Label */}
-                                                            <div style={{fontSize:'0.65rem', color:'#666', textAlign:'right', marginBottom:'4px'}}>
-                                                                {maxVal}min
-                                                            </div>
-                                                            
-                                                            {/* Zusatzinfos */}
-                                                            <div style={{fontSize:'0.7rem', color:'#888', textAlign:'center'}}>
-                                                                Ø {avg}min/Tag | Σ {total}min
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
+                                                    {/* X-ACHSE: DATUM */}
+                                                    <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.6rem', color:'#666', marginBottom:'8px', paddingLeft:'2px', paddingRight:'2px'}}>
+                                                        {data.map((_, idx) => {
+                                                            const dayDate = weekData[idx]?.date;
+                                                            if (!dayDate) return <span key={idx}>-</span>;
+                                                            // Zeige nur jeden 2. Tag bei >10 Tagen (Platzersparnis)
+                                                            if (data.length > 10 && idx % 2 !== 0) return <span key={idx} style={{visibility:'hidden'}}>·</span>;
+                                                            return <span key={idx}>{dayDate.getDate()}.{dayDate.getMonth()+1}.</span>;
+                                                        })}
+                                                    </div>
+                                                    
+                                                    {/* Y-Achse Label */}
+                                                    <div style={{fontSize:'0.65rem', color:'#666', textAlign:'right', marginBottom:'4px'}}>
+                                                        Max: {maxVal}min
+                                                    </div>
+                                                    
+                                                    {/* Zusatzinfos */}
+                                                    <div style={{fontSize:'0.7rem', color:'#888', textAlign:'center'}}>
+                                                        Ø {avg}min/Tag | Σ {total}min
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 );
                             })()}
