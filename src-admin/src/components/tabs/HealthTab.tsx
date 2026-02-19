@@ -389,21 +389,22 @@ export default function HealthTab(props: any) {
         const promises: Promise<any>[] = [];
         const dates: Date[] = [];
         
-        // Berechne Zeitfenster basierend auf weekOffset
-        // weekOffset = 0 → heute - (days-1) bis heute
-        // weekOffset = -1 → heute - (2*days-1) bis heute - days
-        const startOffset = Math.abs(weekOffset) * days;
-        const endOffset = startOffset - days + 1;
+        // Berechne Zeitfenster basierend auf weekOffset:
+        // weekOffset = 0  → i von 0 bis days-1 (heute bis heute-6)
+        // weekOffset = -1 → i von days bis 2*days-1 (heute-7 bis heute-13)
+        // newestOffset = wie viele Tage der NEUESTE Tag zurückliegt
+        const newestOffset = Math.abs(weekOffset) * days;
         
-        for (let i = startOffset; i >= endOffset; i--) {
+        for (let i = 0; i < days; i++) {
+            const dayOffset = newestOffset + i; // 0 = heute, 1 = gestern, ...
             const d = new Date();
-            d.setDate(d.getDate() - i);
+            d.setDate(d.getDate() - dayOffset);
             dates.push(d);
             
             const dateStr = d.toISOString().split('T')[0];
             
-            // Für HEUTE: Lade Live-Daten + roomHistory
-            if (i === 0) {
+            // Für HEUTE (dayOffset = 0): Lade Live-Daten + roomHistory
+            if (dayOffset === 0) {
                 promises.push(
                     Promise.all([
                         socket.sendTo(adapterName + '.' + instance, 'getOverviewData', { _t: Date.now() }),
@@ -1136,7 +1137,7 @@ export default function HealthTab(props: any) {
             <div style={{ maxWidth: '80ch', margin: '0 auto' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom: `2px solid ${isDark?'#444':'#ccc'}`, marginBottom:'30px', paddingBottom:'15px', flexWrap:'wrap', gap:'10px' }}>
                     <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
-                        <strong style={{fontSize:'1.2rem'}}>AURA MONITOR (v0.30.59)</strong>
+                        <strong style={{fontSize:'1.2rem'}}>AURA MONITOR (v0.30.60)</strong>
                         <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#222':'#e0e0e0', borderRadius:'4px', padding:'2px'}}>
                             <IconButton 
                                 size="small" 
@@ -1620,36 +1621,55 @@ export default function HealthTab(props: any) {
                                     return <div style={{textAlign:'center', padding:'40px', color:'#888'}}>Keine Raumdaten verfügbar</div>;
                                 }
                                 
-                                // ALLE RÄUME: GARMIN-STYLE LINIEN + PUNKTE (keine Histogramme mehr!)
+                                // ALLE RÄUME: GARMIN-STYLE LINIEN + PUNKTE
+                                // 2 Spalten, kein Overflow, mit Y-Achse + Hover-Tooltip
                                 return (
-                                    <div style={{display:'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap:'20px', padding:'10px 0'}}>
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                                        gap: '16px',
+                                        padding: '10px 0',
+                                        width: '100%',
+                                        boxSizing: 'border-box'
+                                    }}>
                                         {sortedRooms.map(({room, data, total}, roomIdx) => {
-                                                    const mean = data.reduce((a,b) => a+b, 0) / data.length;
-                                                    const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
-                                                    const std = Math.sqrt(variance);
-                                                    const anomalyThreshold = mean - (2 * std);
-                                                    const maxVal = Math.max(...data);
-                                                    const avg = Math.round(mean);
+                                            const mean = data.reduce((a,b) => a+b, 0) / data.length;
+                                            const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
+                                            const std = Math.sqrt(variance);
+                                            const anomalyThreshold = mean - (2 * std);
+                                            const maxVal = Math.max(...data, 1); // mind. 1 um Division durch 0 zu vermeiden
+                                            const avg = Math.round(mean);
+                                            const yAxisWidth = 28; // Platz für Y-Achse
                                             
                                             return (
                                                 <div key={room} style={{
                                                     border: `1px solid ${isDark?'#333':'#ccc'}`,
                                                     borderRadius: '6px',
-                                                    padding: '12px',
-                                                    backgroundColor: isDark?'#1a1a1a':'#fafafa'
+                                                    padding: '10px',
+                                                    backgroundColor: isDark?'#1a1a1a':'#fafafa',
+                                                    minWidth: 0, // Verhindert Overflow im Grid
+                                                    overflow: 'hidden'
                                                 }}>
-                                                    <div style={{fontSize:'0.75rem', fontWeight:'bold', marginBottom:'10px', color: isDark?'#00e676':'#2196f3'}}>
+                                                    <div style={{fontSize:'0.75rem', fontWeight:'bold', marginBottom:'8px', color: isDark?'#00e676':'#2196f3', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
                                                         {room.toUpperCase()}
                                                     </div>
                                                     
-                                                    {/* GARMIN-STYLE: Linie + Punkte (FÜR ALLE RÄUME!) */}
-                                                    <div style={{position:'relative', height:'90px', marginBottom:'5px'}}>
+                                                    {/* CHART: Y-Achse + SVG nebeneinander */}
+                                                    <div style={{position:'relative', height:'90px', marginBottom:'4px', display:'flex', overflow:'hidden'}}>
+                                                        {/* Y-Achse */}
+                                                        <div style={{width:`${yAxisWidth}px`, flexShrink:0, display:'flex', flexDirection:'column', justifyContent:'space-between', paddingRight:'2px'}}>
+                                                            <span style={{fontSize:'0.55rem', color:'#666', textAlign:'right', display:'block'}}>{maxVal}m</span>
+                                                            <span style={{fontSize:'0.55rem', color:'#666', textAlign:'right', display:'block'}}>{Math.round(maxVal/2)}m</span>
+                                                            <span style={{fontSize:'0.55rem', color:'#666', textAlign:'right', display:'block'}}>0</span>
+                                                        </div>
+                                                        {/* SVG-Diagramm */}
+                                                        <div style={{flex:1, minWidth:0, position:'relative'}}>
                                                         <svg width="100%" height="90" viewBox="0 0 100 90" preserveAspectRatio="none" style={{overflow:'visible'}}>
                                                             {/* Raster-Linien */}
                                                             <line x1="0" y1="90" x2="100" y2="90" stroke={isDark?'#333':'#ddd'} strokeWidth="0.5" vectorEffect="non-scaling-stroke"/>
                                                             <line x1="0" y1="45" x2="100" y2="45" stroke={isDark?'#222':'#eee'} strokeWidth="0.3" strokeDasharray="2,2" vectorEffect="non-scaling-stroke"/>
                                                             
-                                                            {/* Linie (OHNE %!) */}
+                                                            {/* Linie */}
                                                             <polyline
                                                                 points={data.map((val, idx) => {
                                                                     const x = (idx / Math.max(1, data.length - 1)) * 100;
@@ -1662,13 +1682,13 @@ export default function HealthTab(props: any) {
                                                                 vectorEffect="non-scaling-stroke"
                                                             />
                                                             
-                                                            {/* Punkte */}
+                                                            {/* Punkte mit Hover-Tooltip */}
                                                             {data.map((val, idx) => {
                                                                 const x = (idx / Math.max(1, data.length - 1)) * 100;
                                                                 const y = 90 - (maxVal > 0 ? (val / maxVal) * 80 : 0);
                                                                 const isAnomaly = val < anomalyThreshold && val > 0;
                                                                 
-                                                                // Hole Datum für Tooltip
+                                                                // Datum für Tooltip
                                                                 const dayDate = weekData[idx]?.date;
                                                                 const dateLabel = dayDate ? `${dayDate.getDate()}.${dayDate.getMonth()+1}.` : `Tag ${idx+1}`;
                                                                 
@@ -1688,27 +1708,26 @@ export default function HealthTab(props: any) {
                                                                 );
                                                             })}
                                                         </svg>
+                                                        </div>{/* Ende SVG-Wrapper */}
+                                                    </div>{/* Ende Chart-Container */}
+                                                    
+                                                    {/* X-ACHSE: DATUM (unter dem Chart, mit Y-Achsen-Offset) */}
+                                                    <div style={{display:'flex', marginLeft:`${yAxisWidth}px`, overflow:'hidden'}}>
+                                                        <div style={{display:'flex', justifyContent:'space-between', width:'100%', fontSize:'0.55rem', color: isDark?'#666':'#999'}}>
+                                                            {data.map((_, idx) => {
+                                                                const dayDate = weekData[idx]?.date;
+                                                                if (!dayDate) return <span key={idx} style={{flex:1, textAlign:'center'}}>-</span>;
+                                                                // Zeige nur jeden 2. oder 3. Tag bei vielen Daten
+                                                                const step = data.length > 20 ? 3 : data.length > 10 ? 2 : 1;
+                                                                if (idx % step !== 0) return <span key={idx} style={{flex:1}}></span>;
+                                                                return <span key={idx} style={{flex:1, textAlign:'center'}}>{dayDate.getDate()}.{dayDate.getMonth()+1}.</span>;
+                                                            })}
+                                                        </div>
                                                     </div>
                                                     
-                                                    {/* X-ACHSE: DATUM */}
-                                                    <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.6rem', color:'#666', marginBottom:'8px', paddingLeft:'2px', paddingRight:'2px'}}>
-                                                        {data.map((_, idx) => {
-                                                            const dayDate = weekData[idx]?.date;
-                                                            if (!dayDate) return <span key={idx}>-</span>;
-                                                            // Zeige nur jeden 2. Tag bei >10 Tagen (Platzersparnis)
-                                                            if (data.length > 10 && idx % 2 !== 0) return <span key={idx} style={{visibility:'hidden'}}>·</span>;
-                                                            return <span key={idx}>{dayDate.getDate()}.{dayDate.getMonth()+1}.</span>;
-                                                        })}
-                                                    </div>
-                                                    
-                                                    {/* Y-Achse Label */}
-                                                    <div style={{fontSize:'0.65rem', color:'#666', textAlign:'right', marginBottom:'4px'}}>
-                                                        Max: {maxVal}min
-                                                    </div>
-                                                    
-                                                    {/* Zusatzinfos */}
-                                                    <div style={{fontSize:'0.7rem', color:'#888', textAlign:'center'}}>
-                                                        Ø {avg}min/Tag | Σ {total}min
+                                                    {/* Zusammenfassung */}
+                                                    <div style={{fontSize:'0.65rem', color:'#888', textAlign:'center', marginTop:'6px'}}>
+                                                        Ø {avg}min/Tag · Max {maxVal}min · Σ {total}min
                                                     </div>
                                                 </div>
                                             );
