@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.61",
+        "version": "0.30.62",
         "news": {
+            "0.30.62": {
+                "en": "FIX: PWA token mismatch (real IP, state-based URL), Cloudflare EACCES fix (correct data dir), Admin URL refresh button",
+                "de": "FIX: PWA Token-Mismatch (echte IP, State-basierte URL), Cloudflare EACCES Fix (korrektes Verzeichnis), Admin URL-Aktualisieren-Button"
+            },
             "0.30.61": {
                 "en": "NEW: Family PWA (mobile at-a-glance app), Cloudflare Tunnel, rich Pushover notifications with sparkline",
                 "de": "NEU: Familien-PWA (mobile Auf-einen-Blick App), Cloudflare Tunnel, erweiterte Pushover-Benachrichtigungen mit Sparkline"
