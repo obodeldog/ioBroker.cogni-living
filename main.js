@@ -1,1 +1,1134 @@
-const a0_0x3991ae=a0_0xd951;function a0_0xd951(_0x1a8d8c,_0x4b97d8){const _0x445ce4=a0_0x5b00();return a0_0xd951=function(_0xfda96c,_0x4ecacf){_0xfda96c=_0xfda96c-0xfd;let _0x5b00eb=_0x445ce4[_0xfda96c];return _0x5b00eb;},a0_0xd951(_0x1a8d8c,_0x4b97d8);}(function(_0x9b1031,_0x5c0127){const _0x45da2d=a0_0xd951,_0x3b9f90=_0x9b1031();while(!![]){try{const _0x4f1085=-parseInt(_0x45da2d(0x158))/0x1*(-parseInt(_0x45da2d(0x1ee))/0x2)+-parseInt(_0x45da2d(0x111))/0x3+-parseInt(_0x45da2d(0x24e))/0x4+-parseInt(_0x45da2d(0x181))/0x5*(parseInt(_0x45da2d(0x14e))/0x6)+-parseInt(_0x45da2d(0x106))/0x7+parseInt(_0x45da2d(0x254))/0x8+-parseInt(_0x45da2d(0x1f4))/0x9*(-parseInt(_0x45da2d(0x1e4))/0xa);if(_0x4f1085===_0x5c0127)break;else _0x3b9f90['push'](_0x3b9f90['shift']());}catch(_0x380707){_0x3b9f90['push'](_0x3b9f90['shift']());}}}(a0_0x5b00,0x2a208));const a0_0x4ecacf=(function(){let _0x1d254c=!![];return function(_0x351f7f,_0x5d5317){const _0x3b02c5=_0x1d254c?function(){if(_0x5d5317){const _0x10bf27=_0x5d5317['apply'](_0x351f7f,arguments);return _0x5d5317=null,_0x10bf27;}}:function(){};return _0x1d254c=![],_0x3b02c5;};}()),a0_0xfda96c=a0_0x4ecacf(this,function(){const _0x312e79=a0_0xd951;return a0_0xfda96c[_0x312e79(0x243)]()[_0x312e79(0x18a)](_0x312e79(0x208))['toString']()[_0x312e79(0x1f1)](a0_0xfda96c)[_0x312e79(0x18a)](_0x312e79(0x208));});function a0_0x5b00(){const _0x36048b=['CALCULATE_HEALTH_TREND','triggerGaitAnalysis\x20error:\x20','analysis.health.gaitSpeed','.uptime','healthTrendInterval','system','Warte\x20auf\x20Analyse...','analysis.training.status','date','ANALYZE_GAIT','text','checkLicense','setPresence','now','scanDevices','Init...','eventHistory','\x20Kalender-Adapter\x20gefunden.','system.adapter.ical.','onReady','getStateAsync','Gemini\x20Report\x20Day','then','analysis.prediction.trackerTopRoom','getEnums','Scan\x20Error:\x20','toFixed','refreshCalendar\x20failed:\x20','system.adapter.','SET_LEARNING_MODE','analysis.energy.warmupSources','memoryCache','checkSolarCondition','dependencyInstallInProgress','max','add','outdoorSensorId','setObjectNotExistsAsync','existsSync','846834dYLhLx',')\x20-\x20Phase\x20E\x20(Scheduler\x20Fix)','cogni-living','analysis.health.todayVector','analysis.security.lastScore','Gemini\x20Report\x20Night','info','Aktiv\x20(','genAI','log','262366cTgtAx','roomIntegratorTimer','getTime','Say\x20Hello','includes','getDate','telegram','💨\x20Lüftung\x20in\x20','checkWifiPresence:\x20Error\x20checking\x20','analysis.health.todayRoomDetails','moduleEnergy','./lib/topology','TRAIN_HEALTH','stateChange','rawEventLog','briefingJob','bin','stopService','trackerHeartbeat','startService','toISOString','debug','updated','createDailyDigest','threshold_exceeded','accuweather.0','infrasoundArmingId','json','NIGHT','setHours','devices','activeModules','fill','onUnload','handleInfrasound','Event','Lernphase\x20(','TRAIN_COMFORT','°C\x20(Innen:\x20','./lib/scanner','@iobroker/adapter-core','10JoYRzY','isSolar','useCalendar','geminiModel','calendarCheckTimer','analysis.training.triggerHealth','moduleComfort','analysis.automation.description','guest','search','initZombies','main','\x20-\x20','sonn','communicate.request','isProVersion','min','runGeminiAnalysis','analysis.ventilation.lastWindow','forecast.current.weather','toLowerCase','sendTo','endsWith','TRAIN_TOPOLOGY','loadSystemMode','Failed\x20to\x20trigger\x20Python\x20Health\x20Check','📦\x20Restored\x20','moduleHealth','{\x22today\x22:{},\x20\x22yesterday\x22:{},\x20\x22date\x22:\x22\x22}','unload','onStateChange','checkThermostats','location','infrasoundEnabled','de-DE','callback','Keine\x20Daten','Manual\x20Event','all','stringify','moduleSecurity','enum','infrasoundThreshold','No\x20topology\x20data\x20found','shift','scheduleJob','enum.rooms.*','slice','terrasse','setDate','weatherTempId','Room\x20Dwell\x20Time\x20Stats','manual','matrix','appendToLog','reduce','split','initHistory','analysis.safety.infrasoundAlert','59\x2023\x20*\x20*\x20*','initSchedules','executeAutomationAction','pressureBuffer','triggerInfrasoundCorrelation','enum.functions.*','startSystem','\x22history\x22:{}','parse','toLocaleDateString','historyJob','geminiApiKey','runPythonHealthCheck','analysis.energy.warmupTimes','°C)','energy','Sonne:\x20','protectAiMemory','NextHours.Location_1.Day_1.current.symbol_desc','todayVector','infrasoundLocked','some','application/json','number','command','find','\x20(Bewohner\x20anwesend\x20-\x20normal)','analysis.activity.roomStats','sources','analysis.topology.structure','sunny','getGenerativeModel','updateTopology','driftAnalysisTimer','thermostat','updateSchedulePreview','analysis.health.geminiDay','security','✅\x20Dashboard\x20Data\x20(Rooms\x20&\x20Timeline\x20&\x20Details)\x20restored.','filter','568660rPeBFD','Unknown','apiKey','analysis.training.triggerTopology','Sec-Training\x20started...','exitTimer','isPresent','getForeignObjectsAsync','weatherunderground.0','daswetter.0','2yMBEnz','name','node-schedule','constructor','lastTrackerEventTime','Invalid\x20matrix\x20data','81PphROc','No\x20data','analyzeWindowOpening\x20error:\x20','NORMAL','triggerGaitAnalysis\x20parse\x20error:\x20','analysis.trigger','values','events.history','./lib/scheduler','analysis.activity.roomHistory','triggerEnergyPrediction','.venv','path','abortExitTimer','processSensorEvent','substring','checkCalendarTriggers','replace','getAbsoluteDefaultDataDir','val','(((.+)+)+)+$','presenceCheckTimer','.json','saveDailyHistory','presenceDevices','scanThermostats','send','isGracePeriodActive','[Integrator]\x20Error:\x20','Gemini\x20Init\x20Error:\x20','analysis.training.triggerEnergy','pop','getHistoryData','onMessage','triggerBriefing','🚨\x20INFRASCHALL-ALARM:\x20Anomalie\x20bei\x20Abwesenheit\x20(scharf)!','🔊\x20Infraschall:\x20','.isOnline','currentSystemMode','length','analysis.automation.patternDetected','join','Daily\x20Activity\x20Vector\x20(48x30min)','warn','floor','SYSTEM_MODES','createAllObjects','getForeignStateAsync','subscribeForeignStatesAsync','./lib/recorder','Guest\x20Mode','\x20events\x20from\x20today...','window','ltmJob','analysis.visualization.pulse','Party\x20Mode','Adapter','clear',':\x20Temp-Differenz\x20','analysis.automation.targetId','modules','updateLocation','dailyDigests','isRelevantActivity','pythonBridge\x20command\x20failed:\x20','sensorLastValues','error','type','analysis.automation.targetValue','state','motion','from','health','LTM.rawEventLog','getObjectViewAsync','LTM.triggerDailyDigest','TRAIN_SECURITY','.system.mode','testContext','toString','analyzeWindowOpening','readFileSync','temperature','Corrupt','pythonBridge','updateTopologyMatrix','response','klar','⚠\x20Replay\x20skipped:\x20No\x20events\x20in\x20memory.','...','361776qpZXaY','exports','setState','./lib/installer',',\x20Events:\x0a','history','2179912tdSnWb','map','ack','mkdirSync','./lib/dead_man','infrasoundSensorId','.last_seen','utf8','getHours','./lib/ai_agent','system.presenceWho','bind','cancel','message','bootTime','☀️\x20Solar\x20Condition:\x20SUNNY\x20detected\x20via\x20','generateHealthReport','python','times','value','object','getCalendarNames','General\x20Activity\x20Trend','triggerEnergyPrediction\x20Error:\x20','📝\x20Manual\x20event\x20logged:\x20','analysis.health.activityTrend','calendarName','sendNotification','initSystemConfig','toLocaleTimeString','inactivityThresholdHours','setStateAsync','timestamp','💾\x20Saving\x20Daily\x20History\x20for\x20','checkWifiPresence','\x20(Threshold)','1550815mzAwAy','sendMorningBriefing','testApiKey','./lib/python_bridge','version','forEach','LTM.baselineStatus','triggerGaitAnalysis','LTM.dailyDigests','@google/generative-ai','string','839490NbGtUC','integrateRoomTime','updateTopologyMatrix\x20failed:\x20','2-digit','analysisTimer','subscribeStates','writeFileSync','config','analysis.security.learningStatus','\x20Tage)','refreshCalendar','haustür','common','door','ready','{\x22history\x22:{}}','minDaysForBaseline','rows','push','getMinutes','Verbindung\x20erfolgreich:\x20','analysis.training.triggerSecurity'];a0_0x5b00=function(){return _0x36048b;};return a0_0x5b00();}a0_0xfda96c();'use strict';const utils=require(a0_0x3991ae(0x180)),{GoogleGenerativeAI}=require(a0_0x3991ae(0x10f)),path=require(a0_0x3991ae(0x200)),fs=require('fs'),installer=require(a0_0x3991ae(0x251)),scanner=require(a0_0x3991ae(0x17f)),schedulers=require(a0_0x3991ae(0x1fc)),topology=require(a0_0x3991ae(0x163)),setup=require('./lib/setup'),recorder=require(a0_0x3991ae(0x225)),pythonBridge=require(a0_0x3991ae(0x109)),aiAgent=require(a0_0x3991ae(0x25d)),deadMan=require(a0_0x3991ae(0x258)),automation=require('./lib/automation'),GEMINI_MODEL='models/gemini-flash-latest';class CogniLiving extends utils[a0_0x3991ae(0x22c)]{constructor(_0x474d9d){const _0x37a44e=a0_0x3991ae;super({..._0x474d9d,'name':_0x37a44e(0x150)}),this[_0x37a44e(0x137)]=[],this['analysisHistory']=[],this['rawEventLog']=[],this[_0x37a44e(0x232)]=[],this[_0x37a44e(0x235)]={},this['systemConfig']={'latitude':0x0,'longitude':0x0,'city':''},this[_0x37a44e(0x1ea)]=!![],this[_0x37a44e(0x1e9)]=null,this['exitGraceTimer']=null,this[_0x37a44e(0x20f)]=![],this[_0x37a44e(0x156)]=null,this[_0x37a44e(0x184)]=null,this[_0x37a44e(0x21a)]=setup[_0x37a44e(0x221)]['NORMAL'],this[_0x37a44e(0x190)]=![],this['lastAlertState']=![],this['analysisTimer']=null,this['calendarCheckTimer']=null,this[_0x37a44e(0x209)]=null,this[_0x37a44e(0x229)]=null,this['modeResetJob']=null,this[_0x37a44e(0x1dd)]=null,this[_0x37a44e(0x167)]=null,this[_0x37a44e(0x1c6)]=null,this[_0x37a44e(0x16a)]=null,this['healthTrendInterval']=null,this['roomIntegratorTimer']=null,this[_0x37a44e(0x148)]=![],this[_0x37a44e(0x1f2)]=Date[_0x37a44e(0x134)](),this[_0x37a44e(0x146)]=null,this[_0x37a44e(0x262)]=Date[_0x37a44e(0x134)](),this[_0x37a44e(0x1d0)]=![],this[_0x37a44e(0x1bf)]=[],this[_0x37a44e(0x177)]={'health':!![],'security':!![],'energy':!![],'comfort':!![]},this['on'](_0x37a44e(0x11f),this[_0x37a44e(0x13a)][_0x37a44e(0x25f)](this)),this['on'](_0x37a44e(0x165),this['onStateChange'][_0x37a44e(0x25f)](this)),this['on'](_0x37a44e(0x19e),this[_0x37a44e(0x179)][_0x37a44e(0x25f)](this)),this['on']('message',this[_0x37a44e(0x215)][_0x37a44e(0x25f)](this));}async[a0_0x3991ae(0x13a)](){const _0x8abd5c=a0_0x3991ae;this[_0x8abd5c(0x157)][_0x8abd5c(0x154)]('cogni-living\x20adapter\x20starting\x20(v'+this[_0x8abd5c(0x10a)]+_0x8abd5c(0x14f));if(this[_0x8abd5c(0x118)][_0x8abd5c(0x19c)]!==undefined)this['activeModules'][_0x8abd5c(0x23c)]=this[_0x8abd5c(0x118)][_0x8abd5c(0x19c)];if(this[_0x8abd5c(0x118)]['moduleSecurity']!==undefined)this['activeModules'][_0x8abd5c(0x1e1)]=this['config'][_0x8abd5c(0x1a9)];if(this[_0x8abd5c(0x118)][_0x8abd5c(0x162)]!==undefined)this['activeModules'][_0x8abd5c(0x1cb)]=this[_0x8abd5c(0x118)]['moduleEnergy'];if(this['config'][_0x8abd5c(0x187)]!==undefined)this[_0x8abd5c(0x177)]['comfort']=this[_0x8abd5c(0x118)]['moduleComfort'];if(this[_0x8abd5c(0x118)][_0x8abd5c(0x230)])this[_0x8abd5c(0x177)]={...this['activeModules'],...this['config'][_0x8abd5c(0x230)]};this[_0x8abd5c(0x1c2)]();}async[a0_0x3991ae(0x1c2)](){const _0x5ee200=a0_0x3991ae;await setup[_0x5ee200(0x18b)](this);try{this['isProVersion']=await setup[_0x5ee200(0x132)](this[_0x5ee200(0x118)]['licenseKey']);}catch(_0x195455){}if(!this['config'][_0x5ee200(0x100)]||this[_0x5ee200(0x118)][_0x5ee200(0x100)]<0.1)this[_0x5ee200(0x118)][_0x5ee200(0x100)]=0xc;await setup[_0x5ee200(0x1ba)](this),await setup[_0x5ee200(0xfe)](this),topology[_0x5ee200(0x1dc)](this);try{const _0x304477=await this[_0x5ee200(0x13b)](_0x5ee200(0x1c9)),_0x30accc=await this['getStateAsync'](_0x5ee200(0x145));_0x304477&&_0x304477[_0x5ee200(0x207)]&&_0x30accc&&_0x30accc[_0x5ee200(0x207)]&&(Date[_0x5ee200(0x134)]()-_0x304477['ts']<0x4*0xe10*0x3e8&&(this[_0x5ee200(0x146)]={'times':JSON[_0x5ee200(0x1c4)](_0x304477[_0x5ee200(0x207)]),'sources':JSON[_0x5ee200(0x1c4)](_0x30accc[_0x5ee200(0x207)])}));}catch(_0x3e19c2){}if(this['config'][_0x5ee200(0x1c7)])try{this[_0x5ee200(0x156)]=new GoogleGenerativeAI(this[_0x5ee200(0x118)][_0x5ee200(0x1c7)]),this[_0x5ee200(0x184)]=this[_0x5ee200(0x156)][_0x5ee200(0x1db)]({'model':GEMINI_MODEL,'generationConfig':{'responseMimeType':_0x5ee200(0x1d2)}});}catch(_0x471344){this[_0x5ee200(0x157)][_0x5ee200(0x236)](_0x5ee200(0x211)+_0x471344['message']);}await setup[_0x5ee200(0x222)](this),await this['loadSystemMode'](),schedulers[_0x5ee200(0x1bd)](this),await this[_0x5ee200(0x14c)](_0x5ee200(0x22a),{'type':_0x5ee200(0x239),'common':{'name':'Live\x20Event\x20Pulse','type':_0x5ee200(0x1d3),'role':'value','read':!![],'write':![]},'native':{}}),await this[_0x5ee200(0x14c)]('analysis.activity.roomStats',{'type':_0x5ee200(0x239),'common':{'name':_0x5ee200(0x1b4),'type':_0x5ee200(0x110),'role':_0x5ee200(0x173),'read':!![],'write':![],'def':_0x5ee200(0x19d)},'native':{}}),await this[_0x5ee200(0x14c)](_0x5ee200(0x1fd),{'type':_0x5ee200(0x239),'common':{'name':'Room\x20History\x20(24h\x20Buckets)','type':_0x5ee200(0x110),'role':'json','read':!![],'write':![],'def':_0x5ee200(0x120)},'native':{}}),await this[_0x5ee200(0x14c)]('analysis.health.geminiNight',{'type':_0x5ee200(0x239),'common':{'name':_0x5ee200(0x153),'type':_0x5ee200(0x110),'role':_0x5ee200(0x131),'read':!![],'write':![],'def':_0x5ee200(0x12d)},'native':{}}),await this[_0x5ee200(0x14c)](_0x5ee200(0x1e0),{'type':_0x5ee200(0x239),'common':{'name':_0x5ee200(0x13c),'type':_0x5ee200(0x110),'role':_0x5ee200(0x131),'read':!![],'write':![],'def':'Warte\x20auf\x20Analyse...'},'native':{}}),await this['setObjectNotExistsAsync'](_0x5ee200(0x151),{'type':_0x5ee200(0x239),'common':{'name':_0x5ee200(0x21e),'type':_0x5ee200(0x110),'role':'json','read':!![],'write':![],'def':'[]'},'native':{}}),await this['setObjectNotExistsAsync'](_0x5ee200(0x161),{'type':'state','common':{'name':'Daily\x20Room\x20Details\x20(48x30min)','type':'string','role':_0x5ee200(0x173),'read':!![],'write':![],'def':'[]'},'native':{}}),await this['setObjectNotExistsAsync']('analysis.health.activityTrend',{'type':'state','common':{'name':_0x5ee200(0x26a),'type':_0x5ee200(0x1d3),'role':_0x5ee200(0x267),'unit':'%','read':!![],'write':![]},'native':{}}),await this['setObjectNotExistsAsync']('analysis.energy.warmupTimes',{'type':_0x5ee200(0x239),'common':{'name':'Warm-Up\x20Time','type':_0x5ee200(0x110),'role':_0x5ee200(0x173),'read':!![],'write':![]},'native':{}});try{const _0x443e79=await this[_0x5ee200(0x13b)](_0x5ee200(0x1fb));if(_0x443e79&&_0x443e79[_0x5ee200(0x207)]){this[_0x5ee200(0x137)]=JSON[_0x5ee200(0x1c4)](_0x443e79[_0x5ee200(0x207)]);if(this['isProVersion']){const _0x3d17f5=await this[_0x5ee200(0x13b)](_0x5ee200(0x23d));if(_0x3d17f5&&_0x3d17f5[_0x5ee200(0x207)])this['rawEventLog']=JSON[_0x5ee200(0x1c4)](_0x3d17f5[_0x5ee200(0x207)]);}this['log'][_0x5ee200(0x154)](_0x5ee200(0x19b)+this[_0x5ee200(0x137)][_0x5ee200(0x21b)]+'\x20events\x20from\x20standard\x20storage.');}}catch(_0x4bc761){this[_0x5ee200(0x137)]=[];}try{const _0x512916=await this[_0x5ee200(0x13b)](_0x5ee200(0x10e));if(_0x512916&&_0x512916[_0x5ee200(0x207)])this[_0x5ee200(0x232)]=JSON[_0x5ee200(0x1c4)](_0x512916[_0x5ee200(0x207)]);}catch(_0x277d6b){this['dailyDigests']=[];}const _0x3d591e=this[_0x5ee200(0x232)]['length']>=(this[_0x5ee200(0x118)][_0x5ee200(0x121)]||0x7)?_0x5ee200(0x155)+this[_0x5ee200(0x232)]['length']+_0x5ee200(0x11a):_0x5ee200(0x17c)+this['dailyDigests'][_0x5ee200(0x21b)]+'/'+(this[_0x5ee200(0x118)]['minDaysForBaseline']||0x7)+')';await this[_0x5ee200(0x101)](_0x5ee200(0x10c),{'val':_0x3d591e,'ack':!![]}),this[_0x5ee200(0x116)](_0x5ee200(0x1f9)),this[_0x5ee200(0x116)](_0x5ee200(0x23f)),this[_0x5ee200(0x116)](_0x5ee200(0x186));this['config'][_0x5ee200(0x1a2)]&&this['config']['infrasoundSensorId']&&this['activeModules'][_0x5ee200(0x1e1)]&&this['subscribeForeignStates'](this[_0x5ee200(0x118)][_0x5ee200(0x259)]);const _0x2cc636=this[_0x5ee200(0x118)]['devices'];if(_0x2cc636)for(const _0x850fdd of _0x2cc636){await this[_0x5ee200(0x224)](_0x850fdd['id']);}const _0x213d6a=this[_0x5ee200(0x118)][_0x5ee200(0x20c)];if(_0x213d6a)for(const _0x2ecd57 of _0x213d6a){await this['subscribeForeignStatesAsync'](_0x2ecd57);}const _0x6a0b5=require(_0x5ee200(0x1f0));if(this['historyJob'])this[_0x5ee200(0x1c6)]['cancel']();this['historyJob']=_0x6a0b5[_0x5ee200(0x1ae)](_0x5ee200(0x1bc),()=>{const _0x15b58a=_0x5ee200;this[_0x15b58a(0x20b)]();}),setTimeout(()=>this['replayTodayEvents'](),0x1388);if(this[_0x5ee200(0x159)])clearInterval(this['roomIntegratorTimer']);this[_0x5ee200(0x112)](),this['roomIntegratorTimer']=setInterval(async()=>{const _0x23db2f=_0x5ee200;await this[_0x23db2f(0x112)]();},0x3c*0x3e8);if(this['healthTrendInterval'])clearInterval(this[_0x5ee200(0x12b)]);this[_0x5ee200(0x12b)]=setInterval(()=>{const _0x3a9c10=_0x5ee200;this[_0x3a9c10(0x190)]&&this[_0x3a9c10(0x177)]['health']&&this['runPythonHealthCheck']();},0x4*0x3c*0x3c*0x3e8);if(this[_0x5ee200(0x115)])clearInterval(this[_0x5ee200(0x115)]);this['activeModules'][_0x5ee200(0x1cb)]&&(this[_0x5ee200(0x115)]=setInterval(()=>{const _0x82129e=_0x5ee200;this[_0x82129e(0x1fe)]();},0xf*0x3c*0x3e8),setTimeout(()=>this[_0x5ee200(0x1fe)](),0x2710));if(this['calendarCheckTimer'])clearInterval(this[_0x5ee200(0x185)]);this['config'][_0x5ee200(0x183)]&&this['activeModules'][_0x5ee200(0x1cb)]&&(this[_0x5ee200(0x185)]=setInterval(()=>{const _0x467abd=_0x5ee200;automation[_0x467abd(0x204)](this);},0x2*0x3c*0x3e8),setTimeout(()=>automation['checkCalendarTriggers'](this),0x3a98));if(this[_0x5ee200(0x209)])clearInterval(this[_0x5ee200(0x209)]);this[_0x5ee200(0x118)]['presenceDevices']&&this[_0x5ee200(0x118)][_0x5ee200(0x20c)][_0x5ee200(0x21b)]>0x0&&(this[_0x5ee200(0x209)]=setInterval(async()=>{await this['checkWifiPresence']();},0x3c*0x3e8),setTimeout(async()=>await this[_0x5ee200(0x104)](),0x1388));const _0x39c053=path['join'](__dirname,_0x5ee200(0x1ff),_0x5ee200(0x168),_0x5ee200(0x265));pythonBridge[_0x5ee200(0x16b)](this,_0x39c053);}['onUnload'](_0x2a2688){const _0x427be6=a0_0x3991ae;if(this[_0x427be6(0x1c6)])this[_0x427be6(0x1c6)][_0x427be6(0x260)]();this[_0x427be6(0x20b)]()[_0x427be6(0x13d)](()=>{const _0x1afb1f=_0x427be6;if(this[_0x1afb1f(0x115)])clearInterval(this[_0x1afb1f(0x115)]);if(this['calendarCheckTimer'])clearInterval(this[_0x1afb1f(0x185)]);if(this[_0x1afb1f(0x209)])clearInterval(this[_0x1afb1f(0x209)]);if(this[_0x1afb1f(0x159)])clearInterval(this[_0x1afb1f(0x159)]);recorder[_0x1afb1f(0x201)](this),pythonBridge[_0x1afb1f(0x169)](this),_0x2a2688();});}async['replayTodayEvents'](){const _0xab87ac=a0_0x3991ae;if(!this[_0xab87ac(0x137)]||this[_0xab87ac(0x137)]['length']===0x0){this[_0xab87ac(0x157)][_0xab87ac(0x21f)](_0xab87ac(0x24c));return;}this[_0xab87ac(0x157)][_0xab87ac(0x154)]('↺\x20Replaying\x20'+this[_0xab87ac(0x137)]['length']+_0xab87ac(0x227));const _0x3445dd=new Date()[_0xab87ac(0x175)](0x0,0x0,0x0,0x0),_0x262320=_0xab87ac(0x1fd);let _0x469971={'history':{},'date':new Date()[_0xab87ac(0x1c5)]()};const _0x387e6d=_0xab87ac(0x151),_0x50f698='analysis.health.todayRoomDetails';let _0xb6a0ef=new Array(0x30)['fill'](0x0),_0x189361=Array['from']({'length':0x30},()=>[]);this[_0xab87ac(0x137)][_0xab87ac(0x10b)](_0x6e93cd=>{const _0x1d5e1d=_0xab87ac;if(_0x6e93cd[_0x1d5e1d(0x102)]>=_0x3445dd){if(recorder[_0x1d5e1d(0x233)](_0x6e93cd[_0x1d5e1d(0x237)],_0x6e93cd[_0x1d5e1d(0x267)])){const _0x559c23=new Date(_0x6e93cd[_0x1d5e1d(0x102)]),_0x17c331=_0x559c23[_0x1d5e1d(0x25c)]()*0x2+(_0x559c23[_0x1d5e1d(0x124)]()>=0x1e?0x1:0x0);if(_0x17c331<0x30){_0xb6a0ef[_0x17c331]++;const _0x55da22=_0x6e93cd[_0x1d5e1d(0x1a1)]||_0x6e93cd[_0x1d5e1d(0x1ef)]||'?';let _0x40c028=_0x189361[_0x17c331];!_0x40c028[_0x1d5e1d(0x15c)](_0x55da22)&&_0x40c028[_0x1d5e1d(0x123)](_0x55da22);}const _0x29aecd=_0x559c23['getHours']();let _0x31312a=_0x6e93cd['location']||_0x1d5e1d(0x1e5);const _0x5d7a08=(this[_0x1d5e1d(0x118)][_0x1d5e1d(0x176)]||[])[_0x1d5e1d(0x1d5)](_0x3fde47=>_0x3fde47[_0x1d5e1d(0x1a1)]===_0x31312a);if(_0x5d7a08)_0x31312a=_0x5d7a08['location'];if(!_0x469971['history'][_0x31312a])_0x469971['history'][_0x31312a]=new Array(0x18)[_0x1d5e1d(0x178)](0x0);if(_0x469971['history'][_0x31312a][_0x29aecd]<0x3c)_0x469971[_0x1d5e1d(0x253)][_0x31312a][_0x29aecd]++;}}});const _0x1ea790=await this[_0xab87ac(0x13b)](_0x262320);(!_0x1ea790||!_0x1ea790[_0xab87ac(0x207)]||_0x1ea790['val']==='{}'||_0x1ea790[_0xab87ac(0x207)][_0xab87ac(0x15c)](_0xab87ac(0x1c3)))&&await this[_0xab87ac(0x101)](_0x262320,{'val':JSON[_0xab87ac(0x1a8)](_0x469971),'ack':!![]}),await this[_0xab87ac(0x101)](_0x387e6d,{'val':JSON[_0xab87ac(0x1a8)](_0xb6a0ef),'ack':!![]}),await this['setStateAsync'](_0x50f698,{'val':JSON[_0xab87ac(0x1a8)](_0x189361),'ack':!![]}),this[_0xab87ac(0x157)][_0xab87ac(0x154)](_0xab87ac(0x1e2));}async[a0_0x3991ae(0x20b)](){const _0x53f850=a0_0x3991ae;if(!this[_0x53f850(0x177)][_0x53f850(0x23c)])return;const _0x584b1b=new Date()[_0x53f850(0x16c)]()['split']('T')[0x0];this[_0x53f850(0x157)]['debug'](_0x53f850(0x103)+_0x584b1b+_0x53f850(0x24d));try{const [_0x15b131,_0x525dd0,_0x4b6e0c,_0x54b796,_0x2ed16d,_0x3c19d7,_0x13c11f]=await Promise[_0x53f850(0x1a7)]([this[_0x53f850(0x13b)](_0x53f850(0x1fd)),this[_0x53f850(0x13b)]('analysis.health.geminiNight'),this['getStateAsync'](_0x53f850(0x1e0)),this[_0x53f850(0x13b)](_0x53f850(0x152)),this[_0x53f850(0x13b)](_0x53f850(0x151)),this[_0x53f850(0x13b)](_0x53f850(0x26d)),this[_0x53f850(0x13b)](_0x53f850(0x129))]),_0x1d2c15=new Date()[_0x53f850(0x175)](0x0,0x0,0x0,0x0),_0x27cd55=this[_0x53f850(0x137)][_0x53f850(0x1e3)](_0x502cab=>_0x502cab[_0x53f850(0x102)]>=_0x1d2c15&&(_0x502cab['name'][_0x53f850(0x195)]()[_0x53f850(0x15c)](_0x53f850(0x11c))||_0x502cab[_0x53f850(0x1ef)][_0x53f850(0x195)]()['includes'](_0x53f850(0x1b1)))&&(_0x502cab[_0x53f850(0x267)]===!![]||_0x502cab[_0x53f850(0x267)]==='open'))['length'];let _0x5f03ea=0x55;if(_0x3c19d7&&_0x3c19d7[_0x53f850(0x207)]!==undefined)_0x5f03ea=Math[_0x53f850(0x191)](0x64,Math[_0x53f850(0x149)](0x14,Math['round'](0x50+Number(_0x3c19d7[_0x53f850(0x207)])*0x5)));const _0x177dc5=this['eventHistory'][_0x53f850(0x1e3)](_0x103fb1=>_0x103fb1[_0x53f850(0x102)]>=_0x1d2c15),_0x3b9315={'date':_0x584b1b,'timestamp':Date[_0x53f850(0x134)](),'roomHistory':_0x15b131?.[_0x53f850(0x207)]?JSON[_0x53f850(0x1c4)](_0x15b131['val']):{},'geminiNight':_0x525dd0?.['val']||_0x53f850(0x1a5),'geminiDay':_0x4b6e0c?.[_0x53f850(0x207)]||_0x53f850(0x1a5),'anomalyScore':_0x54b796?.[_0x53f850(0x207)]||0.1,'todayVector':_0x2ed16d?.[_0x53f850(0x207)]?JSON[_0x53f850(0x1c4)](_0x2ed16d[_0x53f850(0x207)]):new Array(0x30)[_0x53f850(0x178)](0x0),'batteryLevel':_0x5f03ea,'freshAirCount':_0x27cd55,'gaitSpeed':_0x13c11f?.['val']!==undefined&&_0x13c11f?.['val']!==null?Number(_0x13c11f[_0x53f850(0x207)]):null,'eventHistory':_0x177dc5},_0x5336fe=utils[_0x53f850(0x206)](),_0x26a470=path[_0x53f850(0x21d)](_0x5336fe,_0x53f850(0x150),_0x53f850(0x253));if(!fs['existsSync'](_0x26a470))fs[_0x53f850(0x257)](_0x26a470,{'recursive':!![]});const _0x1d7e25=path['join'](_0x26a470,_0x584b1b+'.json');fs[_0x53f850(0x117)](_0x1d7e25,JSON['stringify'](_0x3b9315)),this[_0x53f850(0x157)][_0x53f850(0x154)]('✅\x20History\x20saved:\x20'+_0x1d7e25);}catch(_0x46ad3b){this['log'][_0x53f850(0x236)]('History\x20Save\x20Error:\x20'+_0x46ad3b[_0x53f850(0x261)]);}}async[a0_0x3991ae(0x112)](){const _0x270d40=a0_0x3991ae;if(!this[_0x270d40(0x1ea)])return;try{let _0x3c51cd=null;try{const _0x4f027c=await this[_0x270d40(0x13b)](_0x270d40(0x13e)),_0x40ded4=await this[_0x270d40(0x13b)]('analysis.prediction.trackerConfidence');if(_0x4f027c&&_0x4f027c['val']&&_0x40ded4&&_0x40ded4[_0x270d40(0x207)]&&_0x40ded4[_0x270d40(0x207)]>0.3){if(_0x4f027c['val']!=='Unknown'&&_0x4f027c[_0x270d40(0x207)]!==_0x270d40(0x136))_0x3c51cd=_0x4f027c['val'];}}catch(_0x3210e5){}if(!_0x3c51cd){const _0x2f788b=this[_0x270d40(0x118)][_0x270d40(0x176)]||[];for(const _0x528ca8 of _0x2f788b){if(_0x528ca8[_0x270d40(0x237)]==='motion'&&_0x528ca8['location'])try{const _0x354036=await this[_0x270d40(0x223)](_0x528ca8['id']);if(_0x354036&&(_0x354036[_0x270d40(0x207)]===!![]||_0x354036[_0x270d40(0x207)]==='on'||_0x354036[_0x270d40(0x207)]===0x1)){_0x3c51cd=_0x528ca8[_0x270d40(0x1a1)];break;}}catch(_0x353546){}}}if(!_0x3c51cd)return;const _0x39219b=this['config'][_0x270d40(0x176)]||[];let _0x4e00e7=_0x3c51cd;const _0x23e2ee=_0x39219b[_0x270d40(0x1d5)](_0x28af27=>_0x28af27[_0x270d40(0x1a1)]&&_0x28af27[_0x270d40(0x1a1)][_0x270d40(0x195)]()===_0x3c51cd[_0x270d40(0x195)]());if(_0x23e2ee)_0x4e00e7=_0x23e2ee[_0x270d40(0x1a1)];const _0xfb8acc=_0x270d40(0x1fd),_0x56fd02=await this[_0x270d40(0x13b)](_0xfb8acc),_0x43bef8=new Date()[_0x270d40(0x1c5)]();let _0xcbd42f={'history':{},'date':_0x43bef8};if(_0x56fd02&&_0x56fd02[_0x270d40(0x207)])try{_0xcbd42f=JSON[_0x270d40(0x1c4)](_0x56fd02['val']);}catch(_0x1dcfba){}_0xcbd42f[_0x270d40(0x12f)]!==_0x43bef8&&(_0xcbd42f['history']={},_0xcbd42f[_0x270d40(0x12f)]=_0x43bef8);if(!_0xcbd42f[_0x270d40(0x253)][_0x4e00e7])_0xcbd42f['history'][_0x4e00e7]=new Array(0x18)[_0x270d40(0x178)](0x0);const _0xb7c72f=new Date()[_0x270d40(0x25c)]();if(_0xcbd42f['history'][_0x4e00e7][_0xb7c72f]<0x3c)_0xcbd42f['history'][_0x4e00e7][_0xb7c72f]++;await this[_0x270d40(0x101)](_0xfb8acc,{'val':JSON[_0x270d40(0x1a8)](_0xcbd42f),'ack':!![]});}catch(_0x4126fe){this['log']['warn'](_0x270d40(0x210)+_0x4126fe['message']);}}async[a0_0x3991ae(0x215)](_0x2168b7){const _0x56897c=a0_0x3991ae;if(typeof _0x2168b7===_0x56897c(0x268)&&_0x2168b7[_0x56897c(0x261)]){if(_0x2168b7['command']===_0x56897c(0x214)){const _0xfb6576=_0x2168b7[_0x56897c(0x261)][_0x56897c(0x12f)],_0x5b9e63=utils['getAbsoluteDefaultDataDir'](),_0x4207a5=path[_0x56897c(0x21d)](_0x5b9e63,_0x56897c(0x150),_0x56897c(0x253),_0xfb6576+_0x56897c(0x20a));if(fs['existsSync'](_0x4207a5))try{const _0x5e61cc=JSON[_0x56897c(0x1c4)](fs[_0x56897c(0x245)](_0x4207a5,_0x56897c(0x25b)));this[_0x56897c(0x196)](_0x2168b7[_0x56897c(0x23b)],_0x2168b7[_0x56897c(0x1d4)],{'success':!![],'data':_0x5e61cc},_0x2168b7['callback']);}catch(_0x483c82){this[_0x56897c(0x196)](_0x2168b7['from'],_0x2168b7[_0x56897c(0x1d4)],{'success':![],'error':_0x56897c(0x247)},_0x2168b7[_0x56897c(0x1a4)]);}else this['sendTo'](_0x2168b7[_0x56897c(0x23b)],_0x2168b7['command'],{'success':![],'error':_0x56897c(0x1f5)},_0x2168b7['callback']);}else{if(_0x2168b7[_0x56897c(0x1d4)]==='getOverviewData'){const _0x4c2b83=this[_0x56897c(0x232)][_0x56897c(0x21b)];let _0x27d6e2=new Array(0x30)[_0x56897c(0x178)](0x0),_0x52b7cd=Array[_0x56897c(0x23b)]({'length':0x30},()=>[]);try{const _0x4cf36b=await this[_0x56897c(0x13b)](_0x56897c(0x151));if(_0x4cf36b&&_0x4cf36b[_0x56897c(0x207)])_0x27d6e2=JSON[_0x56897c(0x1c4)](_0x4cf36b['val']);const _0x243b36=await this['getStateAsync'](_0x56897c(0x161));if(_0x243b36&&_0x243b36[_0x56897c(0x207)])_0x52b7cd=JSON[_0x56897c(0x1c4)](_0x243b36[_0x56897c(0x207)]);}catch(_0x1274f0){}let _0xcb6e1e=new Array(0x30)['fill'](0x0);try{const _0x568e6a=new Date();_0x568e6a[_0x56897c(0x1b2)](_0x568e6a[_0x56897c(0x15d)]()-0x1);const _0x399b9b=_0x568e6a['toISOString']()[_0x56897c(0x1b9)]('T')[0x0],_0x207526=utils[_0x56897c(0x206)](),_0x3d7318=path[_0x56897c(0x21d)](_0x207526,_0x56897c(0x150),_0x56897c(0x253),_0x399b9b+'.json');if(fs[_0x56897c(0x14d)](_0x3d7318)){const _0x4b70b7=JSON[_0x56897c(0x1c4)](fs['readFileSync'](_0x3d7318,_0x56897c(0x25b)));if(_0x4b70b7&&_0x4b70b7[_0x56897c(0x1cf)])_0xcb6e1e=_0x4b70b7[_0x56897c(0x1cf)];}}catch(_0x43e09a){}let _0x42ebd7={'today':{},'yesterday':{}};try{const _0x3a9d0d=await this[_0x56897c(0x13b)](_0x56897c(0x1d7));if(_0x3a9d0d&&_0x3a9d0d[_0x56897c(0x207)])_0x42ebd7=JSON[_0x56897c(0x1c4)](_0x3a9d0d[_0x56897c(0x207)]);}catch(_0x138ce0){}let _0x320bb0=null;try{const _0xa83899=await this[_0x56897c(0x13b)](_0x56897c(0x26d));if(_0xa83899)_0x320bb0=_0xa83899[_0x56897c(0x207)];}catch(_0x232830){}if(_0x320bb0===undefined||_0x320bb0===null){const _0x5c2967=_0x27d6e2[_0x56897c(0x1b8)]((_0x3633af,_0xdbebab)=>_0x3633af+_0xdbebab,0x0),_0xa08fae=Math[_0x56897c(0x191)](0x2,Math['max'](-0x2,(0x64-_0x5c2967)/0x32));_0x320bb0=_0xa08fae;}let _0xb58809=![],_0x42dadf='',_0x4fc9da='',_0x1ea585='';try{const _0x30aba5=await this[_0x56897c(0x13b)](_0x56897c(0x21c));if(_0x30aba5&&_0x30aba5[_0x56897c(0x207)]){_0xb58809=!![];const _0x3e768e=await this[_0x56897c(0x13b)](_0x56897c(0x188));_0x42dadf=_0x3e768e?_0x3e768e['val']:'';const _0x40efad=await this[_0x56897c(0x13b)](_0x56897c(0x22f));_0x4fc9da=_0x40efad?_0x40efad[_0x56897c(0x207)]:'';const _0x3dcbb9=await this[_0x56897c(0x13b)](_0x56897c(0x238));_0x1ea585=_0x3dcbb9?_0x3dcbb9[_0x56897c(0x207)]:'';}}catch(_0x18478b){}const _0x2180d7=await this[_0x56897c(0x147)](),_0x2227f8=(this[_0x56897c(0x118)][_0x56897c(0x176)]||[])[_0x56897c(0x1d1)](_0x4b246f=>_0x4b246f[_0x56897c(0x182)]),_0x50e912=_0x2180d7&&_0x2227f8;let _0x5dc161='';try{const _0x2db5a8=await this[_0x56897c(0x13b)]('system.presenceWho');if(_0x2db5a8&&_0x2db5a8['val'])_0x5dc161=_0x2db5a8['val'];}catch(_0x317d61){}this[_0x56897c(0x196)](_0x2168b7[_0x56897c(0x23b)],_0x2168b7[_0x56897c(0x1d4)],{'success':!![],'eventHistory':this['eventHistory'][_0x56897c(0x1b0)](0x0,0x7d0),'stats':{'digestCount':_0x4c2b83,'isPresent':this[_0x56897c(0x1ea)],'hourlyActivity':_0x27d6e2,'hourlyDetails':_0x52b7cd,'yesterdayActivity':_0xcb6e1e,'solarActive':_0x50e912,'presenceWho':_0x5dc161,'roomStats':_0x42ebd7,'activityTrend':_0x320bb0,'modules':this[_0x56897c(0x177)]},'automation':{'detected':_0xb58809,'description':_0x42dadf,'targetId':_0x4fc9da,'targetValue':_0x1ea585}},_0x2168b7['callback']);}else{if(_0x2168b7[_0x56897c(0x1d4)]===_0x56897c(0x1a0))try{const _0x251f18=await automation[_0x56897c(0x20d)](this);this[_0x56897c(0x196)](_0x2168b7[_0x56897c(0x23b)],_0x2168b7['command'],{'success':!![],'results':_0x251f18},_0x2168b7[_0x56897c(0x1a4)]);}catch(_0x4cfa50){this['sendTo'](_0x2168b7[_0x56897c(0x23b)],_0x2168b7['command'],{'success':![],'error':_0x4cfa50[_0x56897c(0x261)]},_0x2168b7[_0x56897c(0x1a4)]);}else{if(_0x2168b7[_0x56897c(0x1d4)]===_0x56897c(0x135))try{const _0x346c0b=await scanner['scanForDevices'](this,_0x2168b7[_0x56897c(0x261)]||{});this[_0x56897c(0x196)](_0x2168b7['from'],_0x2168b7[_0x56897c(0x1d4)],{'success':!![],'devices':_0x346c0b},_0x2168b7[_0x56897c(0x1a4)]);}catch(_0x3746f0){}else{if(_0x2168b7[_0x56897c(0x1d4)]===_0x56897c(0x13f)){const _0x16fb0d=await this[_0x56897c(0x1eb)](_0x56897c(0x1c1),'enum'),_0x357eea=[];if(_0x16fb0d)for(const _0x2bc855 in _0x16fb0d){let _0xc37501=_0x16fb0d[_0x2bc855]['common'][_0x56897c(0x1ef)];if(_0xc37501&&typeof _0xc37501===_0x56897c(0x268))_0xc37501=_0xc37501['de']||_0xc37501['en']||Object[_0x56897c(0x1fa)](_0xc37501)[0x0]||JSON['stringify'](_0xc37501);_0x357eea[_0x56897c(0x123)]({'id':_0x2bc855,'name':String(_0xc37501||_0x2bc855)});}const _0x333f0e=await this[_0x56897c(0x1eb)](_0x56897c(0x1af),_0x56897c(0x1aa)),_0x113260=[];if(_0x333f0e)for(const _0x1b325d in _0x333f0e){let _0x179e32=_0x333f0e[_0x1b325d][_0x56897c(0x11d)][_0x56897c(0x1ef)];if(_0x179e32&&typeof _0x179e32==='object')_0x179e32=_0x179e32['de']||_0x179e32['en']||Object[_0x56897c(0x1fa)](_0x179e32)[0x0]||JSON[_0x56897c(0x1a8)](_0x179e32);_0x113260[_0x56897c(0x123)](String(_0x179e32||_0x1b325d['split']('.')[_0x56897c(0x213)]()));}this[_0x56897c(0x196)](_0x2168b7['from'],_0x2168b7[_0x56897c(0x1d4)],{'success':!![],'enums':_0x357eea,'rooms':_0x113260},_0x2168b7[_0x56897c(0x1a4)]);}else{if(_0x2168b7[_0x56897c(0x1d4)]===_0x56897c(0x269))try{const _0x5e9949=await this[_0x56897c(0x23e)](_0x56897c(0x12c),'instance',{'startkey':'system.adapter.ical.','endkey':'system.adapter.ical.香'}),_0x5b0b0a=new Set();if(_0x5e9949&&_0x5e9949[_0x56897c(0x122)])for(const _0x296d50 of _0x5e9949['rows']){const _0x385ee6=_0x296d50['id'][_0x56897c(0x205)](_0x56897c(0x143),''),_0x52c13c=await this[_0x56897c(0x223)](_0x385ee6+'.data.table');let _0xf911b5=![];if(_0x52c13c&&_0x52c13c['val']){const _0x2857b1=typeof _0x52c13c[_0x56897c(0x207)]===_0x56897c(0x110)?JSON[_0x56897c(0x1c4)](_0x52c13c[_0x56897c(0x207)]):_0x52c13c[_0x56897c(0x207)];Array['isArray'](_0x2857b1)&&_0x2857b1[_0x56897c(0x10b)](_0xf13a10=>{const _0x167b21=_0x56897c;_0xf13a10[_0x167b21(0x26e)]&&(_0x5b0b0a[_0x167b21(0x14a)](_0xf13a10[_0x167b21(0x26e)]),_0xf911b5=!![]);});}!_0xf911b5&&_0x5b0b0a[_0x56897c(0x14a)](_0x385ee6);}const _0x31de5b=Array[_0x56897c(0x23b)](_0x5b0b0a);if(_0x31de5b[_0x56897c(0x21b)]===0x0)_0x31de5b[_0x56897c(0x123)]('Standard');this[_0x56897c(0x196)](_0x2168b7['from'],_0x2168b7[_0x56897c(0x1d4)],{'success':!![],'names':_0x31de5b},_0x2168b7['callback']);}catch(_0x3dc064){this[_0x56897c(0x196)](_0x2168b7[_0x56897c(0x23b)],_0x2168b7[_0x56897c(0x1d4)],{'success':![],'error':_0x56897c(0x140)+_0x3dc064['message']},_0x2168b7[_0x56897c(0x1a4)]);}else{if(_0x2168b7['command']===_0x56897c(0x11b))try{await automation[_0x56897c(0x1df)](this),this['sendTo'](_0x2168b7['from'],_0x2168b7[_0x56897c(0x1d4)],{'success':!![]},_0x2168b7[_0x56897c(0x1a4)]);}catch(_0x262b24){this[_0x56897c(0x157)][_0x56897c(0x21f)](_0x56897c(0x142)+_0x262b24[_0x56897c(0x261)]),this[_0x56897c(0x196)](_0x2168b7[_0x56897c(0x23b)],_0x2168b7[_0x56897c(0x1d4)],{'success':![],'error':_0x262b24[_0x56897c(0x261)]},_0x2168b7[_0x56897c(0x1a4)]);}else{if(_0x2168b7[_0x56897c(0x1d4)]===_0x56897c(0x249))try{const _0xbe1c2b=_0x2168b7['message']['matrix'];if(!_0xbe1c2b||!Array['isArray'](_0xbe1c2b))throw new Error(_0x56897c(0x1f3));const _0x589a65=await this[_0x56897c(0x13b)](_0x56897c(0x1d9));if(_0x589a65&&_0x589a65['val']){const _0x77e0ba=JSON['parse'](_0x589a65['val']);_0x77e0ba[_0x56897c(0x1b6)]=_0xbe1c2b,_0x77e0ba[_0x56897c(0x16e)]=Date[_0x56897c(0x134)](),await this[_0x56897c(0x101)](_0x56897c(0x1d9),{'val':JSON[_0x56897c(0x1a8)](_0x77e0ba),'ack':!![]}),this[_0x56897c(0x157)]['debug']('🕸️\x20Topology\x20Matrix\x20manually\x20updated\x20by\x20user.'),this[_0x56897c(0x196)](_0x2168b7[_0x56897c(0x23b)],_0x2168b7[_0x56897c(0x1d4)],{'success':!![]},_0x2168b7[_0x56897c(0x1a4)]);}else throw new Error(_0x56897c(0x1ac));}catch(_0x51c3b2){this[_0x56897c(0x157)][_0x56897c(0x21f)](_0x56897c(0x113)+_0x51c3b2[_0x56897c(0x261)]),this['sendTo'](_0x2168b7[_0x56897c(0x23b)],_0x2168b7['command'],{'success':![],'error':_0x51c3b2['message']},_0x2168b7[_0x56897c(0x1a4)]);}else{if(_0x2168b7[_0x56897c(0x1d4)]===_0x56897c(0x248))try{const _0x29b5c9=_0x2168b7[_0x56897c(0x261)][_0x56897c(0x1d4)],_0x20b919=_0x2168b7[_0x56897c(0x261)];this['log'][_0x56897c(0x16d)]('[PythonBridge]\x20Forwarding\x20command:\x20'+_0x29b5c9),pythonBridge['send'](this,_0x29b5c9,_0x20b919,_0x22c9bc=>{const _0x366091=_0x56897c;this[_0x366091(0x196)](_0x2168b7[_0x366091(0x23b)],_0x2168b7[_0x366091(0x1d4)],_0x22c9bc,_0x2168b7[_0x366091(0x1a4)]);});}catch(_0x31894f){this['log']['warn'](_0x56897c(0x234)+_0x31894f[_0x56897c(0x261)]),this[_0x56897c(0x196)](_0x2168b7[_0x56897c(0x23b)],_0x2168b7[_0x56897c(0x1d4)],{'type':'ERROR','payload':_0x31894f[_0x56897c(0x261)]},_0x2168b7[_0x56897c(0x1a4)]);}else{if(_0x2168b7[_0x56897c(0x1d4)]===_0x56897c(0x108))try{const _0x334976=_0x2168b7['message']?_0x2168b7[_0x56897c(0x261)][_0x56897c(0x1e6)]:'';if(!_0x334976)throw new Error('Kein\x20API\x20Key\x20übergeben.');const _0x595e34=new GoogleGenerativeAI(_0x334976),_0x5dd3ac=_0x595e34[_0x56897c(0x1db)]({'model':GEMINI_MODEL}),_0x5caa56=await _0x5dd3ac['generateContent'](_0x56897c(0x15b)),_0x425433=await _0x5caa56[_0x56897c(0x24a)],_0x2dfeac=_0x425433[_0x56897c(0x131)]();this[_0x56897c(0x196)](_0x2168b7['from'],_0x2168b7[_0x56897c(0x1d4)],{'success':!![],'message':_0x56897c(0x125)+_0x2dfeac[_0x56897c(0x203)](0x0,0x14)+_0x56897c(0x24d)},_0x2168b7[_0x56897c(0x1a4)]);}catch(_0x44d3e0){this[_0x56897c(0x196)](_0x2168b7[_0x56897c(0x23b)],_0x2168b7[_0x56897c(0x1d4)],{'success':![],'message':_0x44d3e0[_0x56897c(0x261)]},_0x2168b7[_0x56897c(0x1a4)]);}else{if(_0x2168b7[_0x56897c(0x1d4)]===_0x56897c(0x242))try{const _0x1daf79=await this['checkSolarCondition'](),_0x28c597=await this['getObjectViewAsync']('system','instance',{'startkey':_0x56897c(0x139),'endkey':'system.adapter.ical.香'}),_0x79de79=_0x28c597&&_0x28c597['rows']?_0x28c597[_0x56897c(0x122)][_0x56897c(0x21b)]:0x0;this[_0x56897c(0x196)](_0x2168b7['from'],_0x2168b7['command'],{'success':!![],'weather':_0x56897c(0x1cc)+_0x1daf79+',\x20Temp:\x20'+(this[_0x56897c(0x235)][this['config'][_0x56897c(0x14b)]]||'?')+'°C','calendar':_0x79de79+_0x56897c(0x138)},_0x2168b7[_0x56897c(0x1a4)]);}catch(_0x4bb862){this[_0x56897c(0x196)](_0x2168b7[_0x56897c(0x23b)],_0x2168b7['command'],{'success':![]},_0x2168b7[_0x56897c(0x1a4)]);}}}}}}}}}}}}}['runPythonHealthCheck'](){const _0x1a372d=a0_0x3991ae;if(!this[_0x1a372d(0x177)][_0x1a372d(0x23c)])return;this['log']['debug']('🐍\x20Triggering\x20Python\x20Health\x20Check\x20(Activity\x20Trend)...');try{const _0x80694f=this[_0x1a372d(0x166)]||[];pythonBridge['send'](this,_0x1a372d(0x127),{'events':_0x80694f});}catch(_0x582015){this[_0x1a372d(0x157)]['warn'](_0x1a372d(0x19a));}}async[a0_0x3991ae(0x19f)](_0x247dd5,_0x541e69){const _0x239642=a0_0x3991ae;if(!_0x541e69||this['dependencyInstallInProgress'])return;if(_0x247dd5['includes'](_0x239642(0x15e))&&_0x247dd5['endsWith'](_0x239642(0x18f))&&_0x541e69[_0x239642(0x207)])return;if(this['config']['infrasoundEnabled']&&_0x247dd5===this[_0x239642(0x118)][_0x239642(0x259)]&&this[_0x239642(0x177)][_0x239642(0x1e1)]){this[_0x239642(0x17a)](_0x541e69[_0x239642(0x207)]);return;}if(_0x541e69[_0x239642(0x256)]&&_0x247dd5[_0x239642(0x197)]('pulse'))return;if(_0x247dd5===this['namespace']+_0x239642(0x241)){if(_0x541e69[_0x239642(0x207)]&&Object['values'](setup[_0x239642(0x221)])['includes'](_0x541e69[_0x239642(0x207)])){this[_0x239642(0x21a)]=_0x541e69['val'];if(_0x541e69[_0x239642(0x207)]===setup['SYSTEM_MODES']['VACATION'])await recorder[_0x239642(0x133)](this,![]);else await recorder[_0x239642(0x133)](this,!![]);if(this['isProVersion']){let _0x5617f7=![],_0x57e0a2=0x0,_0xba6b69=_0x239642(0x1b5);if(this[_0x239642(0x21a)]==='party')_0x5617f7=!![],_0x57e0a2=0x168,_0xba6b69=_0x239642(0x22b);else this['currentSystemMode']===_0x239642(0x189)&&(_0x5617f7=!![],_0x57e0a2=0x5a0,_0xba6b69=_0x239642(0x226));pythonBridge[_0x239642(0x20e)](this,_0x239642(0x144),{'active':_0x5617f7,'duration':_0x57e0a2,'label':_0xba6b69}),await this[_0x239642(0x101)](_0x239642(0x119),{'val':JSON[_0x239642(0x1a8)]({'active':_0x5617f7,'label':_0xba6b69,'timestamp':Date[_0x239642(0x134)]()}),'ack':!![]});}}if(!_0x541e69[_0x239642(0x256)])this['setState'](_0x247dd5,{'val':this['currentSystemMode'],'ack':!![]});return;}if(_0x247dd5[_0x239642(0x197)](_0x239642(0x145))&&_0x541e69[_0x239642(0x256)])this['protectAiMemory'](_0x541e69['val']);if(_0x247dd5[_0x239642(0x197)](_0x239642(0x1c9))&&_0x541e69[_0x239642(0x256)]&&this['activeModules']['energy'])automation['checkCalendarTriggers'](this);if(!_0x541e69['ack']){if(_0x247dd5[_0x239642(0x15c)](_0x239642(0x1f9))&&_0x541e69[_0x239642(0x207)]){this['setState'](_0x247dd5,{'val':![],'ack':!![]}),aiAgent[_0x239642(0x192)](this);return;}if(_0x247dd5['includes']('triggerDailyDigest')&&_0x541e69[_0x239642(0x207)]){this['setState'](_0x247dd5,{'val':![],'ack':!![]});if(this[_0x239642(0x190)])aiAgent[_0x239642(0x16f)](this,pythonBridge);return;}if(_0x247dd5[_0x239642(0x15c)](_0x239642(0x216))&&_0x541e69[_0x239642(0x207)]){this[_0x239642(0x250)](_0x247dd5,{'val':![],'ack':!![]}),aiAgent[_0x239642(0x107)](this);return;}if(_0x247dd5['includes']('automation.triggerAction')&&_0x541e69[_0x239642(0x207)]){this[_0x239642(0x250)](_0x247dd5,{'val':![],'ack':!![]}),aiAgent[_0x239642(0x1be)](this);return;}if(_0x247dd5['includes'](_0x239642(0x126))&&_0x541e69[_0x239642(0x207)]){this['setState'](_0x247dd5,{'val':![],'ack':!![]});if(this[_0x239642(0x190)])try{const _0x57f2da=await this['getStateAsync']('LTM.trainingData.sequences');if(_0x57f2da&&_0x57f2da[_0x239642(0x207)]){const _0x56fcbd=JSON[_0x239642(0x1c4)](_0x57f2da['val']);this[_0x239642(0x101)](_0x239642(0x12e),{'val':_0x239642(0x1e8),'ack':!![]}),pythonBridge['send'](this,_0x239642(0x240),{'sequences':_0x56fcbd});}}catch(_0x5afa6d){}return;}if(_0x247dd5[_0x239642(0x15c)](_0x239642(0x186))&&_0x541e69[_0x239642(0x207)]){this[_0x239642(0x250)](_0x247dd5,{'val':![],'ack':!![]});try{aiAgent[_0x239642(0x264)](this,_0x239642(0x174)),setTimeout(()=>aiAgent[_0x239642(0x264)](this,'DAY'),0x2ee0);if(this[_0x239642(0x190)]){this[_0x239642(0x1c8)]();const _0x567d06=await this['getStateAsync'](_0x239642(0x10e));if(_0x567d06&&_0x567d06['val'])pythonBridge[_0x239642(0x20e)](this,_0x239642(0x164),{'digests':JSON['parse'](_0x567d06[_0x239642(0x207)])});}}catch(_0x5b852d){this[_0x239642(0x157)]['warn']('triggerHealth\x20error:\x20'+_0x5b852d['message']);}return;}if(_0x247dd5['includes'](_0x239642(0x212))&&_0x541e69[_0x239642(0x207)]){this[_0x239642(0x250)](_0x247dd5,{'val':![],'ack':!![]}),await this['triggerEnergyPrediction']();return;}if(_0x247dd5[_0x239642(0x15c)]('analysis.training.triggerComfort')&&_0x541e69['val']){this[_0x239642(0x250)](_0x247dd5,{'val':![],'ack':!![]});if(this['isProVersion'])try{const _0x3bcf46=await this['getStateAsync'](_0x239642(0x23d));if(_0x3bcf46&&_0x3bcf46['val']){const _0x5bc4f2={};if(this['config']['devices'])this['config']['devices'][_0x239642(0x10b)](_0x421c4e=>{const _0x151fd6=_0x239642;if(_0x421c4e['id']&&_0x421c4e[_0x151fd6(0x237)])_0x5bc4f2[_0x421c4e['id']]=_0x421c4e['type'];});pythonBridge['send'](this,_0x239642(0x17d),{'events':JSON[_0x239642(0x1c4)](_0x3bcf46[_0x239642(0x207)]),'deviceMap':_0x5bc4f2});}}catch(_0x50b793){}return;}if(_0x247dd5[_0x239642(0x15c)](_0x239642(0x1e7))&&_0x541e69['val']){this[_0x239642(0x250)](_0x247dd5,{'val':![],'ack':!![]}),topology[_0x239642(0x1dc)](this);if(this[_0x239642(0x190)])try{const _0x55def5=await this[_0x239642(0x13b)]('LTM.trainingData.sequences');if(_0x55def5&&_0x55def5['val'])pythonBridge[_0x239642(0x20e)](this,_0x239642(0x198),{'sequences':JSON['parse'](_0x55def5[_0x239642(0x207)])});}catch(_0x52b7a0){}return;}}const _0x499930=(this[_0x239642(0x118)][_0x239642(0x176)]||[])['find'](_0x5a27a1=>_0x5a27a1['id']===_0x247dd5);if(_0x499930){const _0x56db85=await recorder[_0x239642(0x202)](this,_0x247dd5,_0x541e69,_0x499930);_0x56db85&&this[_0x239642(0x250)](_0x239642(0x22a),{'val':Date[_0x239642(0x134)](),'ack':!![]});_0x56db85&&_0x56db85['type']===_0x239642(0x23a)&&_0x56db85[_0x239642(0x1a1)]&&this['isProVersion']&&deadMan[_0x239642(0x231)](this,_0x56db85[_0x239642(0x1a1)]);_0x541e69[_0x239642(0x207)]&&(_0x541e69[_0x239642(0x207)]===!![]||_0x541e69[_0x239642(0x207)]===0x1||String(_0x541e69[_0x239642(0x207)])[_0x239642(0x195)]()==='open')&&(_0x499930[_0x239642(0x237)]&&(_0x499930[_0x239642(0x237)]['includes'](_0x239642(0x228))||_0x499930[_0x239642(0x237)]['includes'](_0x239642(0x11e)))&&this[_0x239642(0x244)](_0x499930));if(_0x499930[_0x239642(0x237)]===_0x239642(0x246)||_0x499930['type']===_0x239642(0x1de)){if(this[_0x239642(0x177)][_0x239642(0x1cb)])automation['cleanupGhostInterventions'](this);}}}async[a0_0x3991ae(0x1cd)](_0xb06264){const _0x102bb2=a0_0x3991ae;if(!this['memoryCache']||Date[_0x102bb2(0x134)]()-this['bootTime']>0x493e0)return;try{const _0x32ac6b=JSON['parse'](_0xb06264),_0x544184=this['memoryCache'][_0x102bb2(0x1d8)];let _0x1f16b2=![];for(const _0x1d2422 in _0x544184){if(_0x544184[_0x1d2422][_0x102bb2(0x15c)]('AI')&&_0x32ac6b[_0x1d2422]&&!_0x32ac6b[_0x1d2422][_0x102bb2(0x15c)]('AI')){_0x1f16b2=!![];break;}}_0x1f16b2&&(await this[_0x102bb2(0x101)](_0x102bb2(0x1c9),{'val':JSON[_0x102bb2(0x1a8)](this[_0x102bb2(0x146)][_0x102bb2(0x266)]),'ack':!![]}),await this[_0x102bb2(0x101)](_0x102bb2(0x145),{'val':JSON[_0x102bb2(0x1a8)](this[_0x102bb2(0x146)][_0x102bb2(0x1d8)]),'ack':!![]}));}catch(_0x5bb842){}}async[a0_0x3991ae(0x199)](){const _0x4bda41=a0_0x3991ae;try{const _0x528133=await this[_0x4bda41(0x13b)](setup['SYSTEM_DP_MODE']);if(_0x528133&&_0x528133[_0x4bda41(0x207)])this[_0x4bda41(0x21a)]=_0x528133[_0x4bda41(0x207)];}catch(_0x176351){this[_0x4bda41(0x21a)]=setup[_0x4bda41(0x221)][_0x4bda41(0x1f7)];}}async[a0_0x3991ae(0x104)](){const _0xdda874=a0_0x3991ae,_0x3cba95=this[_0xdda874(0x118)]['presenceDevices']||[];if(_0x3cba95[_0xdda874(0x21b)]===0x0)return![];const _0x5d3e44=[],_0x3a40bc=Date[_0xdda874(0x134)](),_0x31bd67=0x5*0x3c*0x3e8;for(const _0x3a9aa6 of _0x3cba95){try{let _0xe3ef6c=![];try{const _0x19b695=await this[_0xdda874(0x223)](_0x3a9aa6+_0xdda874(0x219));if(_0x19b695&&_0x19b695[_0xdda874(0x207)]===!![])_0xe3ef6c=!![];}catch(_0x2551cb){}if(!_0xe3ef6c)try{const _0x3aba17=await this[_0xdda874(0x223)](_0x3a9aa6+_0xdda874(0x25a));if(_0x3aba17&&_0x3aba17['ts']){const _0xcf49f5=_0x3a40bc-_0x3aba17['ts'];if(_0xcf49f5<_0x31bd67)_0xe3ef6c=!![];}}catch(_0xbccbae){}if(!_0xe3ef6c)try{const _0x43502c=await this[_0xdda874(0x223)](_0x3a9aa6+_0xdda874(0x12a));if(_0x43502c&&typeof _0x43502c[_0xdda874(0x207)]===_0xdda874(0x1d3)&&_0x43502c[_0xdda874(0x207)]>0x0)_0xe3ef6c=!![];}catch(_0x55ea7e){}if(!_0xe3ef6c)try{const _0x384a8c=await this[_0xdda874(0x223)](_0x3a9aa6);if(_0x384a8c){const _0x23aaf0=_0x3a40bc-(_0x384a8c['ts']||0x0);_0x23aaf0<_0x31bd67&&(_0x384a8c[_0xdda874(0x207)]===!![]||_0x384a8c['val']==='online'||_0x384a8c[_0xdda874(0x207)]===0x1)&&(_0xe3ef6c=!![]);}}catch(_0x3ddd9b){}if(_0xe3ef6c){const _0x122495=_0x3a9aa6['split']('.'),_0x33b8a7=_0x122495[_0x122495['length']-0x1]||_0x3a9aa6;_0x5d3e44[_0xdda874(0x123)](_0x33b8a7);}}catch(_0x1fe943){this[_0xdda874(0x157)][_0xdda874(0x21f)](_0xdda874(0x160)+_0x3a9aa6+':\x20'+_0x1fe943[_0xdda874(0x261)]);}}const _0x34bc06=_0x5d3e44[_0xdda874(0x21b)]>0x0?_0x5d3e44[_0xdda874(0x21d)](',\x20'):'Niemand';return await this['setStateAsync'](_0xdda874(0x25e),{'val':_0x34bc06,'ack':!![]}),_0x5d3e44['length']>0x0;}async['runAutopilot'](){const _0x4a1819=a0_0x3991ae;await aiAgent[_0x4a1819(0x192)](this);this[_0x4a1819(0x177)][_0x4a1819(0x23c)]&&(this['updateHealthVector'](),this['triggerGaitAnalysis']());if(this[_0x4a1819(0x177)][_0x4a1819(0x1cb)])this[_0x4a1819(0x1fe)]();}async[a0_0x3991ae(0x147)](){const _0x370fb0=a0_0x3991ae,_0x803e16=[_0x370fb0(0x1ec),_0x370fb0(0x171),_0x370fb0(0x1ed)],_0x5ca9d4=[_0x370fb0(0x194),'Current.WeatherText',_0x370fb0(0x1ce)];for(const _0xcaeab7 of _0x803e16){for(const _0x3500ed of _0x5ca9d4){try{const _0x471264=_0xcaeab7+'.'+_0x3500ed,_0x545c24=await this[_0x370fb0(0x223)](_0x471264);if(_0x545c24&&_0x545c24['val']){const _0x34a28b=String(_0x545c24['val'])[_0x370fb0(0x195)]();if(_0x34a28b[_0x370fb0(0x15c)](_0x370fb0(0x1da))||_0x34a28b[_0x370fb0(0x15c)]('heiter')||_0x34a28b[_0x370fb0(0x15c)](_0x370fb0(0x24b))||_0x34a28b[_0x370fb0(0x15c)](_0x370fb0(0x18e))||_0x34a28b[_0x370fb0(0x15c)](_0x370fb0(0x22d)))return this['log'][_0x370fb0(0x16d)](_0x370fb0(0x263)+_0x471264),!![];}}catch(_0x22d283){}}}return![];}[a0_0x3991ae(0x10d)](){const _0x4052ec=a0_0x3991ae;if(!this['isProVersion'])return;try{this['getStateAsync']('LTM.trainingData.sequences',(_0xd3f31b,_0x2e6cbd)=>{const _0x325dd0=a0_0xd951;if(_0xd3f31b||!_0x2e6cbd||!_0x2e6cbd[_0x325dd0(0x207)])return;try{const _0x434797=JSON[_0x325dd0(0x1c4)](_0x2e6cbd[_0x325dd0(0x207)]);if(!_0x434797||_0x434797['length']===0x0)return;pythonBridge[_0x325dd0(0x20e)](this,_0x325dd0(0x130),{'sequences':_0x434797}),this['log'][_0x325dd0(0x16d)]('🚶\x20Gait\x20Analysis\x20triggered\x20with\x20'+_0x434797[_0x325dd0(0x21b)]+'\x20sequences');}catch(_0xe23cd){this[_0x325dd0(0x157)][_0x325dd0(0x21f)](_0x325dd0(0x1f8)+_0xe23cd['message']);}});}catch(_0x2c6b41){this[_0x4052ec(0x157)][_0x4052ec(0x21f)](_0x4052ec(0x128)+_0x2c6b41[_0x4052ec(0x261)]);}}async[a0_0x3991ae(0x1fe)](){const _0x1b894f=a0_0x3991ae;if(!this[_0x1b894f(0x190)]||!this[_0x1b894f(0x177)][_0x1b894f(0x1cb)])return;try{const _0x1b7363={},_0x16ea41={},_0xde00e9=this[_0x1b894f(0x118)][_0x1b894f(0x176)]||[];for(const _0x2183bd of _0xde00e9){if((_0x2183bd[_0x1b894f(0x237)]===_0x1b894f(0x246)||_0x2183bd['type']===_0x1b894f(0x1de))&&_0x2183bd[_0x1b894f(0x1a1)])try{const _0xa2c96b=await this[_0x1b894f(0x223)](_0x2183bd['id']);_0xa2c96b&&typeof _0xa2c96b[_0x1b894f(0x207)]===_0x1b894f(0x1d3)&&(_0x1b7363[_0x2183bd[_0x1b894f(0x1a1)]]=_0xa2c96b[_0x1b894f(0x207)],_0x16ea41[_0x2183bd[_0x1b894f(0x1a1)]]=_0x2183bd['isSolar']||![]);}catch(_0x4c8b47){}}let _0x20a537=0xa;if(this[_0x1b894f(0x118)]['weatherTempId'])try{const _0x523ae5=await this[_0x1b894f(0x223)](this[_0x1b894f(0x118)][_0x1b894f(0x1b3)]);if(_0x523ae5&&typeof _0x523ae5['val']===_0x1b894f(0x1d3))_0x20a537=_0x523ae5[_0x1b894f(0x207)];}catch(_0x31519b){}const _0x473b07=await this[_0x1b894f(0x147)]();let _0x306bc8={};try{const _0x29ba04=await this[_0x1b894f(0x13b)]('analysis.energy.warmupTargets');if(_0x29ba04&&_0x29ba04[_0x1b894f(0x207)])_0x306bc8=JSON[_0x1b894f(0x1c4)](_0x29ba04[_0x1b894f(0x207)]);}catch(_0x4563f0){}pythonBridge[_0x1b894f(0x20e)](this,'PREDICT_ENERGY',{'current_temps':_0x1b7363,'t_out':_0x20a537,'is_sunny':_0x473b07,'solar_flags':_0x16ea41,'warmup_targets':_0x306bc8}),this['log'][_0x1b894f(0x154)]('🔮\x20Energy\x20Prediction\x20triggered\x20('+Object['keys'](_0x1b7363)['length']+'\x20rooms)');}catch(_0x327dcd){this[_0x1b894f(0x157)][_0x1b894f(0x21f)](_0x1b894f(0x26b)+_0x327dcd[_0x1b894f(0x261)]);}}['updateHealthVector'](){const _0x4173ad=a0_0x3991ae;if(!this[_0x4173ad(0x166)]||this['rawEventLog'][_0x4173ad(0x21b)]===0x0)return;const _0x21cc9f=new Array(0x30)[_0x4173ad(0x178)](0x0),_0x3bd1e9=Array[_0x4173ad(0x23b)]({'length':0x30},()=>[]),_0x2cf64e=new Date()[_0x4173ad(0x175)](0x0,0x0,0x0,0x0);this[_0x4173ad(0x166)][_0x4173ad(0x10b)](_0x1ae4a2=>{const _0x446004=_0x4173ad,_0x43e003=new Date(_0x1ae4a2[_0x446004(0x102)]);if(_0x43e003[_0x446004(0x15a)]()>=_0x2cf64e){const _0x5f237c=_0x43e003['getHours'](),_0x54d984=_0x43e003['getMinutes'](),_0x166fd7=_0x5f237c*0x2+Math[_0x446004(0x220)](_0x54d984/0x1e);_0x166fd7>=0x0&&_0x166fd7<0x30&&(_0x21cc9f[_0x166fd7]++,_0x3bd1e9[_0x166fd7][_0x446004(0x123)]({'time':_0x43e003[_0x446004(0xff)](_0x446004(0x1a3),{'hour':_0x446004(0x114),'minute':_0x446004(0x114)}),'location':_0x1ae4a2[_0x446004(0x1a1)]||'Unbekannt','type':_0x1ae4a2['type']||_0x446004(0x17b)}));}}),this[_0x4173ad(0x101)](_0x4173ad(0x151),{'val':JSON['stringify'](_0x21cc9f),'ack':!![]}),this['setStateAsync'](_0x4173ad(0x161),{'val':JSON['stringify'](_0x3bd1e9),'ack':!![]});}async[a0_0x3991ae(0x17a)](_0x4ae218){const _0x53d4ce=a0_0x3991ae;if(!this['config'][_0x53d4ce(0x1a2)]||typeof _0x4ae218!==_0x53d4ce(0x1d3))return;const _0x3a3289=this[_0x53d4ce(0x118)][_0x53d4ce(0x1ab)]||0.04;this[_0x53d4ce(0x1bf)]['push']({'timestamp':Date['now'](),'value':_0x4ae218}),this[_0x53d4ce(0x1bf)][_0x53d4ce(0x21b)]>0x64&&this[_0x53d4ce(0x1bf)][_0x53d4ce(0x1ad)](),_0x4ae218>_0x3a3289&&!this[_0x53d4ce(0x1d0)]&&(this[_0x53d4ce(0x1d0)]=!![],this[_0x53d4ce(0x157)][_0x53d4ce(0x21f)]('🔊\x20Infraschall-Alarm:\x20'+_0x4ae218[_0x53d4ce(0x141)](0x4)+'\x20>\x20'+_0x3a3289+_0x53d4ce(0x105)),await this[_0x53d4ce(0x1c0)](_0x4ae218,_0x53d4ce(0x170)),setTimeout(()=>{const _0x24ddb2=_0x53d4ce;this[_0x24ddb2(0x1d0)]=![];},0x5*0x3c*0x3e8));}async['triggerInfrasoundCorrelation'](_0x363431,_0x3b593d){const _0x401f9f=a0_0x3991ae;if(!this[_0x401f9f(0x1ea)]){const _0x51666d=this[_0x401f9f(0x137)]['slice'](0x0,0xa),_0x35d848=_0x51666d[_0x401f9f(0x255)](_0x15b24b=>new Date(_0x15b24b[_0x401f9f(0x102)])[_0x401f9f(0xff)]('de-DE')+_0x401f9f(0x18d)+(_0x15b24b['location']||_0x401f9f(0x1e5))+':\x20'+_0x15b24b[_0x401f9f(0x1ef)])[_0x401f9f(0x21d)]('\x0a');this[_0x401f9f(0x157)]['warn']('🔊\x20FORENSIC:\x20Infraschall\x20bei\x20Abwesenheit!\x20Pressure:\x20'+_0x363431[_0x401f9f(0x141)](0x4)+_0x401f9f(0x252)+_0x35d848);if(this[_0x401f9f(0x118)]['infrasoundArmingId'])try{const _0xfd22f8=await this[_0x401f9f(0x223)](this['config'][_0x401f9f(0x172)]);_0xfd22f8&&_0xfd22f8[_0x401f9f(0x207)]===!![]&&(await this[_0x401f9f(0x101)](_0x401f9f(0x1bb),{'val':JSON[_0x401f9f(0x1a8)]({'timestamp':Date[_0x401f9f(0x134)](),'pressure':_0x363431[_0x401f9f(0x141)](0x4),'eventType':_0x3b593d,'recentEvents':_0x51666d[_0x401f9f(0x1b0)](0x0,0x3)}),'ack':!![]}),this[_0x401f9f(0x157)][_0x401f9f(0x236)](_0x401f9f(0x217)));}catch(_0x4f5429){}}else this[_0x401f9f(0x157)]['debug'](_0x401f9f(0x218)+_0x363431['toFixed'](0x4)+_0x401f9f(0x1d6));}async[a0_0x3991ae(0x244)](_0x5bac1f){const _0x459758=a0_0x3991ae;if(!_0x5bac1f||!_0x5bac1f[_0x459758(0x1a1)])return;try{const _0x25887e=(this['config'][_0x459758(0x176)]||[])[_0x459758(0x1e3)](_0x200b4b=>_0x200b4b[_0x459758(0x1a1)]===_0x5bac1f['location']&&(_0x200b4b[_0x459758(0x237)]===_0x459758(0x246)||_0x200b4b['type']===_0x459758(0x1de)));if(_0x25887e[_0x459758(0x21b)]===0x0)return;const _0x23bf34=await this[_0x459758(0x223)](_0x25887e[0x0]['id']);if(!_0x23bf34||typeof _0x23bf34[_0x459758(0x207)]!==_0x459758(0x1d3))return;const _0x4cd806=_0x23bf34[_0x459758(0x207)];let _0x483a8c=null;if(this['config']['weatherTempId']){const _0xc5af71=await this[_0x459758(0x223)](this[_0x459758(0x118)]['weatherTempId']);_0xc5af71&&typeof _0xc5af71['val']==='number'&&(_0x483a8c=_0xc5af71[_0x459758(0x207)]);}if(_0x483a8c!==null){const _0x25ee2a=Math['abs'](_0x4cd806-_0x483a8c);_0x25ee2a>0x3&&(this[_0x459758(0x157)][_0x459758(0x16d)](_0x459758(0x15f)+_0x5bac1f[_0x459758(0x1a1)]+_0x459758(0x22e)+_0x25ee2a['toFixed'](0x1)+_0x459758(0x17e)+_0x4cd806+'°C,\x20Außen:\x20'+_0x483a8c+_0x459758(0x1ca)),await this[_0x459758(0x101)](_0x459758(0x193),{'val':JSON[_0x459758(0x1a8)]({'room':_0x5bac1f[_0x459758(0x1a1)],'timestamp':Date[_0x459758(0x134)](),'tempDiff':_0x25ee2a[_0x459758(0x141)](0x1),'recommendation':_0x25ee2a>0x5?'Gute\x20Lüftungsmöglichkeit!':'Lüften\x20empfohlen'}),'ack':!![]}));}}catch(_0x31f6e1){this[_0x459758(0x157)][_0x459758(0x21f)](_0x459758(0x1f6)+_0x31f6e1[_0x459758(0x261)]);}}async[a0_0x3991ae(0x1b7)](_0x11d7f5){const _0x4cc4e2=a0_0x3991ae;if(!_0x11d7f5||typeof _0x11d7f5!==_0x4cc4e2(0x268))return;const _0x5b80cd={'timestamp':_0x11d7f5[_0x4cc4e2(0x102)]||Date[_0x4cc4e2(0x134)](),'id':_0x11d7f5['id']||Date[_0x4cc4e2(0x134)]()[_0x4cc4e2(0x243)](),'name':_0x11d7f5[_0x4cc4e2(0x1ef)]||_0x4cc4e2(0x1a6),'type':_0x11d7f5['type']||'custom','location':_0x11d7f5['location']||_0x4cc4e2(0x1e5),'value':_0x11d7f5[_0x4cc4e2(0x267)]||null};this[_0x4cc4e2(0x137)]['unshift'](_0x5b80cd);if(this[_0x4cc4e2(0x137)]['length']>0x1388)this['eventHistory'][_0x4cc4e2(0x213)]();await this[_0x4cc4e2(0x101)](_0x4cc4e2(0x1fb),{'val':JSON[_0x4cc4e2(0x1a8)](this[_0x4cc4e2(0x137)]),'ack':!![]}),this[_0x4cc4e2(0x157)][_0x4cc4e2(0x16d)](_0x4cc4e2(0x26c)+_0x5b80cd['name']+'\x20('+_0x5b80cd['location']+')');}[a0_0x3991ae(0xfd)](_0x476309){}}if(require[a0_0x3991ae(0x18c)]!==module)module[a0_0x3991ae(0x24f)]=_0x3fb73d=>new CogniLiving(_0x3fb73d);else new CogniLiving();
+/* eslint-disable */
+'use strict';
+
+/*
+ * cogni-living Adapter für ioBroker
+ * Version: 0.30.38 (Fix: Scheduler Init & Robust Calendar Search)
+ */
+
+const utils = require('@iobroker/adapter-core');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const path = require('path');
+const fs = require('fs');
+
+// --- MODULE IMPORTS ---
+const installer = require('./lib/installer');
+const scanner = require('./lib/scanner');
+const schedulers = require('./lib/scheduler');
+const topology = require('./lib/topology');
+const setup = require('./lib/setup');
+const recorder = require('./lib/recorder');
+const pythonBridge = require('./lib/python_bridge');
+const aiAgent = require('./lib/ai_agent');
+const deadMan = require('./lib/dead_man');
+const automation = require('./lib/automation');
+const notifications = require('./lib/notifications');
+const pwaServer = require('./lib/pwa_server');
+const cloudflareTunnel = require('./lib/cloudflare_tunnel');
+
+// --- CONSTANTS ---
+const GEMINI_MODEL = 'models/gemini-flash-latest';
+
+class CogniLiving extends utils.Adapter {
+    constructor(options) {
+        super({ ...options, name: 'cogni-living' });
+        this.eventHistory = []; this.analysisHistory = []; this.rawEventLog = []; this.dailyDigests = []; this.sensorLastValues = {};
+        this.systemConfig = { latitude: 0, longitude: 0, city: '' }; this.isPresent = true; this.exitTimer = null; this.exitGraceTimer = null; this.isGracePeriodActive = false;
+        this.genAI = null; this.geminiModel = null; this.currentSystemMode = setup.SYSTEM_MODES.NORMAL; this.isProVersion = false; this.lastAlertState = false;
+        this.analysisTimer = null; this.calendarCheckTimer = null; this.presenceCheckTimer = null; this.ltmJob = null; this.modeResetJob = null; this.driftAnalysisTimer = null; this.briefingJob = null;
+        this.historyJob = null;
+
+        this.trackerHeartbeat = null;
+        this.healthTrendInterval = null;
+        this.roomIntegratorTimer = null;
+
+        this.dependencyInstallInProgress = false;
+        this.lastTrackerEventTime = Date.now();
+
+        this.memoryCache = null;
+        this.bootTime = Date.now();
+
+        this.infrasoundLocked = false;
+        this.pressureBuffer = [];
+
+        // Active Modules
+        this.activeModules = { health: true, security: true, energy: true, comfort: true };
+
+        this.on('ready', this.onReady.bind(this));
+        this.on('stateChange', this.onStateChange.bind(this));
+        this.on('unload', this.onUnload.bind(this));
+        this.on('message', this.onMessage.bind(this));
+    }
+
+    async onReady() {
+        this.log.info(`cogni-living adapter starting (v${this.version}) - Phase E (Scheduler Fix)`);
+
+        if (this.config.moduleHealth !== undefined) this.activeModules.health = this.config.moduleHealth;
+        if (this.config.moduleSecurity !== undefined) this.activeModules.security = this.config.moduleSecurity;
+        if (this.config.moduleEnergy !== undefined) this.activeModules.energy = this.config.moduleEnergy;
+        if (this.config.moduleComfort !== undefined) this.activeModules.comfort = this.config.moduleComfort;
+        if (this.config.modules) this.activeModules = { ...this.activeModules, ...this.config.modules };
+
+        this.startSystem();
+    }
+
+    async startSystem() {
+        await setup.initZombies(this);
+        try { this.isProVersion = await setup.checkLicense(this.config.licenseKey); } catch(e) {}
+        if (!this.config.inactivityThresholdHours || this.config.inactivityThresholdHours < 0.1) this.config.inactivityThresholdHours = 12;
+
+        await setup.initHistory(this);
+        await setup.initSystemConfig(this);
+        
+        // Update Topology Matrix beim Start
+        topology.updateTopology(this);
+
+        try {
+            const wt = await this.getStateAsync('analysis.energy.warmupTimes');
+            const ws = await this.getStateAsync('analysis.energy.warmupSources');
+            if (wt && wt.val && ws && ws.val) {
+                if (Date.now() - wt.ts < 4 * 3600 * 1000) {
+                    this.memoryCache = { times: JSON.parse(wt.val), sources: JSON.parse(ws.val) };
+                }
+            }
+        } catch(e) {}
+
+        if (this.config.geminiApiKey) {
+            try {
+                this.genAI = new GoogleGenerativeAI(this.config.geminiApiKey);
+                this.geminiModel = this.genAI.getGenerativeModel({ model: GEMINI_MODEL, generationConfig: { responseMimeType: 'application/json' } });
+            } catch (error) { this.log.error(`Gemini Init Error: ${error.message}`); }
+        }
+
+        await setup.createAllObjects(this);
+        await this.loadSystemMode();
+
+        // --- FIX: START SCHEDULERS (This was missing!) ---
+        schedulers.initSchedules(this);
+        // -------------------------------------------------
+
+        await this.setObjectNotExistsAsync('analysis.visualization.pulse', { type: 'state', common: { name: 'Live Event Pulse', type: 'number', role: 'value', read: true, write: false }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.activity.roomStats', { type: 'state', common: { name: 'Room Dwell Time Stats', type: 'string', role: 'json', read: true, write: false, def: '{"today":{}, "yesterday":{}, "date":""}' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.activity.roomHistory', { type: 'state', common: { name: 'Room History (24h Buckets)', type: 'string', role: 'json', read: true, write: false, def: '{"history":{}}' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.health.geminiNight', { type: 'state', common: { name: 'Gemini Report Night', type: 'string', role: 'text', read: true, write: false, def: 'Warte auf Analyse...' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.health.geminiDay', { type: 'state', common: { name: 'Gemini Report Day', type: 'string', role: 'text', read: true, write: false, def: 'Warte auf Analyse...' }, native: {} });
+
+        await this.setObjectNotExistsAsync('analysis.health.todayVector', { type: 'state', common: { name: 'Daily Activity Vector (48x30min)', type: 'string', role: 'json', read: true, write: false, def: '[]' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.health.todayRoomDetails', { type: 'state', common: { name: 'Daily Room Details (48x30min)', type: 'string', role: 'json', read: true, write: false, def: '[]' }, native: {} });
+
+        await this.setObjectNotExistsAsync('analysis.health.activityTrend', { type: 'state', common: { name: 'General Activity Trend', type: 'number', role: 'value', unit: '%', read: true, write: false }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.energy.warmupTimes', { type: 'state', common: { name: 'Warm-Up Time', type: 'string', role: 'json', read: true, write: false }, native: {} });
+
+        try {
+            const s = await this.getStateAsync('events.history');
+            if (s && s.val) {
+                this.eventHistory = JSON.parse(s.val);
+                if(this.isProVersion) {
+                    const r = await this.getStateAsync('LTM.rawEventLog');
+                    if(r && r.val) this.rawEventLog = JSON.parse(r.val);
+                }
+                this.log.info(`📦 Restored ${this.eventHistory.length} events from standard storage.`);
+            }
+        } catch(e){ this.eventHistory = []; }
+
+        try { const s = await this.getStateAsync('LTM.dailyDigests'); if (s && s.val) this.dailyDigests = JSON.parse(s.val); } catch(e){ this.dailyDigests = []; }
+
+        const msg = this.dailyDigests.length >= (this.config.minDaysForBaseline || 7) ? `Aktiv (${this.dailyDigests.length} Tage)` : `Lernphase (${this.dailyDigests.length}/${this.config.minDaysForBaseline || 7})`;
+        await this.setStateAsync('LTM.baselineStatus', { val: msg, ack: true });
+
+        this.subscribeStates('analysis.trigger');
+        this.subscribeStates('LTM.triggerDailyDigest');
+        this.subscribeStates('analysis.training.triggerHealth');
+
+        if (this.config.infrasoundEnabled && this.config.infrasoundSensorId && this.activeModules.security) {
+            this.subscribeForeignStates(this.config.infrasoundSensorId);
+        }
+        const devices = this.config.devices; if (devices) { for (const d of devices) { await this.subscribeForeignStatesAsync(d.id); } }
+        const devs = this.config.presenceDevices; if (devs) { for (const id of devs) { await this.subscribeForeignStatesAsync(id); } }
+
+        const schedule = require('node-schedule');
+        if (this.historyJob) this.historyJob.cancel();
+        this.historyJob = schedule.scheduleJob('59 23 * * *', () => {
+            this.saveDailyHistory();
+        });
+
+        setTimeout(() => this.replayTodayEvents(), 5000);
+
+        if (this.roomIntegratorTimer) clearInterval(this.roomIntegratorTimer);
+        this.integrateRoomTime();
+        this.roomIntegratorTimer = setInterval(async () => {
+            await this.integrateRoomTime();
+        }, 60 * 1000);
+
+        if (this.healthTrendInterval) clearInterval(this.healthTrendInterval);
+        this.healthTrendInterval = setInterval(() => {
+            if (this.isProVersion && this.activeModules.health) {
+                this.runPythonHealthCheck();
+            }
+        }, 4 * 60 * 60 * 1000);
+
+        // Energy Prediction Timer (alle 15 Minuten)
+        if (this.analysisTimer) clearInterval(this.analysisTimer);
+        if (this.activeModules.energy) {
+            this.analysisTimer = setInterval(() => {
+                this.triggerEnergyPrediction();
+            }, 15 * 60 * 1000); // 15 Minuten
+            // Initialer Run nach 10 Sekunden
+            setTimeout(() => this.triggerEnergyPrediction(), 10000);
+        }
+
+        // Calendar Check Timer (alle 2 Minuten) - KRITISCH für rechtzeitiges Heizen!
+        if (this.calendarCheckTimer) clearInterval(this.calendarCheckTimer);
+        if (this.config.useCalendar && this.activeModules.energy) {
+            this.calendarCheckTimer = setInterval(() => {
+                automation.checkCalendarTriggers(this);
+            }, 2 * 60 * 1000); // 2 Minuten
+            // Initialer Run nach 15 Sekunden
+            setTimeout(() => automation.checkCalendarTriggers(this), 15000);
+        }
+
+        // Presence Check Timer (alle 1 Minute) - Aktualisiert "Bewohner Anwesend"
+        if (this.presenceCheckTimer) clearInterval(this.presenceCheckTimer);
+        if (this.config.presenceDevices && this.config.presenceDevices.length > 0) {
+            this.presenceCheckTimer = setInterval(async () => {
+                await this.checkWifiPresence();
+            }, 60 * 1000); // 1 Minute
+            // Initialer Run nach 5 Sekunden
+            setTimeout(async () => await this.checkWifiPresence(), 5000);
+        }
+
+        const manualPythonPath = path.join(__dirname, '.venv', 'bin', 'python');
+        pythonBridge.startService(this, manualPythonPath);
+
+        // --- PWA FAMILY APP ---
+        this._startFamilyApp();
+    }
+
+    async _startFamilyApp() {
+        if (!this.config.pwaEnabled) return;
+        
+        try {
+            await pwaServer.start(this);
+            
+            if (this.config.cloudflareEnabled) {
+                const port = this.config.pwaPort || 8095;
+                const tunnelUrl = await cloudflareTunnel.start(this, port);
+                if (tunnelUrl) {
+                    this.log.info(`[PWA] 🌍 Cloudflare URL: ${tunnelUrl}/?token=${this.config.familyShareToken || ''}`);
+                }
+            }
+        } catch(e) {
+            this.log.error(`[PWA] Startup error: ${e.message}`);
+        }
+    }
+
+    onUnload(callback) {
+        if (this.historyJob) this.historyJob.cancel();
+        this.saveDailyHistory().then(async () => {
+            if (this.analysisTimer) clearInterval(this.analysisTimer);
+            if (this.calendarCheckTimer) clearInterval(this.calendarCheckTimer);
+            if (this.presenceCheckTimer) clearInterval(this.presenceCheckTimer);
+            if (this.roomIntegratorTimer) clearInterval(this.roomIntegratorTimer);
+            recorder.abortExitTimer(this);
+            pythonBridge.stopService(this);
+            
+            // PWA und Tunnel beenden
+            cloudflareTunnel.stop();
+            await pwaServer.stop();
+            
+            callback();
+        });
+    }
+
+    async replayTodayEvents() {
+        if (!this.eventHistory || this.eventHistory.length === 0) {
+            this.log.warn("⚠ Replay skipped: No events in memory.");
+            return;
+        }
+
+        this.log.info(`↺ Replaying ${this.eventHistory.length} events from today...`);
+        const startOfDay = new Date().setHours(0,0,0,0);
+
+        const histId = 'analysis.activity.roomHistory';
+        let histData = { history: {}, date: new Date().toLocaleDateString() };
+
+        const vectorId = 'analysis.health.todayVector';
+        const detailsId = 'analysis.health.todayRoomDetails';
+
+        let todayBuckets = new Array(48).fill(0);
+        let todayDetails = Array.from({ length: 48 }, () => []);
+
+        this.eventHistory.forEach(evt => {
+            if (evt.timestamp >= startOfDay) {
+                if (recorder.isRelevantActivity(evt.type, evt.value)) {
+                    const date = new Date(evt.timestamp);
+                    const bucketIndex = (date.getHours() * 2) + (date.getMinutes() >= 30 ? 1 : 0);
+
+                    if (bucketIndex < 48) {
+                        todayBuckets[bucketIndex]++;
+
+                        const roomName = evt.location || evt.name || '?';
+                        let currentRooms = todayDetails[bucketIndex];
+                        if (!currentRooms.includes(roomName)) {
+                            currentRooms.push(roomName);
+                        }
+                    }
+
+                    const hour = date.getHours();
+                    let room = evt.location || 'Unknown';
+                    const dev = (this.config.devices||[]).find(d => d.location === room);
+                    if(dev) room = dev.location;
+
+                    if (!histData.history[room]) histData.history[room] = new Array(24).fill(0);
+                    if (histData.history[room][hour] < 60) histData.history[room][hour]++;
+                }
+            }
+        });
+
+        const currentState = await this.getStateAsync(histId);
+        if (!currentState || !currentState.val || currentState.val === '{}' || currentState.val.includes('"history":{}')) {
+            await this.setStateAsync(histId, { val: JSON.stringify(histData), ack: true });
+        }
+
+        await this.setStateAsync(vectorId, { val: JSON.stringify(todayBuckets), ack: true });
+        await this.setStateAsync(detailsId, { val: JSON.stringify(todayDetails), ack: true });
+
+        this.log.info("✅ Dashboard Data (Rooms & Timeline & Details) restored.");
+    }
+
+    async saveDailyHistory() {
+        if (!this.activeModules.health) return;
+        const dateStr = new Date().toISOString().split('T')[0];
+        this.log.debug(`💾 Saving Daily History for ${dateStr}...`);
+
+        try {
+            const [
+                roomHistory, geminiNight, geminiDay, anomalyScore, todayVector, activityTrend, gaitSpeed
+            ] = await Promise.all([
+                this.getStateAsync('analysis.activity.roomHistory'),
+                this.getStateAsync('analysis.health.geminiNight'),
+                this.getStateAsync('analysis.health.geminiDay'),
+                this.getStateAsync('analysis.security.lastScore'),
+                this.getStateAsync('analysis.health.todayVector'),
+                this.getStateAsync('analysis.health.activityTrend'),
+                this.getStateAsync('analysis.health.gaitSpeed')
+            ]);
+
+            const startOfDayTimestamp = new Date().setHours(0,0,0,0);
+            const freshAirCount = this.eventHistory.filter(e => e.timestamp >= startOfDayTimestamp && (e.name.toLowerCase().includes('haustür') || e.name.toLowerCase().includes('terrasse')) && (e.value === true || e.value === 'open')).length;
+
+            let battery = 85;
+            if (activityTrend && activityTrend.val !== undefined) battery = Math.min(100, Math.max(20, Math.round(80 + (Number(activityTrend.val) * 5))));
+
+            // WICHTIG: Nur Events von HEUTE speichern, nicht alle Events!
+            const todayEvents = this.eventHistory.filter(e => e.timestamp >= startOfDayTimestamp);
+
+            const snapshot = {
+                date: dateStr,
+                timestamp: Date.now(),
+                roomHistory: roomHistory?.val ? JSON.parse(roomHistory.val) : {},
+                geminiNight: geminiNight?.val || 'Keine Daten',
+                geminiDay: geminiDay?.val || 'Keine Daten',
+                anomalyScore: anomalyScore?.val || 0.1,
+                todayVector: todayVector?.val ? JSON.parse(todayVector.val) : new Array(48).fill(0),
+                batteryLevel: battery,
+                freshAirCount: freshAirCount,
+                gaitSpeed: gaitSpeed?.val !== undefined && gaitSpeed?.val !== null ? Number(gaitSpeed.val) : null,
+                eventHistory: todayEvents  // ✅ NUR Events von heute!
+            };
+
+            const dataDir = utils.getAbsoluteDefaultDataDir();
+            const historyDir = path.join(dataDir, 'cogni-living', 'history');
+            if (!fs.existsSync(historyDir)) fs.mkdirSync(historyDir, { recursive: true });
+
+            const filePath = path.join(historyDir, `${dateStr}.json`);
+            fs.writeFileSync(filePath, JSON.stringify(snapshot));
+            this.log.info(`✅ History saved: ${filePath}`);
+
+        } catch(e) { this.log.error(`History Save Error: ${e.message}`); }
+    }
+
+    async integrateRoomTime() {
+        if (!this.isPresent) return;
+        try {
+            let currentRoom = null;
+            try {
+                const trState = await this.getStateAsync('analysis.prediction.trackerTopRoom');
+                const tpState = await this.getStateAsync('analysis.prediction.trackerConfidence');
+                if (trState && trState.val && tpState && tpState.val && tpState.val > 0.3) {
+                    if (trState.val !== 'Unknown' && trState.val !== 'Init...') currentRoom = trState.val;
+                }
+            } catch(e) {}
+
+            if (!currentRoom) {
+                const devices = this.config.devices || [];
+                for (const dev of devices) {
+                    if (dev.type === 'motion' && dev.location) {
+                        try {
+                            const s = await this.getForeignStateAsync(dev.id);
+                            if (s && (s.val === true || s.val === 'on' || s.val === 1)) {
+                                currentRoom = dev.location;
+                                break;
+                            }
+                        } catch(e) {}
+                    }
+                }
+            }
+
+            if (!currentRoom) return;
+
+            const devices = this.config.devices || [];
+            let normalizedRoom = currentRoom;
+            const match = devices.find(d => d.location && d.location.toLowerCase() === currentRoom.toLowerCase());
+            if (match) normalizedRoom = match.location;
+
+            const histId = 'analysis.activity.roomHistory';
+            const histState = await this.getStateAsync(histId);
+            const todayStr = new Date().toLocaleDateString();
+            let histData = { history: {}, date: todayStr };
+
+            if (histState && histState.val) { try { histData = JSON.parse(histState.val); } catch(e){} }
+
+            if (histData.date !== todayStr) { histData.history = {}; histData.date = todayStr; }
+            if (!histData.history[normalizedRoom]) histData.history[normalizedRoom] = new Array(24).fill(0);
+
+            const currentHour = new Date().getHours();
+            if (histData.history[normalizedRoom][currentHour] < 60) histData.history[normalizedRoom][currentHour]++;
+
+            await this.setStateAsync(histId, { val: JSON.stringify(histData), ack: true });
+
+        } catch(e) { this.log.warn(`[Integrator] Error: ${e.message}`); }
+    }
+
+    async onMessage(obj) {
+        if (typeof obj === 'object' && obj.message) {
+            if (obj.command === 'getHistoryData') {
+                const requestedDate = obj.message.date;
+                const dataDir = utils.getAbsoluteDefaultDataDir();
+                const filePath = path.join(dataDir, 'cogni-living', 'history', `${requestedDate}.json`);
+                if (fs.existsSync(filePath)) {
+                    try {
+                        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                        this.sendTo(obj.from, obj.command, { success: true, data: data }, obj.callback);
+                    } catch(e) { this.sendTo(obj.from, obj.command, { success: false, error: "Corrupt" }, obj.callback); }
+                } else { this.sendTo(obj.from, obj.command, { success: false, error: "No data" }, obj.callback); }
+            }
+            else if (obj.command === 'getOverviewData') {
+                const digestCount = this.dailyDigests.length;
+
+                let hourlyActivity = new Array(48).fill(0);
+                let hourlyDetails = Array.from({ length: 48 }, () => []);
+                try {
+                    const vecState = await this.getStateAsync('analysis.health.todayVector');
+                    if (vecState && vecState.val) hourlyActivity = JSON.parse(vecState.val);
+
+                    const detState = await this.getStateAsync('analysis.health.todayRoomDetails');
+                    if (detState && detState.val) hourlyDetails = JSON.parse(detState.val);
+                } catch(e) {}
+
+                // LOAD YESTERDAY'S DATA
+                let yesterdayActivity = new Array(48).fill(0);
+                try {
+                    const y = new Date(); y.setDate(y.getDate() - 1);
+                    const yStr = y.toISOString().split('T')[0];
+                    const dataDir = utils.getAbsoluteDefaultDataDir();
+                    const yPath = path.join(dataDir, 'cogni-living', 'history', `${yStr}.json`);
+                    if (fs.existsSync(yPath)) {
+                        const yData = JSON.parse(fs.readFileSync(yPath, 'utf8'));
+                        if (yData && yData.todayVector) yesterdayActivity = yData.todayVector;
+                    }
+                } catch(e) { /* Ignore */ }
+
+                let roomStats = { today: {}, yesterday: {} };
+                try { const rs = await this.getStateAsync('analysis.activity.roomStats'); if (rs && rs.val) roomStats = JSON.parse(rs.val); } catch(e) {}
+
+                // BATTERY FALLBACK
+                let activityTrendVal = null;
+                try { const at = await this.getStateAsync('analysis.health.activityTrend'); if(at) activityTrendVal = at.val; } catch(e){}
+
+                if (activityTrendVal === undefined || activityTrendVal === null) {
+                    const totalEvents = hourlyActivity.reduce((a, b) => a + b, 0);
+                    const fallbackTrend = Math.min(2, Math.max(-2, (100 - totalEvents) / 50));
+                    activityTrendVal = fallbackTrend;
+                }
+
+                let detected = false; let desc = ''; let tId = ''; let tVal = '';
+                try {
+                    const dState = await this.getStateAsync('analysis.automation.patternDetected');
+                    if (dState && dState.val) {
+                        detected = true;
+                        const descS = await this.getStateAsync('analysis.automation.description'); desc = descS ? descS.val : '';
+                        const tIdS = await this.getStateAsync('analysis.automation.targetId'); tId = tIdS ? tIdS.val : '';
+                        const tValS = await this.getStateAsync('analysis.automation.targetValue'); tVal = tValS ? tValS.val : '';
+                    }
+                } catch(e){}
+
+                const isSunny = await this.checkSolarCondition();
+                const hasSolar = (this.config.devices || []).some(d => d.isSolar);
+                const solarActive = isSunny && hasSolar;
+                let presenceWho = ''; try { const pw = await this.getStateAsync('system.presenceWho'); if(pw && pw.val) presenceWho = pw.val; } catch(e){}
+
+                this.sendTo(obj.from, obj.command, {
+                    success: true,
+                    eventHistory: this.eventHistory.slice(0, 2000),
+                    stats: {
+                        digestCount,
+                        isPresent: this.isPresent,
+                        hourlyActivity,
+                        hourlyDetails,
+                        yesterdayActivity,
+                        solarActive,
+                        presenceWho,
+                        roomStats,
+                        activityTrend: activityTrendVal,
+                        modules: this.activeModules
+                    },
+                    automation: { detected, description: desc, targetId: tId, targetValue: tVal }
+                }, obj.callback);
+            }
+            else if (obj.command === 'checkThermostats') { try { const results = await automation.scanThermostats(this); this.sendTo(obj.from, obj.command, { success: true, results }, obj.callback); } catch (e) { this.sendTo(obj.from, obj.command, { success: false, error: e.message }, obj.callback); } }
+            else if (obj.command === 'scanDevices') { try { const results = await scanner.scanForDevices(this, obj.message || {}); this.sendTo(obj.from, obj.command, { success: true, devices: results }, obj.callback); } catch (e) {} }
+            else if (obj.command === 'getEnums') {
+                const functions = await this.getForeignObjectsAsync('enum.functions.*', 'enum');
+                const list = [];
+                if (functions) {
+                    for (const id in functions) {
+                        let n = functions[id].common.name;
+                        if (n && typeof n === 'object') n = n.de || n.en || Object.values(n)[0] || JSON.stringify(n);
+                        list.push({ id: id, name: String(n || id) });
+                    }
+                }
+                const rooms = await this.getForeignObjectsAsync('enum.rooms.*', 'enum');
+                const roomList = [];
+                if (rooms) {
+                    for (const id in rooms) {
+                        let n = rooms[id].common.name;
+                        if (n && typeof n === 'object') n = n.de || n.en || Object.values(n)[0] || JSON.stringify(n);
+                        roomList.push(String(n || id.split('.').pop()));
+                    }
+                }
+                this.sendTo(obj.from, obj.command, { success: true, enums: list, rooms: roomList }, obj.callback);
+            }
+            // --- FIX: ROBUST CALENDAR SEARCH & HANDLERS ---
+            else if (obj.command === 'getCalendarNames') {
+                try {
+                    // Loop through ALL ical instances to find calendars, regardless of frontend default
+                    const instances = await this.getObjectViewAsync('system', 'instance', { startkey: 'system.adapter.ical.', endkey: 'system.adapter.ical.\u9999' });
+                    const names = new Set();
+
+                    if (instances && instances.rows) {
+                        for (const row of instances.rows) {
+                            const instId = row.id.replace('system.adapter.', '');
+                            const state = await this.getForeignStateAsync(`${instId}.data.table`);
+
+                            let foundSpecific = false;
+                            if (state && state.val) {
+                                const table = typeof state.val === 'string' ? JSON.parse(state.val) : state.val;
+                                if (Array.isArray(table)) {
+                                    table.forEach(entry => {
+                                        if(entry.calendarName) {
+                                            names.add(entry.calendarName);
+                                            foundSpecific = true;
+                                        }
+                                    });
+                                }
+                            }
+
+                            // FALLBACK: If no specific "calendarName" found in events, use Instance ID
+                            // This ensures we always find at least "ical.0" if it exists.
+                            if (!foundSpecific) {
+                                names.add(instId);
+                            }
+                        }
+                    }
+
+                    const finalNames = Array.from(names);
+                    if (finalNames.length === 0) finalNames.push('Standard'); // Absolute fallback
+
+                    this.sendTo(obj.from, obj.command, { success: true, names: finalNames }, obj.callback);
+                } catch(e) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: "Scan Error: " + e.message }, obj.callback);
+                }
+            }
+            else if (obj.command === 'refreshCalendar') {
+                try {
+                    await automation.updateSchedulePreview(this);
+                    this.sendTo(obj.from, obj.command, { success: true }, obj.callback);
+                } catch(e) {
+                    this.log.warn(`refreshCalendar failed: ${e.message}`);
+                    this.sendTo(obj.from, obj.command, { success: false, error: e.message }, obj.callback);
+                }
+            }
+            else if (obj.command === 'updateTopologyMatrix') {
+                try {
+                    const newMatrix = obj.message.matrix;
+                    if (!newMatrix || !Array.isArray(newMatrix)) {
+                        throw new Error('Invalid matrix data');
+                    }
+                    
+                    // Lade aktuelle Topologie
+                    const state = await this.getStateAsync('analysis.topology.structure');
+                    if (state && state.val) {
+                        const topo = JSON.parse(state.val);
+                        topo.matrix = newMatrix;
+                        topo.updated = Date.now();
+                        
+                        // Speichere aktualisierte Matrix
+                        await this.setStateAsync('analysis.topology.structure', { val: JSON.stringify(topo), ack: true });
+                        
+                        this.log.debug(`🕸️ Topology Matrix manually updated by user.`);
+                        this.sendTo(obj.from, obj.command, { success: true }, obj.callback);
+                    } else {
+                        throw new Error('No topology data found');
+                    }
+                } catch(e) {
+                    this.log.warn(`updateTopologyMatrix failed: ${e.message}`);
+                    this.sendTo(obj.from, obj.command, { success: false, error: e.message }, obj.callback);
+                }
+            }
+            else if (obj.command === 'pythonBridge') {
+                // Generic Python Bridge Handler - leitet alle Commands an Python weiter
+                try {
+                    const pythonCommand = obj.message.command;
+                    const pythonData = obj.message;
+                    
+                    this.log.debug(`[PythonBridge] Forwarding command: ${pythonCommand}`);
+                    
+                    pythonBridge.send(this, pythonCommand, pythonData, (response) => {
+                        // Callback wenn Python antwortet
+                        this.sendTo(obj.from, obj.command, response, obj.callback);
+                    });
+                } catch(e) {
+                    this.log.warn(`pythonBridge command failed: ${e.message}`);
+                    this.sendTo(obj.from, obj.command, { type: 'ERROR', payload: e.message }, obj.callback);
+                }
+            }
+            else if (obj.command === 'testApiKey') {
+                try {
+                    const testKey = obj.message ? obj.message.apiKey : '';
+                    if (!testKey) throw new Error("Kein API Key übergeben.");
+
+                    const testAI = new GoogleGenerativeAI(testKey);
+                    const model = testAI.getGenerativeModel({ model: GEMINI_MODEL });
+                    const result = await model.generateContent("Say Hello");
+                    const response = await result.response;
+                    const text = response.text();
+
+                    this.sendTo(obj.from, obj.command, { success: true, message: "Verbindung erfolgreich: " + text.substring(0, 20) + "..." }, obj.callback);
+                } catch(e) {
+                    this.sendTo(obj.from, obj.command, { success: false, message: e.message }, obj.callback);
+                }
+            }
+            else if (obj.command === 'testContext') {
+                try {
+                    const isSunny = await this.checkSolarCondition();
+                    const instances = await this.getObjectViewAsync('system', 'instance', { startkey: 'system.adapter.ical.', endkey: 'system.adapter.ical.\u9999' });
+                    const calCount = instances && instances.rows ? instances.rows.length : 0;
+
+                    this.sendTo(obj.from, obj.command, {
+                        success: true,
+                        weather: `Sonne: ${isSunny}, Temp: ${this.sensorLastValues[this.config.outdoorSensorId] || '?'}°C`,
+                        calendar: `${calCount} Kalender-Adapter gefunden.`
+                    }, obj.callback);
+                } catch(e) {
+                    this.sendTo(obj.from, obj.command, { success: false }, obj.callback);
+                }
+            }
+        }
+    }
+
+    runPythonHealthCheck() {
+        if (!this.activeModules.health) return;
+        this.log.debug('🐍 Triggering Python Health Check (Activity Trend)...');
+        try {
+            const rawEvents = this.rawEventLog || [];
+            pythonBridge.send(this, 'CALCULATE_HEALTH_TREND', { events: rawEvents });
+        } catch(e) { this.log.warn('Failed to trigger Python Health Check'); }
+    }
+
+    async onStateChange(id, state) {
+        if (!state || this.dependencyInstallInProgress) return;
+        if (id.includes('telegram') && id.endsWith('communicate.request') && state.val) return;
+
+        if (this.config.infrasoundEnabled && id === this.config.infrasoundSensorId && this.activeModules.security) {
+            this.handleInfrasound(state.val);
+            return;
+        }
+
+        if (state.ack && id.endsWith('pulse')) return;
+
+        if (id === `${this.namespace}.system.mode`) {
+            if (state.val && Object.values(setup.SYSTEM_MODES).includes(state.val)) {
+                this.currentSystemMode = state.val;
+                if (state.val === setup.SYSTEM_MODES.VACATION) await recorder.setPresence(this, false);
+                else await recorder.setPresence(this, true);
+
+                if (this.isProVersion) {
+                    let learnActive = false;
+                    let learnDuration = 0;
+                    let learnLabel = 'manual';
+                    if (this.currentSystemMode === 'party') { learnActive = true; learnDuration = 360; learnLabel = 'Party Mode'; }
+                    else if (this.currentSystemMode === 'guest') { learnActive = true; learnDuration = 1440; learnLabel = 'Guest Mode'; }
+                    pythonBridge.send(this, 'SET_LEARNING_MODE', { active: learnActive, duration: learnDuration, label: learnLabel });
+                    await this.setStateAsync('analysis.security.learningStatus', { val: JSON.stringify({ active: learnActive, label: learnLabel, timestamp: Date.now() }), ack: true });
+                }
+            }
+            if (!state.ack) this.setState(id, { val: this.currentSystemMode, ack: true });
+            return;
+        }
+
+        if (id.endsWith('analysis.energy.warmupSources') && state.ack) this.protectAiMemory(state.val);
+        if (id.endsWith('analysis.energy.warmupTimes') && state.ack && this.activeModules.energy) automation.checkCalendarTriggers(this);
+
+        if (!state.ack) {
+            if (id.includes('analysis.trigger') && state.val) { this.setState(id, { val: false, ack: true }); aiAgent.runGeminiAnalysis(this); return; }
+            if (id.includes('triggerDailyDigest') && state.val) { this.setState(id, { val: false, ack: true }); if (this.isProVersion) aiAgent.createDailyDigest(this, pythonBridge); return; }
+            if (id.includes('triggerBriefing') && state.val) { this.setState(id, { val: false, ack: true }); aiAgent.sendMorningBriefing(this); return; }
+            if (id.includes('automation.triggerAction') && state.val) { this.setState(id, { val: false, ack: true }); aiAgent.executeAutomationAction(this); return; }
+            if (id.includes('analysis.training.triggerSecurity') && state.val) { this.setState(id, { val: false, ack: true }); if (this.isProVersion) { try { const seqState = await this.getStateAsync('LTM.trainingData.sequences'); if (seqState && seqState.val) { const sequences = JSON.parse(seqState.val); this.setStateAsync('analysis.training.status', { val: 'Sec-Training started...', ack: true }); pythonBridge.send(this, 'TRAIN_SECURITY', { sequences }); } } catch(e) {} } return; }
+
+            if (id.includes('analysis.training.triggerHealth') && state.val) {
+                this.setState(id, { val: false, ack: true });
+                try {
+                    // Health Reports sind für alle verfügbar (nicht nur Pro!)
+                    aiAgent.generateHealthReport(this, 'NIGHT');
+                    setTimeout(() => aiAgent.generateHealthReport(this, 'DAY'), 12000);
+                    
+                    // Training nur für Pro-Version
+                    if (this.isProVersion) {
+                        this.runPythonHealthCheck();
+                        const s = await this.getStateAsync('LTM.dailyDigests');
+                        if(s && s.val) pythonBridge.send(this, 'TRAIN_HEALTH', { digests: JSON.parse(s.val) });
+                    }
+                } catch(e) {
+                    this.log.warn(`triggerHealth error: ${e.message}`);
+                }
+                return;
+            }
+
+            if (id.includes('analysis.training.triggerEnergy') && state.val) {
+                this.setState(id, { val: false, ack: true });
+                // Trigger Energy Prediction (PINN + Warmup + Ventilation)
+                await this.triggerEnergyPrediction();
+                return;
+            }
+            if (id.includes('analysis.training.triggerComfort') && state.val) {
+                this.setState(id, { val: false, ack: true });
+                if (this.isProVersion) {
+                    try {
+                        const s = await this.getStateAsync('LTM.rawEventLog');
+                        if(s && s.val) {
+                            const deviceMap = {};
+                            if (this.config.devices) this.config.devices.forEach(d => { if (d.id && d.type) deviceMap[d.id] = d.type; });
+                            pythonBridge.send(this, 'TRAIN_COMFORT', { events: JSON.parse(s.val), deviceMap: deviceMap });
+                        }
+                    } catch(e){}
+                }
+                return;
+            }
+            if (id.includes('analysis.training.triggerTopology') && state.val) {
+                this.setState(id, { val: false, ack: true });
+                topology.updateTopology(this);
+                if (this.isProVersion) {
+                    try {
+                        const seqState = await this.getStateAsync('LTM.trainingData.sequences');
+                        if (seqState && seqState.val) pythonBridge.send(this, 'TRAIN_TOPOLOGY', { sequences: JSON.parse(seqState.val) });
+                    } catch(e) {}
+                }
+                return;
+            }
+        }
+
+        const dev = (this.config.devices || []).find(d => d.id === id);
+        if (dev) {
+            const evt = await recorder.processSensorEvent(this, id, state, dev);
+            if (evt) {
+                this.setState('analysis.visualization.pulse', { val: Date.now(), ack: true });
+            }
+            if (evt && evt.type === 'motion' && evt.location && this.isProVersion) {
+                deadMan.updateLocation(this, evt.location);
+            }
+            if (state.val && (state.val === true || state.val === 1 || String(state.val).toLowerCase() === 'open')) {
+                if (dev.type && (dev.type.includes('window') || dev.type.includes('door'))) {
+                    this.analyzeWindowOpening(dev);
+                }
+            }
+            if (dev.type === 'temperature' || dev.type === 'thermostat') {
+                if (this.activeModules.energy) automation.cleanupGhostInterventions(this);
+            }
+        }
+    }
+
+    async protectAiMemory(newSourcesJson) {
+        if (!this.memoryCache || (Date.now() - this.bootTime > 300000)) return;
+        try {
+            const newSources = JSON.parse(newSourcesJson);
+            const oldSources = this.memoryCache.sources;
+            let restoreNeeded = false;
+            for (const room in oldSources) {
+                if (oldSources[room].includes('AI') && newSources[room] && !newSources[room].includes('AI')) { restoreNeeded = true; break; }
+            }
+            if (restoreNeeded) {
+                await this.setStateAsync('analysis.energy.warmupTimes', { val: JSON.stringify(this.memoryCache.times), ack: true });
+                await this.setStateAsync('analysis.energy.warmupSources', { val: JSON.stringify(this.memoryCache.sources), ack: true });
+            }
+        } catch(e) {}
+    }
+
+    async loadSystemMode() { try { const state = await this.getStateAsync(setup.SYSTEM_DP_MODE); if (state && state.val) this.currentSystemMode = state.val; } catch (e) { this.currentSystemMode = setup.SYSTEM_MODES.NORMAL; } }
+    async checkWifiPresence() {
+        const presenceDevices = this.config.presenceDevices || [];
+        if (presenceDevices.length === 0) return false;
+
+        const presentPeople = [];
+        const now = Date.now();
+        const TIMEOUT_MS = 5 * 60 * 1000; // 5 Minuten
+
+        for (const deviceId of presenceDevices) {
+            try {
+                // Versuche verschiedene States zu finden: isOnline, last_seen, uptime, etc.
+                let isOnline = false;
+                
+                // 1. Prüfe isOnline State
+                try {
+                    const onlineState = await this.getForeignStateAsync(`${deviceId}.isOnline`);
+                    if (onlineState && onlineState.val === true) isOnline = true;
+                } catch(e) {}
+
+                // 2. Prüfe last_seen Timestamp (falls vorhanden)
+                if (!isOnline) {
+                    try {
+                        const lastSeenState = await this.getForeignStateAsync(`${deviceId}.last_seen`);
+                        if (lastSeenState && lastSeenState.ts) {
+                            const diffMs = now - lastSeenState.ts;
+                            if (diffMs < TIMEOUT_MS) isOnline = true;
+                        }
+                    } catch(e) {}
+                }
+
+                // 3. Prüfe uptime (falls vorhanden)
+                if (!isOnline) {
+                    try {
+                        const uptimeState = await this.getForeignStateAsync(`${deviceId}.uptime`);
+                        if (uptimeState && typeof uptimeState.val === 'number' && uptimeState.val > 0) isOnline = true;
+                    } catch(e) {}
+                }
+
+                // 4. Fallback: Prüfe State selbst (manche Adapter haben nur den Hauptstate)
+                if (!isOnline) {
+                    try {
+                        const mainState = await this.getForeignStateAsync(deviceId);
+                        if (mainState) {
+                            // Prüfe Timestamp des States
+                            const diffMs = now - (mainState.ts || 0);
+                            if (diffMs < TIMEOUT_MS && (mainState.val === true || mainState.val === 'online' || mainState.val === 1)) {
+                                isOnline = true;
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                if (isOnline) {
+                    // Extrahiere Namen aus Device-ID (z.B. "alias.0.Smartphone.Marc" -> "Marc")
+                    const parts = deviceId.split('.');
+                    const name = parts[parts.length - 1] || deviceId;
+                    presentPeople.push(name);
+                }
+            } catch(e) {
+                this.log.warn(`checkWifiPresence: Error checking ${deviceId}: ${e.message}`);
+            }
+        }
+
+        // Aktualisiere presenceWho State
+        const presenceWho = presentPeople.length > 0 ? presentPeople.join(', ') : 'Niemand';
+        await this.setStateAsync('system.presenceWho', { val: presenceWho, ack: true });
+
+        return presentPeople.length > 0;
+    }
+    async runAutopilot() { await aiAgent.runGeminiAnalysis(this); if(this.activeModules.health) { this.updateHealthVector(); this.triggerGaitAnalysis(); } if(this.activeModules.energy) this.triggerEnergyPrediction(); }
+    async checkSolarCondition() {
+        // Prüft verschiedene Wetter-Adapter auf sonniges Wetter
+        const weatherAdapters = ['weatherunderground.0', 'accuweather.0', 'daswetter.0'];
+        const weatherPaths = ['forecast.current.weather', 'Current.WeatherText', 'NextHours.Location_1.Day_1.current.symbol_desc'];
+        
+        for (const adapter of weatherAdapters) {
+            for (const path of weatherPaths) {
+                try {
+                    const stateId = `${adapter}.${path}`;
+                    const state = await this.getForeignStateAsync(stateId);
+                    if (state && state.val) {
+                        const text = String(state.val).toLowerCase();
+                        // Prüfe auf sonnige Keywords (DE + EN)
+                        if (text.includes('sunny') || text.includes('heiter') || 
+                            text.includes('klar') || text.includes('sonn') || 
+                            text.includes('clear')) {
+                            this.log.debug(`☀️ Solar Condition: SUNNY detected via ${stateId}`);
+                            return true;
+                        }
+                    }
+                } catch(e) {
+                    // Adapter nicht vorhanden - weiter versuchen
+                }
+            }
+        }
+        return false;
+    }
+    triggerGaitAnalysis() {
+        if (!this.isProVersion) return;
+        
+        // Ganganalyse basierend auf Motion-Sensor-Sequenzen
+        try {
+            this.getStateAsync('LTM.trainingData.sequences', (err, state) => {
+                if (err || !state || !state.val) return;
+                
+                try {
+                    const sequences = JSON.parse(state.val);
+                    if (!sequences || sequences.length === 0) return;
+                    
+                    // Sende Sequenzen an Python für Ganganalyse
+                    pythonBridge.send(this, 'ANALYZE_GAIT', { sequences });
+                    
+                    this.log.debug(`🚶 Gait Analysis triggered with ${sequences.length} sequences`);
+                } catch(e) {
+                    this.log.warn(`triggerGaitAnalysis parse error: ${e.message}`);
+                }
+            });
+        } catch(e) {
+            this.log.warn(`triggerGaitAnalysis error: ${e.message}`);
+        }
+    }
+    async triggerEnergyPrediction() {
+        if (!this.isProVersion || !this.activeModules.energy) return;
+        try {
+            // Sammle aktuelle Temperaturen
+            const current_temps = {};
+            const solar_flags = {};
+            const devices = this.config.devices || [];
+            
+            for (const dev of devices) {
+                if ((dev.type === 'temperature' || dev.type === 'thermostat') && dev.location) {
+                    try {
+                        const state = await this.getForeignStateAsync(dev.id);
+                        if (state && typeof state.val === 'number') {
+                            current_temps[dev.location] = state.val;
+                            solar_flags[dev.location] = dev.isSolar || false;
+                        }
+                    } catch(e) {}
+                }
+            }
+
+            // Außentemperatur (falls vorhanden)
+            let t_out = 10.0;
+            if (this.config.weatherTempId) {
+                try {
+                    const wState = await this.getForeignStateAsync(this.config.weatherTempId);
+                    if (wState && typeof wState.val === 'number') t_out = wState.val;
+                } catch(e) {}
+            }
+
+            const is_sunny = await this.checkSolarCondition();
+
+            // Warmup-Ziele laden
+            let warmup_targets = {};
+            try {
+                const wt = await this.getStateAsync('analysis.energy.warmupTargets');
+                if (wt && wt.val) warmup_targets = JSON.parse(wt.val);
+            } catch(e) {}
+
+            pythonBridge.send(this, 'PREDICT_ENERGY', {
+                current_temps,
+                t_out,
+                is_sunny,
+                solar_flags,
+                warmup_targets
+            });
+            
+            this.log.info(`🔮 Energy Prediction triggered (${Object.keys(current_temps).length} rooms)`);
+        } catch(e) {
+            this.log.warn(`triggerEnergyPrediction Error: ${e.message}`);
+        }
+    }
+    updateHealthVector() {
+        // Berechnet den 48-Slot Activity Vector für heute (00:00-23:59, 30-Min-Slots)
+        if (!this.rawEventLog || this.rawEventLog.length === 0) return;
+
+        const todayVector = new Array(48).fill(0);
+        const todayDetails = Array.from({ length: 48 }, () => []);
+        const todayStart = new Date().setHours(0, 0, 0, 0);
+
+        // Zähle Events pro 30-Min-Slot
+        this.rawEventLog.forEach(entry => {
+            const eventTime = new Date(entry.timestamp);
+            if (eventTime.getTime() >= todayStart) {
+                const hour = eventTime.getHours();
+                const minute = eventTime.getMinutes();
+                const slotIndex = hour * 2 + Math.floor(minute / 30);
+                
+                if (slotIndex >= 0 && slotIndex < 48) {
+                    todayVector[slotIndex]++;
+                    todayDetails[slotIndex].push({
+                        time: eventTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+                        location: entry.location || 'Unbekannt',
+                        type: entry.type || 'Event'
+                    });
+                }
+            }
+        });
+
+        // Setze States
+        this.setStateAsync('analysis.health.todayVector', { 
+            val: JSON.stringify(todayVector), 
+            ack: true 
+        });
+        
+        this.setStateAsync('analysis.health.todayRoomDetails', { 
+            val: JSON.stringify(todayDetails), 
+            ack: true 
+        });
+    }
+    async handleInfrasound(value) {
+        // Verarbeitet Infraschall-Sensor-Daten für Anomalie-Erkennung
+        if (!this.config.infrasoundEnabled || typeof value !== 'number') return;
+        
+        const threshold = this.config.infrasoundThreshold || 0.04;
+        
+        // Füge Wert zum Buffer hinzu (für Korrelation mit Events)
+        this.pressureBuffer.push({
+            timestamp: Date.now(),
+            value: value
+        });
+        
+        // Halte Buffer klein (letzte 100 Werte = ca. 5-10 Minuten bei 5s Polling)
+        if (this.pressureBuffer.length > 100) {
+            this.pressureBuffer.shift();
+        }
+        
+        // Prüfe auf Schwellwert-Überschreitung (potenzielle Anomalie)
+        if (value > threshold && !this.infrasoundLocked) {
+            this.infrasoundLocked = true;
+            this.log.warn(`🔊 Infraschall-Alarm: ${value.toFixed(4)} > ${threshold} (Threshold)`);
+            
+            // Trigger Korrelation mit letzten Events
+            await this.triggerInfrasoundCorrelation(value, 'threshold_exceeded');
+            
+            // Lock für 5 Minuten (Spam-Schutz)
+            setTimeout(() => {
+                this.infrasoundLocked = false;
+            }, 5 * 60 * 1000);
+        }
+    }
+    async triggerInfrasoundCorrelation(pressure, eventType) {
+        // Korreliert Infraschall-Anomalie mit letzten Events (forensische Analyse)
+        if (!this.isPresent) {
+            // Nur wenn niemand zuhause ist → potenzielle Sicherheits-Anomalie!
+            const recentEvents = this.eventHistory.slice(0, 10);
+            const eventLog = recentEvents.map(e => 
+                `${new Date(e.timestamp).toLocaleTimeString('de-DE')} - ${e.location || 'Unknown'}: ${e.name}`
+            ).join('\n');
+            
+            this.log.warn(`🔊 FORENSIC: Infraschall bei Abwesenheit! Pressure: ${pressure.toFixed(4)}, Events:\n${eventLog}`);
+            
+            // Optional: Sende Benachrichtigung (nur bei Abwesenheit!)
+            if (this.config.infrasoundArmingId) {
+                try {
+                    const armState = await this.getForeignStateAsync(this.config.infrasoundArmingId);
+                    if (armState && armState.val === true) {
+                        // System ist "scharf" → Alarm!
+                        await this.setStateAsync('analysis.safety.infrasoundAlert', {
+                            val: JSON.stringify({
+                                timestamp: Date.now(),
+                                pressure: pressure.toFixed(4),
+                                eventType: eventType,
+                                recentEvents: recentEvents.slice(0, 3)
+                            }),
+                            ack: true
+                        });
+                        
+                        this.log.error(`🚨 INFRASCHALL-ALARM: Anomalie bei Abwesenheit (scharf)!`);
+                    }
+                } catch(e) {}
+            }
+        } else {
+            // Bei Anwesenheit nur Debug-Log
+            this.log.debug(`🔊 Infraschall: ${pressure.toFixed(4)} (Bewohner anwesend - normal)`);
+        }
+    }
+    async analyzeWindowOpening(device) {
+        // Analysiert Fenster-/Türöffnungen für Lüftungsempfehlungen
+        if (!device || !device.location) return;
+
+        try {
+            // Hole aktuelle Raumtemperatur
+            const tempDevices = (this.config.devices || []).filter(d => 
+                d.location === device.location && (d.type === 'temperature' || d.type === 'thermostat')
+            );
+            
+            if (tempDevices.length === 0) return;
+            
+            const tempState = await this.getForeignStateAsync(tempDevices[0].id);
+            if (!tempState || typeof tempState.val !== 'number') return;
+            
+            const roomTemp = tempState.val;
+            
+            // Hole Außentemperatur
+            let outsideTemp = null;
+            if (this.config.weatherTempId) {
+                const outState = await this.getForeignStateAsync(this.config.weatherTempId);
+                if (outState && typeof outState.val === 'number') {
+                    outsideTemp = outState.val;
+                }
+            }
+            
+            // Einfache Lüftungslogik: Wenn Außentemperatur verfügbar
+            if (outsideTemp !== null) {
+                const tempDiff = Math.abs(roomTemp - outsideTemp);
+                
+                // Empfehlung: Lüften wenn Temperatur-Differenz > 3°C
+                if (tempDiff > 3.0) {
+                    this.log.debug(`💨 Lüftung in ${device.location}: Temp-Differenz ${tempDiff.toFixed(1)}°C (Innen: ${roomTemp}°C, Außen: ${outsideTemp}°C)`);
+                    
+                    // Optional: State setzen für Benachrichtigungen
+                    await this.setStateAsync('analysis.ventilation.lastWindow', {
+                        val: JSON.stringify({
+                            room: device.location,
+                            timestamp: Date.now(),
+                            tempDiff: tempDiff.toFixed(1),
+                            recommendation: tempDiff > 5 ? 'Gute Lüftungsmöglichkeit!' : 'Lüften empfohlen'
+                        }),
+                        ack: true
+                    });
+                }
+            }
+        } catch(e) {
+            this.log.warn(`analyzeWindowOpening error: ${e.message}`);
+        }
+    }
+    async appendToLog(entry) {
+        // Fügt einen Eintrag zum Event-Log hinzu (für manuelle Events oder externe Systeme)
+        if (!entry || typeof entry !== 'object') return;
+        
+        const logEntry = {
+            timestamp: entry.timestamp || Date.now(),
+            id: entry.id || Date.now().toString(),
+            name: entry.name || 'Manual Event',
+            type: entry.type || 'custom',
+            location: entry.location || 'Unknown',
+            value: entry.value || null
+        };
+        
+        this.eventHistory.unshift(logEntry);
+        if (this.eventHistory.length > 5000) this.eventHistory.pop();
+        
+        // Persistiere Event History
+        await this.setStateAsync('events.history', { 
+            val: JSON.stringify(this.eventHistory), 
+            ack: true 
+        });
+        
+        this.log.debug(`📝 Manual event logged: ${logEntry.name} (${logEntry.location})`);
+    }
+    sendNotification(message) { /* ... */ }
+}
+
+if (require.main !== module) module.exports = (options) => new CogniLiving(options);
+else new CogniLiving();

@@ -511,7 +511,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
                 {/* NOTIFICATIONS */}
                 <Accordion expanded={expandedAccordion === 'panel3'} onChange={this.handleAccordionChange('panel3')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Benachrichtigungen</Typography></AccordionSummary><AccordionDetails>
-                    <NotificationsView settings={this.state as any} availableInstances={this.state.availableInstances} isTesting={this.state.isTestingNotification} onChange={(attr, val) => this.updateNativeValue(attr, val)} onTest={() => this.handleTestNotificationClick()} />
+                    <NotificationsView settings={this.state as any} availableInstances={this.state.availableInstances} isTesting={this.state.isTestingNotification} onChange={(attr, val) => this.updateNativeValue(attr, val)} onTest={() => this.handleTestNotificationClick()} socket={this.props.socket} namespace={`${this.props.adapterName}.${this.props.instance}`} />
                 </AccordionDetails></Accordion>
 
                 {/* SENSORS */}
