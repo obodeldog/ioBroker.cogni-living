@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.66",
+        "version": "0.30.67",
         "news": {
+            "0.30.67": {
+                "en": "FIX: geminiDay/geminiNight JSON parsing restored AI summary; distillNightText reduces night quality to 2-3 words locally; sparkline legend added",
+                "de": "FIX: geminiDay/geminiNight JSON-Parsing stellt KI-Zusammenfassung wieder her; distillNightText kürzt Nachttext lokal auf 2-3 Wörter; Sparkline-Legende ergänzt"
+            },
             "0.30.66": {
                 "en": "FIX: PWA activity metric replaced by anomaly status (Unauffällig/Auffällig); night quality from geminiNight AI text; 7-day sparkline with correct path and anomaly coloring",
                 "de": "FIX: PWA Aktivität ersetzt durch Anomalie-Status (Unauffällig/Auffällig); Nachtqualität aus geminiNight KI-Text; 7-Tage-Sparkline mit korrektem Pfad und Anomalie-Farb-Codierung"
