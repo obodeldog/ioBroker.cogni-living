@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.70",
+        "version": "0.30.71",
         "news": {
+            "0.30.71": {
+                "en": "FIX: PWA analysis progress now polls real completion (NIGHT+DAY); sparkline CSS hover tooltip; night color logic unified; real activity timestamp shown",
+                "de": "FIX: PWA Analyse-Fortschritt wartet auf echte Fertigmeldung (NACHT+TAG); Sparkline CSS-Hover-Tooltip; Nacht-Farblogik vereinheitlicht; echte Uhrzeit statt 'gerade eben'"
+            },
             "0.30.70": {
                 "en": "FIX: Room charts x-axis corrected (newest day right); 7-day KI summary parser handles all JSON formats; PWA shows real time instead of 'gerade eben'; aiSummary array-format stripped",
                 "de": "FIX: Raum-Charts X-Achse korrigiert (neuester Tag rechts); 7-Tage KI-Parser für alle JSON-Formate; PWA zeigt echte Uhrzeit statt 'gerade eben'; aiSummary Array-Format bereinigt"

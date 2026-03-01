@@ -734,7 +734,11 @@ class CogniLiving extends utils.Adapter {
                     }
 
                     // History-Snapshot nach Analyse aktualisieren (damit PWA/Charts frische Daten sehen)
-                    setTimeout(() => this.saveDailyHistory().catch(e => {}), 20000);
+                    // Nach ~30s (NIGHT 0s + DAY 12s + Gemini ~10s + Puffer) ist alles fertig → PWA-Polling informieren
+                    setTimeout(() => {
+                        this.saveDailyHistory().catch(e => {});
+                        pwaServer.markAnalysisDone();
+                    }, 30000);
                 } catch(e) {
                     this.log.warn(`triggerHealth error: ${e.message}`);
                 }
