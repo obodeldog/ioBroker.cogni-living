@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.64",
+        "version": "0.30.65",
         "news": {
+            "0.30.65": {
+                "en": "FIX: Unified data sources – PWA + Admin now read from same history file; window sensors correctly counted (fenster/haustuer/terrasse/balkon); roomHistory used for bath minutes",
+                "de": "FIX: Einheitliche Datenquelle – PWA + Admin lesen aus gleicher History-Datei; Fenstersensoren korrekt erkannt (fenster/haustür/terrasse/balkon); Bad-Minuten aus roomHistory"
+            },
             "0.30.64": {
                 "en": "FIX: PWA uses roomStats for bath minutes, history-file for windows/night; Analyze-button with progress bar; Cloudflare process health-check",
                 "de": "FIX: PWA nutzt roomStats für Bad-Minuten, History-Datei für Fenster/Nacht; Analysieren-Button mit Ladebalken; Cloudflare Prozess-Health-Check"

@@ -315,7 +315,16 @@ class CogniLiving extends utils.Adapter {
             ]);
 
             const startOfDayTimestamp = new Date().setHours(0,0,0,0);
-            const freshAirCount = this.eventHistory.filter(e => e.timestamp >= startOfDayTimestamp && (e.name.toLowerCase().includes('haustür') || e.name.toLowerCase().includes('terrasse')) && (e.value === true || e.value === 'open')).length;
+            // Fenster/Tür-Öffnungen: alle Sensoren mit fenster/haustür/terrasse/balkon/window im Namen
+            const FRESH_AIR_KEYWORDS = ['fenster', 'haustür', 'haustuer', 'terrasse', 'balkon', 'balkontür', 'window', 'door'];
+            const freshAirCount = this.eventHistory.filter(e => {
+                const ts = e.timestamp || e.ts || 0;
+                if (ts < startOfDayTimestamp) return false;
+                const name = (e.name || e.id || e.deviceName || '').toLowerCase();
+                const isWindowSensor = FRESH_AIR_KEYWORDS.some(k => name.includes(k));
+                const isOpen = e.value === true || e.value === 1 || e.value === 'true' || e.value === 'open';
+                return isWindowSensor && isOpen;
+            }).length;
 
             let battery = 85;
             if (activityTrend && activityTrend.val !== undefined) battery = Math.min(100, Math.max(20, Math.round(80 + (Number(activityTrend.val) * 5))));
@@ -323,18 +332,40 @@ class CogniLiving extends utils.Adapter {
             // WICHTIG: Nur Events von HEUTE speichern, nicht alle Events!
             const todayEvents = this.eventHistory.filter(e => e.timestamp >= startOfDayTimestamp);
 
+            // Raum-Verweildauer heute aus roomHistory berechnen (Minuten pro Raum)
+            const roomHistoryData = roomHistory?.val ? JSON.parse(roomHistory.val) : {};
+            const todayRoomMinutes = {};
+            if (roomHistoryData.history) {
+                for (const [room, hourlyArr] of Object.entries(roomHistoryData.history)) {
+                    if (Array.isArray(hourlyArr)) {
+                        todayRoomMinutes[room] = hourlyArr.reduce((a, b) => a + (b || 0), 0);
+                    }
+                }
+            }
+            // roomStats-State aktuell halten (gleiche Datenquelle für Admin + PWA)
+            try {
+                let existingStats = { today: {}, yesterday: {}, date: '' };
+                const rsState = await this.getStateAsync('analysis.activity.roomStats');
+                if (rsState && rsState.val) existingStats = JSON.parse(rsState.val);
+                existingStats.today = todayRoomMinutes;
+                existingStats.date = dateStr;
+                await this.setStateAsync('analysis.activity.roomStats', { val: JSON.stringify(existingStats), ack: true });
+            } catch(e) {}
+
             const snapshot = {
                 date: dateStr,
                 timestamp: Date.now(),
-                roomHistory: roomHistory?.val ? JSON.parse(roomHistory.val) : {},
+                roomHistory: roomHistoryData,
+                todayRoomMinutes: todayRoomMinutes,   // ← direkt nutzbar: { 'EG Bad': 25, ... }
                 geminiNight: geminiNight?.val || 'Keine Daten',
                 geminiDay: geminiDay?.val || 'Keine Daten',
                 anomalyScore: anomalyScore?.val || 0.1,
                 todayVector: todayVector?.val ? JSON.parse(todayVector.val) : new Array(48).fill(0),
                 batteryLevel: battery,
                 freshAirCount: freshAirCount,
+                windowOpenings: freshAirCount,        // ← alias für PWA-Kompatibilität
                 gaitSpeed: gaitSpeed?.val !== undefined && gaitSpeed?.val !== null ? Number(gaitSpeed.val) : null,
-                eventHistory: todayEvents  // ✅ NUR Events von heute!
+                eventHistory: todayEvents
             };
 
             const dataDir = utils.getAbsoluteDefaultDataDir();
@@ -700,6 +731,9 @@ class CogniLiving extends utils.Adapter {
                         const s = await this.getStateAsync('LTM.dailyDigests');
                         if(s && s.val) pythonBridge.send(this, 'TRAIN_HEALTH', { digests: JSON.parse(s.val) });
                     }
+
+                    // History-Snapshot nach Analyse aktualisieren (damit PWA/Charts frische Daten sehen)
+                    setTimeout(() => this.saveDailyHistory().catch(e => {}), 20000);
                 } catch(e) {
                     this.log.warn(`triggerHealth error: ${e.message}`);
                 }
