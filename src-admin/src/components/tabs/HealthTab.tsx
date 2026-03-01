@@ -1511,23 +1511,24 @@ export default function HealthTab(props: any) {
                                                 
                                                 const freshAir = day.data?.freshAirCount || 0;
                                                 
-                                                // Parse KI-Zusammenfassung (doppeltes JSON-Decode)
-                                                let summary = 'Keine Daten';
-                                                if (day.data?.geminiDay) {
+                                                // Parse KI-Zusammenfassung (multi-format: JSON-Objekt, Array, Klartext)
+                                                let summary = '';
+                                                if (day.data?.geminiDay && day.data.geminiDay !== 'Keine Daten') {
                                                     try {
-                                                        let text = day.data.geminiDay;
-                                                        // Erste Ebene: Parse wenn JSON-String
-                                                        if (text.startsWith('{') || text.startsWith('"')) {
-                                                            try { text = JSON.parse(text); } catch {}
+                                                        let val: any = day.data.geminiDay;
+                                                        // String → parsen
+                                                        if (typeof val === 'string' && (val.startsWith('{') || val.startsWith('[') || val.startsWith('"'))) {
+                                                            try { val = JSON.parse(val); } catch {}
                                                         }
-                                                        // Zweite Ebene: Extrahiere "analyse" Key
-                                                        if (typeof text === 'object' && text.analyse) {
-                                                            summary = text.analyse;
-                                                        } else if (typeof text === 'string') {
-                                                            summary = text;
+                                                        // Array → erstes Element
+                                                        if (Array.isArray(val) && val.length > 0) val = val[0];
+                                                        // Objekt → summary / analyse / text extrahieren
+                                                        if (typeof val === 'object' && val !== null) {
+                                                            val = val.summary || val.analyse || val.text || val.message || JSON.stringify(val);
                                                         }
+                                                        if (typeof val === 'string') summary = val;
                                                     } catch {
-                                                        summary = String(day.data.geminiDay).substring(0, 100);
+                                                        summary = String(day.data.geminiDay).substring(0, 150);
                                                     }
                                                 }
                                                 
@@ -1575,8 +1576,8 @@ export default function HealthTab(props: any) {
                                                                 {day.hasData ? `${freshAir}x` : '-'}
                                                             </span>
                                                         </td>
-                                                        <td style={{padding:'12px', fontSize:'0.8rem', fontStyle:'italic', color:isDark?'#aaa':'#555', maxWidth:'350px', cursor: summary.length > 80 ? 'help' : 'default'}} title={summary.length > 80 ? summary : ''}>
-                                                            {day.hasData ? `"${summary.substring(0, 80)}${summary.length > 80 ? '...' : ''}"` : '-'}
+                                                        <td style={{padding:'12px', fontSize:'0.8rem', fontStyle:'italic', color: summary ? (isDark?'#aaa':'#555') : '#555', maxWidth:'350px', cursor: summary.length > 80 ? 'help' : 'default'}} title={summary.length > 80 ? summary : ''}>
+                                                            {!day.hasData ? '-' : summary ? `"${summary.substring(0, 80)}${summary.length > 80 ? '...' : ''}"` : <span style={{color:'#555', fontStyle:'normal', fontSize:'0.75rem'}}>— Analyse noch nicht gespeichert —</span>}
                                                         </td>
                                                     </tr>
                                                 );
@@ -1593,12 +1594,13 @@ export default function HealthTab(props: any) {
                                 // Extrahiere Raum-Daten aus weekData
                                 const roomTimeSeriesMap: Record<string, number[]> = {};
                                 
-                                weekData.forEach(day => {
+                                // Älteste Tage zuerst → neuster Tag ist INDEX LETZTES = RECHTS im Chart
+                                const orderedWeekData = [...weekData].reverse();
+                                orderedWeekData.forEach(day => {
                                     if (day.hasData && day.data && day.data.roomHistory) {
                                         const roomHist = day.data.roomHistory.history || {};
                                         Object.keys(roomHist).forEach(room => {
                                             if (!roomTimeSeriesMap[room]) roomTimeSeriesMap[room] = [];
-                                            // Summiere alle 24 Stunden für diesen Tag
                                             const hourlyData = roomHist[room];
                                             const dayTotal = Array.isArray(hourlyData) 
                                                 ? hourlyData.reduce((sum: number, h: number) => sum + h, 0) 
@@ -1683,14 +1685,13 @@ export default function HealthTab(props: any) {
                                                             />
                                                             
                                                             {/* Punkte mit Hover-Tooltip */}
-                                                            {data.map((val, idx) => {
-                                                                const x = (idx / Math.max(1, data.length - 1)) * 100;
-                                                                const y = 90 - (maxVal > 0 ? (val / maxVal) * 80 : 0);
-                                                                const isAnomaly = val < anomalyThreshold && val > 0;
-                                                                
-                                                                // Datum für Tooltip
-                                                                const dayDate = weekData[idx]?.date;
-                                                                const dateLabel = dayDate ? `${dayDate.getDate()}.${dayDate.getMonth()+1}.` : `Tag ${idx+1}`;
+                                            {data.map((val, idx) => {
+                                                const x = (idx / Math.max(1, data.length - 1)) * 100;
+                                                const y = 90 - (maxVal > 0 ? (val / maxVal) * 80 : 0);
+                                                const isAnomaly = val < anomalyThreshold && val > 0;
+                                                
+                                                const dayDate = orderedWeekData[idx]?.date;
+                                                const dateLabel = dayDate ? `${dayDate.getDate()}.${dayDate.getMonth()+1}.` : `Tag ${idx+1}`;
                                                                 
                                                                 return (
                                                                     <circle
@@ -1714,9 +1715,9 @@ export default function HealthTab(props: any) {
                                                     {/* X-ACHSE: DATUM (unter dem Chart, mit Y-Achsen-Offset) */}
                                                     <div style={{display:'flex', marginLeft:`${yAxisWidth}px`, overflow:'hidden'}}>
                                                         <div style={{display:'flex', justifyContent:'space-between', width:'100%', fontSize:'0.55rem', color: isDark?'#666':'#999'}}>
-                                                            {data.map((_, idx) => {
-                                                                const dayDate = weekData[idx]?.date;
-                                                                if (!dayDate) return <span key={idx} style={{flex:1, textAlign:'center'}}>-</span>;
+                                            {data.map((_, idx) => {
+                                                const dayDate = orderedWeekData[idx]?.date;
+                                                if (!dayDate) return <span key={idx} style={{flex:1, textAlign:'center'}}>-</span>;
                                                                 // Zeige nur jeden 2. oder 3. Tag bei vielen Daten
                                                                 const step = data.length > 20 ? 3 : data.length > 10 ? 2 : 1;
                                                                 if (idx % step !== 0) return <span key={idx} style={{flex:1}}></span>;
