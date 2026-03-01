@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.65",
+        "version": "0.30.66",
         "news": {
+            "0.30.66": {
+                "en": "FIX: PWA activity metric replaced by anomaly status (Unauffällig/Auffällig); night quality from geminiNight AI text; 7-day sparkline with correct path and anomaly coloring",
+                "de": "FIX: PWA Aktivität ersetzt durch Anomalie-Status (Unauffällig/Auffällig); Nachtqualität aus geminiNight KI-Text; 7-Tage-Sparkline mit korrektem Pfad und Anomalie-Farb-Codierung"
+            },
             "0.30.65": {
                 "en": "FIX: Unified data sources – PWA + Admin now read from same history file; window sensors correctly counted (fenster/haustuer/terrasse/balkon); roomHistory used for bath minutes",
                 "de": "FIX: Einheitliche Datenquelle – PWA + Admin lesen aus gleicher History-Datei; Fenstersensoren korrekt erkannt (fenster/haustür/terrasse/balkon); Bad-Minuten aus roomHistory"

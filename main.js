@@ -356,14 +356,15 @@ class CogniLiving extends utils.Adapter {
                 date: dateStr,
                 timestamp: Date.now(),
                 roomHistory: roomHistoryData,
-                todayRoomMinutes: todayRoomMinutes,   // ← direkt nutzbar: { 'EG Bad': 25, ... }
-                geminiNight: geminiNight?.val || 'Keine Daten',
-                geminiDay: geminiDay?.val || 'Keine Daten',
-                anomalyScore: anomalyScore?.val || 0.1,
+                todayRoomMinutes: todayRoomMinutes,   // { 'EG Bad': 25, ... }
+                geminiNight: geminiNight?.val || null,
+                geminiDay: geminiDay?.val || null,
+                anomalyScore: anomalyScore?.val !== undefined && anomalyScore?.val !== null
+                    ? Number(anomalyScore.val) : null,
                 todayVector: todayVector?.val ? JSON.parse(todayVector.val) : new Array(48).fill(0),
                 batteryLevel: battery,
                 freshAirCount: freshAirCount,
-                windowOpenings: freshAirCount,        // ← alias für PWA-Kompatibilität
+                windowOpenings: freshAirCount,
                 gaitSpeed: gaitSpeed?.val !== undefined && gaitSpeed?.val !== null ? Number(gaitSpeed.val) : null,
                 eventHistory: todayEvents
             };
