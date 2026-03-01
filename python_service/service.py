@@ -57,7 +57,11 @@ def process_message(msg):
 
         # 1. SECURITY
         if cmd == "TRAIN_SECURITY":
-            success, details, thresh = security_brain.train(data.get("sequences", []))
+            # Primär: dailyDigests für IsolationForest (wenn vorhanden)
+            digests = data.get("digests", [])
+            sequences = data.get("sequences", [])
+            train_data = digests if digests else sequences
+            success, details, thresh = security_brain.train(train_data)
             send_result("TRAINING_COMPLETE", {"success": success, "details": details, "threshold": thresh})
 
         # --- GRAPH BRAIN TRAINING (DEBUG EDITION) ---
@@ -147,7 +151,11 @@ def process_message(msg):
 
         # 2. HEALTH
         elif cmd == "TRAIN_HEALTH":
-            success, details = health_brain.train(data.get("digests", []))
+            digests = data.get("digests", [])
+            success, details = health_brain.train(digests)
+            # Security-IsolationForest parallel mittrainieren (gleiche Daten)
+            if success and digests:
+                security_brain.train(digests)
             send_result("HEALTH_TRAIN_RESULT", {"success": success, "details": details})
 
         elif cmd == "ANALYZE_HEALTH":

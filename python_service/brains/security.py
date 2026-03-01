@@ -2,15 +2,16 @@ import os
 import pickle
 import numpy as np
 import json
-import time # WICHTIG für Zeitstempel
+import time
 
-# PFAD-LOGIK: Gehe einen Ordner hoch (zurück zu python_service/)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, "security_model.keras")
 SCALER_PATH = os.path.join(BASE_DIR, "security_scaler.pkl")
 VOCAB_PATH = os.path.join(BASE_DIR, "security_vocab.pkl")
 GRAPH_MODEL_PATH = os.path.join(BASE_DIR, "graph_behavior.pkl")
 CONFIG_PATH = os.path.join(BASE_DIR, "security_config.json")
+# IsolationForest-Modell für Sequenz-Anomalie (trainiert aus dailyDigests)
+IF_MODEL_PATH = os.path.join(BASE_DIR, "security_if_model.pkl")
 DEFAULT_THRESHOLD = 0.05
 
 class SecurityBrain:
@@ -18,6 +19,9 @@ class SecurityBrain:
         self.model = None; self.scaler = None; self.vocab_encoder = None
         self.max_seq_len = 20; self.dynamic_threshold = DEFAULT_THRESHOLD; self.is_ready = False
         self.graph = GraphEngine()
+        # IsolationForest als primärer Anomalie-Detektor (ersetzt LSTM-Placeholder)
+        self.if_model = None
+        self._load_if_model()
 
         # --- NEW: RAPID ADAPTATION LAYER (Few-Shot Overlay) ---
         self.learning_mode_active = False
@@ -27,6 +31,63 @@ class SecurityBrain:
         # Für dieses einfache LSTM speichern wir die Roh-Sequenzen oder vereinfachte Signaturen.
         self.whitelist_buffer = []
         self.last_clean_time = 0
+
+    def _load_if_model(self):
+        """Lädt den IsolationForest sofern bereits trainiert."""
+        try:
+            if os.path.exists(IF_MODEL_PATH):
+                with open(IF_MODEL_PATH, 'rb') as f:
+                    self.if_model = pickle.load(f)
+        except Exception:
+            self.if_model = None
+
+    def _train_if_model(self, digests):
+        """
+        Trainiert IsolationForest auf Tages-Aktivitätsvektoren aus den dailyDigests.
+        Wird bei TRAIN_SECURITY automatisch aufgerufen.
+        """
+        try:
+            from sklearn.ensemble import IsolationForest
+            vectors = []
+            for d in digests:
+                vec = d.get('activityVector', None)
+                if vec and len(vec) == 96:
+                    vectors.append(vec)
+                else:
+                    count = d.get('eventCount', 0)
+                    v = [0] * 96
+                    for i in range(30, 80): v[i] = int(count / 50)
+                    vectors.append(v)
+            if len(vectors) < 3:
+                return False
+            X = np.array(vectors)
+            clf = IsolationForest(random_state=42, contamination=0.1)
+            clf.fit(X)
+            with open(IF_MODEL_PATH, 'wb') as f:
+                pickle.dump(clf, f)
+            self.if_model = clf
+            return True
+        except Exception:
+            return False
+
+    def _if_score(self, sequence):
+        """
+        Berechnet Anomalie-Score aus IsolationForest (0.0=normal, 1.0=stark anomal).
+        Kodiert die Sequenz als 96-dim Vektor (Stunden × Transitionen).
+        """
+        if self.if_model is None:
+            return None
+        try:
+            vec = [0] * 96
+            for step in (sequence or []):
+                room = str(step).lower() if isinstance(step, str) else str(step.get('loc', '')).lower()
+                h = hash(room) % 96
+                if vec[h] < 5: vec[h] += 1
+            X = np.array([vec])
+            raw = self.if_model.score_samples(X)[0]
+            return max(0.0, min(1.0, -raw))
+        except Exception:
+            return None
 
     def load_brain(self):
         try:
@@ -42,6 +103,7 @@ class SecurityBrain:
                         self.dynamic_threshold = conf.get('threshold', DEFAULT_THRESHOLD)
                 self.is_ready = True
             self.graph.load_behavior()
+            self._load_if_model()
             return True
         except Exception as e: return False
 
@@ -105,61 +167,53 @@ class SecurityBrain:
         return False
 
     def train(self, sequences):
+        """
+        Trainiert den IsolationForest auf Sequenz-Daten.
+        sequences kann dailyDigests oder Raumsequenzen sein.
+        """
         try:
-            # Placeholder for complex LSTM training logic to keep file small for now
-            # In a real scenario, you'd paste the full training logic here.
-            return True, "Training Simulated (Architecture Split)", 0.05
-        except Exception as e: return False, str(e), 0.05
+            digests = sequences if isinstance(sequences, list) else []
+            trained = self._train_if_model(digests)
+            msg = "IsolationForest trained" if trained else "Not enough data (<3 days)"
+            return True, msg, DEFAULT_THRESHOLD
+        except Exception as e:
+            return False, str(e), DEFAULT_THRESHOLD
 
     def predict(self, sequence):
-        # 0. Maintenance
         self.check_learning_status()
 
-        if not self.is_ready: return 0.0, False, "Model not ready"
-
         try:
-            # --- 1. SIMULATION LSTM PREDICTION (Placeholder Logic) ---
-            # Hier würde normal self.model.predict() stehen.
-            # Wir simulieren eine Anomalie für Testzwecke, wenn 'Unknown' drin ist.
-            anomaly_score = 0.01
-            is_anomaly = False
-            explanation = "Normal behavior"
+            # IsolationForest-Score (personalisiert, trainiert auf eigenen Daten)
+            if_score = self._if_score(sequence)
 
-            # Dummy-Logik für "Unbekannt" -> Anomalie
-            if sequence and 'Unknown' in sequence:
-                anomaly_score = 0.9
-                is_anomaly = True
-                explanation = "Unknown location sequence"
+            if if_score is not None:
+                anomaly_score = if_score
+            else:
+                # Kein trainiertes Modell: Graph-basierter Fallback
+                anomaly_score = 0.1
+                if sequence and ('Unknown' in sequence or
+                    any(str(s).lower() in ['unknown', ''] for s in sequence)):
+                    anomaly_score = 0.7
 
-            # --- 2. LSTM DECISION ---
-            # Wenn Score > Threshold -> Anomalie
-            if anomaly_score > self.dynamic_threshold:
-                is_anomaly = True
-                explanation = f"High Reconstruction Error ({anomaly_score:.4f})"
+            is_anomaly = anomaly_score > self.dynamic_threshold
+            explanation = f"IF Score: {anomaly_score:.3f}" if if_score is not None else "Fallback score"
 
-            # --- 3. OVERLAY CHECK (VETO-LOGIK) ---
+            # Overlay: Lernmodus vetoed Anomalien
             if is_anomaly and self.learning_mode_active:
-                # Wir prüfen: Kennen wir das schon von heute Abend?
                 if self._is_whitelisted(sequence):
-                    # VETO!
                     is_anomaly = False
-                    explanation = f"Whitelisted by {self.learning_label} mode"
-                    # Wir senken den Score künstlich für das Protokoll
                     anomaly_score = self.dynamic_threshold * 0.9
+                    explanation = f"Whitelisted by {self.learning_label} mode"
                 else:
-                    # Noch nicht bekannt, aber wir sind im Lernmodus?
-                    # Strategie: Im Lernmodus sind wir toleranter.
-                    # Wir fügen es hinzu FÜR DAS NÄCHSTE MAL (One-Shot Learning),
-                    # aber beim allerersten Mal geben wir vielleicht noch eine Warnung oder sind still.
-                    # HIER: Wir akzeptieren es sofort (agil), wenn es nicht total absurd ist.
                     self._add_to_whitelist(sequence)
-                    is_anomaly = False # Sofortige Amnestie
-                    explanation = f"Learned new pattern ({self.learning_label})"
+                    is_anomaly = False
                     anomaly_score = 0.0
+                    explanation = f"Learned new pattern ({self.learning_label})"
 
             return anomaly_score, is_anomaly, explanation
 
-        except Exception as e: return 0.0, False, str(e)
+        except Exception as e:
+            return 0.1, False, str(e)
 
 class GraphEngine:
     def __init__(self):

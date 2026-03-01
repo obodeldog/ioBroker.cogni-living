@@ -1137,7 +1137,7 @@ export default function HealthTab(props: any) {
             <div style={{ maxWidth: '80ch', margin: '0 auto' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom: `2px solid ${isDark?'#444':'#ccc'}`, marginBottom:'30px', paddingBottom:'15px', flexWrap:'wrap', gap:'10px' }}>
                     <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
-                        <strong style={{fontSize:'1.2rem'}}>AURA MONITOR (v0.30.60)</strong>
+                        <strong style={{fontSize:'1.2rem'}}>AURA MONITOR (v0.30.68)</strong>
                         <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#222':'#e0e0e0', borderRadius:'4px', padding:'2px'}}>
                             <IconButton 
                                 size="small" 

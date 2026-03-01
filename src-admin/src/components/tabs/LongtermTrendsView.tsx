@@ -246,10 +246,10 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
     const baseline = trendsData?.activity?.baseline || 100;
     const baselineStd = trendsData?.activity?.baseline_std || 15;
     
-    // Dynamische Y-Achse: min/max aus tatsächlichen Daten berechnen
-    const allValues = mainChartData.flatMap((d: any) => [d.value, d.movingAvg]).filter((v: any) => v != null && !isNaN(v));
-    const dataMin = allValues.length > 0 ? Math.max(0, Math.floor(Math.min(...allValues) * 0.8)) : 0;
-    const dataMax = allValues.length > 0 ? Math.ceil(Math.max(...allValues) * 1.2) : 200;
+    // Y-Achse: 0–100% fix, damit Tages-Unterschiede sichtbar sind
+    // (Bei dynamischer Achse sehen 48% und 52% gleich aus)
+    const dataMin = 0;
+    const dataMax = 100;
 
     return (
         <Box sx={{ p: 2 }}>

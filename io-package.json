@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.68",
+        "version": "0.30.69",
         "news": {
+            "0.30.69": {
+                "en": "FIX: SecurityBrain IsolationForest replaces placeholder; Y-axis 0-100% fixed; AURA Monitor version updated",
+                "de": "FIX: SecurityBrain IsolationForest ersetzt Placeholder; Y-Achse 0-100% fest; AURA Monitor Version aktualisiert"
+            },
             "0.30.68": {
                 "en": "FIX: Activity load formula (48*5 scale); Night IsolationForest personalization; Health anomaly score in state; PWA reads real anomaly; lastNightNormal for person",
                 "de": "FIX: Aktivitäts-Belastung Formel (48*5); Nacht-IsolationForest personalisiert; Health-Anomalie-Score in State; PWA liest echten Score; lastNightNormal für Person"
