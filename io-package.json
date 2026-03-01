@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.62",
+        "version": "0.30.63",
         "news": {
+            "0.30.63": {
+                "en": "FIX: PWA metrics from eventHistory (bath visits, window openings, night quality), Cloudflare stable output pipe, Settings state defaults for new fields",
+                "de": "FIX: PWA Metriken aus eventHistory (Bad-Besuche, Fenster-Öffnungen, Nacht-Qualität), Cloudflare stabiler Output-Pipe, Settings-Defaults für neue Felder"
+            },
             "0.30.62": {
                 "en": "FIX: PWA token mismatch (real IP, state-based URL), Cloudflare EACCES fix (correct data dir), Admin URL refresh button",
                 "de": "FIX: PWA Token-Mismatch (echte IP, State-basierte URL), Cloudflare EACCES Fix (korrektes Verzeichnis), Admin URL-Aktualisieren-Button"

@@ -94,7 +94,29 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             thermostatDiagResults: [],
             isScanningThermostats: false,
             editMappingContext: null,
-            editMappingValue: ''
+            editMappingValue: '',
+
+            // Familien-App (PWA)
+            pwaEnabled: native.pwaEnabled === true,
+            pwaPort: native.pwaPort || 8095,
+            familyShareToken: native.familyShareToken || '',
+            cloudflareEnabled: native.cloudflareEnabled === true,
+
+            // Modul-Toggles
+            moduleHealth: native.moduleHealth !== false,
+            moduleSecurity: native.moduleSecurity !== false,
+            moduleEnergy: native.moduleEnergy !== false,
+            moduleComfort: native.moduleComfort !== false,
+
+            // Infrasound
+            infrasoundEnabled: native.infrasoundEnabled || false,
+            infrasoundSensorId: native.infrasoundSensorId || '',
+            infrasoundThreshold: native.infrasoundThreshold || 0.04,
+            infrasoundArmingId: native.infrasoundArmingId || '',
+            infrasoundEntryDelay: native.infrasoundEntryDelay || 0,
+
+            // Calendar Profile Matching
+            calendarProfileMatching: native.calendarProfileMatching || false
         };
     }
 
