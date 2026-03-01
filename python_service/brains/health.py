@@ -45,13 +45,15 @@ class HealthBrain:
         except Exception as e: return False, str(e)
 
     def predict(self, digest):
-        if not self.is_ready: return 0, "Not Ready"
+        if not self.is_ready: return 0, 0.0, "Not Ready"
         try:
             X = self._prepare_features([digest])
             res = self.model.predict(X)[0]
-            score = self.model.score_samples(X)[0]
-            return res, f"Anomaly Score: {score:.3f}"
-        except Exception as e: return 0, str(e)
+            raw_score = self.model.score_samples(X)[0]
+            # IsolationForest: negativ = Anomalie. 0-1 Skala: 0=normal, 1=stark anomal
+            norm_score = max(0.0, min(1.0, -raw_score))
+            return res, norm_score, f"Anomaly Score: {raw_score:.3f}"
+        except Exception as e: return 0, 0.0, str(e)
 
     def analyze_gait_speed(self, sequences):
         """
@@ -441,17 +443,18 @@ class HealthBrain:
     
     def analyze_night_restlessness(self, daily_data, weeks=4):
         """
-        Analysiert nächtliche Aktivität (22:00-06:00).
-        
-        Args:
-            daily_data: Liste mit { 'date': 'YYYY-MM-DD', 'nightEvents': 12, ... }
+        Analysiert nächtliche Aktivität (22:00-07:30) – personalisiert mit IsolationForest.
+        Nacht-Slots aus todayVector: 44-47 (22-24h) + 0-15 (00-07:30h) = 20 Slots.
         
         Returns:
             {
-                'timeline': ['2026-01-01', ...],
+                'timeline': [...],
                 'values': [12, 8, 15, ...],  # Events pro Nacht
                 'avg': 11.3,
-                'trend': 'STEIGEND'
+                'trend': 'STEIGEND',
+                'anomaly_scores': [0.02, -0.1, ...],  # Personalisiert: Abweichung vom Normalwert
+                'baseline_night_events': 10.5,
+                'last_night_normal': True  # Ist letzte Nacht für DIESE Person normal?
             }
         """
         try:
@@ -465,28 +468,52 @@ class HealthBrain:
             
             timeline = [d['date'] for d in sorted_data]
             values = [d.get('nightEvents', 0) for d in sorted_data]
-            
             avg = np.mean(values)
             
-            # Trend berechnen
+            # Trend
             if len(values) >= 7:
                 first_week = np.mean(values[:7])
                 last_week = np.mean(values[-7:])
-                
-                if last_week > first_week * 1.2:
-                    trend = 'STEIGEND'
-                elif last_week < first_week * 0.8:
-                    trend = 'FALLEND'
-                else:
-                    trend = 'STABIL'
+                trend = 'STEIGEND' if last_week > first_week * 1.2 else ('FALLEND' if last_week < first_week * 0.8 else 'STABIL')
             else:
                 trend = 'UNBEKANNT'
+            
+            # Personalisierte Nacht-Anomalie: IsolationForest auf Nacht-Slots
+            # Slots 44-47 (22-24h) + 0-15 (00-07:30h) = 20-dim Vektor pro Nacht
+            NIGHT_SLOTS = list(range(44, 48)) + list(range(0, 16))
+            anomaly_scores = [0.0] * len(timeline)
+            last_night_normal = True
+            
+            night_vectors = []
+            for d in sorted_data:
+                vec = d.get('todayVector', [])
+                if vec and len(vec) >= 48:
+                    night_vec = [float(vec[i]) if i < len(vec) else 0 for i in NIGHT_SLOTS]
+                else:
+                    night_vec = [float(d.get('nightEvents', 0) / 20.0)] * 20  # Fallback
+                night_vectors.append(night_vec)
+            
+            night_vectors = np.array(night_vectors)
+            if len(night_vectors) >= 5:
+                try:
+                    from sklearn.ensemble import IsolationForest
+                    clf = IsolationForest(random_state=42, contamination=0.1)
+                    clf.fit(night_vectors[:-1])  # Trainiere auf allen außer letzter Nacht
+                    scores = clf.score_samples(night_vectors)
+                    for i, s in enumerate(scores):
+                        anomaly_scores[i] = round(float(s), 4)
+                    last_night_normal = anomaly_scores[-1] > -0.3  # Schwellwert
+                except Exception:
+                    pass
             
             return {
                 'timeline': timeline,
                 'values': values,
                 'avg': round(avg, 1),
-                'trend': trend
+                'trend': trend,
+                'anomaly_scores': anomaly_scores,
+                'baseline_night_events': round(avg, 1),
+                'last_night_normal': last_night_normal
             }
         
         except Exception as e:

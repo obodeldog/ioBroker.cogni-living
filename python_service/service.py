@@ -151,8 +151,8 @@ def process_message(msg):
             send_result("HEALTH_TRAIN_RESULT", {"success": success, "details": details})
 
         elif cmd == "ANALYZE_HEALTH":
-            res, details = health_brain.predict(data.get("digest", {}))
-            send_result("HEALTH_RESULT", {"is_anomaly": (res == -1), "details": details})
+            res, score, details = health_brain.predict(data.get("digest", {}))
+            send_result("HEALTH_RESULT", {"is_anomaly": (res == -1), "anomaly_score": score, "details": details})
 
         # --- UPDATE: GAIT PROOF ---
         elif cmd == "ANALYZE_GAIT":
