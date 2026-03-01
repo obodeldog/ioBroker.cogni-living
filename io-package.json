@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.71",
+        "version": "0.30.72",
         "news": {
+            "0.30.72": {
+                "en": "FIX: Night color logic order (Unruhig=red before Badgang=orange); sparkline tooltip max-width+wrap; tooltip text shortened",
+                "de": "FIX: Nacht-Farblogik-Reihenfolge (Unruhig=rot vor Badgang=orange); Sparkline-Tooltip max-width+wrap; Tooltip-Text gekürzt"
+            },
             "0.30.71": {
                 "en": "FIX: PWA analysis progress now polls real completion (NIGHT+DAY); sparkline CSS hover tooltip; night color logic unified; real activity timestamp shown",
                 "de": "FIX: PWA Analyse-Fortschritt wartet auf echte Fertigmeldung (NACHT+TAG); Sparkline CSS-Hover-Tooltip; Nacht-Farblogik vereinheitlicht; echte Uhrzeit statt 'gerade eben'"
