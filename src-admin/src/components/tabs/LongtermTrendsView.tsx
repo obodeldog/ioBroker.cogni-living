@@ -509,7 +509,9 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     🔬 DRIFT-MONITOR
                                 </Typography>
                                 <Typography variant="caption" sx={{ display: 'block', color: '#ff9800', fontSize: '0.6rem', mb: 0.5 }}>
-                                    Beobachtungsphase — noch nicht validiert
+                                    {trendsData?.drift?.adaptive
+                                        ? `Adaptiv kalibriert — Baseline: ${trendsData.drift.calibration_days} Tage, σ=${trendsData.drift.baseline_sigma}`
+                                        : 'Fester Schwellwert'}
                                 </Typography>
                                 {trendsData?.drift ? (
                                     <>
@@ -523,7 +525,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                             </Typography>
                                         </Box>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
-                                            PH-Score: {trendsData.drift.current_score?.toFixed(1)} / Schwelle: {trendsData.drift.threshold}
+                                            PH-Score: {trendsData.drift.current_score?.toFixed(1)} / Schwelle: {trendsData.drift.threshold?.toFixed(0)}{trendsData.drift.adaptive ? ' (adaptiv)' : ''}
                                         </Typography>
                                         <ResponsiveContainer width="100%" height={100}>
                                             <LineChart data={trendsData.drift.scores?.map((v: number, i: number) => ({ i: i + 1, score: Math.round(v) })) || []}>
@@ -536,6 +538,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                         </ResponsiveContainer>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem' }}>
                                             Anstieg = Verhaltensmuster ändert sich. Rote Linie = Alarm-Schwelle.
+                                            {trendsData.drift.calibration_days ? ` Erste ${trendsData.drift.calibration_days} Tage = Kalibrierung (Score=0).` : ''}
                                         </Typography>
                                     </>
                                 ) : (

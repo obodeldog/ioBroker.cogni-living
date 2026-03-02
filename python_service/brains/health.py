@@ -677,43 +677,62 @@ class HealthBrain:
         
         except Exception as e:
             return {'error': str(e)}
-    def detect_drift_page_hinkley(self, values, delta_factor=0.02, lambda_threshold=50):
+    def detect_drift_page_hinkley(self, values, delta_factor=0.02, lambda_threshold=None):
         """
-        Page-Hinkley-Test fuer graduelle Drift-Detektion.
-        Erkennt schleichende Verhaltensaenderungen ueber Wochen/Monate.
+        Page-Hinkley-Test mit adaptivem Schwellwert.
 
-        Algorithmus:
-          Laufender Mittelwert mu (exponentiell gewichtet, alpha=0.05)
-          Kumulativer Score M_t = M_{t-1} + (x_t - mu - delta)
-          m_t = min(M_0..M_t)
-          PH-Score = M_t - m_t
-          Alarm wenn PH-Score > lambda_threshold
+        Kalibrierungsphase (erste 14 Tage):
+          Berechnet Baseline-Mittelwert (mu) und Standardabweichung (sigma).
+          PH-Score bleibt 0 – keine Alarme.
+
+        Erkennungsphase (ab Tag 15):
+          PH-Test startet mit kalibriertem mu.
+          Adaptiver Schwellwert = max(30, 3 * sigma * sqrt(n_erkennungstage))
+          So passt sich die Empfindlichkeit automatisch an die natuerliche
+          Variabilitaet der jeweiligen Person an.
 
         Args:
             values:           Liste taeglicher Aktivitaetsprozente (relativ, 0-200)
             delta_factor:     Minimale erkennbare Aenderung (Anteil des Mittelwerts)
-            lambda_threshold: Empfindlichkeit (hoeher = weniger Fehlalarme)
+            lambda_threshold: Wenn None: adaptiv berechnet; sonst: fester Wert
 
         Returns:
-            scores, current_score, drift_detected, threshold, change_point_idx
+            scores, current_score, drift_detected, threshold, adaptive,
+            calibration_days, baseline_sigma, change_point_idx
         """
         try:
             if not values or len(values) < 10:
                 return {'error': f'Zu wenig Daten ({len(values) if values else 0} Tage, min. 10)'}
 
             values = [float(v) for v in values]
-            half = max(5, len(values) // 2)
-            mu = float(np.median(values[:half]))
-            delta = delta_factor * abs(mu) if mu != 0 else 1.0
 
-            M, m, ph_scores = 0.0, 0.0, []
-            for x in values:
+            # Kalibrierungsphase: min. 7, max. 14 Tage (oder Haelfte der Daten)
+            calibration_days = min(14, max(7, len(values) // 2))
+            calibration = values[:calibration_days]
+            detection   = values[calibration_days:]
+
+            cal_mean = float(np.mean(calibration))
+            cal_std  = float(np.std(calibration)) if len(calibration) > 1 else 10.0
+
+            # Adaptiver Schwellwert
+            adaptive = lambda_threshold is None
+            if adaptive:
+                n_det = max(1, len(detection))
+                lambda_threshold = max(30.0, round(3.0 * cal_std * (n_det ** 0.5), 1))
+
+            # PH-Test laeuft nur auf Erkennungsphase, startet mit kalibriertem mu
+            mu    = cal_mean
+            delta = delta_factor * abs(mu) if mu != 0 else 1.0
+            M, m  = 0.0, 0.0
+
+            ph_scores = [0.0] * calibration_days  # Kalibrierungstage = 0
+            for x in detection:
                 M = M + (x - mu - delta)
                 m = min(m, M)
-                ph_scores.append(round(M - m, 2))
+                ph_scores.append(round(max(0.0, M - m), 2))
                 mu = 0.95 * mu + 0.05 * x
 
-            current_score = ph_scores[-1]
+            current_score = round(ph_scores[-1], 2)
             drift_detected = current_score > lambda_threshold
 
             change_point_idx = None
@@ -725,10 +744,13 @@ class HealthBrain:
                         break
 
             return {
-                'scores': ph_scores,
-                'current_score': round(current_score, 2),
-                'drift_detected': drift_detected,
-                'threshold': lambda_threshold,
+                'scores':           ph_scores,
+                'current_score':    current_score,
+                'drift_detected':   drift_detected,
+                'threshold':        lambda_threshold,
+                'adaptive':         adaptive,
+                'calibration_days': calibration_days,
+                'baseline_sigma':   round(cal_std, 1),
                 'change_point_idx': change_point_idx
             }
         except Exception as e:
