@@ -209,20 +209,24 @@ def process_message(msg):
             hygiene_trend = health_brain.analyze_hygiene_frequency(daily_data, weeks)
             ventilation_trend = health_brain.analyze_ventilation_behavior(daily_data, weeks)
 
-            # Drift-Detektion (Page-Hinkley) auf Aktivitätswerten
-            # Input: die bereits normalisierten activityPercent-Werte aus dailyData
-            activity_values = [d.get('activityPercent', 0) for d in sorted(daily_data, key=lambda x: x.get('date', ''))]
-            drift_result = health_brain.detect_drift_page_hinkley(activity_values) if len(activity_values) >= 10 else {'error': f'Noch {10 - len(activity_values)} Tage bis zur ersten Drift-Analyse'}
-
+            # Drift wird NICHT mehr hier berechnet - separater ANALYZE_DRIFT Befehl
+            # stellt sicher dass Drift immer alle verfuegbaren Daten nutzt (zeitfenster-unabhaengig)
             send_result("LONGTERM_TRENDS_RESULT", {
                 'activity': activity_trend,
                 'gait': gait_trend,
                 'night': night_trend,
                 'mobility': mobility_trend,
                 'hygiene': hygiene_trend,
-                'ventilation': ventilation_trend,
-                'drift': drift_result
+                'ventilation': ventilation_trend
             })
+
+        elif cmd == "ANALYZE_DRIFT":
+            # Separater Drift-Befehl: immer alle verfuegbaren Daten, unabhaengig vom Zeitfenster
+            all_data = data.get("dailyData", [])
+            log(f"Drift Analysis: Processing {len(all_data)} days (full history)")
+            activity_values = [d.get('activityPercent', 0) for d in sorted(all_data, key=lambda x: x.get('date', ''))]
+            drift_result = health_brain.detect_drift_page_hinkley(activity_values) if len(activity_values) >= 10 else {'error': f'Noch {10 - len(activity_values)} Tage bis zur ersten Drift-Analyse'}
+            send_result("DRIFT_RESULT", drift_result)
 
         # 3. ENERGY
         elif cmd == "TRAIN_ENERGY":
