@@ -13,13 +13,9 @@
 
 ## 🧠 Was macht dieses System einzigartig?
 
-Cogni-Living ist kein gewöhnlicher Adapter. Es ist eine **Hybrid-AI Engine**, die klassische IoT-Steuerung mit modernster Forschung aus den Bereichen **Deep Learning** und **Large Language Models (LLM)** verbindet.
+Cogni-Living ist kein gewöhnlicher Adapter. Es ist eine **Hybrid-AI Engine**, die klassische IoT-Steuerung mit modernster Forschung aus den Bereichen **Machine Learning** und **Large Language Models (LLM)** verbindet — lokal, privat, ohne Cloud-Zwang.
 
-Anstatt manuell Skripte zu schreiben ("Wenn Bewegung, dann Licht"), trainiert Cogni-Living **drei spezialisierte neuronale Netze** direkt auf Ihrer Hardware:
-
-1.  **LSTM Autoencoder (Long Short-Term Memory):** Lernt komplexe zeitliche Muster ("Normalität") und erkennt Anomalien (Einbruch, Krankheit) anhand des Rekonstruktionsfehlers.
-2.  **GCN (Graph Neural Networks):** Versteht die Topologie Ihres Hauses. Es weiß, dass Küche und Flur verbunden sind und filtert "Teleportations-Fehler" oder Geister-Bewegungen heraus.
-3.  **PINN (Physics-Informed Neural Networks):** Ein KI-Modell, das die Thermodynamik Ihres Gebäudes lernt. Es versteht Dämmwerte, solare Gewinne und Heizkurven physikalisch korrekt.
+> **Ehrlichkeit zuerst:** Dieses Projekt ist ein aktiv weiterentwickelter Forschungsprototyp. Die folgende Roadmap zeigt transparent, was bereits implementiert ist, was in Entwicklung ist und was zukünftig angestrebt wird.
 
 ---
 
@@ -58,35 +54,95 @@ Anstatt manuell Skripte zu schreiben ("Wenn Bewegung, dann Licht"), trainiert Co
 
 ## 🚀 Technologie-Stack
 
-Dieses Projekt ist "State of the Art" Engineering:
-
-* **Backend:** Node.js (ioBroker) als Orchestrator.
-* **AI Core:** Python Sidecar (voll integriert, installiert sich selbst).
-* **Libraries:** TensorFlow/PyTorch (für PINNs), Scikit-Learn (für Anomalie-Erkennung), NetworkX (für Graphen).
-* **Cloud AI:** Google Gemini Pro/Flash (für semantisches Verstehen & Reporting).
+* **Backend:** Node.js (ioBroker) als Orchestrator & State-Manager
+* **AI Core:** Python Sidecar (Scikit-Learn, NumPy) — läuft lokal auf der Hardware
+* **Cloud AI:** Google Gemini Pro/Flash — nur für Textzusammenfassungen, keine Rohdaten
+* **Frontend:** React/TypeScript mit Recharts (Admin UI) + PWA (Familien-App NUUKANNI)
+* **Persistenz:** JSON History-Files (täglich), ioBroker States, Pickle-Modelle
 
 ---
 
-## 💎 Features & Versionen
+## 🗺️ AURA MASTER ROADMAP — SÄULE GESUNDHEIT
+
+> **Legende:** ✅ Implementiert · ⚠️ Teilweise/Vereinfacht · 🔬 Geplant (Forschung) · ❌ Noch nicht begonnen
+
+### 📊 Algorithmen & Methoden — Vollständige Übersicht
+
+| # | Ziel / Was wird gemessen | Algorithmus / Methode | Genutzt auch in | Implementiert seit | Status |
+|---|---|---|---|---|---|
+| 1 | **Tages-Anomalie:** Ist heute ungewöhnlich? | IsolationForest (96-dim Aktivitätsvektor) | Sicherheit | v0.30.68 | ✅ |
+| 2 | **Nacht-Anomalie:** War diese Nacht für DIESE Person normal? | IsolationForest (20-dim Nacht-Slots, personalisiert) | — | v0.30.68 | ✅ |
+| 3 | **Ganggeschwindigkeit:** Verändert sich die Mobilität über Monate? | Lineare Regression auf Flur-Durchgangszeiten | — | v0.28.0 | ✅ |
+| 4 | **Aktivitätstrend (kurzfristig):** Steigt/fällt die Aktivität? | Lineare Regression auf Tages-Aktivitätswerte | — | v0.28.0 | ✅ |
+| 5 | **Stündliche Heatmap:** Zu welcher Uhrzeit ist Aktivität anomal? | IsolationForest + Regelbasierte Tageszeit-Flags | — | v0.30.x | ✅ |
+| 6 | **Lebenszeichen-Alarm:** Ist die Person in kritischer Stille? | Regelbasiert (Stunden seit letzter Aktivität je Raum) | — | v0.28.0 | ✅ |
+| 7 | **Raum-Mobilität:** Wie viele Räume werden pro Tag genutzt? | Statistik (Mittelwert, Trend-Vergleich) | — | v0.30.x | ✅ |
+| 8 | **Hygiene-Frequenz:** Verändert sich die Bad-Nutzung? | Statistik (Mittelwert, Trend-Vergleich) | — | v0.30.x | ✅ |
+| 9 | **Lüftungsverhalten:** Wie oft wird gelüftet? | Statistik (Mittelwert, Trend-Vergleich) | Energie (Ventilation Detective) | v0.30.x | ✅ |
+| 10 | **KI-Tagesbericht:** Was passierte heute in natürlicher Sprache? | Google Gemini LLM | Sicherheit, Energie | v0.25.x | ✅ |
+| 11 | **KI-Nachtbericht:** Wie war die Nacht in natürlicher Sprache? | Google Gemini LLM | — | v0.25.x | ✅ |
+| 12 | **Sicherheits-Anomalie:** Verhalten der letzten Tage normal? | IsolationForest auf tägliche Aktivitätsvektoren | Sicherheit | v0.30.69 | ✅ |
+| 13 | **Raum-Histogramm-Anomalie:** Wird ein Raum ungewöhnlich wenig genutzt? | Statistik (Mittelwert − 2×Std als Schwellwert) | — | v0.30.58 | ✅ |
+| 14 | **Aktivitätslevel (relativ, personalisiert):** Wie aktiv ist der Tag relativ zum persönlichen Schnitt? | Gleitender Median der letzten 14 Tage als Referenz | — | v0.30.69 (Y-Achse fix), **Normalisierung noch falsch** | ⚠️ |
+| 15 | **Temporale Sequenz-Vorhersage:** "Um 07:30 erwarte ich Küche — heute nicht" | LSTM / Transformer auf stündlichen Aktivitätssequenzen | Sicherheit, Komfort | **GEPLANT** | 🔬 |
+| 16 | **Graduelle Drift-Detektion:** Erkennung schleichender Verschlechterung über Monate (Demenz-Frühwarnung) | Page-Hinkley-Test oder CUSUM auf Langzeittrends | — | **GEPLANT** | 🔬 |
+| 17 | **Zirkadianer Rhythmus-Modell:** Verschiebt sich der Schlaf-/Wach-Zyklus? | Kurzzeitfouriertransformation (STFT) oder Cosinor-Analyse | — | **GEPLANT** | 🔬 |
+| 18 | **Konfidenz-Intervalle:** "Wie sicher sind wir, dass das anomal ist?" | Bootstrap-Konfidenzintervalle oder Bayesianisches IF | — | **GEPLANT** | 🔬 |
+| 19 | **Kontext-Bewusstsein:** Feiertag, Besuch, Jahreszeit berücksichtigen | Kalender-Integration + saisonale Baseline-Korrektur | Energie | **GEPLANT** | 🔬 |
+| 20 | **Formale Evaluation:** Wie gut erkennt das System echte Ereignisse? | Ground-Truth-Labeling + ROC/AUC-Metriken | — | **GRUNDLAGE FEHLT** | ❌ |
+
+---
+
+### 🔍 Was das README versprochen hat vs. was wirklich läuft
+
+| README-Versprechen | Realität | Bewertung |
+|---|---|---|
+| "LSTM Autoencoder" | IsolationForest (kein LSTM, keine zeitliche Sequenz) | ⚠️ Vereinfacht — funktioniert, aber ohne Zeitdimension |
+| "GCN (Graph Neural Networks)" | Topologie-Matrix als Adjazenzgraph (kein echtes Message-Passing-GCN) | ⚠️ Vereinfacht — Topologie-Bewusstsein vorhanden |
+| "PINN (Physics AI)" | Implementiert für Energie-Säule | ✅ Korrekt |
+| "Drift-Analyse" | Lineare Regression auf kurzfristige Trends; echte Drift-Detektion über Monate fehlt | ⚠️ Kurzfristig vorhanden, Langzeit-Drift fehlt |
+| "Few-Shot Learning (Party-Modus)" | Nicht implementiert | ❌ Noch nicht vorhanden |
+
+---
+
+### 🎯 Nächste Entwicklungsschritte (priorisiert)
+
+| Priorität | Was | Warum | Aufwand |
+|---|---|---|---|
+| 🔴 HOCH | Aktivitätslevel-Normalisierung auf persönlichen Median | Alle Balken zeigen 100% — falsche Formel | Klein |
+| 🔴 HOCH | Tooltip-Format & JSON-Artefakte bereinigen | UX-Problem in PWA | Klein |
+| 🟡 MITTEL | LSTM für stündliche Erwartungsmodellierung | Nächste Stufe der Anomalie-Erkennung | Groß |
+| 🟡 MITTEL | Drift-Detektion (Page-Hinkley / CUSUM) über Monate | Demenz-Frühwarnung — Kernziel der Anwendung | Mittel |
+| 🟢 LANGFRISTIG | Zirkadianer Rhythmus-Analyse | Schlaf-/Wach-Verschiebung als Frühindikator | Groß |
+| 🟢 LANGFRISTIG | Formale Evaluation (Ground Truth) | Für akademische Veröffentlichung notwendig | Sehr groß |
+| 🟢 LANGFRISTIG | Kontext-Bewusstsein (Kalender/Saison) | Deutlich weniger Fehlalarme | Mittel |
+
+---
+
+## 💎 Features & Versionen (aktuell)
 
 | Feature | Standard (Free) | Pro (Neural Link) |
 | :--- | :---: | :---: |
 | **Google Gemini Integration** | ✅ Ja | ✅ Ja |
 | **Auto-Discovery Wizard** | ✅ Ja | ✅ Ja |
-| **LSTM Anomaly Detection** | ✅ Ja | ✅ Ja |
+| **IsolationForest Anomalie-Erkennung** | ✅ Ja | ✅ Ja |
+| **Ganggeschwindigkeit (Lineare Regression)** | ✅ Ja | ✅ Ja |
 | **Ventilation Detective (Virtual Sensing)** | ✅ Ja | ✅ Ja |
+| **NUUKANNI Familien-PWA** | ✅ Ja | ✅ Ja |
 | **Energy: Smart Warm-Up (Kalender)** | ❌ Nein | ✅ Ja |
 | **Energy: PINN (Physics AI)** | ❌ Nein | ✅ Ja |
-| **Health: Drift-Analyse & GCN-Filter** | ❌ Nein | ✅ Ja |
-| **Security: Few-Shot Learning (Party)** | ❌ Nein | ✅ Ja |
+| **Health: Langzeit-Trends (6 Metriken)** | ❌ Nein | ✅ Ja |
+| **LSTM Temporale Vorhersage** | ❌ Geplant | ❌ Geplant |
+| **Drift-Detektion (Demenz-Frühwarnung)** | ❌ Geplant | ❌ Geplant |
 
 ---
 
 ## ⚖️ Disclaimer & Sicherheit
 
-1.  **Kein Medizinprodukt:** Software ersetzt keinen Arzt. Dient zur Unterstützung (AAL).
-2.  **Privacy First:** Lokale Modelle (Random Forest, LSTM) laufen auf Ihrer Hardware. Nur für komplexe Text-Analysen werden anonymisierte Daten an Gemini gesendet.
-3.  **Haftung:** Nutzung auf eigene Gefahr. Verlassen Sie sich bei Lebensgefahr nicht auf Smart-Home-Technik.
+1.  **Kein Medizinprodukt:** Software ersetzt keinen Arzt. Dient zur Unterstützung (AAL — Ambient Assisted Living).
+2.  **Privacy First:** Alle ML-Modelle (IsolationForest, Regression) laufen lokal auf Ihrer Hardware. Nur anonymisierte Textzusammenfassungen werden an Gemini gesendet.
+3.  **Forschungsprototyp:** Dieses System befindet sich in aktiver Entwicklung. Verlassen Sie sich bei Lebensgefahr nicht auf Smart-Home-Technik.
+4.  **Haftung:** Nutzung auf eigene Gefahr.
 
 ---
 
