@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.74",
+        "version": "0.30.75",
         "news": {
+            "0.30.75": {
+                "en": "FIX: const→let dailyData (build error); Gemini prompt uses aiContext name, no JSON format; status_bericht/antwort JSON keys added; sparkline tooltip with date and icons",
+                "de": "FIX: const→let dailyData (Build-Fehler); Gemini nutzt aiContext-Namen, kein JSON-Format; status_bericht/antwort JSON-Keys ergänzt; Sparkline-Tooltip mit Datum und Icons"
+            },
             "0.30.74": {
                 "en": "NEW: Relative activity normalization (personal median=100%); Page-Hinkley drift detection debug kachel; README roadmap updated with UI-display column",
                 "de": "NEU: Relative Aktivitäts-Normalisierung (persönlicher Median=100%); Page-Hinkley Drift-Monitor Debug-Kachel; README Roadmap mit UI-Darstellung-Spalte aktualisiert"

@@ -54,7 +54,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
             console.log(`[LongtermTrends] 📅 Requesting ${days} days of history...`);
 
             // SCHRITT 1: History-Files laden (alle verfügbaren Tage)
-            const dailyData: DailyDataPoint[] = [];
+            let dailyData: DailyDataPoint[] = [];
             const today = new Date();
 
             for (let i = 0; i < days; i++) {

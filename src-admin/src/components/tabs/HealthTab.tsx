@@ -1524,7 +1524,7 @@ export default function HealthTab(props: any) {
                                                         if (Array.isArray(val) && val.length > 0) val = val[0];
                                                         // Objekt → summary / analyse / text extrahieren
                                                         if (typeof val === 'object' && val !== null) {
-                                                            val = val.summary || val.analyse || val.text || val.message || JSON.stringify(val);
+                                                            val = val.summary || val.analyse || val.text || val.antwort || val.status_bericht || val.message || JSON.stringify(val);
                                                         }
                                                         if (typeof val === 'string') summary = val;
                                                     } catch {
