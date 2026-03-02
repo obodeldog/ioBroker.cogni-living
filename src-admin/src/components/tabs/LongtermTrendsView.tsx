@@ -85,11 +85,11 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         console.log(`[LongtermTrends] 📈 ${dateStr}: events=${eventHistory.length}, rooms=${Object.keys(roomHistoryData).length}, vector=${todayVector.length}`);
                         
                         // ============================================================
-                        // AKTIVITÄT: todayVector (48 x 30-Min-Slots), max 5 pro Slot
-                        // Korrekte Skala: totalEvents/(48*5)*100 = 0-100% pro Tag
+                        // AKTIVITÄT: Roher Event-Total aus todayVector (wird später
+                        // relativ zum persönlichen Median normalisiert – kein fixer Divisor!)
                         // ============================================================
                         const totalEvents = todayVector.reduce((sum: number, count: number) => sum + count, 0);
-                        const activityPercent = Math.min(100, Math.round((totalEvents / (48 * 5)) * 100));
+                        const activityPercent = totalEvents; // temporär: roh, wird unten normalisiert
                         
                         // ============================================================
                         // NACHT-EVENTS: Events zwischen 22:00-06:00 NUR IM SCHLAFZIMMER!
@@ -160,6 +160,25 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                 }
             }
 
+            // ============================================================
+            // NORMALISIERUNG: Persönlicher Median als 100%-Referenz
+            // Ein durchschnittlicher Tag = 100%, kein fester Divisor mehr
+            // ============================================================
+            const rawTotals = dailyData.map(d => d.activityPercent).filter(v => v > 0);
+            const sortedTotals = [...rawTotals].sort((a, b) => a - b);
+            const personalMedian = sortedTotals.length > 0
+                ? sortedTotals[Math.floor(sortedTotals.length / 2)]
+                : 240; // Fallback falls keine Daten
+            
+            // Jeden Tag relativ zum Median normalisieren (100% = Durchschnittstag)
+            dailyData = dailyData.map(d => ({
+                ...d,
+                activityPercent: d.activityPercent > 0
+                    ? Math.min(200, Math.round((d.activityPercent / personalMedian) * 100))
+                    : 0
+            }));
+            
+            console.log(`[LongtermTrends] 📐 Normalisierung: Median=${personalMedian} Events → 100%. Bereich: ${Math.min(...dailyData.map(d=>d.activityPercent))}%–${Math.max(...dailyData.map(d=>d.activityPercent))}%`);
             console.log(`[LongtermTrends] 📊 Collected ${dailyData.length} days of data`);
             
             // 🔍 DEBUG: Zeige aggregierte Daten
@@ -246,10 +265,10 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
     const baseline = trendsData?.activity?.baseline || 100;
     const baselineStd = trendsData?.activity?.baseline_std || 15;
     
-    // Y-Achse: 0–100% fix, damit Tages-Unterschiede sichtbar sind
-    // (Bei dynamischer Achse sehen 48% und 52% gleich aus)
+    // Y-Achse: 0–200% (100% = persönlicher Durchschnittstag)
+    // Damit sind individuelle Abweichungen klar sichtbar
     const dataMin = 0;
-    const dataMax = 100;
+    const dataMax = 200;
 
     return (
         <Box sx={{ p: 2 }}>
@@ -331,13 +350,13 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                 <Tooltip content={<CustomTooltip />} formatter={(v: any) => [`${v}%`]} />
                                 <Legend />
 
-                                {/* Farbzonen (relativ zu Datenbereich) */}
-                                <ReferenceArea y1={dataMin} y2={Math.max(dataMin, baseline * 0.5)} fill="url(#redGradient)" fillOpacity={1} />
-                                <ReferenceArea y1={Math.max(dataMin, baseline * 0.5)} y2={baseline + baselineStd} fill="url(#greenGradient)" fillOpacity={1} />
-                                <ReferenceArea y1={baseline + baselineStd} y2={dataMax} fill="url(#orangeGradient)" fillOpacity={1} />
+                                {/* Farbzonen: relativ zu 100% (= persönlicher Durchschnittstag) */}
+                                <ReferenceArea y1={0}   y2={60}  fill="url(#redGradient)"    fillOpacity={1} />
+                                <ReferenceArea y1={60}  y2={140} fill="url(#greenGradient)"  fillOpacity={1} />
+                                <ReferenceArea y1={140} y2={200} fill="url(#orangeGradient)" fillOpacity={1} />
 
-                                {/* Baseline */}
-                                <ReferenceLine y={baseline} stroke="#888" strokeDasharray="5 5" label={{ value: "Baseline", position: "insideRight", fontSize: 11 }} />
+                                {/* 100%-Linie = persönlicher Normalwert */}
+                                <ReferenceLine y={100} stroke="#888" strokeDasharray="5 5" label={{ value: "Normalwert", position: "insideRight", fontSize: 11 }} />
 
                                 {/* Tageswerte (halbtransparent) */}
                                 <Line
@@ -364,9 +383,10 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
 
                         {/* Legende */}
                         <Box sx={{ mt: 2, fontSize: '0.7rem', color: isDark ? '#aaa' : '#666' }}>
-                            <div>🔴 <strong>ALARMZONE (&lt;50%)</strong>: Sehr niedrige Aktivität</div>
-                            <div>🟢 <strong>NORMALBEREICH (50-{baseline + baselineStd}%)</strong>: Gesund für dieses Haus</div>
-                            <div>🟠 <strong>ERHÖHT (&gt;{baseline + baselineStd}%)</strong>: Ungewöhnlich aktiv (Besuch?)</div>
+                            <div>🔴 <strong>ALARMZONE (&lt;60%)</strong>: Sehr niedrige Aktivität für diese Person</div>
+                            <div>🟢 <strong>NORMALBEREICH (60–140%)</strong>: Typisches Niveau für dieses Haus</div>
+                            <div>🟠 <strong>ERHÖHT (&gt;140%)</strong>: Ungewöhnlich aktiv (Besuch, Aufregung?)</div>
+                            <div style={{ marginTop: 4, opacity: 0.7 }}>100% = persönlicher Durchschnittstag (rollender Median)</div>
                         </Box>
                     </Paper>
 
@@ -482,12 +502,48 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             </Paper>
                         </Grid>
 
-                        {/* 6. Platzhalter für zukünftige Metrik (z.B. Sozial-Index) */}
+                        {/* 6. 🔬 DRIFT-MONITOR (Beobachtungsphase) */}
                         <Grid item xs={12} md={6} lg={4}>
-                            <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-                                    🔮 WEITERE METRIKEN<br />IN ENTWICKLUNG
+                            <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%', border: `1px dashed ${isDark ? '#444' : '#ccc'}` }}>
+                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
+                                    🔬 DRIFT-MONITOR
                                 </Typography>
+                                <Typography variant="caption" sx={{ display: 'block', color: '#ff9800', fontSize: '0.6rem', mb: 0.5 }}>
+                                    Beobachtungsphase — noch nicht validiert
+                                </Typography>
+                                {trendsData?.drift ? (
+                                    <>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                            <Box sx={{
+                                                width: 10, height: 10, borderRadius: '50%',
+                                                bgcolor: trendsData.drift.drift_detected ? '#dc3545' : (trendsData.drift.current_score > trendsData.drift.threshold * 0.5 ? '#fd7e14' : '#28a745')
+                                            }} />
+                                            <Typography variant="caption" sx={{ fontWeight: 'bold', color: trendsData.drift.drift_detected ? 'error.main' : (trendsData.drift.current_score > trendsData.drift.threshold * 0.5 ? '#fd7e14' : '#28a745') }}>
+                                                {trendsData.drift.drift_detected ? '⚠️ Drift erkannt' : (trendsData.drift.current_score > trendsData.drift.threshold * 0.5 ? 'Möglicher Drift' : 'Kein Drift')}
+                                            </Typography>
+                                        </Box>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+                                            PH-Score: {trendsData.drift.current_score?.toFixed(1)} / Schwelle: {trendsData.drift.threshold}
+                                        </Typography>
+                                        <ResponsiveContainer width="100%" height={100}>
+                                            <LineChart data={trendsData.drift.scores?.map((v: number, i: number) => ({ i: i + 1, score: Math.round(v) })) || []}>
+                                                <XAxis dataKey="i" stroke={lineColor} style={{ fontSize: '0.55rem' }} />
+                                                <YAxis stroke={lineColor} style={{ fontSize: '0.55rem' }} />
+                                                <Tooltip formatter={(v: any) => [`${v}`, 'PH-Score']} />
+                                                <ReferenceLine y={trendsData.drift.threshold} stroke="#dc3545" strokeDasharray="3 3" />
+                                                <Line type="monotone" dataKey="score" stroke="#ff9800" strokeWidth={1.5} dot={false} name="Drift-Score" />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem' }}>
+                                            Anstieg = Verhaltensmuster ändert sich. Rote Linie = Alarm-Schwelle.
+                                        </Typography>
+                                    </>
+                                ) : (
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 2, textAlign: 'center' }}>
+                                        Drift-Analyse läuft nach Backend-Call…<br />
+                                        (min. 10 Tage Daten nötig)
+                                    </Typography>
+                                )}
                             </Paper>
                         </Grid>
                     </Grid>

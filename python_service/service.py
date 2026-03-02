@@ -208,14 +208,20 @@ def process_message(msg):
             mobility_trend = health_brain.analyze_room_mobility(daily_data, weeks)
             hygiene_trend = health_brain.analyze_hygiene_frequency(daily_data, weeks)
             ventilation_trend = health_brain.analyze_ventilation_behavior(daily_data, weeks)
-            
+
+            # Drift-Detektion (Page-Hinkley) auf Aktivitätswerten
+            # Input: die bereits normalisierten activityPercent-Werte aus dailyData
+            activity_values = [d.get('activityPercent', 0) for d in sorted(daily_data, key=lambda x: x.get('date', ''))]
+            drift_result = health_brain.detect_drift_page_hinkley(activity_values) if len(activity_values) >= 10 else {'error': f'Noch {10 - len(activity_values)} Tage bis zur ersten Drift-Analyse'}
+
             send_result("LONGTERM_TRENDS_RESULT", {
                 'activity': activity_trend,
                 'gait': gait_trend,
                 'night': night_trend,
                 'mobility': mobility_trend,
                 'hygiene': hygiene_trend,
-                'ventilation': ventilation_trend
+                'ventilation': ventilation_trend,
+                'drift': drift_result
             })
 
         # 3. ENERGY

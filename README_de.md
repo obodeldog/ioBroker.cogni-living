@@ -64,58 +64,27 @@ Cogni-Living ist kein gewöhnlicher Adapter. Es ist eine **Hybrid-AI Engine**, d
 
 ## 🗺️ AURA MASTER ROADMAP — SÄULE GESUNDHEIT
 
-> **Legende:** ✅ Implementiert · ⚠️ Teilweise/Vereinfacht · 🔬 Geplant (Forschung) · ❌ Noch nicht begonnen
+> **Legende:** ✅ Implementiert · 🔬 Beobachtungsphase (neu, noch nicht validiert) · ⚠️ Bekannte Lücke
 
-### 📊 Algorithmen & Methoden — Vollständige Übersicht
+### 📊 Algorithmen & Methoden — Implementierte Features
 
-| # | Ziel / Was wird gemessen | Algorithmus / Methode | Genutzt auch in | Implementiert seit | Status |
-|---|---|---|---|---|---|
-| 1 | **Tages-Anomalie:** Ist heute ungewöhnlich? | IsolationForest (96-dim Aktivitätsvektor) | Sicherheit | v0.30.68 | ✅ |
-| 2 | **Nacht-Anomalie:** War diese Nacht für DIESE Person normal? | IsolationForest (20-dim Nacht-Slots, personalisiert) | — | v0.30.68 | ✅ |
-| 3 | **Ganggeschwindigkeit:** Verändert sich die Mobilität über Monate? | Lineare Regression auf Flur-Durchgangszeiten | — | v0.28.0 | ✅ |
-| 4 | **Aktivitätstrend (kurzfristig):** Steigt/fällt die Aktivität? | Lineare Regression auf Tages-Aktivitätswerte | — | v0.28.0 | ✅ |
-| 5 | **Stündliche Heatmap:** Zu welcher Uhrzeit ist Aktivität anomal? | IsolationForest + Regelbasierte Tageszeit-Flags | — | v0.30.x | ✅ |
-| 6 | **Lebenszeichen-Alarm:** Ist die Person in kritischer Stille? | Regelbasiert (Stunden seit letzter Aktivität je Raum) | — | v0.28.0 | ✅ |
-| 7 | **Raum-Mobilität:** Wie viele Räume werden pro Tag genutzt? | Statistik (Mittelwert, Trend-Vergleich) | — | v0.30.x | ✅ |
-| 8 | **Hygiene-Frequenz:** Verändert sich die Bad-Nutzung? | Statistik (Mittelwert, Trend-Vergleich) | — | v0.30.x | ✅ |
-| 9 | **Lüftungsverhalten:** Wie oft wird gelüftet? | Statistik (Mittelwert, Trend-Vergleich) | Energie (Ventilation Detective) | v0.30.x | ✅ |
-| 10 | **KI-Tagesbericht:** Was passierte heute in natürlicher Sprache? | Google Gemini LLM | Sicherheit, Energie | v0.25.x | ✅ |
-| 11 | **KI-Nachtbericht:** Wie war die Nacht in natürlicher Sprache? | Google Gemini LLM | — | v0.25.x | ✅ |
-| 12 | **Sicherheits-Anomalie:** Verhalten der letzten Tage normal? | IsolationForest auf tägliche Aktivitätsvektoren | Sicherheit | v0.30.69 | ✅ |
-| 13 | **Raum-Histogramm-Anomalie:** Wird ein Raum ungewöhnlich wenig genutzt? | Statistik (Mittelwert − 2×Std als Schwellwert) | — | v0.30.58 | ✅ |
-| 14 | **Aktivitätslevel (relativ, personalisiert):** Wie aktiv ist der Tag relativ zum persönlichen Schnitt? | Gleitender Median der letzten 14 Tage als Referenz | — | v0.30.69 (Y-Achse fix), **Normalisierung noch falsch** | ⚠️ |
-| 15 | **Temporale Sequenz-Vorhersage:** "Um 07:30 erwarte ich Küche — heute nicht" | LSTM / Transformer auf stündlichen Aktivitätssequenzen | Sicherheit, Komfort | **GEPLANT** | 🔬 |
-| 16 | **Graduelle Drift-Detektion:** Erkennung schleichender Verschlechterung über Monate (Demenz-Frühwarnung) | Page-Hinkley-Test oder CUSUM auf Langzeittrends | — | **GEPLANT** | 🔬 |
-| 17 | **Zirkadianer Rhythmus-Modell:** Verschiebt sich der Schlaf-/Wach-Zyklus? | Kurzzeitfouriertransformation (STFT) oder Cosinor-Analyse | — | **GEPLANT** | 🔬 |
-| 18 | **Konfidenz-Intervalle:** "Wie sicher sind wir, dass das anomal ist?" | Bootstrap-Konfidenzintervalle oder Bayesianisches IF | — | **GEPLANT** | 🔬 |
-| 19 | **Kontext-Bewusstsein:** Feiertag, Besuch, Jahreszeit berücksichtigen | Kalender-Integration + saisonale Baseline-Korrektur | Energie | **GEPLANT** | 🔬 |
-| 20 | **Formale Evaluation:** Wie gut erkennt das System echte Ereignisse? | Ground-Truth-Labeling + ROC/AUC-Metriken | — | **GRUNDLAGE FEHLT** | ❌ |
-
----
-
-### 🔍 Was das README versprochen hat vs. was wirklich läuft
-
-| README-Versprechen | Realität | Bewertung |
-|---|---|---|
-| "LSTM Autoencoder" | IsolationForest (kein LSTM, keine zeitliche Sequenz) | ⚠️ Vereinfacht — funktioniert, aber ohne Zeitdimension |
-| "GCN (Graph Neural Networks)" | Topologie-Matrix als Adjazenzgraph (kein echtes Message-Passing-GCN) | ⚠️ Vereinfacht — Topologie-Bewusstsein vorhanden |
-| "PINN (Physics AI)" | Implementiert für Energie-Säule | ✅ Korrekt |
-| "Drift-Analyse" | Lineare Regression auf kurzfristige Trends; echte Drift-Detektion über Monate fehlt | ⚠️ Kurzfristig vorhanden, Langzeit-Drift fehlt |
-| "Few-Shot Learning (Party-Modus)" | Nicht implementiert | ❌ Noch nicht vorhanden |
-
----
-
-### 🎯 Nächste Entwicklungsschritte (priorisiert)
-
-| Priorität | Was | Warum | Aufwand |
-|---|---|---|---|
-| 🔴 HOCH | Aktivitätslevel-Normalisierung auf persönlichen Median | Alle Balken zeigen 100% — falsche Formel | Klein |
-| 🔴 HOCH | Tooltip-Format & JSON-Artefakte bereinigen | UX-Problem in PWA | Klein |
-| 🟡 MITTEL | LSTM für stündliche Erwartungsmodellierung | Nächste Stufe der Anomalie-Erkennung | Groß |
-| 🟡 MITTEL | Drift-Detektion (Page-Hinkley / CUSUM) über Monate | Demenz-Frühwarnung — Kernziel der Anwendung | Mittel |
-| 🟢 LANGFRISTIG | Zirkadianer Rhythmus-Analyse | Schlaf-/Wach-Verschiebung als Frühindikator | Groß |
-| 🟢 LANGFRISTIG | Formale Evaluation (Ground Truth) | Für akademische Veröffentlichung notwendig | Sehr groß |
-| 🟢 LANGFRISTIG | Kontext-Bewusstsein (Kalender/Saison) | Deutlich weniger Fehlalarme | Mittel |
+| # | Ziel / Was wird gemessen | Algorithmus / Methode | Genutzt auch in | Version | Status | UI-Darstellung |
+|---|---|---|---|---|---|---|
+| 1 | **Tages-Anomalie:** Ist heute ungewöhnlich? | IsolationForest (96-dim Aktivitätsvektor) | Sicherheit | v0.30.68 | ✅ | Admin: „Tages-Status"-Kachel (Unauffällig/Auffällig + Score) · PWA: Tages-Status-Kachel |
+| 2 | **Nacht-Anomalie:** War diese Nacht für DIESE Person normal? | IsolationForest (20-dim Nacht-Slots, personalisiert) | — | v0.30.68 | ✅ | Admin: Nacht-Unruhe-Chart + „wie immer/mehr als üblich" · PWA: Letzte-Nacht-Kachel |
+| 3 | **Ganggeschwindigkeit:** Verändert sich die Mobilität über Monate? | Lineare Regression auf Flur-Durchgangszeiten | — | v0.28.0 | ✅ | Admin: Langzeit-Trends → Mini-Linien-Chart „Ganggeschwindigkeit" |
+| 4 | **Aktivitätstrend (kurzfristig):** Steigt/fällt die Aktivität? | Lineare Regression auf Tages-Aktivitätswerte | — | v0.28.0 | ✅ | Admin: Langzeit-Trends → Haupt-Area-Chart „Aktivitäts-Belastung" |
+| 5 | **Stündliche Heatmap:** Zu welcher Uhrzeit ist Aktivität anomal? | IsolationForest + Regelbasierte Tageszeit-Flags | — | v0.30.x | ✅ | Admin: 7-Tage-Übersicht → Aktivitäts-Spalte (% relativ zur Baseline) |
+| 6 | **Lebenszeichen-Alarm:** Ist die Person in kritischer Stille? | Regelbasiert (Stunden seit letzter Aktivität je Raum) | — | v0.28.0 | ✅ | Admin: Topologie-Matrix (farbige Punkte) · PWA: Roter Alarm-Banner |
+| 7 | **Raum-Mobilität:** Wie viele Räume werden pro Tag genutzt? | Statistik (Mittelwert, Trend-Vergleich) | — | v0.30.x | ✅ | Admin: Langzeit-Trends → Mini-Area-Chart „Raum-Mobilität" |
+| 8 | **Hygiene-Frequenz:** Verändert sich die Bad-Nutzung? | Statistik (Mittelwert, Trend-Vergleich) | — | v0.30.x | ✅ | Admin: Langzeit-Trends → Mini-Line-Chart „Bad-Nutzung" · PWA: Bad-Nutzung-Kachel |
+| 9 | **Lüftungsverhalten:** Wie oft wird gelüftet? | Statistik (Mittelwert, Trend-Vergleich) | Energie | v0.30.x | ✅ | Admin: Langzeit-Trends → Mini-Bar-Chart „Frischluft" · PWA: Frischluft-Kachel |
+| 10 | **KI-Tagesbericht:** Was passierte heute in natürlicher Sprache? | Google Gemini LLM | Sicherheit, Energie | v0.25.x | ✅ | Admin: AURA Monitor → KI-Zusammenfassung · PWA: KI-Analyse-Sektion |
+| 11 | **KI-Nachtbericht:** Wie war die Nacht in natürlicher Sprache? | Google Gemini LLM | — | v0.25.x | ✅ | Admin: Schlaf-Radar → Nacht-Protokoll · PWA: Letzte-Nacht-Kachel (destilliert) |
+| 12 | **Sicherheits-Anomalie:** Verhalten der letzten Tage normal? | IsolationForest auf tägliche Aktivitätsvektoren | Sicherheit | v0.30.69 | ✅ | Admin: AURA Monitor → Anomalie-Score · PWA: Tages-Status (Farbe + Score) |
+| 13 | **Raum-Histogramm-Anomalie:** Wird ein Raum ungewöhnlich wenig genutzt? | Statistik (Mittelwert − 2×Std als Schwellwert) | — | v0.30.58 | ✅ | Admin: Woche/Monat → Raum-Nutzung Histogramme (grün/rot) |
+| 14 | **Aktivitätslevel relativ:** Wie aktiv ist der Tag im Vergleich zum persönlichen Schnitt? | Rollender Median der geladenen Tage als 100%-Referenz | — | v0.30.74 | ✅ | Admin: Aktivitäts-Belastung (0–200%, 100% = Normalwert) · PWA: Sparkline-Balkenhöhe |
+| 16 | **Graduelle Drift-Detektion:** Schleichende Verhaltensänderung über Wochen erkennen | Page-Hinkley-Test auf normalisierten Aktivitätswerten | — | v0.30.74 | 🔬 Beobachtungsphase | Admin: Langzeit-Trends → „Drift-Monitor"-Kachel (orange gestrichelt, PH-Score-Chart + Status-Badge) |
 
 ---
 
@@ -132,8 +101,7 @@ Cogni-Living ist kein gewöhnlicher Adapter. Es ist eine **Hybrid-AI Engine**, d
 | **Energy: Smart Warm-Up (Kalender)** | ❌ Nein | ✅ Ja |
 | **Energy: PINN (Physics AI)** | ❌ Nein | ✅ Ja |
 | **Health: Langzeit-Trends (6 Metriken)** | ❌ Nein | ✅ Ja |
-| **LSTM Temporale Vorhersage** | ❌ Geplant | ❌ Geplant |
-| **Drift-Detektion (Demenz-Frühwarnung)** | ❌ Geplant | ❌ Geplant |
+| **Drift-Monitor (Page-Hinkley, Beobachtungsphase)** | ✅ Ja | ✅ Ja |
 
 ---
 

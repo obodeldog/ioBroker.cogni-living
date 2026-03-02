@@ -677,3 +677,59 @@ class HealthBrain:
         
         except Exception as e:
             return {'error': str(e)}
+    def detect_drift_page_hinkley(self, values, delta_factor=0.02, lambda_threshold=50):
+        """
+        Page-Hinkley-Test fuer graduelle Drift-Detektion.
+        Erkennt schleichende Verhaltensaenderungen ueber Wochen/Monate.
+
+        Algorithmus:
+          Laufender Mittelwert mu (exponentiell gewichtet, alpha=0.05)
+          Kumulativer Score M_t = M_{t-1} + (x_t - mu - delta)
+          m_t = min(M_0..M_t)
+          PH-Score = M_t - m_t
+          Alarm wenn PH-Score > lambda_threshold
+
+        Args:
+            values:           Liste taeglicher Aktivitaetsprozente (relativ, 0-200)
+            delta_factor:     Minimale erkennbare Aenderung (Anteil des Mittelwerts)
+            lambda_threshold: Empfindlichkeit (hoeher = weniger Fehlalarme)
+
+        Returns:
+            scores, current_score, drift_detected, threshold, change_point_idx
+        """
+        try:
+            if not values or len(values) < 10:
+                return {'error': f'Zu wenig Daten ({len(values) if values else 0} Tage, min. 10)'}
+
+            values = [float(v) for v in values]
+            half = max(5, len(values) // 2)
+            mu = float(np.median(values[:half]))
+            delta = delta_factor * abs(mu) if mu != 0 else 1.0
+
+            M, m, ph_scores = 0.0, 0.0, []
+            for x in values:
+                M = M + (x - mu - delta)
+                m = min(m, M)
+                ph_scores.append(round(M - m, 2))
+                mu = 0.95 * mu + 0.05 * x
+
+            current_score = ph_scores[-1]
+            drift_detected = current_score > lambda_threshold
+
+            change_point_idx = None
+            if drift_detected:
+                onset = lambda_threshold * 0.25
+                for i in range(len(ph_scores) - 1, -1, -1):
+                    if ph_scores[i] < onset:
+                        change_point_idx = i
+                        break
+
+            return {
+                'scores': ph_scores,
+                'current_score': round(current_score, 2),
+                'drift_detected': drift_detected,
+                'threshold': lambda_threshold,
+                'change_point_idx': change_point_idx
+            }
+        except Exception as e:
+            return {'error': str(e)}
