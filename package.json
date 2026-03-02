@@ -1,7 +1,7 @@
-{
+﻿{
   "name": "iobroker.cogni-living",
-    "version": "0.30.75",
-    "description": "Analysiert Verhaltensmuster für Gesundheit & Komfort",
+    "version": "0.30.76",
+    "description": "Analysiert Verhaltensmuster fÃ¼r Gesundheit & Komfort",
     "author": {
         "name": "Marc Jaeger",
         "email": "mj112@gmx.de"
