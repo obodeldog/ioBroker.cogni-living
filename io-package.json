@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.30.72",
+        "version": "0.30.73",
         "news": {
+            "0.30.73": {
+                "en": "FIX: Sparkline tooltip nightText JSON parsed; first sentence only shown",
+                "de": "FIX: Sparkline-Tooltip nightText JSON-geparst; nur erster Satz wird angezeigt"
+            },
             "0.30.72": {
                 "en": "FIX: Night color logic order (Unruhig=red before Badgang=orange); sparkline tooltip max-width+wrap; tooltip text shortened",
                 "de": "FIX: Nacht-Farblogik-Reihenfolge (Unruhig=rot vor Badgang=orange); Sparkline-Tooltip max-width+wrap; Tooltip-Text gekürzt"
