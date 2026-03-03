@@ -1,256 +1,256 @@
-﻿{
-    "common": {
-        "name": "cogni-living",
-        "version": "0.30.78",
-        "news": {
-            "0.30.75": {
-                "en": "FIX: constâ†’let dailyData (build error); Gemini prompt uses aiContext name, no JSON format; status_bericht/antwort JSON keys added; sparkline tooltip with date and icons",
-                "de": "FIX: constâ†’let dailyData (Build-Fehler); Gemini nutzt aiContext-Namen, kein JSON-Format; status_bericht/antwort JSON-Keys ergÃ¤nzt; Sparkline-Tooltip mit Datum und Icons"
-            },
-            "0.30.74": {
-                "en": "NEW: Relative activity normalization (personal median=100%); Page-Hinkley drift detection debug kachel; README roadmap updated with UI-display column",
-                "de": "NEU: Relative AktivitÃ¤ts-Normalisierung (persÃ¶nlicher Median=100%); Page-Hinkley Drift-Monitor Debug-Kachel; README Roadmap mit UI-Darstellung-Spalte aktualisiert"
-            },
-            "0.30.73": {
-                "en": "FIX: Sparkline tooltip nightText JSON parsed; first sentence only shown",
-                "de": "FIX: Sparkline-Tooltip nightText JSON-geparst; nur erster Satz wird angezeigt"
-            },
-            "0.30.72": {
-                "en": "FIX: Night color logic order (Unruhig=red before Badgang=orange); sparkline tooltip max-width+wrap; tooltip text shortened",
-                "de": "FIX: Nacht-Farblogik-Reihenfolge (Unruhig=rot vor Badgang=orange); Sparkline-Tooltip max-width+wrap; Tooltip-Text gekÃ¼rzt"
-            },
-            "0.30.71": {
-                "en": "FIX: PWA analysis progress now polls real completion (NIGHT+DAY); sparkline CSS hover tooltip; night color logic unified; real activity timestamp shown",
-                "de": "FIX: PWA Analyse-Fortschritt wartet auf echte Fertigmeldung (NACHT+TAG); Sparkline CSS-Hover-Tooltip; Nacht-Farblogik vereinheitlicht; echte Uhrzeit statt 'gerade eben'"
-            },
-            "0.30.70": {
-                "en": "FIX: Room charts x-axis corrected (newest day right); 7-day KI summary parser handles all JSON formats; PWA shows real time instead of 'gerade eben'; aiSummary array-format stripped",
-                "de": "FIX: Raum-Charts X-Achse korrigiert (neuester Tag rechts); 7-Tage KI-Parser fÃ¼r alle JSON-Formate; PWA zeigt echte Uhrzeit statt 'gerade eben'; aiSummary Array-Format bereinigt"
-            },
-            "0.30.69": {
-                "en": "FIX: SecurityBrain IsolationForest replaces placeholder; Y-axis 0-100% fixed; AURA Monitor version updated",
-                "de": "FIX: SecurityBrain IsolationForest ersetzt Placeholder; Y-Achse 0-100% fest; AURA Monitor Version aktualisiert"
-            },
-            "0.30.68": {
-                "en": "FIX: Activity load formula (48*5 scale); Night IsolationForest personalization; Health anomaly score in state; PWA reads real anomaly; lastNightNormal for person",
-                "de": "FIX: AktivitÃ¤ts-Belastung Formel (48*5); Nacht-IsolationForest personalisiert; Health-Anomalie-Score in State; PWA liest echten Score; lastNightNormal fÃ¼r Person"
-            },
-            "0.30.67": {
-                "en": "FIX: geminiDay/geminiNight JSON parsing restored AI summary; distillNightText reduces night quality to 2-3 words locally; sparkline legend added",
-                "de": "FIX: geminiDay/geminiNight JSON-Parsing stellt KI-Zusammenfassung wieder her; distillNightText kÃ¼rzt Nachttext lokal auf 2-3 WÃ¶rter; Sparkline-Legende ergÃ¤nzt"
-            },
-            "0.30.66": {
-                "en": "FIX: PWA activity metric replaced by anomaly status (UnauffÃ¤llig/AuffÃ¤llig); night quality from geminiNight AI text; 7-day sparkline with correct path and anomaly coloring",
-                "de": "FIX: PWA AktivitÃ¤t ersetzt durch Anomalie-Status (UnauffÃ¤llig/AuffÃ¤llig); NachtqualitÃ¤t aus geminiNight KI-Text; 7-Tage-Sparkline mit korrektem Pfad und Anomalie-Farb-Codierung"
-            },
-            "0.30.65": {
-                "en": "FIX: Unified data sources â€“ PWA + Admin now read from same history file; window sensors correctly counted (fenster/haustuer/terrasse/balkon); roomHistory used for bath minutes",
-                "de": "FIX: Einheitliche Datenquelle â€“ PWA + Admin lesen aus gleicher History-Datei; Fenstersensoren korrekt erkannt (fenster/haustÃ¼r/terrasse/balkon); Bad-Minuten aus roomHistory"
-            },
-            "0.30.64": {
-                "en": "FIX: PWA uses roomStats for bath minutes, history-file for windows/night; Analyze-button with progress bar; Cloudflare process health-check",
-                "de": "FIX: PWA nutzt roomStats fÃ¼r Bad-Minuten, History-Datei fÃ¼r Fenster/Nacht; Analysieren-Button mit Ladebalken; Cloudflare Prozess-Health-Check"
-            },
-            "0.30.63": {
-                "en": "FIX: PWA metrics from eventHistory (bath visits, window openings, night quality), Cloudflare stable output pipe, Settings state defaults for new fields",
-                "de": "FIX: PWA Metriken aus eventHistory (Bad-Besuche, Fenster-Ã–ffnungen, Nacht-QualitÃ¤t), Cloudflare stabiler Output-Pipe, Settings-Defaults fÃ¼r neue Felder"
-            },
-            "0.30.62": {
-                "en": "FIX: PWA token mismatch (real IP, state-based URL), Cloudflare EACCES fix (correct data dir), Admin URL refresh button",
-                "de": "FIX: PWA Token-Mismatch (echte IP, State-basierte URL), Cloudflare EACCES Fix (korrektes Verzeichnis), Admin URL-Aktualisieren-Button"
-            },
-            "0.30.61": {
-                "en": "NEW: Family PWA (mobile at-a-glance app), Cloudflare Tunnel, rich Pushover notifications with sparkline",
-                "de": "NEU: Familien-PWA (mobile Auf-einen-Blick App), Cloudflare Tunnel, erweiterte Pushover-Benachrichtigungen mit Sparkline"
-            },
-            "0.30.55": {
-                "en": "UX: Hallway sensor checkbox in sensor table (replaces keyword input)",
-                "de": "UX: Flur-Sensor Checkbox in Sensor-Tabelle (ersetzt Keyword-Eingabe)"
-            },
-            "0.30.54": {
-                "en": "FEATURE: Filtered hover tooltips (bedroom vs. outside), Configurable hallway rooms, Gait speed from Gait Analysis, Baseline median fix",
-                "de": "FEATURE: Gefilterte Hover-Tooltips (Schlafzimmer vs. auÃŸerhalb), Konfigurierbare Flur-RÃ¤ume, Ganggeschwindigkeit aus Gait Analysis, Baseline-Median-Fix"
-            },
-            "0.30.53": {
-                "en": "CRITICAL FIX: Corrected data extraction for longterm trends (roomHistory, nightEvents, windowOpenings, activity calculation)",
-                "de": "KRITISCHER FIX: Korrigierte Datenextraktion fÃ¼r Langzeit-Trends (roomHistory, nightEvents, windowOpenings, AktivitÃ¤tsberechnung)"
-            },
-            "0.30.52": {
-                "en": "FEATURE: Adaptive night activity split (bedroom vs. outside), Event-count for trends, Briefing debug log",
-                "de": "FEATURE: Adaptive Nacht-AktivitÃ¤t Split (Schlafzimmer vs. auÃŸerhalb), Event-Count fÃ¼r Trends, Briefing Debug-Log"
-            },
-            "0.30.51": {
-                "en": "CRITICAL FIX: History files now save only today's events (not all events), Backend timeout increased to 30s",
-                "de": "KRITISCHER FIX: History-Files speichern jetzt nur heutige Events (nicht alle), Backend Timeout auf 30s erhÃ¶ht"
-            },
-            "0.30.50": {
-                "en": "DEBUG: Add detailed extraction logs to diagnose empty data issue",
-                "de": "DEBUG: Detaillierte Extraktions-Logs zur Diagnose leerer Daten"
-            },
-            "0.30.49": {
-                "en": "FIX: Use native socket.sendTo Promises instead of callback wrappers (fixes timeout issue)",
-                "de": "FIX: Nutze native socket.sendTo Promises statt Callback-Wrapper (behebt Timeout-Problem)"
-            },
-            "0.30.48": {
-                "en": "DEBUG: Add extensive console logging + timeout fixes for longterm trends loading",
-                "de": "DEBUG: Umfangreiche Console-Logs + Timeout-Fixes fÃ¼r Langzeit-Trends-Laden"
-            },
-            "0.30.47": {
-                "en": "NEW: Garmin-Style Longterm Trends (Activity Load, Gait Speed, Night Restlessness, Room Mobility, Hygiene, Ventilation)",
-                "de": "NEU: Garmin-Style Langzeit-Trends (AktivitÃ¤ts-Belastung, Ganggeschwindigkeit, Nacht-Unruhe, Raum-MobilitÃ¤t, Hygiene, LÃ¼ftung)"
-            },
-            "0.30.46": {
-                "en": "FIX: Topology Matrix multi-click (missing backend handler + optimistic update)",
-                "de": "FIX: Topologie-Matrix Mehrfach-Klick (fehlender Backend-Handler + optimistic update)"
-            },
-            "0.30.45": {
-                "en": "UX: Compact Topology Matrix (narrower columns, all rooms visible)",
-                "de": "UX: Kompakte Topologie-Matrix (schmalere Spalten, alle RÃ¤ume sichtbar)"
-            },
-            "0.30.44": {
-                "en": "UX: Full-Width Topology Matrix + Better Scrollbars + Graph-Brain uses current data",
-                "de": "UX: Topologie-Matrix volle Breite + Bessere Scrollbars + Graph-Brain nutzt aktuelle Daten"
-            },
-            "0.30.43": {
-                "en": "Fix: Topology Matrix click bug (state preservation)",
-                "de": "Fix: Topologie-Matrix Klick-Bug (State-Erhaltung)"
-            },
-            "0.30.42": {
-                "en": "Topology Auto-Update on Start + Room Hover Tooltips",
-                "de": "Topologie Auto-Update beim Start + Raum Hover-Tooltips"
-            },
-            "0.30.41": {
-                "en": "Life Sign Alert System + Activity Legend + Timeline UX Cleanup",
-                "de": "Lebenszeichen-Alarmsystem + AktivitÃ¤ts-Legende + Timeline UX Bereinigung"
-            },
-            "0.30.40": {
-                "en": "Adaptive Activity Calculation (Baseline-Relative) + Timeline Visibility Fix",
-                "de": "Adaptive AktivitÃ¤tsberechnung (Baseline-relativ) + Timeline-Sichtbarkeit Fix"
-            },
-            "0.30.39": {
-                "en": "UX: Smart-Split Timeline + Current Time Indicator",
-                "de": "UX: Smart-Split Timeline + Aktuelle-Zeit-Anzeige"
-            },
-            "0.30.38": {
-                "en": "Fix: Python Bridge Message Handler + Callback System",
-                "de": "Fix: Python Bridge Message Handler + Callback-System"
-            },
-            "0.30.37": {
-                "en": "Feature: Intelligent Heatmap with IsolationForest + Time Rules",
-                "de": "Feature: Intelligente Heatmap mit IsolationForest + Zeitregeln"
-            },
-            "0.30.36": {
-                "en": "Feature: Activity Heatmap (7 days Ã— 24 hours)",
-                "de": "Feature: AktivitÃ¤ts-Heatmap (7 Tage Ã— 24 Stunden)"
-            },
-            "0.30.35": {
-                "en": "Fix: Unified activity calculation (Day & Week view)",
-                "de": "Fix: Vereinheitlichte AktivitÃ¤ts-Berechnung (Tag & Woche)"
-            },
-            "0.30.3": {
-                "en": "Phase E: Added Room Integrator & Feature Toggles",
-                "de": "Phase E: Raum-Integrator & Modul-Schalter hinzugefÃ¼gt"
-            },
-            "0.29.12": {
-                "en": "Feature: RL Penalty Auto-Expiration (3 Days)",
-                "de": "Feature: Automatischer Ablauf von Lern-Sperren (3 Tage)"
-            }
-        },
-        "titleLang": {
-            "en": "NUUKANNI (Cogni-Living)",
-            "de": "NUUKANNI (Cogni-Living)"
-        },
-        "desc": {
-            "en": "Neuro-Symbolic AI for Home Automation & Health",
-            "de": "Neuro-Symbolische KI fÃ¼r Hausautomation & Gesundheit"
-        },
-        "authors": [
-            "Marc Jaeger <mj112@gmx.de>"
-        ],
-        "keywords": [
-            "ai",
-            "behavior",
-            "health",
-            "smart home"
-        ],
-        "licenseInformation": {
-            "type": "free",
-            "license": "MIT"
-        },
-        "platform": "Javascript/Node.js",
-        "icon": "cogni-living.png",
-        "extIcon": "https://raw.githubusercontent.com/obodeldog/ioBroker.cogni-living/main/admin/cogni-living.png",
-        "readme": "https://github.com/obodeldog/ioBroker.cogni-living/blob/main/README.md",
-        "loglevel": "info",
-        "mode": "daemon",
-        "type": "iot-systems",
-        "compact": true,
-        "connectionType": "local",
-        "dataSource": "push",
-        "materialize": true,
-        "dependencies": [
-            {
-                "js-controller": ">=6.0.11"
-            }
-        ],
-        "globalDependencies": [
-            {
-                "admin": ">=7.0.23"
-            }
-        ]
+{
+  "common": {
+    "name": "cogni-living",
+    "version": "0.30.79",
+    "news": {
+      "0.30.75": {
+        "en": "FIX: constâ†’let dailyData (build error); Gemini prompt uses aiContext name, no JSON format; status_bericht/antwort JSON keys added; sparkline tooltip with date and icons",
+        "de": "FIX: constâ†’let dailyData (Build-Fehler); Gemini nutzt aiContext-Namen, kein JSON-Format; status_bericht/antwort JSON-Keys ergÃ¤nzt; Sparkline-Tooltip mit Datum und Icons"
+      },
+      "0.30.74": {
+        "en": "NEW: Relative activity normalization (personal median=100%); Page-Hinkley drift detection debug kachel; README roadmap updated with UI-display column",
+        "de": "NEU: Relative AktivitÃ¤ts-Normalisierung (persÃ¶nlicher Median=100%); Page-Hinkley Drift-Monitor Debug-Kachel; README Roadmap mit UI-Darstellung-Spalte aktualisiert"
+      },
+      "0.30.73": {
+        "en": "FIX: Sparkline tooltip nightText JSON parsed; first sentence only shown",
+        "de": "FIX: Sparkline-Tooltip nightText JSON-geparst; nur erster Satz wird angezeigt"
+      },
+      "0.30.72": {
+        "en": "FIX: Night color logic order (Unruhig=red before Badgang=orange); sparkline tooltip max-width+wrap; tooltip text shortened",
+        "de": "FIX: Nacht-Farblogik-Reihenfolge (Unruhig=rot vor Badgang=orange); Sparkline-Tooltip max-width+wrap; Tooltip-Text gekÃ¼rzt"
+      },
+      "0.30.71": {
+        "en": "FIX: PWA analysis progress now polls real completion (NIGHT+DAY); sparkline CSS hover tooltip; night color logic unified; real activity timestamp shown",
+        "de": "FIX: PWA Analyse-Fortschritt wartet auf echte Fertigmeldung (NACHT+TAG); Sparkline CSS-Hover-Tooltip; Nacht-Farblogik vereinheitlicht; echte Uhrzeit statt 'gerade eben'"
+      },
+      "0.30.70": {
+        "en": "FIX: Room charts x-axis corrected (newest day right); 7-day KI summary parser handles all JSON formats; PWA shows real time instead of 'gerade eben'; aiSummary array-format stripped",
+        "de": "FIX: Raum-Charts X-Achse korrigiert (neuester Tag rechts); 7-Tage KI-Parser fÃ¼r alle JSON-Formate; PWA zeigt echte Uhrzeit statt 'gerade eben'; aiSummary Array-Format bereinigt"
+      },
+      "0.30.69": {
+        "en": "FIX: SecurityBrain IsolationForest replaces placeholder; Y-axis 0-100% fixed; AURA Monitor version updated",
+        "de": "FIX: SecurityBrain IsolationForest ersetzt Placeholder; Y-Achse 0-100% fest; AURA Monitor Version aktualisiert"
+      },
+      "0.30.68": {
+        "en": "FIX: Activity load formula (48*5 scale); Night IsolationForest personalization; Health anomaly score in state; PWA reads real anomaly; lastNightNormal for person",
+        "de": "FIX: AktivitÃ¤ts-Belastung Formel (48*5); Nacht-IsolationForest personalisiert; Health-Anomalie-Score in State; PWA liest echten Score; lastNightNormal fÃ¼r Person"
+      },
+      "0.30.67": {
+        "en": "FIX: geminiDay/geminiNight JSON parsing restored AI summary; distillNightText reduces night quality to 2-3 words locally; sparkline legend added",
+        "de": "FIX: geminiDay/geminiNight JSON-Parsing stellt KI-Zusammenfassung wieder her; distillNightText kÃ¼rzt Nachttext lokal auf 2-3 WÃ¶rter; Sparkline-Legende ergÃ¤nzt"
+      },
+      "0.30.66": {
+        "en": "FIX: PWA activity metric replaced by anomaly status (UnauffÃ¤llig/AuffÃ¤llig); night quality from geminiNight AI text; 7-day sparkline with correct path and anomaly coloring",
+        "de": "FIX: PWA AktivitÃ¤t ersetzt durch Anomalie-Status (UnauffÃ¤llig/AuffÃ¤llig); NachtqualitÃ¤t aus geminiNight KI-Text; 7-Tage-Sparkline mit korrektem Pfad und Anomalie-Farb-Codierung"
+      },
+      "0.30.65": {
+        "en": "FIX: Unified data sources â€“ PWA + Admin now read from same history file; window sensors correctly counted (fenster/haustuer/terrasse/balkon); roomHistory used for bath minutes",
+        "de": "FIX: Einheitliche Datenquelle â€“ PWA + Admin lesen aus gleicher History-Datei; Fenstersensoren korrekt erkannt (fenster/haustÃ¼r/terrasse/balkon); Bad-Minuten aus roomHistory"
+      },
+      "0.30.64": {
+        "en": "FIX: PWA uses roomStats for bath minutes, history-file for windows/night; Analyze-button with progress bar; Cloudflare process health-check",
+        "de": "FIX: PWA nutzt roomStats fÃ¼r Bad-Minuten, History-Datei fÃ¼r Fenster/Nacht; Analysieren-Button mit Ladebalken; Cloudflare Prozess-Health-Check"
+      },
+      "0.30.63": {
+        "en": "FIX: PWA metrics from eventHistory (bath visits, window openings, night quality), Cloudflare stable output pipe, Settings state defaults for new fields",
+        "de": "FIX: PWA Metriken aus eventHistory (Bad-Besuche, Fenster-Ã–ffnungen, Nacht-QualitÃ¤t), Cloudflare stabiler Output-Pipe, Settings-Defaults fÃ¼r neue Felder"
+      },
+      "0.30.62": {
+        "en": "FIX: PWA token mismatch (real IP, state-based URL), Cloudflare EACCES fix (correct data dir), Admin URL refresh button",
+        "de": "FIX: PWA Token-Mismatch (echte IP, State-basierte URL), Cloudflare EACCES Fix (korrektes Verzeichnis), Admin URL-Aktualisieren-Button"
+      },
+      "0.30.61": {
+        "en": "NEW: Family PWA (mobile at-a-glance app), Cloudflare Tunnel, rich Pushover notifications with sparkline",
+        "de": "NEU: Familien-PWA (mobile Auf-einen-Blick App), Cloudflare Tunnel, erweiterte Pushover-Benachrichtigungen mit Sparkline"
+      },
+      "0.30.55": {
+        "en": "UX: Hallway sensor checkbox in sensor table (replaces keyword input)",
+        "de": "UX: Flur-Sensor Checkbox in Sensor-Tabelle (ersetzt Keyword-Eingabe)"
+      },
+      "0.30.54": {
+        "en": "FEATURE: Filtered hover tooltips (bedroom vs. outside), Configurable hallway rooms, Gait speed from Gait Analysis, Baseline median fix",
+        "de": "FEATURE: Gefilterte Hover-Tooltips (Schlafzimmer vs. auÃŸerhalb), Konfigurierbare Flur-RÃ¤ume, Ganggeschwindigkeit aus Gait Analysis, Baseline-Median-Fix"
+      },
+      "0.30.53": {
+        "en": "CRITICAL FIX: Corrected data extraction for longterm trends (roomHistory, nightEvents, windowOpenings, activity calculation)",
+        "de": "KRITISCHER FIX: Korrigierte Datenextraktion fÃ¼r Langzeit-Trends (roomHistory, nightEvents, windowOpenings, AktivitÃ¤tsberechnung)"
+      },
+      "0.30.52": {
+        "en": "FEATURE: Adaptive night activity split (bedroom vs. outside), Event-count for trends, Briefing debug log",
+        "de": "FEATURE: Adaptive Nacht-AktivitÃ¤t Split (Schlafzimmer vs. auÃŸerhalb), Event-Count fÃ¼r Trends, Briefing Debug-Log"
+      },
+      "0.30.51": {
+        "en": "CRITICAL FIX: History files now save only today's events (not all events), Backend timeout increased to 30s",
+        "de": "KRITISCHER FIX: History-Files speichern jetzt nur heutige Events (nicht alle), Backend Timeout auf 30s erhÃ¶ht"
+      },
+      "0.30.50": {
+        "en": "DEBUG: Add detailed extraction logs to diagnose empty data issue",
+        "de": "DEBUG: Detaillierte Extraktions-Logs zur Diagnose leerer Daten"
+      },
+      "0.30.49": {
+        "en": "FIX: Use native socket.sendTo Promises instead of callback wrappers (fixes timeout issue)",
+        "de": "FIX: Nutze native socket.sendTo Promises statt Callback-Wrapper (behebt Timeout-Problem)"
+      },
+      "0.30.48": {
+        "en": "DEBUG: Add extensive console logging + timeout fixes for longterm trends loading",
+        "de": "DEBUG: Umfangreiche Console-Logs + Timeout-Fixes fÃ¼r Langzeit-Trends-Laden"
+      },
+      "0.30.47": {
+        "en": "NEW: Garmin-Style Longterm Trends (Activity Load, Gait Speed, Night Restlessness, Room Mobility, Hygiene, Ventilation)",
+        "de": "NEU: Garmin-Style Langzeit-Trends (AktivitÃ¤ts-Belastung, Ganggeschwindigkeit, Nacht-Unruhe, Raum-MobilitÃ¤t, Hygiene, LÃ¼ftung)"
+      },
+      "0.30.46": {
+        "en": "FIX: Topology Matrix multi-click (missing backend handler + optimistic update)",
+        "de": "FIX: Topologie-Matrix Mehrfach-Klick (fehlender Backend-Handler + optimistic update)"
+      },
+      "0.30.45": {
+        "en": "UX: Compact Topology Matrix (narrower columns, all rooms visible)",
+        "de": "UX: Kompakte Topologie-Matrix (schmalere Spalten, alle RÃ¤ume sichtbar)"
+      },
+      "0.30.44": {
+        "en": "UX: Full-Width Topology Matrix + Better Scrollbars + Graph-Brain uses current data",
+        "de": "UX: Topologie-Matrix volle Breite + Bessere Scrollbars + Graph-Brain nutzt aktuelle Daten"
+      },
+      "0.30.43": {
+        "en": "Fix: Topology Matrix click bug (state preservation)",
+        "de": "Fix: Topologie-Matrix Klick-Bug (State-Erhaltung)"
+      },
+      "0.30.42": {
+        "en": "Topology Auto-Update on Start + Room Hover Tooltips",
+        "de": "Topologie Auto-Update beim Start + Raum Hover-Tooltips"
+      },
+      "0.30.41": {
+        "en": "Life Sign Alert System + Activity Legend + Timeline UX Cleanup",
+        "de": "Lebenszeichen-Alarmsystem + AktivitÃ¤ts-Legende + Timeline UX Bereinigung"
+      },
+      "0.30.40": {
+        "en": "Adaptive Activity Calculation (Baseline-Relative) + Timeline Visibility Fix",
+        "de": "Adaptive AktivitÃ¤tsberechnung (Baseline-relativ) + Timeline-Sichtbarkeit Fix"
+      },
+      "0.30.39": {
+        "en": "UX: Smart-Split Timeline + Current Time Indicator",
+        "de": "UX: Smart-Split Timeline + Aktuelle-Zeit-Anzeige"
+      },
+      "0.30.38": {
+        "en": "Fix: Python Bridge Message Handler + Callback System",
+        "de": "Fix: Python Bridge Message Handler + Callback-System"
+      },
+      "0.30.37": {
+        "en": "Feature: Intelligent Heatmap with IsolationForest + Time Rules",
+        "de": "Feature: Intelligente Heatmap mit IsolationForest + Zeitregeln"
+      },
+      "0.30.36": {
+        "en": "Feature: Activity Heatmap (7 days Ã— 24 hours)",
+        "de": "Feature: AktivitÃ¤ts-Heatmap (7 Tage Ã— 24 Stunden)"
+      },
+      "0.30.35": {
+        "en": "Fix: Unified activity calculation (Day & Week view)",
+        "de": "Fix: Vereinheitlichte AktivitÃ¤ts-Berechnung (Tag & Woche)"
+      },
+      "0.30.3": {
+        "en": "Phase E: Added Room Integrator & Feature Toggles",
+        "de": "Phase E: Raum-Integrator & Modul-Schalter hinzugefÃ¼gt"
+      },
+      "0.29.12": {
+        "en": "Feature: RL Penalty Auto-Expiration (3 Days)",
+        "de": "Feature: Automatischer Ablauf von Lern-Sperren (3 Tage)"
+      }
     },
-    "native": {
-        "moduleHealth": true,
-        "moduleSecurity": true,
-        "moduleEnergy": true,
-        "moduleComfort": true,
-        "devices": [],
-        "presenceDevices": [],
-        "outdoorSensorId": "",
-        "geminiApiKey": "",
-        "licenseKey": "",
-        "analysisInterval": 15,
-        "aiPersona": "generic",
-        "livingContext": "",
-        "minDaysForBaseline": 7,
-        "flurRooms": "flur, diele, gang, treppe",
-        "inactivityMonitoringEnabled": false,
-        "inactivityThresholdHours": 12,
-        "notifyTelegramEnabled": false,
-        "notifyTelegramInstance": "",
-        "notifyTelegramRecipient": "",
-        "notifyPushoverEnabled": false,
-        "notifyPushoverInstance": "",
-        "notifyPushoverRecipient": "",
-        "notifyEmailEnabled": false,
-        "notifyEmailInstance": "",
-        "notifyEmailRecipient": "",
-        "notifyWhatsappEnabled": false,
-        "notifyWhatsappInstance": "",
-        "notifyWhatsappRecipient": "",
-        "notifySignalEnabled": false,
-        "notifySignalInstance": "",
-        "notifySignalRecipient": "",
-        "ltmStbWindowDays": 14,
-        "ltmLtbWindowDays": 60,
-        "ltmDriftCheckIntervalHours": 24,
-        "briefingEnabled": false,
-        "briefingTime": "08:00",
-        "useWeather": false,
-        "weatherInstance": "",
-        "useCalendar": false,
-        "calendarInstance": "",
-        "calendarProfileMatching": false,
-        "infrasoundEnabled": false,
-        "infrasoundSensorId": "",
-        "infrasoundThreshold": 0.04,
-        "infrasoundArmingId": "",
-        "infrasoundEntryDelay": 0,
-        "pwaEnabled": false,
-        "pwaPort": 8095,
-        "familyShareToken": "",
-        "cloudflareEnabled": false
+    "titleLang": {
+      "en": "NUUKANNI (Cogni-Living)",
+      "de": "NUUKANNI (Cogni-Living)"
     },
-    "objects": [],
-    "instanceObjects": []
+    "desc": {
+      "en": "Neuro-Symbolic AI for Home Automation & Health",
+      "de": "Neuro-Symbolische KI fÃ¼r Hausautomation & Gesundheit"
+    },
+    "authors": [
+      "Marc Jaeger <mj112@gmx.de>"
+    ],
+    "keywords": [
+      "ai",
+      "behavior",
+      "health",
+      "smart home"
+    ],
+    "licenseInformation": {
+      "type": "free",
+      "license": "MIT"
+    },
+    "platform": "Javascript/Node.js",
+    "icon": "cogni-living.png",
+    "extIcon": "https://raw.githubusercontent.com/obodeldog/ioBroker.cogni-living/main/admin/cogni-living.png",
+    "readme": "https://github.com/obodeldog/ioBroker.cogni-living/blob/main/README.md",
+    "loglevel": "info",
+    "mode": "daemon",
+    "type": "iot-systems",
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "push",
+    "materialize": true,
+    "dependencies": [
+      {
+        "js-controller": ">=6.0.11"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=7.0.23"
+      }
+    ]
+  },
+  "native": {
+    "moduleHealth": true,
+    "moduleSecurity": true,
+    "moduleEnergy": true,
+    "moduleComfort": true,
+    "devices": [],
+    "presenceDevices": [],
+    "outdoorSensorId": "",
+    "geminiApiKey": "",
+    "licenseKey": "",
+    "analysisInterval": 15,
+    "aiPersona": "generic",
+    "livingContext": "",
+    "minDaysForBaseline": 7,
+    "flurRooms": "flur, diele, gang, treppe",
+    "inactivityMonitoringEnabled": false,
+    "inactivityThresholdHours": 12,
+    "notifyTelegramEnabled": false,
+    "notifyTelegramInstance": "",
+    "notifyTelegramRecipient": "",
+    "notifyPushoverEnabled": false,
+    "notifyPushoverInstance": "",
+    "notifyPushoverRecipient": "",
+    "notifyEmailEnabled": false,
+    "notifyEmailInstance": "",
+    "notifyEmailRecipient": "",
+    "notifyWhatsappEnabled": false,
+    "notifyWhatsappInstance": "",
+    "notifyWhatsappRecipient": "",
+    "notifySignalEnabled": false,
+    "notifySignalInstance": "",
+    "notifySignalRecipient": "",
+    "ltmStbWindowDays": 14,
+    "ltmLtbWindowDays": 60,
+    "ltmDriftCheckIntervalHours": 24,
+    "briefingEnabled": false,
+    "briefingTime": "08:00",
+    "useWeather": false,
+    "weatherInstance": "",
+    "useCalendar": false,
+    "calendarInstance": "",
+    "calendarProfileMatching": false,
+    "infrasoundEnabled": false,
+    "infrasoundSensorId": "",
+    "infrasoundThreshold": 0.04,
+    "infrasoundArmingId": "",
+    "infrasoundEntryDelay": 0,
+    "pwaEnabled": false,
+    "pwaPort": 8095,
+    "familyShareToken": "",
+    "cloudflareEnabled": false
+  },
+  "objects": [],
+  "instanceObjects": []
 }
