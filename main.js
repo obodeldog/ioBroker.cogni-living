@@ -319,7 +319,7 @@ class CogniLiving extends utils.Adapter {
             const contactOpenEvents = this.eventHistory.filter(e => {
                 const ts = e.timestamp || e.ts || 0;
                 if (ts < startOfDayTimestamp) return false;
-                if (e.type !== 'contact') return false;
+                if (e.type !== 'door') return false;
                 return e.value === true || e.value === 1 || e.value === 'true' || e.value === 'open';
             });
             const freshAirCount = contactOpenEvents.length;
