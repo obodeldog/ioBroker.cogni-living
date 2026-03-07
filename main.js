@@ -330,6 +330,41 @@ class CogniLiving extends utils.Adapter {
                 windowOpenCounts[label] = (windowOpenCounts[label] || 0) + 1;
             });
 
+            // Nacht-Sensor Locations (isNightSensor=true) -> typ-basiert, kein Keyword-Matching
+            const nightSensorLocations = new Set(
+                (this.config.devices || [])
+                    .filter(d => d.isNightSensor === true && d.location)
+                    .map(d => d.location)
+            );
+            // Bad/WC Locations (isBathroomSensor=true) -> typ-basiert, kein Keyword-Matching
+            const bathroomLocations = new Set(
+                (this.config.devices || [])
+                    .filter(d => d.isBathroomSensor === true && d.location)
+                    .map(d => d.location)
+            );
+
+            // Nacht-Events: Bewegung in Nacht-Sensor-Raeumen zwischen 22:00-08:00
+            const nightMotionCount = todayEvents.filter(e => {
+                if (!e.timestamp) return false;
+                const hour = new Date(e.timestamp).getHours();
+                const isNightTime = hour >= 22 || hour < 8;
+                const isMotion = e.type === 'motion' || e.type === 'presence';
+                const isNightRoom = nightSensorLocations.size > 0
+                    ? nightSensorLocations.has(e.location)
+                    : (e.location || e.name || '').toLowerCase().includes('schlaf');
+                return isNightTime && isNightRoom && isMotion;
+            }).length;
+
+            // Bad-Minuten: Summe aus roomHistory fuer Bad-Sensor-Raeume
+            const roomHistDataForBath = roomHistoryData.history || {};
+            const bathroomMinutes = Object.entries(roomHistDataForBath)
+                .filter(([room]) => bathroomLocations.size > 0
+                    ? bathroomLocations.has(room)
+                    : /bad|wc|toilet/i.test(room))
+                .reduce((sum, [, hourlyArr]) => {
+                    return sum + (Array.isArray(hourlyArr) ? hourlyArr.reduce((a, b) => a + (b || 0), 0) : 0);
+                }, 0);
+
             let battery = 85;
             if (activityTrend && activityTrend.val !== undefined) battery = Math.min(100, Math.max(20, Math.round(80 + (Number(activityTrend.val) * 5))));
 
@@ -391,6 +426,10 @@ class CogniLiving extends utils.Adapter {
                 freshAirCount: freshAirCount,
                 windowOpenings: freshAirCount,
                 windowOpenCounts: windowOpenCounts,
+                nightMotionCount: nightMotionCount,
+                bathroomMinutes: bathroomMinutes,
+                nightSensorLocations: Array.from(nightSensorLocations),
+                bathroomLocations: Array.from(bathroomLocations),
                 gaitSpeed: gaitSpeed?.val !== undefined && gaitSpeed?.val !== null ? Number(gaitSpeed.val) : null,
                 eventHistory: todayEvents
             };

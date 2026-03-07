@@ -105,18 +105,26 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         const totalEvents = todayVector.reduce((sum: number, count: number) => sum + count, 0);
                         const activityPercent = totalEvents; // temporär: roh, wird unten normalisiert
                         
+// ============================================================
+                        // NACHT-EVENTS: aus Snapshot (typ-basiert via isNightSensor-Flag)
+                        // Fallback: location includes 'schlaf' (keyword)
                         // ============================================================
-                        // NACHT-EVENTS: Nur MOTION/PRESENCE im Schlafzimmer, 22:00-08:00
-                        // KEINE Heizung/Thermostat/Temperatur-Updates!
-                        // ============================================================
-                        const nightEvents = eventHistory.filter((e: any) => {
-                            if (!e.timestamp) return false;
-                            const hour = new Date(e.timestamp).getHours();
-                            const isNightTime = hour >= 22 || hour < 8;
-                            const isMotion = !e.type || e.type === 'motion' || e.type === 'presence' || e.type === 'contact';
-                            const isBedroom = (e.location || e.name || '').toLowerCase().includes('schlaf');
-                            return isNightTime && isBedroom && isMotion;
-                        }).length;
+                        let nightEvents: number;
+                        if (histData.nightMotionCount !== undefined) {
+                            nightEvents = histData.nightMotionCount;
+                        } else {
+                            const nightLocs: string[] = histData.nightSensorLocations || [];
+                            nightEvents = eventHistory.filter((e: any) => {
+                                if (!e.timestamp) return false;
+                                const hour = new Date(e.timestamp).getHours();
+                                const isNightTime = hour >= 22 || hour < 8;
+                                const isMotion = e.type === 'motion' || e.type === 'presence';
+                                const isNightRoom = nightLocs.length > 0
+                                    ? nightLocs.includes(e.location)
+                                    : (e.location || e.name || '').toLowerCase().includes('schlaf');
+                                return isNightTime && isNightRoom && isMotion;
+                            }).length;
+                        }
 
                         // ============================================================
                         // UNIQUE RÄUME: Zähle Räume mit Aktivität (> 0 Events)
@@ -126,19 +134,26 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             return Array.isArray(hourlyData) && hourlyData.some((h: number) => h > 0);
                         }).length;
 
+// ============================================================
+                        // BAD-MINUTEN: aus Snapshot (typ-basiert via isBathroomSensor-Flag)
+                        // Fallback: /bad|wc|toilet/ keyword auf Raumnamen
                         // ============================================================
-                        // BAD-BESUCHE: Summe aller Events in Bad/WC-Räumen
-                        // ============================================================
-                        const bathroomVisits = Object.keys(roomHistoryData)
-                            .filter(r => /bad|wc|toilet/i.test(r))
-                            .reduce((sum, r) => {
-                                const hourlyData = roomHistoryData[r];
-                                return sum + (Array.isArray(hourlyData) ? hourlyData.reduce((a: number, b: number) => a + b, 0) : 0);
-                            }, 0);
+                        let bathroomVisits: number;
+                        if (histData.bathroomMinutes !== undefined) {
+                            bathroomVisits = histData.bathroomMinutes;
+                        } else {
+                            const bathLocs: string[] = histData.bathroomLocations || [];
+                            bathroomVisits = Object.keys(roomHistoryData)
+                                .filter(r => bathLocs.length > 0 ? bathLocs.includes(r) : /bad|wc|toilet/i.test(r))
+                                .reduce((sum, r) => {
+                                    const hourlyData = roomHistoryData[r];
+                                    return sum + (Array.isArray(hourlyData) ? hourlyData.reduce((a: number, b: number) => a + b, 0) : 0);
+                                }, 0);
+                        }
 
                         // ============================================================
                         // FENSTER-OEFFNUNGEN: typ-basiert aus Snapshot (kein Keyword-Matching)
-                        // Fallback: e.type === 'contact' aus eventHistory
+                        // Fallback: e.type === 'door' aus eventHistory
                         // ============================================================
                         let windowOpenings: number;
                         if (histData.windowOpenCounts) {
@@ -146,7 +161,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         } else {
                             // Fallback fuer alte Snapshots: type-basiert, kein Keyword-Matching
                             windowOpenings = eventHistory.filter((e: any) =>
-                                e.type === 'contact' && (e.value === true || e.value === 1 || e.value === 'open' || e.value === 'true')
+                                e.type === 'door' && (e.value === true || e.value === 1 || e.value === 'open' || e.value === 'true')
                             ).length;
                         }
 
@@ -170,7 +185,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             // Fallback fuer alte Snapshots: type === 'contact'
                             const r: {[key: string]: number} = {};
                             eventHistory.filter((e: any) =>
-                                e.type === 'contact' && (e.value === true || e.value === 1 || e.value === 'open' || e.value === 'true')
+                                e.type === 'door' && (e.value === true || e.value === 1 || e.value === 'open' || e.value === 'true')
                             ).forEach((e: any) => {
                                 const k = e.name || 'Unbekannt';
                                 r[k] = (r[k] || 0) + 1;
@@ -327,12 +342,26 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
         }
     };
 
+    // Hilfsfunktion: Wochentag aus Datumsstring (MM-DD oder YYYY-MM-DD)
+    const getWeekday = (label: string) => {
+        const DAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+        let year: number, month: number, day: number;
+        const parts = label.split('-').map(Number);
+        if (parts.length === 2) {
+            year = new Date().getFullYear(); month = parts[0]; day = parts[1];
+        } else {
+            [year, month, day] = parts;
+        }
+        const d = new Date(year, month - 1, day);
+        return isNaN(d.getTime()) ? '' : DAYS[d.getDay()];
+    };
+
     // Custom Tooltip
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (!active || !payload || payload.length === 0) return null;
         return (
             <Paper sx={{ p: 1, bgcolor: isDark ? '#1a1a1a' : '#ffffff', border: `1px solid ${isDark ? '#444' : '#ddd'}` }}>
-                <Typography variant="caption" sx={{ fontWeight: 'bold' }}>{label}</Typography>
+                <Typography variant="caption" sx={{ fontWeight: 'bold' }}>{label} <span style={{fontWeight:'normal',opacity:0.7}}>{getWeekday(label)}</span></Typography>
                 {payload.map((entry: any, idx: number) => (
                     <Typography key={idx} variant="caption" sx={{ color: entry.color, display: 'block' }}>
                         {entry.name}: {entry.value}
@@ -368,7 +397,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
         const dayEntry = dailyDataRaw.find((d: any) => d.date && d.date.substring(5) === label);
         return (
             <Paper sx={{ p: 1, bgcolor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#444' : '#ddd'}`, maxWidth: 240 }}>
-                <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block' }}>{label}</Typography>
+                <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block' }}>{label} <span style={{fontWeight:'normal',opacity:0.7}}>{getWeekday(label)}</span></Typography>
                 {payload.map((entry: any, idx: number) => (
                     entry.value != null && <Typography key={idx} variant="caption" sx={{ color: entry.color, display: 'block' }}>
                         {entry.name}: {entry.value}
@@ -383,7 +412,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             .slice(0, 5)
                             .map(([room, mins]: any) => (
                                 <Typography key={room} variant="caption" sx={{ display: 'block', fontSize: '0.6rem' }}>
-                                    {room}: {mins} min
+                                    {room}: {mins} min aktiv
                                 </Typography>
                             ))}
                     </Box>
@@ -486,7 +515,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         {mainChartData.length > 0 ? (
                             <>
                                 <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', mb: 1 }}>
-                                    {mainChartData.length} Tage geladen | Wertebereich: {Math.min(...mainChartData.map((d:any) => d.value))}% – {Math.max(...mainChartData.map((d:any) => d.value))}% | Baseline: {trendsData?.activity?.baseline}%
+                                    {mainChartData.length} Tage geladen | Wertebereich: {Math.min(...mainChartData.map((d:any) => d.value))}% – {Math.max(...mainChartData.map((d:any) => d.value))}% | Baseline: {trendsData?.activity?.baseline}% · 0–24 Uhr
                                 </Typography>
 
                                 {/* ComposedChart: Balken (Tageswert) + Linie (7-Tage-Trend) */}
@@ -532,7 +561,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     GANGGESCHWINDIGKEIT
                                 </Typography>
                                 <Typography variant="caption" sx={{ display: 'block', color: trendsData.gait?.status === 'VERSCHLECHTERT' ? 'error.main' : 'text.secondary' }}>
-                                    Trend: {trendsData.gait?.status || 'N/A'} ({trendsData.gait?.trend_percent || 0}%)
+                                    Trend: {trendsData.gait?.status || 'N/A'} ({trendsData.gait?.trend_percent || 0}%) · 0–24 Uhr
                                 </Typography>
                                 <ResponsiveContainer width="100%" height={150}>
                                     <ComposedChart data={makeMiniData(trendsData.gait?.timeline || [], trendsData.gait?.values || [])}>
@@ -554,7 +583,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     NACHT-UNRUHE
                                 </Typography>
                                 <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                                    Ø {trendsData.night?.avg || 0} Events | {trendsData.night?.trend || 'N/A'}
+                                    Ø {trendsData.night?.avg || 0} Events | {trendsData.night?.trend || 'N/A'} · 22–08 Uhr
                                     {trendsData.night?.last_night_normal !== undefined && (
                                         <span style={{ color: trendsData.night.last_night_normal ? '#28a745' : '#fd7e14', marginLeft: 6 }}>
                                             · Letzte Nacht: {trendsData.night.last_night_normal ? 'normal' : 'ungewöhnlich'}
@@ -581,7 +610,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     RAUM-MOBILITÄT
                                 </Typography>
                                 <Typography variant="caption" sx={{ display: 'block', color: trendsData.mobility?.trend === 'IMMOBIL' ? 'error.main' : 'text.secondary' }}>
-                                    Ø {trendsData.mobility?.avg || 0} Räume | {trendsData.mobility?.trend || 'N/A'}
+                                    Ø {trendsData.mobility?.avg || 0} Räume | {trendsData.mobility?.trend || 'N/A'} · 0–24 Uhr
                                 </Typography>
                                 <ResponsiveContainer width="100%" height={150}>
                                     <ComposedChart data={makeMiniData(trendsData.mobility?.timeline || [], trendsData.mobility?.values || [])}>
@@ -603,7 +632,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     BAD-NUTZUNG
                                 </Typography>
                                 <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                                    Ø {trendsData.hygiene?.avg || 0} Min. | {trendsData.hygiene?.trend || 'N/A'}
+                                    Ø {trendsData.hygiene?.avg || 0} Min. | {trendsData.hygiene?.trend || 'N/A'} · 0–24 Uhr
                                 </Typography>
                                 <ResponsiveContainer width="100%" height={150}>
                                     <ComposedChart data={makeMiniData(trendsData.hygiene?.timeline || [], trendsData.hygiene?.values || [])}>
@@ -625,7 +654,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     FRISCHLUFT
                                 </Typography>
                                 <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                                    Ø {trendsData.ventilation?.avg || 0} Öffnungen | {trendsData.ventilation?.trend || 'N/A'}
+                                    Ø {trendsData.ventilation?.avg || 0} Öffnungen | {trendsData.ventilation?.trend || 'N/A'} · 0–24 Uhr
                                 </Typography>
                                 <ResponsiveContainer width="100%" height={150}>
                                     <ComposedChart data={makeMiniData(trendsData.ventilation?.timeline || [], trendsData.ventilation?.values || [])}>
