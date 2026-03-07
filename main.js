@@ -361,7 +361,26 @@ class CogniLiving extends utils.Adapter {
                 geminiDay: geminiDay?.val || null,
                 anomalyScore: anomalyScore?.val !== undefined && anomalyScore?.val !== null
                     ? Number(anomalyScore.val) : null,
-                todayVector: todayVector?.val ? JSON.parse(todayVector.val) : new Array(48).fill(0),
+                todayVector: (() => {
+                    // Primär: aus analysis.health.todayVector State (rawEventLog-basiert)
+                    // Fallback: direkt aus eventHistory des heutigen Tages berechnen
+                    let vec = todayVector?.val ? JSON.parse(todayVector.val) : null;
+                    const vecIsEmpty = !vec || vec.every(v => v === 0);
+                    if (vecIsEmpty && todayEvents.length > 0) {
+                        // Fallback: Vector aus heutigen Events berechnen
+                        vec = new Array(48).fill(0);
+                        const dayStart = new Date().setHours(0,0,0,0);
+                        todayEvents.forEach(e => {
+                            const ts = e.timestamp || e.ts || 0;
+                            if (ts >= dayStart) {
+                                const d = new Date(ts);
+                                const slot = d.getHours() * 2 + Math.floor(d.getMinutes() / 30);
+                                if (slot >= 0 && slot < 48) vec[slot]++;
+                            }
+                        });
+                    }
+                    return vec || new Array(48).fill(0);
+                })(),
                 batteryLevel: battery,
                 freshAirCount: freshAirCount,
                 windowOpenings: freshAirCount,

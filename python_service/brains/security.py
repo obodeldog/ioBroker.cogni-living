@@ -189,12 +189,10 @@ class SecurityBrain:
             if if_score is not None:
                 anomaly_score = if_score
             else:
-                # Kein trainiertes Modell: Graph-basierter Fallback
+                # Kein trainiertes Modell: KEIN Alarm ausloesen
+                # Erst nach erfolgreichem Training sinnvoll
                 anomaly_score = 0.1
-                if sequence and ('Unknown' in sequence or
-                    any(str(s).lower() in ['unknown', ''] for s in sequence)):
-                    anomaly_score = 0.7
-
+                return anomaly_score, False, "Kein Modell trainiert - bitte Training starten"
             is_anomaly = anomaly_score > self.dynamic_threshold
             explanation = f"IF Score: {anomaly_score:.3f}" if if_score is not None else "Fallback score"
 
