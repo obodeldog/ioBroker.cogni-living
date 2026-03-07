@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.30.93",
+    "version": "0.30.94",
     "news": {
       "0.30.75": {
         "en": "FIX: constâ†’let dailyData (build error); Gemini prompt uses aiContext name, no JSON format; status_bericht/antwort JSON keys added; sparkline tooltip with date and icons",

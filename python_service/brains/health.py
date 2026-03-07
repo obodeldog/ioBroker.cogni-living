@@ -55,14 +55,17 @@ class HealthBrain:
             return res, norm_score, f"Anomaly Score: {raw_score:.3f}"
         except Exception as e: return 0, 0.0, str(e)
 
-    def analyze_gait_speed(self, sequences):
+    def analyze_gait_speed(self, sequences, hallway_locations=None):
         """
-        Berechnet Trend, Sensoren UND einen mathematischen Beweis.
-        Output: (percent_change, list_of_sensors, debug_proof_string)
+        Berechnet mittlere Flur-Transitzeit (Sekunden) als Ganggeschwindigkeits-Proxy.
+        Hoeher = langsamer = potenzielle Verschlechterung.
+        Output: (avg_duration_seconds, list_of_sensors, debug_proof_string)
         """
         try:
             durations = []
             used_sensors = set()
+            # Konfigurierte Flur-Raeume (isHallway-Flag) haben Vorrang vor Keywords
+            hallway_set = set(hallway_locations or [])
 
             for seq in sequences:
                 steps = seq.get('steps', [])
@@ -72,38 +75,29 @@ class HealthBrain:
                 seq_sensors = []
 
                 for step in steps:
-                    loc = step['loc'].lower()
-                    if any(x in loc for x in ['flur', 'diele', 'gang']):
+                    loc = step.get('loc', '')
+                    loc_lower = loc.lower()
+                    # Typ-basiert (isHallway-Flag) oder Keyword-Fallback
+                    if loc in hallway_set or any(x in loc_lower for x in ['flur', 'diele', 'gang', 'korridor']):
                         is_hallway = True
-                        seq_sensors.append(step['loc'])
+                        seq_sensors.append(loc)
 
                 if is_hallway:
-                    duration = steps[-1]['t_delta']
-                    if duration > 1 and duration < 20:
+                    duration = steps[-1].get('t_delta', 0)
+                    if 1 < duration < 30:  # 1-30 Sek. plausibel
                         durations.append(duration)
                         for s in seq_sensors: used_sensors.add(s)
 
-            if len(durations) < 5:
-                return None, [], "Zu wenig Datenpunkte (<5 Sequenzen)"
+            if len(durations) < 3:
+                return None, [], f"Zu wenig Datenpunkte ({len(durations)}/3 Sequenzen)"
 
-            # Mathematik (Lineare Regression)
-            x = np.arange(len(durations))
-            y = np.array(durations)
-            slope, intercept = np.polyfit(x, y, 1)
+            avg_duration = round(float(np.median(durations)), 1)
+            last_5 = [round(d, 1) for d in durations[-5:]]
+            proof = (f"n={len(durations)} Flur-Sequenzen. Median={avg_duration}s. "
+                     f"Bereich: {min(durations):.1f}-{max(durations):.1f}s. "
+                     f"Letzte 5 Werte (Sek.): {last_5}")
 
-            start_val = intercept
-            end_val = (slope * (len(durations)-1)) + intercept
-
-            if start_val == 0: start_val = 0.01
-            percent_change = ((end_val - start_val) / start_val) * 100
-
-            # --- DER BEWEIS ---
-            # Wir formatieren die letzten 5 Messwerte und die Regressions-Parameter
-            last_5 = [round(d, 2) for d in durations[-5:]]
-            proof = (f"n={len(durations)} Events. Regression y=mx+b: m={slope:.4f}, b={intercept:.2f}. "
-                     f"Letzte 5 Messwerte (Sekunden): {last_5}")
-
-            return percent_change, list(used_sensors), proof
+            return avg_duration, list(used_sensors), proof
         except Exception as e: return None, [], f"Error: {str(e)}"
 
     def analyze_activity_trend(self, values):

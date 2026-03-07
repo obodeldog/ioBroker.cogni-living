@@ -164,12 +164,13 @@ def process_message(msg):
 
         # --- UPDATE: GAIT PROOF ---
         elif cmd == "ANALYZE_GAIT":
-            trend, sensors, proof = health_brain.analyze_gait_speed(data.get("sequences", []))
-            if trend is not None:
+            hallway_locs = data.get("hallwayLocations", [])
+            avg_dur, sensors, proof = health_brain.analyze_gait_speed(data.get("sequences", []), hallway_locs)
+            if avg_dur is not None:
                 send_result("GAIT_RESULT", {
-                    "speed_trend": trend,
+                    "avg_duration": avg_dur,
                     "sensors": sensors,
-                    "proof": proof # Der Beweis
+                    "proof": proof
                 })
         # ---------------------------
 

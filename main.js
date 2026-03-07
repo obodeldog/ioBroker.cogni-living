@@ -1009,7 +1009,10 @@ class CogniLiving extends utils.Adapter {
                     if (!sequences || sequences.length === 0) return;
                     
                     // Sende Sequenzen an Python für Ganganalyse
-                    pythonBridge.send(this, 'ANALYZE_GAIT', { sequences });
+                    const hallwayLocations = (this.config.devices || [])
+                        .filter(d => d.isHallway === true && d.location)
+                        .map(d => d.location);
+                    pythonBridge.send(this, 'ANALYZE_GAIT', { sequences, hallwayLocations });
                     
                     this.log.debug(`🚶 Gait Analysis triggered with ${sequences.length} sequences`);
                 } catch(e) {
