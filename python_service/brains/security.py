@@ -1,4 +1,4 @@
-import os
+﻿import os
 import pickle
 import numpy as np
 import json
@@ -10,7 +10,7 @@ SCALER_PATH = os.path.join(BASE_DIR, "security_scaler.pkl")
 VOCAB_PATH = os.path.join(BASE_DIR, "security_vocab.pkl")
 GRAPH_MODEL_PATH = os.path.join(BASE_DIR, "graph_behavior.pkl")
 CONFIG_PATH = os.path.join(BASE_DIR, "security_config.json")
-# IsolationForest-Modell für Sequenz-Anomalie (trainiert aus dailyDigests)
+# IsolationForest-Modell fÃ¼r Sequenz-Anomalie (trainiert aus dailyDigests)
 IF_MODEL_PATH = os.path.join(BASE_DIR, "security_if_model.pkl")
 DEFAULT_THRESHOLD = 0.05
 
@@ -19,7 +19,7 @@ class SecurityBrain:
         self.model = None; self.scaler = None; self.vocab_encoder = None
         self.max_seq_len = 20; self.dynamic_threshold = DEFAULT_THRESHOLD; self.is_ready = False
         self.graph = GraphEngine()
-        # IsolationForest als primärer Anomalie-Detektor (ersetzt LSTM-Placeholder)
+        # IsolationForest als primÃ¤rer Anomalie-Detektor (ersetzt LSTM-Placeholder)
         self.if_model = None
         self._load_if_model()
 
@@ -28,12 +28,12 @@ class SecurityBrain:
         self.learning_mode_end = 0
         self.learning_label = "none"
         # Der Buffer speichert 'erlaubte' Sequenzen/Muster als Vektoren oder Hashes
-        # Für dieses einfache LSTM speichern wir die Roh-Sequenzen oder vereinfachte Signaturen.
+        # FÃ¼r dieses einfache LSTM speichern wir die Roh-Sequenzen oder vereinfachte Signaturen.
         self.whitelist_buffer = []
         self.last_clean_time = 0
 
     def _load_if_model(self):
-        """Lädt den IsolationForest sofern bereits trainiert."""
+        """LÃ¤dt den IsolationForest sofern bereits trainiert."""
         try:
             if os.path.exists(IF_MODEL_PATH):
                 with open(IF_MODEL_PATH, 'rb') as f:
@@ -43,7 +43,7 @@ class SecurityBrain:
 
     def _train_if_model(self, digests):
         """
-        Trainiert IsolationForest auf Tages-Aktivitätsvektoren aus den dailyDigests.
+        Trainiert IsolationForest auf Tages-AktivitÃ¤tsvektoren aus den dailyDigests.
         Wird bei TRAIN_SECURITY automatisch aufgerufen.
         """
         try:
@@ -51,8 +51,18 @@ class SecurityBrain:
             vectors = []
             for d in digests:
                 vec = d.get('activityVector', None)
-                if vec and len(vec) == 96:
-                    vectors.append(vec)
+                if vec and len(vec) >= 24:
+                    # Normalisiere auf 96-dim (48-dim todayVector wird verdoppelt)
+                    if len(vec) == 96:
+                        vectors.append(vec)
+                    elif len(vec) == 48:
+                        vec96 = []
+                        for v in vec:
+                            vec96.extend([v, v])
+                        vectors.append(vec96)
+                    else:
+                        vec96 = (list(vec) + [0]*96)[:96]
+                        vectors.append(vec96)
                 else:
                     count = d.get('eventCount', 0)
                     v = [0] * 96
@@ -73,7 +83,7 @@ class SecurityBrain:
     def _if_score(self, sequence):
         """
         Berechnet Anomalie-Score aus IsolationForest (0.0=normal, 1.0=stark anomal).
-        Kodiert die Sequenz als 96-dim Vektor (Stunden × Transitionen).
+        Kodiert die Sequenz als 96-dim Vektor (Stunden Ã— Transitionen).
         """
         if self.if_model is None:
             return None
@@ -116,7 +126,7 @@ class SecurityBrain:
             self.learning_mode_active = True
             self.learning_mode_end = time.time() + (duration_minutes * 60)
             self.learning_label = label
-            # Wir löschen den Buffer NICHT sofort beim Start, falls man verlängert.
+            # Wir lÃ¶schen den Buffer NICHT sofort beim Start, falls man verlÃ¤ngert.
             # Aber wenn der Label wechselt (z.B. Party -> Urlaub), resetten wir.
             print(f"[SEC] Learning Mode STARTED: {label} for {duration_minutes} min.")
         else:
@@ -126,15 +136,15 @@ class SecurityBrain:
             print(f"[SEC] Learning Mode STOPPED. Buffer cleared.")
 
     def check_learning_status(self):
-        """Prüft ob Zeit abgelaufen ist (TTL)"""
+        """PrÃ¼ft ob Zeit abgelaufen ist (TTL)"""
         if self.learning_mode_active and time.time() > self.learning_mode_end:
             print("[SEC] Learning Mode EXPIRED. Switching back to strict mode.")
             self.set_learning_mode(False)
 
     def _add_to_whitelist(self, sequence):
-        """Fügt ein Muster zur Whitelist hinzu (Few-Shot Learning)"""
+        """FÃ¼gt ein Muster zur Whitelist hinzu (Few-Shot Learning)"""
         # Wir speichern vereinfacht den letzten Raum oder die Signatur
-        # In einer komplexeren Version wäre das ein Embedding-Vektor.
+        # In einer komplexeren Version wÃ¤re das ein Embedding-Vektor.
         if not sequence: return
 
         # Einfache Signatur: Letzter Raum + Vorletzter Raum (Transition)
@@ -152,7 +162,7 @@ class SecurityBrain:
                 # print(f"[SEC] Learned new pattern: {signature}")
 
     def _is_whitelisted(self, sequence):
-        """Prüft gegen den Overlay-Buffer"""
+        """PrÃ¼ft gegen den Overlay-Buffer"""
         if not sequence: return False
 
         signature = sequence[-1]

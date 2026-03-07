@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 'use strict';
 
 /*
@@ -396,6 +396,25 @@ class CogniLiving extends utils.Adapter {
             fs.writeFileSync(filePath, JSON.stringify(snapshot));
             this.log.info(`✅ History saved: ${filePath}`);
 
+            // Auto-Training IsolationForest: taeglich nach Speichern ausfuehren
+            try {
+                const allFiles = fs.readdirSync(historyDir).filter(f => f.endsWith('.json')).sort();
+                if (allFiles.length >= 3) {
+                    const trainingData = [];
+                    for (const fname of allFiles.slice(-30)) {
+                        try {
+                            const d = JSON.parse(fs.readFileSync(path.join(historyDir, fname), 'utf8'));
+                            if (d.todayVector && Array.isArray(d.todayVector) && d.todayVector.some(v => v > 0)) {
+                                trainingData.push({ activityVector: d.todayVector, eventCount: d.todayVector.reduce((a,b) => a+b, 0) });
+                            }
+                        } catch(e) {}
+                    }
+                    if (trainingData.length >= 3) {
+                        pythonBridge.send(this, 'TRAIN_SECURITY', { sequences: trainingData });
+                        this.log.info('[Security] Auto-Training gestartet: ' + trainingData.length + ' Tage');
+                    }
+                }
+            } catch(e) { this.log.debug('[Security] Auto-Training Fehler: ' + e.message); }
         } catch(e) { this.log.error(`History Save Error: ${e.message}`); }
     }
 
@@ -1190,3 +1209,4 @@ class CogniLiving extends utils.Adapter {
 
 if (require.main !== module) module.exports = (options) => new CogniLiving(options);
 else new CogniLiving();
+
