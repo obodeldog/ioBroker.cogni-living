@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 'use strict';
 
 /*
@@ -315,16 +315,20 @@ class CogniLiving extends utils.Adapter {
             ]);
 
             const startOfDayTimestamp = new Date().setHours(0,0,0,0);
-            // Fenster/Tür-Öffnungen: alle Sensoren mit fenster/haustür/terrasse/balkon/window im Namen
-            const FRESH_AIR_KEYWORDS = ['fenster', 'haustür', 'haustuer', 'terrasse', 'balkon', 'balkontür', 'window', 'door'];
-            const freshAirCount = this.eventHistory.filter(e => {
+            // Fenster-/Tueroeffnungen: typ-basiert aus config.devices (kein Keyword-Matching!)
+            const contactOpenEvents = this.eventHistory.filter(e => {
                 const ts = e.timestamp || e.ts || 0;
                 if (ts < startOfDayTimestamp) return false;
-                const name = (e.name || e.id || e.deviceName || '').toLowerCase();
-                const isWindowSensor = FRESH_AIR_KEYWORDS.some(k => name.includes(k));
-                const isOpen = e.value === true || e.value === 1 || e.value === 'true' || e.value === 'open';
-                return isWindowSensor && isOpen;
-            }).length;
+                if (e.type !== 'contact') return false;
+                return e.value === true || e.value === 1 || e.value === 'true' || e.value === 'open';
+            });
+            const freshAirCount = contactOpenEvents.length;
+            // Pro-Sensor-Aufschluesselung fuer Tooltip (Name -> Anzahl Oeffnungen)
+            const windowOpenCounts = {};
+            contactOpenEvents.forEach(e => {
+                const label = e.name || e.id || 'Unbekannt';
+                windowOpenCounts[label] = (windowOpenCounts[label] || 0) + 1;
+            });
 
             let battery = 85;
             if (activityTrend && activityTrend.val !== undefined) battery = Math.min(100, Math.max(20, Math.round(80 + (Number(activityTrend.val) * 5))));
@@ -386,6 +390,7 @@ class CogniLiving extends utils.Adapter {
                 batteryLevel: battery,
                 freshAirCount: freshAirCount,
                 windowOpenings: freshAirCount,
+                windowOpenCounts: windowOpenCounts,
                 gaitSpeed: gaitSpeed?.val !== undefined && gaitSpeed?.val !== null ? Number(gaitSpeed.val) : null,
                 eventHistory: todayEvents
             };

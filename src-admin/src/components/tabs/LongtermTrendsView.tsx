@@ -3,7 +3,7 @@ import {
     Box, Typography, Button, ButtonGroup, CircularProgress, Grid, Paper
 } from '@mui/material';
 import {
-    LineChart, Line, AreaChart, Area, BarChart, Bar,
+    LineChart, Line, AreaChart, Area, BarChart, Bar, ComposedChart,
     XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
     ReferenceLine, ReferenceArea, Legend
 } from 'recharts';
@@ -35,6 +35,20 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
     const [loading, setLoading] = useState<boolean>(false);
     const [trendsData, setTrendsData] = useState<any>(null);
     const [error, setError] = useState<string>('');
+
+    // Drift: eigener State, unabhaengig vom Zeitfenster
+    const [driftData, setDriftData] = React.useState<any>(null);
+    const [dailyDataRaw, setDailyDataRaw] = React.useState<any[]>([]);
+    const [driftLoading, setDriftLoading] = React.useState<boolean>(false);
+    const driftLoadedRef = React.useRef<boolean>(false);
+
+    // Drift einmalig laden (unabhaengig vom Zeitfenster)
+    React.useEffect(() => {
+        if (!driftLoadedRef.current) {
+            driftLoadedRef.current = true;
+            loadDriftData();
+        }
+    }, []);
 
     // Lade Daten beim Mount und bei Zeitraum-Änderung
     useEffect(() => {
@@ -92,14 +106,16 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         const activityPercent = totalEvents; // temporär: roh, wird unten normalisiert
                         
                         // ============================================================
-                        // NACHT-EVENTS: Events zwischen 22:00-06:00 NUR IM SCHLAFZIMMER!
+                        // NACHT-EVENTS: Nur MOTION/PRESENCE im Schlafzimmer, 22:00-08:00
+                        // KEINE Heizung/Thermostat/Temperatur-Updates!
                         // ============================================================
                         const nightEvents = eventHistory.filter((e: any) => {
                             if (!e.timestamp) return false;
                             const hour = new Date(e.timestamp).getHours();
-                            const isNightTime = hour >= 22 || hour < 6;
+                            const isNightTime = hour >= 22 || hour < 8;
+                            const isMotion = !e.type || e.type === 'motion' || e.type === 'presence' || e.type === 'contact';
                             const isBedroom = (e.location || e.name || '').toLowerCase().includes('schlaf');
-                            return isNightTime && isBedroom;
+                            return isNightTime && isBedroom && isMotion;
                         }).length;
 
                         // ============================================================
@@ -121,14 +137,18 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             }, 0);
 
                         // ============================================================
-                        // FENSTER-ÖFFNUNGEN: Nur Events mit value=true/"open"!
+                        // FENSTER-OEFFNUNGEN: typ-basiert aus Snapshot (kein Keyword-Matching)
+                        // Fallback: e.type === 'contact' aus eventHistory
                         // ============================================================
-                        const windowOpenings = eventHistory.filter((e: any) => {
-                            const name = (e.name || '').toLowerCase();
-                            const hasWindowKeyword = name.includes('window') || name.includes('fenster') || name.includes('tür') || name.includes('door');
-                            const isOpening = e.value === true || e.value === 1 || e.value === 'open' || e.value === 'true';
-                            return hasWindowKeyword && isOpening;
-                        }).length;
+                        let windowOpenings: number;
+                        if (histData.windowOpenCounts) {
+                            windowOpenings = Object.values(histData.windowOpenCounts as {[key: string]: number}).reduce((a: number, b: number) => a + b, 0);
+                        } else {
+                            // Fallback fuer alte Snapshots: type-basiert, kein Keyword-Matching
+                            windowOpenings = eventHistory.filter((e: any) =>
+                                e.type === 'contact' && (e.value === true || e.value === 1 || e.value === 'open' || e.value === 'true')
+                            ).length;
+                        }
 
                         // ============================================================
                         // GAIT SPEED: Aus Gait Analysis (analyze_gait_speed)
@@ -141,6 +161,23 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         // 🔍 DEBUG: Zeige berechnete Metriken
                         console.log(`[LongtermTrends] ✅ ${dateStr}: activity=${activityPercent}%, night=${nightEvents}, rooms=${uniqueRooms}, bathroom=${bathroomVisits}, windows=${windowOpenings}, gait=${gaitSpeed.toFixed(1)}`);
 
+                        // Raum-Aktivitaet fuer Tooltip (Minuten pro Raum)
+                        const roomActivity: {[key: string]: number} = histData.todayRoomMinutes || {};
+
+                        // Fenster/Tuer-Oeffnungen fuer Tooltip (pro Sensor)
+                        // typ-basiert aus Snapshot - kein Keyword-Matching mehr noetig
+                        const windowsByRoom: {[key: string]: number} = histData.windowOpenCounts || (() => {
+                            // Fallback fuer alte Snapshots: type === 'contact'
+                            const r: {[key: string]: number} = {};
+                            eventHistory.filter((e: any) =>
+                                e.type === 'contact' && (e.value === true || e.value === 1 || e.value === 'open' || e.value === 'true')
+                            ).forEach((e: any) => {
+                                const k = e.name || 'Unbekannt';
+                                r[k] = (r[k] || 0) + 1;
+                            });
+                            return r;
+                        })();
+
                         dailyData.push({
                             date: dateStr,
                             activityPercent,
@@ -149,6 +186,8 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             uniqueRooms,
                             bathroomVisits,
                             windowOpenings,
+                            roomActivity,
+                            windowsByRoom,
                             todayVector: todayVector  // Für Python Nacht-IsolationForest
                         });
                     } else {
@@ -188,6 +227,9 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                 const avgNight = dailyData.reduce((sum, d) => sum + d.nightEvents, 0) / dailyData.length;
                 console.log(`[LongtermTrends] 📊 Averages: Activity=${avgActivity.toFixed(1)}%, Night Events=${avgNight.toFixed(1)}`);
             }
+
+            // Roh-Daten für Tooltip-Detailansicht speichern
+            setDailyDataRaw(dailyData);
 
             if (dailyData.length < 3) {
                 const msg = `Nicht genug historische Daten (${dailyData.length} von min. 3 Tagen)`;
@@ -232,6 +274,59 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
         }
     };
 
+    // Drift separat laden: immer alle verfuegbaren Daten (max. 180 Tage)
+    const loadDriftData = async () => {
+        setDriftLoading(true);
+        try {
+            const MAX_DRIFT_DAYS = 180;
+            let driftDailyData: DailyDataPoint[] = [];
+            const today = new Date();
+            let consecutiveMissing = 0;
+            for (let i = 0; i < MAX_DRIFT_DAYS; i++) {
+                const d = new Date(today);
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+                try {
+                    const response: any = await Promise.race([
+                        socket.sendTo(`${adapterName}.${instance}`, 'getHistoryData', { date: dateStr, _t: Date.now() }),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+                    ]);
+                    if (response.success && response.data) {
+                        consecutiveMissing = 0;
+                        const todayVector = response.data.todayVector || [];
+                        const totalEvents = todayVector.reduce((sum: number, count: number) => sum + count, 0);
+                        driftDailyData.push({ date: dateStr, activityPercent: totalEvents, gaitSpeed: 0, nightEvents: 0, uniqueRooms: 0, bathroomVisits: 0, windowOpenings: 0 });
+                    } else {
+                        consecutiveMissing++;
+                        if (consecutiveMissing >= 14 && i > 21) break;
+                    }
+                } catch { consecutiveMissing++; }
+            }
+            if (driftDailyData.length < 10) { setDriftData({ error: `Zu wenig Daten (${driftDailyData.length} Tage, min. 10)` }); return; }
+            const rawTotals = driftDailyData.map(d => d.activityPercent).filter(v => v > 0);
+            const sortedTotals = [...rawTotals].sort((a, b) => a - b);
+            const median = sortedTotals[Math.floor(sortedTotals.length / 2)] || 240;
+            driftDailyData = driftDailyData.map(d => ({
+                ...d,
+                activityPercent: d.activityPercent > 0 ? Math.min(200, Math.round((d.activityPercent / median) * 100)) : 0
+            }));
+            driftDailyData.sort((a, b) => a.date.localeCompare(b.date));
+            const resp: any = await Promise.race([
+                socket.sendTo(`${adapterName}.${instance}`, 'pythonBridge', { command: 'ANALYZE_DRIFT', dailyData: driftDailyData }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Drift Timeout')), 30000))
+            ]);
+            if (resp && resp.type !== 'ERROR') {
+                setDriftData(resp.payload || resp);
+            } else {
+                setDriftData({ error: 'Drift-Backend-Fehler: ' + (resp?.payload || 'Unbekannt') });
+            }
+        } catch (err: any) {
+            setDriftData({ error: 'Drift-Fehler: ' + err.message });
+        } finally {
+            setDriftLoading(false);
+        }
+    };
+
     // Custom Tooltip
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (!active || !payload || payload.length === 0) return null;
@@ -243,6 +338,69 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         {entry.name}: {entry.value}
                     </Typography>
                 ))}
+            </Paper>
+        );
+    };
+
+    // Hilfsfunktion: 7-Tage gleitender Durchschnitt
+    const calcMovingAvg = (values: number[], window: number = 7) => {
+        return values.map((_, i) => {
+            const start = Math.max(0, i - window + 1);
+            const slice = values.slice(start, i + 1).filter((v: number) => v > 0);
+            return slice.length > 0 ? Math.round(slice.reduce((a: number, b: number) => a + b, 0) / slice.length) : null;
+        });
+    };
+
+    // Mini-Chart Daten mit Moving Average aufbereiten
+    const makeMiniData = (timeline: string[], values: number[]) => {
+        if (!timeline || !values) return [];
+        const avgs = calcMovingAvg(values);
+        return timeline.map((d: string, i: number) => ({
+            date: d.substring(5),
+            value: values[i] || 0,
+            movingAvg: avgs[i]
+        }));
+    };
+
+    // Tooltip-Factory fuer Mini-Charts mit optionalem Aufschluessel
+    const MiniTooltip = ({ active, payload, label, extraData, extraLabel }: any) => {
+        if (!active || !payload || payload.length === 0) return null;
+        const dayEntry = dailyDataRaw.find((d: any) => d.date && d.date.substring(5) === label);
+        return (
+            <Paper sx={{ p: 1, bgcolor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#444' : '#ddd'}`, maxWidth: 240 }}>
+                <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block' }}>{label}</Typography>
+                {payload.map((entry: any, idx: number) => (
+                    entry.value != null && <Typography key={idx} variant="caption" sx={{ color: entry.color, display: 'block' }}>
+                        {entry.name}: {entry.value}
+                    </Typography>
+                ))}
+                {extraData === 'rooms' && dayEntry?.roomActivity && Object.keys(dayEntry.roomActivity).length > 0 && (
+                    <Box sx={{ mt: 0.5, borderTop: `1px solid ${isDark ? '#333' : '#eee'}`, pt: 0.5 }}>
+                        <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', mb: 0.3 }}>Aktive Raeume:</Typography>
+                        {Object.entries(dayEntry.roomActivity)
+                            .filter(([_, v]: any) => v > 0)
+                            .sort(([,a]: any, [,b]: any) => (b as number) - (a as number))
+                            .slice(0, 5)
+                            .map(([room, mins]: any) => (
+                                <Typography key={room} variant="caption" sx={{ display: 'block', fontSize: '0.6rem' }}>
+                                    {room}: {mins} min
+                                </Typography>
+                            ))}
+                    </Box>
+                )}
+                {extraData === 'windows' && dayEntry?.windowsByRoom && Object.keys(dayEntry.windowsByRoom).length > 0 && (
+                    <Box sx={{ mt: 0.5, borderTop: `1px solid ${isDark ? '#333' : '#eee'}`, pt: 0.5 }}>
+                        <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', mb: 0.3 }}>Geoeffnet:</Typography>
+                        {Object.entries(dayEntry.windowsByRoom)
+                            .sort(([,a]: any, [,b]: any) => (b as number) - (a as number))
+                            .map(([name, count]: any) => {
+                                const sn = String(name).replace(/^homematic\s+/i,'').replace(/^[a-zA-Z0-9]+\.[0-9]+\.[^.]+\./i,'').substring(0,26);
+                                return (<Typography key={name} variant="caption" sx={{ display: 'block', fontSize: '0.58rem', lineHeight: 1.3 }}>
+                                    {sn}: {count}x
+                                </Typography>);
+                            })}
+                    </Box>
+                )}
             </Paper>
         );
     };
@@ -320,77 +478,52 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
             {!loading && !error && trendsData && (
                 <>
                     <Paper sx={{ p: 2, mb: 3, bgcolor: isDark ? '#0a0a0a' : '#ffffff' }}>
-                        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
+                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
                             AKTIVITÄTS-BELASTUNG
                         </Typography>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <AreaChart data={mainChartData}>
-                                <defs>
-                                    <linearGradient id="redGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#dc3545" stopOpacity={0.3} />
-                                        <stop offset="100%" stopColor="#dc3545" stopOpacity={0.1} />
-                                    </linearGradient>
-                                    <linearGradient id="greenGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#28a745" stopOpacity={0.3} />
-                                        <stop offset="100%" stopColor="#28a745" stopOpacity={0.1} />
-                                    </linearGradient>
-                                    <linearGradient id="orangeGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#fd7e14" stopOpacity={0.3} />
-                                        <stop offset="100%" stopColor="#fd7e14" stopOpacity={0.1} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                                <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.7rem' }} />
-                                <YAxis 
-                                    domain={[dataMin, dataMax]} 
-                                    stroke={lineColor} 
-                                    style={{ fontSize: '0.7rem' }}
-                                    tickFormatter={(v: number) => `${v}%`}
-                                />
-                                <Tooltip content={<CustomTooltip />} formatter={(v: any) => [`${v}%`]} />
-                                <Legend />
 
-                                {/* Farbzonen: relativ zu 100% (= persönlicher Durchschnittstag) */}
-                                <ReferenceArea y1={0}   y2={60}  fill="url(#redGradient)"    fillOpacity={1} />
-                                <ReferenceArea y1={60}  y2={140} fill="url(#greenGradient)"  fillOpacity={1} />
-                                <ReferenceArea y1={140} y2={200} fill="url(#orangeGradient)" fillOpacity={1} />
+                        {/* DEBUG: Rohdaten-Tabelle — zeigt ob Daten überhaupt vorhanden sind */}
+                        {mainChartData.length > 0 ? (
+                            <>
+                                <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', mb: 1 }}>
+                                    {mainChartData.length} Tage geladen | Wertebereich: {Math.min(...mainChartData.map((d:any) => d.value))}% – {Math.max(...mainChartData.map((d:any) => d.value))}% | Baseline: {trendsData?.activity?.baseline}%
+                                </Typography>
 
-                                {/* 100%-Linie = persönlicher Normalwert */}
-                                <ReferenceLine y={100} stroke="#888" strokeDasharray="5 5" label={{ value: "Normalwert", position: "insideRight", fontSize: 11 }} />
+                                {/* ComposedChart: Balken (Tageswert) + Linie (7-Tage-Trend) */}
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <ComposedChart data={mainChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.65rem' }} interval={Math.floor(mainChartData.length / 10)} />
+                                        <YAxis domain={[0, 200]} stroke={lineColor} style={{ fontSize: '0.7rem' }} tickFormatter={(v: number) => `${v}%`} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        {/* Farbzonen als Referenz */}
+                                        <ReferenceArea y1={0}   y2={60}  fill="rgba(220,53,69,0.15)" />
+                                        <ReferenceArea y1={60}  y2={140} fill="rgba(40,167,69,0.15)" />
+                                        <ReferenceArea y1={140} y2={200} fill="rgba(253,126,20,0.15)" />
+                                        <ReferenceLine y={100} stroke="#888" strokeDasharray="5 5" label={{ value: "Normalwert", position: "insideRight", fontSize: 10 }} />
+                                        <Bar dataKey="value" fill="#4fc3f7" opacity={0.85} name="Tageswert %" radius={[2,2,0,0]} />
+                                        <Line type="monotone" dataKey="movingAvg" stroke="#546e7a" strokeWidth={2} dot={false} name="Ø 7 Tage" />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
 
-                                {/* Tageswerte (halbtransparent) */}
-                                <Line
-                                    type="monotone"
-                                    dataKey="value"
-                                    stroke="#fd7e14"
-                                    strokeWidth={1}
-                                    strokeOpacity={0.6}
-                                    dot={{ fill: '#fd7e14', r: 3, fillOpacity: 0.8 }}
-                                    name="Tageswert"
-                                />
-
-                                {/* Trendlinie (7-Tage MA) */}
-                                <Line
-                                    type="monotone"
-                                    dataKey="movingAvg"
-                                    stroke={lineColor}
-                                    strokeWidth={3}
-                                    dot={{ fill: lineColor, r: 4 }}
-                                    name="Trend (7-Tage Ø)"
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
-
-                        {/* Legende */}
-                        <Box sx={{ mt: 2, fontSize: '0.7rem', color: isDark ? '#aaa' : '#666' }}>
-                            <div>🔴 <strong>ALARMZONE (&lt;60%)</strong>: Sehr niedrige Aktivität für diese Person</div>
-                            <div>🟢 <strong>NORMALBEREICH (60–140%)</strong>: Typisches Niveau für dieses Haus</div>
-                            <div>🟠 <strong>ERHÖHT (&gt;140%)</strong>: Ungewöhnlich aktiv (Besuch, Aufregung?)</div>
-                            <div style={{ marginTop: 4, opacity: 0.7 }}>100% = persönlicher Durchschnittstag (rollender Median)</div>
-                        </Box>
+                                <Box sx={{ mt: 1, fontSize: '0.7rem', color: isDark ? '#aaa' : '#666', display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                                    <span>🔴 <strong>ALARMZONE (&lt;60%)</strong>: Sehr niedrige Aktivität</span>
+                                    <span>🟢 <strong>NORMALBEREICH (60–140%)</strong>: Typisches Niveau</span>
+                                    <span>🟡 <strong>ERHÖHT (&gt;140%)</strong>: Ungewöhnlich aktiv</span>
+                                    <span style={{ opacity: 0.7, display: 'block', marginTop: 4, width: '100%' }}>100% = persönlicher Durchschnittstag (rollender Median) | Hellblau = Tageswert, Grau = 7-Tage-Trend</span>
+                                </Box>
+                            </>
+                        ) : (
+                            <Box sx={{ p: 3, textAlign: 'center', color: isDark ? '#888' : '#aaa' }}>
+                                <Typography variant="body2">Keine Aktivitätsdaten verfügbar</Typography>
+                                <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+                                    trendsData.activity: {JSON.stringify(trendsData?.activity)?.substring(0, 200)}
+                                </Typography>
+                            </Box>
+                        )}
                     </Paper>
 
-                    {/* Mini-Graphen Grid */}
+                                    {/* Mini-Graphen Grid */}
                     <Grid container spacing={2}>
                         {/* 1. Ganggeschwindigkeit */}
                         <Grid item xs={12} md={6} lg={4}>
@@ -402,13 +535,14 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     Trend: {trendsData.gait?.status || 'N/A'} ({trendsData.gait?.trend_percent || 0}%)
                                 </Typography>
                                 <ResponsiveContainer width="100%" height={150}>
-                                    <LineChart data={trendsData.gait?.timeline?.map((d: string, i: number) => ({ date: d.substring(5), value: trendsData.gait.values[i] })) || []}>
+                                    <ComposedChart data={makeMiniData(trendsData.gait?.timeline || [], trendsData.gait?.values || [])}>
                                         <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} />
+                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor((trendsData.gait?.timeline?.length || 1) / 6)} />
                                         <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} />
                                         <Tooltip content={<CustomTooltip />} />
-                                        <Line type="monotone" dataKey="value" stroke="#00e676" strokeWidth={2} dot={false} name="Sekunden" />
-                                    </LineChart>
+                                        <Bar dataKey="value" fill="#00e676" opacity={0.7} name="Sekunden" radius={[2,2,0,0]} />
+                                        <Line type="monotone" dataKey="movingAvg" stroke="#546e7a" strokeWidth={2} dot={false} name="Ø 7 Tage" connectNulls />
+                                    </ComposedChart>
                                 </ResponsiveContainer>
                             </Paper>
                         </Grid>
@@ -428,13 +562,14 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     )}
                                 </Typography>
                                 <ResponsiveContainer width="100%" height={150}>
-                                    <BarChart data={trendsData.night?.timeline?.map((d: string, i: number) => ({ date: d.substring(5), value: trendsData.night.values[i] })) || []}>
+                                    <ComposedChart data={makeMiniData(trendsData.night?.timeline || [], trendsData.night?.values || [])}>
                                         <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} />
+                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor((trendsData.night?.timeline?.length || 1) / 6)} />
                                         <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} />
                                         <Tooltip content={<CustomTooltip />} />
-                                        <Bar dataKey="value" fill="#fd7e14" name="Events" />
-                                    </BarChart>
+                                        <Bar dataKey="value" fill="#fd7e14" opacity={0.8} name="Bewegungen" radius={[2,2,0,0]} />
+                                        <Line type="monotone" dataKey="movingAvg" stroke="#546e7a" strokeWidth={2} dot={false} name="Ø 7 Tage" connectNulls />
+                                    </ComposedChart>
                                 </ResponsiveContainer>
                             </Paper>
                         </Grid>
@@ -449,13 +584,14 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     Ø {trendsData.mobility?.avg || 0} Räume | {trendsData.mobility?.trend || 'N/A'}
                                 </Typography>
                                 <ResponsiveContainer width="100%" height={150}>
-                                    <AreaChart data={trendsData.mobility?.timeline?.map((d: string, i: number) => ({ date: d.substring(5), value: trendsData.mobility.values[i] })) || []}>
+                                    <ComposedChart data={makeMiniData(trendsData.mobility?.timeline || [], trendsData.mobility?.values || [])}>
                                         <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} />
+                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor((trendsData.mobility?.timeline?.length || 1) / 6)} />
                                         <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Area type="monotone" dataKey="value" stroke="#00bcd4" fill="#00bcd4" fillOpacity={0.3} name="Räume" />
-                                    </AreaChart>
+                                        <Tooltip content={<MiniTooltip extraData="rooms" />} />
+                                        <Bar dataKey="value" fill="#00bcd4" opacity={0.7} name="Räume" />
+                                    <Line type="monotone" dataKey="movingAvg" stroke="#546e7a" strokeWidth={2} dot={false} name="Ø 7 Tage" connectNulls />
+                                    </ComposedChart>
                                 </ResponsiveContainer>
                             </Paper>
                         </Grid>
@@ -467,16 +603,17 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     BAD-NUTZUNG
                                 </Typography>
                                 <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                                    Ø {trendsData.hygiene?.avg || 0} Besuche | {trendsData.hygiene?.trend || 'N/A'}
+                                    Ø {trendsData.hygiene?.avg || 0} Min. | {trendsData.hygiene?.trend || 'N/A'}
                                 </Typography>
                                 <ResponsiveContainer width="100%" height={150}>
-                                    <LineChart data={trendsData.hygiene?.timeline?.map((d: string, i: number) => ({ date: d.substring(5), value: trendsData.hygiene.values[i] })) || []}>
+                                    <ComposedChart data={makeMiniData(trendsData.hygiene?.timeline || [], trendsData.hygiene?.values || [])}>
                                         <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} />
+                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor((trendsData.hygiene?.timeline?.length || 1) / 6)} />
                                         <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} />
                                         <Tooltip content={<CustomTooltip />} />
-                                        <Line type="monotone" dataKey="value" stroke="#9c27b0" strokeWidth={2} dot={false} name="Besuche" />
-                                    </LineChart>
+                                        <Bar dataKey="value" fill="#9c27b0" opacity={0.7} name="Minuten" radius={[2,2,0,0]} />
+                                        <Line type="monotone" dataKey="movingAvg" stroke="#546e7a" strokeWidth={2} dot={false} name="Ø 7 Tage" connectNulls />
+                                    </ComposedChart>
                                 </ResponsiveContainer>
                             </Paper>
                         </Grid>
@@ -491,13 +628,14 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     Ø {trendsData.ventilation?.avg || 0} Öffnungen | {trendsData.ventilation?.trend || 'N/A'}
                                 </Typography>
                                 <ResponsiveContainer width="100%" height={150}>
-                                    <BarChart data={trendsData.ventilation?.timeline?.map((d: string, i: number) => ({ date: d.substring(5), value: trendsData.ventilation.values[i] })) || []}>
+                                    <ComposedChart data={makeMiniData(trendsData.ventilation?.timeline || [], trendsData.ventilation?.values || [])}>
                                         <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} />
+                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor((trendsData.ventilation?.timeline?.length || 1) / 6)} />
                                         <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Bar dataKey="value" fill="#03a9f4" name="Öffnungen" />
-                                    </BarChart>
+                                        <Tooltip content={<MiniTooltip extraData="windows" />} />
+                                        <Bar dataKey="value" fill="#03a9f4" opacity={0.7} name="Oeffnungen" radius={[2,2,0,0]} />
+                                        <Line type="monotone" dataKey="movingAvg" stroke="#546e7a" strokeWidth={2} dot={false} name="Ø 7 Tage" connectNulls />
+                                    </ComposedChart>
                                 </ResponsiveContainer>
                             </Paper>
                         </Grid>
@@ -509,42 +647,49 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     🔬 DRIFT-MONITOR
                                 </Typography>
                                 <Typography variant="caption" sx={{ display: 'block', color: '#ff9800', fontSize: '0.6rem', mb: 0.5 }}>
-                                    {trendsData?.drift?.adaptive
-                                        ? `Adaptiv kalibriert — Baseline: ${trendsData.drift.calibration_days} Tage, σ=${trendsData.drift.baseline_sigma}`
+                                    {driftData?.adaptive
+                                        ? `Adaptiv kalibriert — Baseline: ${driftData.calibration_days} Tage, σ=${driftData.baseline_sigma}`
                                         : 'Fester Schwellwert'}
                                 </Typography>
-                                {trendsData?.drift ? (
+                                {driftLoading ? (
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 2, textAlign: 'center' }}>
+                                        Lade Drift-Daten…
+                                    </Typography>
+                                ) : driftData && !driftData.error ? (
                                     <>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                                             <Box sx={{
                                                 width: 10, height: 10, borderRadius: '50%',
-                                                bgcolor: trendsData.drift.drift_detected ? '#dc3545' : (trendsData.drift.current_score > trendsData.drift.threshold * 0.5 ? '#fd7e14' : '#28a745')
+                                                bgcolor: driftData.drift_detected ? '#dc3545' : (driftData.current_score > driftData.threshold * 0.5 ? '#fd7e14' : '#28a745')
                                             }} />
-                                            <Typography variant="caption" sx={{ fontWeight: 'bold', color: trendsData.drift.drift_detected ? 'error.main' : (trendsData.drift.current_score > trendsData.drift.threshold * 0.5 ? '#fd7e14' : '#28a745') }}>
-                                                {trendsData.drift.drift_detected ? '⚠️ Drift erkannt' : (trendsData.drift.current_score > trendsData.drift.threshold * 0.5 ? 'Möglicher Drift' : 'Kein Drift')}
+                                            <Typography variant="caption" sx={{ fontWeight: 'bold', color: driftData.drift_detected ? 'error.main' : (driftData.current_score > driftData.threshold * 0.5 ? '#fd7e14' : '#28a745') }}>
+                                                {driftData.drift_detected ? '⚠️ Drift erkannt' : (driftData.current_score > driftData.threshold * 0.5 ? 'Möglicher Drift' : 'Kein Drift')}
                                             </Typography>
                                         </Box>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
-                                            PH-Score: {trendsData.drift.current_score?.toFixed(1)} / Schwelle: {trendsData.drift.threshold?.toFixed(0)}{trendsData.drift.adaptive ? ' (adaptiv)' : ''}
+                                            PH-Score: {driftData.current_score?.toFixed(1)} / Schwelle: {driftData.threshold?.toFixed(0)}{driftData.adaptive ? ' (adaptiv)' : ''}
                                         </Typography>
                                         <ResponsiveContainer width="100%" height={100}>
-                                            <LineChart data={trendsData.drift.scores?.map((v: number, i: number) => ({ i: i + 1, score: Math.round(v) })) || []}>
+                                            <LineChart data={driftData.scores?.map((v: number, i: number) => ({ i: i + 1, score: Math.round(v) })) || []}>
                                                 <XAxis dataKey="i" stroke={lineColor} style={{ fontSize: '0.55rem' }} />
-                                                <YAxis stroke={lineColor} style={{ fontSize: '0.55rem' }} />
+                                                <YAxis stroke={lineColor} style={{ fontSize: '0.55rem' }} domain={[0, Math.ceil(Math.max(driftData.current_score || 0, driftData.threshold || 50) * 1.2)]} />
                                                 <Tooltip formatter={(v: any) => [`${v}`, 'PH-Score']} />
-                                                <ReferenceLine y={trendsData.drift.threshold} stroke="#dc3545" strokeDasharray="3 3" />
+                                                <ReferenceLine y={driftData.threshold} stroke="#dc3545" strokeDasharray="3 3" label={{ value: 'Schwelle', position: 'right', fill: '#dc3545', fontSize: 9 }} />
                                                 <Line type="monotone" dataKey="score" stroke="#ff9800" strokeWidth={1.5} dot={false} name="Drift-Score" />
                                             </LineChart>
                                         </ResponsiveContainer>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem' }}>
                                             Anstieg = Verhaltensmuster ändert sich. Rote Linie = Alarm-Schwelle.
-                                            {trendsData.drift.calibration_days ? ` Erste ${trendsData.drift.calibration_days} Tage = Kalibrierung (Score=0).` : ''}
+                                            {driftData.calibration_days ? ` Erste ${driftData.calibration_days} Tage = Kalibrierung (Score=0).` : ''}
                                         </Typography>
                                     </>
+                                ) : driftData?.error ? (
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1, fontSize: '0.65rem' }}>
+                                        {driftData.error}
+                                    </Typography>
                                 ) : (
                                     <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 2, textAlign: 'center' }}>
-                                        Drift-Analyse läuft nach Backend-Call…<br />
-                                        (min. 10 Tage Daten nötig)
+                                        Drift-Analyse lädt… (min. 10 Tage Daten nötig)
                                     </Typography>
                                 )}
                             </Paper>
@@ -555,3 +700,15 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
         </Box>
     );
 }
+
+
+
+
+
+
+
+
+
+
+
+
