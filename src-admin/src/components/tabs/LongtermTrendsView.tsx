@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Box, Typography, Button, ButtonGroup, CircularProgress, Grid, Paper
+    Box, Typography, Button, ButtonGroup, CircularProgress, Grid, Paper,
+    Tooltip as MuiTooltip, IconButton
 } from '@mui/material';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import {
     LineChart, Line, AreaChart, Area, BarChart, Bar, ComposedChart,
     XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
@@ -25,6 +27,20 @@ interface DailyDataPoint {
     uniqueRooms: number;
     bathroomVisits: number;
     windowOpenings: number;
+}
+
+function ChartHelp({ text }: { text: string }) {
+    return (
+        <MuiTooltip
+            title={<span style={{ fontSize: '0.8rem', lineHeight: 1.5, display: 'block', maxWidth: 280 }}>{text}</span>}
+            placement="top"
+            arrow
+        >
+            <IconButton size="small" sx={{ p: 0, ml: 0.5, opacity: 0.4, '&:hover': { opacity: 1 }, verticalAlign: 'middle' }}>
+                <HelpOutlineIcon sx={{ fontSize: 14 }} />
+            </IconButton>
+        </MuiTooltip>
+    );
 }
 
 export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
@@ -507,9 +523,12 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
             {!loading && !error && trendsData && (
                 <>
                     <Paper sx={{ p: 2, mb: 3, bgcolor: isDark ? '#0a0a0a' : '#ffffff' }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
-                            AKTIVITÄTS-BELASTUNG
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
+                                AKTIVITÄTS-BELASTUNG
+                            </Typography>
+                            <ChartHelp text={"Zeigt deine tägliche Bewegungsintensität im Vergleich zu deinem persönlichen Durchschnitt (= 100%). Hellblau = Tageswert, Grau = 7-Tage-Trend. Grüne Zone (60–140%) ist dein Normalbereich. Werte unter 60% oder über 140% deuten auf unübliche Aktivität hin – z.B. Krankheit oder besonders aktive Tage."} />
+                        </Box>
                         {trendsData.activity && (() => {
                             const ma = (trendsData.activity as any).moving_avg as number[];
                             const last = ma && ma.length > 0 ? ma[ma.length - 1] : null;
@@ -563,9 +582,12 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         {/* 1. Ganggeschwindigkeit */}
                         <Grid item xs={12} md={6} lg={4}>
                             <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
-                                    GANGGESCHWINDIGKEIT
-                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
+                                        GANGGESCHWINDIGKEIT
+                                    </Typography>
+                                    <ChartHelp text={"Misst wie lange du durchschnittlich brauchst, um den Flur zu durchqueren (Median in Sekunden). Eine länger werdende Durchquerungszeit kann auf nachlassende Mobilität hinweisen. Typischer Normalbereich: 3–15 Sekunden. Nur Sensoren die als Flur markiert sind werden berücksichtigt."} />
+                                </Box>
                                 <Typography variant="caption" sx={{ display: 'block', color: trendsData.gait?.status === 'VERSCHLECHTERT' ? 'error.main' : 'text.secondary' }}>
                                     Ø {trendsData.gait?.avg?.toFixed(1) || 'N/A'} Sek. | {trendsData.gait?.status || 'N/A'} · 0–24 Uhr
                                 </Typography>
@@ -585,9 +607,12 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         {/* 2. Nacht-Unruhe (personalisierte Anomalie) */}
                         <Grid item xs={12} md={6} lg={4}>
                             <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
-                                    NACHT-UNRUHE
-                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
+                                        NACHT-UNRUHE
+                                    </Typography>
+                                    <ChartHelp text={"Zählt Bewegungsereignisse zwischen 22:00 und 08:00 Uhr in Schlafräumen. Viele Ereignisse deuten auf unruhigen Schlaf oder häufiges Aufstehen hin. Nur Sensoren die als Nacht markiert sind werden berücksichtigt. Der Trend vergleicht die letzten 7 Tage mit dem 4-Wochen-Durchschnitt."} />
+                                </Box>
                                 <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
                                     Ø {trendsData.night?.avg || 0} Events | {trendsData.night?.trend || 'N/A'} · 22–08 Uhr
                                     {trendsData.night?.last_night_normal !== undefined && (
@@ -612,9 +637,12 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         {/* 3. Raum-Mobilität */}
                         <Grid item xs={12} md={6} lg={4}>
                             <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
-                                    RAUM-MOBILITÄT
-                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
+                                        RAUM-MOBILITÄT
+                                    </Typography>
+                                    <ChartHelp text={"Zeigt in wie vielen verschiedenen Räumen du dich pro Tag bewegt hast. Wenige besuchte Räume können ein Zeichen von eingeschränkter Mobilität sein. Im Tooltip siehst du für jeden Raum wie viele Minuten aktive Bewegung registriert wurde. Alle Bewegungssensoren außer Nacht-Sensoren werden berücksichtigt."} />
+                                </Box>
                                 <Typography variant="caption" sx={{ display: 'block', color: trendsData.mobility?.trend === 'IMMOBIL' ? 'error.main' : 'text.secondary' }}>
                                     Ø {trendsData.mobility?.avg || 0} Räume | {trendsData.mobility?.trend || 'N/A'} · 0–24 Uhr
                                 </Typography>
@@ -634,9 +662,12 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         {/* 4. Hygiene-Frequenz */}
                         <Grid item xs={12} md={6} lg={4}>
                             <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
-                                    BAD-NUTZUNG
-                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
+                                        BAD-NUTZUNG
+                                    </Typography>
+                                    <ChartHelp text={"Zählt die Minuten täglicher Bewegungsaktivität im Badezimmer. Eine starke Zu- oder Abnahme kann hygienische Gewohnheitsänderungen anzeigen. Nur Sensoren die als Bad markiert sind werden berücksichtigt. Thermostat-Sensoren werden nicht mitgezählt."} />
+                                </Box>
                                 <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
                                     Ø {trendsData.hygiene?.avg || 0} Min. | {trendsData.hygiene?.trend || 'N/A'} · 0–24 Uhr
                                 </Typography>
@@ -656,9 +687,12 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         {/* 5. Lüftungsverhalten */}
                         <Grid item xs={12} md={6} lg={4}>
                             <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
-                                    FRISCHLUFT
-                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
+                                        FRISCHLUFT
+                                    </Typography>
+                                    <ChartHelp text={"Zählt wie oft Fenster oder Türen pro Tag geöffnet wurden. Regelmäßiges Lüften ist wichtig für Wohlbefinden und Gesundheit. Nur Kontaktsensoren vom Typ Tür werden gezählt. Im Tooltip siehst du welche Fenster und Türen besonders häufig geöffnet wurden."} />
+                                </Box>
                                 <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
                                     Ø {trendsData.ventilation?.avg || 0} Öffnungen | {trendsData.ventilation?.trend || 'N/A'} · 0–24 Uhr
                                 </Typography>

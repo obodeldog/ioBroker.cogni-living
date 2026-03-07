@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box, Button, Divider, Dialog, DialogTitle, DialogContent, DialogActions,
-    Typography, IconButton
+    Typography, IconButton, Tooltip as MuiTooltip
 } from '@mui/material';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import LongtermTrendsView from './LongtermTrendsView';
@@ -57,7 +58,7 @@ const getRoomCategory = (locationOrName: string): 'BATHROOM' | 'BEDROOM' | 'KITC
     return 'OTHER';
 };
 
-const TerminalBox = ({ title, children, themeType, height = 'auto' }: { title: string, children: React.ReactNode, themeType: string, height?: string }) => {
+const TerminalBox = ({ title, children, themeType, height = 'auto', helpText, style }: { title: string, children: React.ReactNode, themeType: string, height?: string, helpText?: string, style?: React.CSSProperties }) => {
     const isDark = themeType === 'dark';
     const borderColor = isDark ? '#444' : '#bbb';
     const bgColor = isDark ? '#0a0a0a' : '#ffffff';
@@ -75,7 +76,8 @@ const TerminalBox = ({ title, children, themeType, height = 'auto' }: { title: s
             boxShadow: isDark ? 'none' : '2px 2px 0px rgba(0,0,0,0.1)',
             height: height,
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            ...(style || {})
         }}>
             <div style={{
                 backgroundColor: isDark ? '#1a1a1a' : '#f0f0f0',
@@ -87,7 +89,13 @@ const TerminalBox = ({ title, children, themeType, height = 'auto' }: { title: s
                 letterSpacing: '1px',
                 textTransform: 'uppercase'
             }}>
-                [ {title} ]
+                [ {title} ]{helpText && (
+                    <MuiTooltip title={<span style={{ fontSize: '0.75rem', lineHeight: 1.5, display: 'block', maxWidth: 280 }}>{helpText}</span>} placement="top" arrow>
+                        <IconButton size="small" sx={{ p: 0, ml: 0.5, opacity: 0.4, '&:hover': { opacity: 1 }, verticalAlign: 'middle', color: titleColor }}>
+                            <HelpOutlineIcon sx={{ fontSize: 12 }} />
+                        </IconButton>
+                    </MuiTooltip>
+                )}
             </div>
             <div style={{ padding: '12px', flexGrow: 1 }}>
                 {children}
@@ -125,7 +133,9 @@ export default function HealthTab(props: any) {
     const [roomStats, setRoomStats] = useState<{today: Record<string, number>, yesterday: Record<string, number>}>({today:{}, yesterday:{}});
 
     const [geminiNight, setGeminiNight] = useState<string>('Warte auf Analyse...');
+    const [geminiNightTs, setGeminiNightTs] = useState<number | null>(null);
     const [geminiDay, setGeminiDay] = useState<string>('Warte auf Analyse...');
+    const [geminiDayTs, setGeminiDayTs] = useState<number | null>(null);
     const [aiMode, setAiMode] = useState<'SIMPLE' | 'NEURAL'>('SIMPLE');
     const [digestCount, setDigestCount] = useState<number>(0);
     const TRAINING_TARGET = 14;
@@ -210,7 +220,9 @@ export default function HealthTab(props: any) {
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
                     setGeminiNight(d.geminiNight || "Keine Daten");
+                    setGeminiNightTs(d.geminiNightTs || null);
                     setGeminiDay(d.geminiDay || "Keine Daten");
+                    setGeminiDayTs(d.geminiDayTs || null);
                     setAnomalyScore(d.anomalyScore || 0.1);
                     
                     // Berechne batteryLevel RELATIV zur Baseline (wie Wochenansicht!)
@@ -601,8 +613,8 @@ export default function HealthTab(props: any) {
 
         socket.getState(`${namespace}.analysis.health.gaitSpeed`).then((s:any) => setGaitTrend(s?.val !== undefined ? Number(s.val) : null));
         socket.getState(`${namespace}.analysis.safety.deadMan.currentRoom`).then((s:any) => setDmRoom(s?.val || null));
-        socket.getState(`${namespace}.analysis.health.geminiNight`).then((s:any) => setGeminiNight(s?.val || 'Warte auf Analyse...'));
-        socket.getState(`${namespace}.analysis.health.geminiDay`).then((s:any) => setGeminiDay(s?.val || 'Warte auf Analyse...'));
+        socket.getState(`${namespace}.analysis.health.geminiNight`).then((s:any) => { setGeminiNight(s?.val || 'Warte auf Analyse...'); if (s?.ts) setGeminiNightTs(s.ts); });
+        socket.getState(`${namespace}.analysis.health.geminiDay`).then((s:any) => { setGeminiDay(s?.val || 'Warte auf Analyse...'); if (s?.ts) setGeminiDayTs(s.ts); });
         socket.getState(`${namespace}.analysis.activity.roomHistory`).then((s:any) => {
             if (s && s.val) { try { const data = JSON.parse(s.val); if (data && data.history) setRoomHistory(data.history); } catch(e) {} }
         });
@@ -925,7 +937,7 @@ export default function HealthTab(props: any) {
 
         return (
             <div style={{display:'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '20px'}}>
-                <TerminalBox title={`SCHLAF-RADAR (22-08) ${isNightTime ? '🌙 AKTUELLE NACHT' : '📅 LETZTE NACHT'}`} themeType={themeType}>
+                <TerminalBox title={`SCHLAF-RADAR (22-08) ${isNightTime ? '🌙 AKTUELLE NACHT' : '📅 LETZTE NACHT'}`} themeType={themeType} helpText={"Balkendiagramm der Nacht-Aktivität (22–08 Uhr). Jeder Balken = 30 Minuten. Hohe Balken = viele Bewegungen. Grün = normal, Rot/Orange = auffällig viel. Hilft Schlafmuster zu erkennen."}>
                     {/* ZEILE 1: UNRUHE IM SCHLAFZIMMER */}
                     <div style={{marginBottom:'15px'}}>
                         <div style={{fontSize:'0.75rem', color:'#888', marginBottom:'5px'}}>UNRUHE IM SCHLAFZIMMER:</div>
@@ -1000,7 +1012,7 @@ export default function HealthTab(props: any) {
                     </div>
                 </TerminalBox>
 
-                <TerminalBox title={`NEURO-TIMELINE (08-22) ${isDayTime ? '☀️ HEUTE' : '📅 GESTERN'}`} themeType={themeType}>
+                <TerminalBox title={`NEURO-TIMELINE (08-22) ${isDayTime ? '☀️ HEUTE' : '📅 GESTERN'}`} themeType={themeType} helpText={"Stündliche Tages-Aktivität (08–22 Uhr). Blau = keine Aktivität, Grün = normal, Gelb/Rot = erhöht. Zeigt Tagesstruktur und Aktivitätsmuster auf einen Blick."}>
                     <div style={{position:'relative', padding:'10px 0'}}>
                         <div style={{display:'flex', justifyContent:'space-between', gap:'2px', flexWrap:'nowrap', minWidth:0}}>
                             {dayIndices.map((idx, i) => {
@@ -1755,16 +1767,18 @@ export default function HealthTab(props: any) {
                 {/* TAGESANSICHT (Original) */}
                 {viewMode === 'DAY' && (<>
                 <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom:'20px', alignItems: 'stretch'}}>
-                    <TerminalBox title="🌙 NACHT-PROTOKOLL" themeType={themeType} height="100%">
+                    <TerminalBox title="🌙 NACHT-PROTOKOLL" themeType={themeType} height="100%" helpText={"Zeigt den KI-generierten Schlafbericht der letzten Nacht (Gemini). Enthält Analyse der Schlafqualität, Bewegungsereignisse zwischen 22:00 und 08:00 Uhr und Vergleich mit dem persönlichen Normalverhalten."}>
                         <div style={{fontStyle:'italic', lineHeight:'1.4', fontSize:'0.9rem'}}>"{geminiNight}"</div>
+                        {geminiNightTs && <div style={{fontSize:'0.75rem', opacity:0.5, marginTop:'6px', fontStyle:'normal'}}>Stand: {new Date(geminiNightTs).toLocaleString('de-DE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} Uhr</div>}
                     </TerminalBox>
-                    <TerminalBox title="☀️ TAGES-SITUATION" themeType={themeType} height="100%">
+                    <TerminalBox title="☀️ TAGES-SITUATION" themeType={themeType} height="100%" helpText={"KI-generierter Tagesbericht (Gemini). Zusammenfassung der heutigen Aktivitätsmuster, besuchter Räume und auffälliger Ereignisse. Wird täglich aktualisiert."}>
                         <div style={{fontStyle:'italic', lineHeight:'1.4', fontSize:'0.9rem'}}>"{geminiDay}"</div>
+                        {geminiDayTs && <div style={{fontSize:'0.75rem', opacity:0.5, marginTop:'6px', fontStyle:'normal'}}>Stand: {new Date(geminiDayTs).toLocaleString('de-DE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} Uhr</div>}
                     </TerminalBox>
                 </div>
 
                 <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px', alignItems: 'stretch'}}>
-                    <TerminalBox title="DIAGNOSE & VITALITÄT" themeType={themeType} height="100%">
+                    <TerminalBox title="DIAGNOSE & VITALITÄT" themeType={themeType} height="100%" helpText={"Zeigt den Gesundheits-Score (0–1). Ein KI-Modell vergleicht dein aktuelles Bewegungsmuster mit deinem persönlichen Normalverhalten. Score unter 0.3 = unauffällig. Das Modell trainiert sich automatisch sobald 7+ Tage Daten vorliegen – bis dahin zeigt es 0.10 (kein Modell)."}>
                         {hasData ? (
                             <>
                                 <div style={{display:'flex', alignItems:'center', gap:'15px', marginBottom:'15px'}}>
@@ -1793,7 +1807,7 @@ export default function HealthTab(props: any) {
                         )}
                     </TerminalBox>
 
-                    <TerminalBox title="ENERGIE-RESERVE (AKKU)" themeType={themeType} height="100%">
+                    <TerminalBox title="ENERGIE-RESERVE (AKKU)" themeType={themeType} height="100%" helpText={"Metapher für das Aktivitätsniveau: Hohe Aktivität = voller Akku. Die Kurve zeigt den Verlauf über den Tag. Rote Zonen = ungewöhnlich hohe oder niedrige Aktivität im Vergleich zum persönlichen Durchschnitt."}>
                         <div style={{textAlign:'center', padding:'10px 0'}}>
                             <div style={{fontSize:'3rem', fontWeight:'bold', color: hasData ? (batteryLevel>50?'#00e676':'#ffab40') : '#888', lineHeight:'1'}}>{batteryLevel}%</div>
                             <div style={{width:'60%', margin:'10px auto'}}><RenderBlockBar val={batteryLevel} max={100} height='16px' themeType={themeType} /></div>
@@ -1806,7 +1820,7 @@ export default function HealthTab(props: any) {
                 {renderMobility()}
 
                 <div style={{display:'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px'}}>
-                    <TerminalBox title="FRESH AIR" themeType={themeType}>
+                    <TerminalBox title="FRESH AIR" themeType={themeType} helpText={"Zeigt wie oft heute Fenster oder Türen geöffnet wurden. Regelmäßiges Lüften ist ein Zeichen für aktiven Alltag. Nur Kontaktsensoren vom Typ Tür werden berücksichtigt."}>
                         <div style={{textAlign:'center'}}>
                             <div style={{fontSize:'2rem', color: hasData ? '#00e676' : '#888', fontWeight:'bold'}}>{freshAirCount}x</div>
                             <Divider sx={{my:1, borderColor: isDark?'#333':'#eee'}} />
@@ -1814,7 +1828,7 @@ export default function HealthTab(props: any) {
                         </div>
                     </TerminalBox>
 
-                    <TerminalBox title="MAHLZEITEN" themeType={themeType}>
+                    <TerminalBox title="MAHLZEITEN" themeType={themeType} helpText={"Schätzt Mahlzeiten-Zeitpunkte anhand von Küchenaktivität. Die Zeiten sind Schätzungen basierend auf Bewegungsmustern, keine exakten Messungen."}>
                         {hasData ? (
                             <>
                                 <div style={{display:'grid', gridTemplateColumns:'20px 1fr', gap:'5px', marginBottom:'10px'}}>
@@ -1828,7 +1842,7 @@ export default function HealthTab(props: any) {
                         ) : <div style={{textAlign:'center', padding:'20px', color:'#888'}}>KEINE DATEN</div>}
                     </TerminalBox>
 
-                    <TerminalBox title="BAD / HYGIENE" themeType={themeType}>
+                    <TerminalBox title="BAD / HYGIENE" themeType={themeType} helpText={"Zeigt die heutige Badezimmer-Nutzung in Minuten aktiver Bewegung. Nur als Bad markierte Sensoren werden berücksichtigt. Thermostate werden ignoriert."}>
                         <div style={{textAlign:'center'}}>
                             <div style={{fontSize:'1.5rem', color: hasData ? (badStatus.status==='FREI'?'#2196f3':'#ffab40') : '#888', fontWeight:'bold', marginBottom:'5px'}}>{badStatus.status}</div>
                             <Divider sx={{my:1, borderColor: isDark?'#333':'#eee'}} />
