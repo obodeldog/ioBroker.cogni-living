@@ -358,7 +358,9 @@ class CogniLiving extends utils.Adapter {
                 roomHistory: roomHistoryData,
                 todayRoomMinutes: todayRoomMinutes,   // { 'EG Bad': 25, ... }
                 geminiNight: geminiNight?.val || null,
+                geminiNightTs: geminiNight?.ts || null,
                 geminiDay: geminiDay?.val || null,
+                geminiDayTs: geminiDay?.ts || null,
                 anomalyScore: anomalyScore?.val !== undefined && anomalyScore?.val !== null
                     ? Number(anomalyScore.val) : null,
                 todayVector: (() => {
@@ -1209,4 +1211,5 @@ class CogniLiving extends utils.Adapter {
 
 if (require.main !== module) module.exports = (options) => new CogniLiving(options);
 else new CogniLiving();
+
 
