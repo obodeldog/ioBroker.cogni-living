@@ -510,14 +510,20 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
                             AKTIVITÄTS-BELASTUNG
                         </Typography>
+                        {trendsData.activity && (() => {
+                            const ma = (trendsData.activity as any).moving_avg as number[];
+                            const last = ma && ma.length > 0 ? ma[ma.length - 1] : null;
+                            const base = (trendsData.activity as any).baseline as number;
+                            const trend = last === null ? 'N/A' : last > (base + 10) ? 'STEIGEND ↑' : last < (base - 10) ? 'FALLEND ↓' : 'STABIL';
+                            return (
+                                <Typography variant="caption" sx={{ color: isDark ? '#888' : '#666', display: 'block', mb: 1 }}>
+                                    Ø {base}% (14-Tage-Median) | {trend} · 0–24 Uhr
+                                </Typography>
+                            );
+                        })()}
 
-                        {/* DEBUG: Rohdaten-Tabelle — zeigt ob Daten überhaupt vorhanden sind */}
                         {mainChartData.length > 0 ? (
                             <>
-                                <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', mb: 1 }}>
-                                    {mainChartData.length} Tage geladen | Wertebereich: {Math.min(...mainChartData.map((d:any) => d.value))}% – {Math.max(...mainChartData.map((d:any) => d.value))}% | Baseline: {trendsData?.activity?.baseline}% · 0–24 Uhr
-                                </Typography>
-
                                 {/* ComposedChart: Balken (Tageswert) + Linie (7-Tage-Trend) */}
                                 <ResponsiveContainer width="100%" height={250}>
                                     <ComposedChart data={mainChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
@@ -561,7 +567,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     GANGGESCHWINDIGKEIT
                                 </Typography>
                                 <Typography variant="caption" sx={{ display: 'block', color: trendsData.gait?.status === 'VERSCHLECHTERT' ? 'error.main' : 'text.secondary' }}>
-                                    Trend: {trendsData.gait?.status || 'N/A'} ({trendsData.gait?.trend_percent || 0}%) · 0–24 Uhr
+                                    Ø {trendsData.gait?.avg?.toFixed(1) || 'N/A'} Sek. | {trendsData.gait?.status || 'N/A'} · 0–24 Uhr
                                 </Typography>
                                 <ResponsiveContainer width="100%" height={150}>
                                     <ComposedChart data={makeMiniData(trendsData.gait?.timeline || [], trendsData.gait?.values || [])}>
