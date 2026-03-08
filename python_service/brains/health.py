@@ -57,47 +57,64 @@ class HealthBrain:
 
     def analyze_gait_speed(self, sequences, hallway_locations=None):
         """
-        Berechnet mittlere Flur-Transitzeit (Sekunden) als Ganggeschwindigkeits-Proxy.
-        Hoeher = langsamer = potenzielle Verschlechterung.
-        Output: (avg_duration_seconds, list_of_sensors, debug_proof_string)
+        Berechnet Flur-Transitzeit: Zeit von Flur-Trigger bis naechster-Raum-Trigger.
+        Erfordert Muster [Raum_A -> Flur -> Raum_B] in der Sequenz.
+        Unabhaengig von Sensor-Hold-Zeit, da nur steigende Flanken gemessen werden.
+        Output: (median_transit_seconds, list_of_sensors, debug_proof_string)
         """
         try:
             durations = []
             used_sensors = set()
-            # Konfigurierte Flur-Raeume (isHallway-Flag) haben Vorrang vor Keywords
             hallway_set = set(hallway_locations or [])
+            hallway_keywords = ['flur', 'diele', 'gang', 'korridor']
+
+            def is_hallway_loc(loc):
+                return loc in hallway_set or any(x in loc.lower() for x in hallway_keywords)
 
             for seq in sequences:
                 steps = seq.get('steps', [])
-                if len(steps) < 2: continue
+                if len(steps) < 3:  # Mindestens Raum_A + Flur + Raum_B
+                    continue
 
-                is_hallway = False
-                seq_sensors = []
-
-                for step in steps:
+                for i, step in enumerate(steps):
                     loc = step.get('loc', '')
-                    loc_lower = loc.lower()
-                    # Typ-basiert (isHallway-Flag) oder Keyword-Fallback
-                    if loc in hallway_set or any(x in loc_lower for x in ['flur', 'diele', 'gang', 'korridor']):
-                        is_hallway = True
-                        seq_sensors.append(loc)
 
-                if is_hallway:
-                    duration = steps[-1].get('t_delta', 0)
-                    if 1 < duration < 30:  # 1-30 Sek. plausibel
-                        durations.append(duration)
-                        for s in seq_sensors: used_sensors.add(s)
+                    # Ist dieser Step ein Flur-Sensor?
+                    if not is_hallway_loc(loc):
+                        continue
+
+                    # Muss einen Raum DAVOR und DANACH haben
+                    if i == 0 or i + 1 >= len(steps):
+                        continue
+
+                    prev_loc = steps[i - 1].get('loc', '')
+                    next_loc = steps[i + 1].get('loc', '')
+
+                    # Nachbar-Steps duerfen selbst kein Flur sein (kein Flur-Flur-Flur)
+                    if is_hallway_loc(prev_loc) or is_hallway_loc(next_loc):
+                        continue
+
+                    # Transitzeit: Flur-Trigger -> naechster Raum-Trigger
+                    t_hallway = step.get('t_delta', 0)
+                    t_next    = steps[i + 1].get('t_delta', 0)
+                    transit   = t_next - t_hallway
+
+                    # Plausibilitaets-Filter: 1-20 Sekunden
+                    if 1 <= transit <= 20:
+                        durations.append(transit)
+                        used_sensors.add(loc)
 
             if len(durations) < 3:
-                return None, [], f"Zu wenig Datenpunkte ({len(durations)}/3 Sequenzen)"
+                return None, [], f"Zu wenig Datenpunkte ({len(durations)}/3 Transitionen)"
 
-            avg_duration = round(float(np.median(durations)), 1)
+            median_transit = round(float(np.median(durations)), 1)
             last_5 = [round(d, 1) for d in durations[-5:]]
-            proof = (f"n={len(durations)} Flur-Sequenzen. Median={avg_duration}s. "
+            proof = (f"n={len(durations)} Transitionen [Raum->Flur->Raum]. "
+                     f"Median={median_transit}s. "
                      f"Bereich: {min(durations):.1f}-{max(durations):.1f}s. "
-                     f"Letzte 5 Werte (Sek.): {last_5}")
+                     f"Letzte 5 (Sek.): {last_5}")
 
-            return avg_duration, list(used_sensors), proof
+            return median_transit, list(used_sensors), proof
         except Exception as e: return None, [], f"Error: {str(e)}"
 
     def analyze_activity_trend(self, values):
