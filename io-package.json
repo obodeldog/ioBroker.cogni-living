@@ -236,6 +236,8 @@
     "ltmDriftCheckIntervalHours": 24,
     "briefingEnabled": false,
     "briefingTime": "08:00",
+    "weeklyBriefingEnabled": false,
+    "weeklyBriefingTime": "09:00",
     "useWeather": false,
     "weatherInstance": "",
     "useCalendar": false,
