@@ -584,6 +584,31 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         )}
                     </Paper>
 
+                    {/* ═══ DRIFT-ANALYSE Gruppe ═══ */}
+                    <Box sx={{
+                        mt: 3,
+                        borderLeft: '4px solid #ff9800',
+                        borderRadius: '0 8px 8px 0',
+                        bgcolor: isDark ? 'rgba(255,152,0,0.04)' : 'rgba(255,152,0,0.03)',
+                        pl: 2,
+                        pr: 0.5,
+                        pt: 2,
+                        pb: 1,
+                    }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                            <Typography variant="overline" sx={{
+                                color: '#ff9800',
+                                fontWeight: 'bold',
+                                letterSpacing: '0.12em',
+                                fontSize: '0.7rem',
+                                lineHeight: 1,
+                            }}>
+                                🔬 DRIFT-ANALYSE
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', ml: 1.5, fontSize: '0.62rem' }}>
+                                Langzeit-Veränderungen — die 3 Kacheln und der Monitor darunter zeigen dasselbe Bild: kurz vs. lang
+                            </Typography>
+                        </Box>
                                     {/* Mini-Graphen Grid */}
                     <Grid container spacing={2}>
                         {/* 1. Ganggeschwindigkeit */}
@@ -810,7 +835,33 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                     </Grid>
 
                     <Grid item xs={12} style={{ display: 'none' }}>{/* keeps grid structure */}</Grid>
+                    </Box>
 
+                    {/* ═══ HYGIENE & LÜFTUNG Gruppe ═══ */}
+                    <Box sx={{
+                        mt: 3,
+                        borderLeft: '4px solid #4db6ac',
+                        borderRadius: '0 8px 8px 0',
+                        bgcolor: isDark ? 'rgba(77,182,172,0.04)' : 'rgba(77,182,172,0.03)',
+                        pl: 2,
+                        pr: 0.5,
+                        pt: 2,
+                        pb: 1,
+                    }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                            <Typography variant="overline" sx={{
+                                color: '#4db6ac',
+                                fontWeight: 'bold',
+                                letterSpacing: '0.12em',
+                                fontSize: '0.7rem',
+                                lineHeight: 1,
+                            }}>
+                                🏠 HYGIENE & LÜFTUNG
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', ml: 1.5, fontSize: '0.62rem' }}>
+                                Unabhängige Metriken — kein Einfluss auf den Drift-Monitor
+                            </Typography>
+                        </Box>
                     {/* Weitere Gesundheitskacheln */}
                     <Grid container spacing={2} sx={{ mt: 2 }}>
                         {/* 4. Hygiene-Frequenz */}
@@ -865,6 +916,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
 
 
                     </Grid>
+                    </Box>
                 </>
             )}
         </Box>
