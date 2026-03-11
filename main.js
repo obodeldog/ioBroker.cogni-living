@@ -297,73 +297,38 @@ class CogniLiving extends utils.Adapter {
     }
 
     async saveDailyHistory() {
+        // Sequenzen für Gait-Speed-Berechnung vorladen
+        try {
+            const _sq = await this.getStateAsync('LTM.trainingData.sequences');
+            this._lastSeqState = (_sq && _sq.val) ? _sq.val : null;
+        } catch(e) { this._lastSeqState = null; }
         if (!this.activeModules.health) return;
         const dateStr = new Date().toISOString().split('T')[0];
         this.log.debug(`💾 Saving Daily History for ${dateStr}...`);
 
         try {
             const [
-                roomHistory, geminiNight, geminiDay, anomalyScore, todayVector, activityTrend, gaitSpeed
+                roomHistory, geminiNight, geminiDay, anomalyScore, todayVector, activityTrend
             ] = await Promise.all([
                 this.getStateAsync('analysis.activity.roomHistory'),
                 this.getStateAsync('analysis.health.geminiNight'),
                 this.getStateAsync('analysis.health.geminiDay'),
                 this.getStateAsync('analysis.security.lastScore'),
                 this.getStateAsync('analysis.health.todayVector'),
-                this.getStateAsync('analysis.health.activityTrend'),
-                this.getStateAsync('analysis.health.gaitSpeed')
+                this.getStateAsync('analysis.health.activityTrend')
             ]);
 
             const startOfDayTimestamp = new Date().setHours(0,0,0,0);
-            // Fenster-/Tueroeffnungen: typ-basiert aus config.devices (kein Keyword-Matching!)
-            const contactOpenEvents = this.eventHistory.filter(e => {
+            // Fenster/Tür-Öffnungen: alle Sensoren mit fenster/haustür/terrasse/balkon/window im Namen
+            const FRESH_AIR_KEYWORDS = ['fenster', 'haustür', 'haustuer', 'terrasse', 'balkon', 'balkontür', 'window', 'door'];
+            const freshAirCount = this.eventHistory.filter(e => {
                 const ts = e.timestamp || e.ts || 0;
                 if (ts < startOfDayTimestamp) return false;
-                if (e.type !== 'door') return false;
-                return e.value === true || e.value === 1 || e.value === 'true' || e.value === 'open';
-            });
-            const freshAirCount = contactOpenEvents.length;
-            // Pro-Sensor-Aufschluesselung fuer Tooltip (Name -> Anzahl Oeffnungen)
-            const windowOpenCounts = {};
-            contactOpenEvents.forEach(e => {
-                const label = e.name || e.id || 'Unbekannt';
-                windowOpenCounts[label] = (windowOpenCounts[label] || 0) + 1;
-            });
-
-            // Nacht-Sensor Locations (isNightSensor=true) -> typ-basiert, kein Keyword-Matching
-            const nightSensorLocations = new Set(
-                (this.config.devices || [])
-                    .filter(d => d.isNightSensor === true && d.location)
-                    .map(d => d.location)
-            );
-            // Bad/WC Locations (isBathroomSensor=true) -> typ-basiert, kein Keyword-Matching
-            const bathroomLocations = new Set(
-                (this.config.devices || [])
-                    .filter(d => d.isBathroomSensor === true && d.location)
-                    .map(d => d.location)
-            );
-
-            // Nacht-Events: Bewegung in Nacht-Sensor-Raeumen zwischen 22:00-08:00
-            const nightMotionCount = todayEvents.filter(e => {
-                if (!e.timestamp) return false;
-                const hour = new Date(e.timestamp).getHours();
-                const isNightTime = hour >= 22 || hour < 8;
-                const isMotion = e.type === 'motion' || e.type === 'presence';
-                const isNightRoom = nightSensorLocations.size > 0
-                    ? nightSensorLocations.has(e.location)
-                    : (e.location || e.name || '').toLowerCase().includes('schlaf');
-                return isNightTime && isNightRoom && isMotion;
+                const name = (e.name || e.id || e.deviceName || '').toLowerCase();
+                const isWindowSensor = FRESH_AIR_KEYWORDS.some(k => name.includes(k));
+                const isOpen = e.value === true || e.value === 1 || e.value === 'true' || e.value === 'open';
+                return isWindowSensor && isOpen;
             }).length;
-
-            // Bad-Minuten: Summe aus roomHistory fuer Bad-Sensor-Raeume
-            const roomHistDataForBath = roomHistoryData.history || {};
-            const bathroomMinutes = Object.entries(roomHistDataForBath)
-                .filter(([room]) => bathroomLocations.size > 0
-                    ? bathroomLocations.has(room)
-                    : /bad|wc|toilet/i.test(room))
-                .reduce((sum, [, hourlyArr]) => {
-                    return sum + (Array.isArray(hourlyArr) ? hourlyArr.reduce((a, b) => a + (b || 0), 0) : 0);
-                }, 0);
 
             let battery = 85;
             if (activityTrend && activityTrend.val !== undefined) battery = Math.min(100, Math.max(20, Math.round(80 + (Number(activityTrend.val) * 5))));
@@ -397,9 +362,7 @@ class CogniLiving extends utils.Adapter {
                 roomHistory: roomHistoryData,
                 todayRoomMinutes: todayRoomMinutes,   // { 'EG Bad': 25, ... }
                 geminiNight: geminiNight?.val || null,
-                geminiNightTs: geminiNight?.ts || null,
                 geminiDay: geminiDay?.val || null,
-                geminiDayTs: geminiDay?.ts || null,
                 anomalyScore: anomalyScore?.val !== undefined && anomalyScore?.val !== null
                     ? Number(anomalyScore.val) : null,
                 todayVector: (() => {
@@ -425,12 +388,37 @@ class CogniLiving extends utils.Adapter {
                 batteryLevel: battery,
                 freshAirCount: freshAirCount,
                 windowOpenings: freshAirCount,
-                windowOpenCounts: windowOpenCounts,
-                nightMotionCount: nightMotionCount,
-                bathroomMinutes: bathroomMinutes,
-                nightSensorLocations: Array.from(nightSensorLocations),
-                bathroomLocations: Array.from(bathroomLocations),
-                gaitSpeed: gaitSpeed?.val !== undefined && gaitSpeed?.val !== null ? Number(gaitSpeed.val) : null,
+                gaitSpeed: (() => {
+                    // Berechne heutige Gait-Speed direkt aus Sequenzen (kein async noetig)
+                    try {
+                        const seqState = this._lastSeqState; // wird unten gesetzt
+                        if (!seqState) return null;
+                        const allSeqs = JSON.parse(seqState);
+                        const todayStr = dateStr; // bereits oben definiert
+                        const todaySeqs = allSeqs.filter(s => (s.timestamp || '').startsWith(todayStr));
+                        if (todaySeqs.length < 1) return null;
+
+                        const hallwayConf = (this.config.devices || []).filter(d => d.isHallway).map(d => d.location || d.name || '');
+                        const hallwayKw = ['flur', 'diele', 'gang', 'korridor'];
+                        const isHallway = (loc) => hallwayConf.includes(loc) || hallwayKw.some(k => (loc || '').toLowerCase().includes(k));
+
+                        const transits = [];
+                        for (const seq of todaySeqs) {
+                            const steps = seq.steps || [];
+                            if (steps.length < 3) continue;
+                            for (let i = 1; i < steps.length - 1; i++) {
+                                if (!isHallway(steps[i].loc)) continue;
+                                if (isHallway(steps[i-1].loc) || isHallway(steps[i+1].loc)) continue;
+                                const transit = (steps[i+1].t_delta || 0) - (steps[i].t_delta || 0);
+                                if (transit >= 1 && transit <= 20) transits.push(transit);
+                            }
+                        }
+                        if (transits.length < 2) return null;
+                        transits.sort((a, b) => a - b);
+                        const median = transits[Math.floor(transits.length / 2)];
+                        return Math.round(median * 10) / 10;
+                    } catch(e) { return null; }
+                })(),
                 eventHistory: todayEvents
             };
 
@@ -442,25 +430,6 @@ class CogniLiving extends utils.Adapter {
             fs.writeFileSync(filePath, JSON.stringify(snapshot));
             this.log.info(`✅ History saved: ${filePath}`);
 
-            // Auto-Training IsolationForest: taeglich nach Speichern ausfuehren
-            try {
-                const allFiles = fs.readdirSync(historyDir).filter(f => f.endsWith('.json')).sort();
-                if (allFiles.length >= 3) {
-                    const trainingData = [];
-                    for (const fname of allFiles.slice(-30)) {
-                        try {
-                            const d = JSON.parse(fs.readFileSync(path.join(historyDir, fname), 'utf8'));
-                            if (d.todayVector && Array.isArray(d.todayVector) && d.todayVector.some(v => v > 0)) {
-                                trainingData.push({ activityVector: d.todayVector, eventCount: d.todayVector.reduce((a,b) => a+b, 0) });
-                            }
-                        } catch(e) {}
-                    }
-                    if (trainingData.length >= 3) {
-                        pythonBridge.send(this, 'TRAIN_SECURITY', { sequences: trainingData });
-                        this.log.info('[Security] Auto-Training gestartet: ' + trainingData.length + ' Tage');
-                    }
-                }
-            } catch(e) { this.log.debug('[Security] Auto-Training Fehler: ' + e.message); }
         } catch(e) { this.log.error(`History Save Error: ${e.message}`); }
     }
 
@@ -1009,10 +978,7 @@ class CogniLiving extends utils.Adapter {
                     if (!sequences || sequences.length === 0) return;
                     
                     // Sende Sequenzen an Python für Ganganalyse
-                    const hallwayLocations = (this.config.devices || [])
-                        .filter(d => d.isHallway === true && d.location)
-                        .map(d => d.location);
-                    pythonBridge.send(this, 'ANALYZE_GAIT', { sequences, hallwayLocations });
+                    pythonBridge.send(this, 'ANALYZE_GAIT', { sequences });
                     
                     this.log.debug(`🚶 Gait Analysis triggered with ${sequences.length} sequences`);
                 } catch(e) {
@@ -1258,5 +1224,3 @@ class CogniLiving extends utils.Adapter {
 
 if (require.main !== module) module.exports = (options) => new CogniLiving(options);
 else new CogniLiving();
-
-
