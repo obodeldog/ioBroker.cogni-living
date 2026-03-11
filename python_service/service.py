@@ -229,24 +229,27 @@ def process_message(msg):
             act_vals   = [d.get('activityPercent', 0) for d in all_data]
             gait_vals  = [d.get('gaitSpeed', 0)       for d in all_data if d.get('gaitSpeed', 0) > 0 and d.get('gaitSpeed', 0) < 60]
             night_vals = [d.get('nightEvents', 0)     for d in all_data]
+            rooms_vals = [d.get('uniqueRooms', 0)     for d in all_data]
 
             MIN_DAYS = 10
-            # Aktivitaet: Abnahme detektieren → Werte negieren
-            act_neg   = [-v for v in act_vals]
-            act_r   = health_brain.detect_drift_page_hinkley(act_neg)   if len(act_vals)   >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(act_vals)} Tage nötig'}
-            gait_r  = health_brain.detect_drift_page_hinkley(gait_vals) if len(gait_vals)  >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(gait_vals)} Tage nötig'}
-            night_r = health_brain.detect_drift_page_hinkley(night_vals)if len(night_vals) >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(night_vals)} Tage nötig'}
+            # Abnahme-Metriken: Werte negieren (Aktivität sinkt = schlecht, Raum-Nutzung sinkt = schlecht)
+            act_r   = health_brain.detect_drift_page_hinkley([-v for v in act_vals])   if len(act_vals)   >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(act_vals)} Tage nötig'}
+            gait_r  = health_brain.detect_drift_page_hinkley(gait_vals)                if len(gait_vals)  >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(gait_vals)} Tage nötig'}
+            night_r = health_brain.detect_drift_page_hinkley(night_vals)               if len(night_vals) >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(night_vals)} Tage nötig'}
+            rooms_r = health_brain.detect_drift_page_hinkley([-v for v in rooms_vals]) if len([v for v in rooms_vals if v > 0]) >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len([v for v in rooms_vals if v > 0])} Tage nötig'}
 
             overall = any([
                 isinstance(act_r,   dict) and act_r.get('drift_detected',   False),
                 isinstance(gait_r,  dict) and gait_r.get('drift_detected',  False),
                 isinstance(night_r, dict) and night_r.get('drift_detected', False),
+                isinstance(rooms_r, dict) and rooms_r.get('drift_detected', False),
             ])
             send_result("DRIFT_RESULT", {
                 'overall_drift': overall,
                 'activity':      act_r,
                 'gait':          gait_r,
                 'night':         night_r,
+                'rooms':         rooms_r,
                 'n_days':        len(all_data)
             })
 
