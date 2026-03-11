@@ -222,12 +222,33 @@ def process_message(msg):
             })
 
         elif cmd == "ANALYZE_DRIFT":
-            # Separater Drift-Befehl: immer alle verfuegbaren Daten, unabhaengig vom Zeitfenster
-            all_data = data.get("dailyData", [])
-            log(f"Drift Analysis: Processing {len(all_data)} days (full history)")
-            activity_values = [d.get('activityPercent', 0) for d in sorted(all_data, key=lambda x: x.get('date', ''))]
-            drift_result = health_brain.detect_drift_page_hinkley(activity_values) if len(activity_values) >= 10 else {'error': f'Noch {10 - len(activity_values)} Tage bis zur ersten Drift-Analyse'}
-            send_result("DRIFT_RESULT", drift_result)
+            # Multi-Metrik Drift: Aktivitaet (Abnahme), Ganggeschwindigkeit (Zunahme), Nacht-Unruhe (Zunahme)
+            all_data = sorted(data.get("dailyData", []), key=lambda x: x.get('date', ''))
+            log(f"Drift Analysis: Processing {len(all_data)} days (3 metrics)")
+
+            act_vals   = [d.get('activityPercent', 0) for d in all_data]
+            gait_vals  = [d.get('gaitSpeed', 0)       for d in all_data if d.get('gaitSpeed', 0) > 0 and d.get('gaitSpeed', 0) < 60]
+            night_vals = [d.get('nightEvents', 0)     for d in all_data]
+
+            MIN_DAYS = 10
+            # Aktivitaet: Abnahme detektieren → Werte negieren
+            act_neg   = [-v for v in act_vals]
+            act_r   = health_brain.detect_drift_page_hinkley(act_neg)   if len(act_vals)   >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(act_vals)} Tage nötig'}
+            gait_r  = health_brain.detect_drift_page_hinkley(gait_vals) if len(gait_vals)  >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(gait_vals)} Tage nötig'}
+            night_r = health_brain.detect_drift_page_hinkley(night_vals)if len(night_vals) >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(night_vals)} Tage nötig'}
+
+            overall = any([
+                isinstance(act_r,   dict) and act_r.get('drift_detected',   False),
+                isinstance(gait_r,  dict) and gait_r.get('drift_detected',  False),
+                isinstance(night_r, dict) and night_r.get('drift_detected', False),
+            ])
+            send_result("DRIFT_RESULT", {
+                'overall_drift': overall,
+                'activity':      act_r,
+                'gait':          gait_r,
+                'night':         night_r,
+                'n_days':        len(all_data)
+            })
 
         # 3. ENERGY
         elif cmd == "TRAIN_ENERGY":

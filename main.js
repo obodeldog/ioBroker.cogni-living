@@ -430,7 +430,96 @@ class CogniLiving extends utils.Adapter {
             fs.writeFileSync(filePath, JSON.stringify(snapshot));
             this.log.info(`✅ History saved: ${filePath}`);
 
+            // Nächtliche Drift-Prüfung (nach dem Speichern)
+            this._checkDriftAlarm(historyDir).catch(e => this.log.warn(`[Drift] Alarm-Check Fehler: ${e.message}`));
+
         } catch(e) { this.log.error(`History Save Error: ${e.message}`); }
+    }
+
+    async _checkDriftAlarm(historyDir) {
+        const setup = require('./lib/setup');
+        const COOLDOWN_DAYS = 14;
+        const MIN_DAYS      = 10;
+
+        // Cooldown prüfen
+        try {
+            const lastAlarm = await this.getStateAsync('analysis.drift.lastAlarmDate').catch(() => null);
+            if (lastAlarm && lastAlarm.val) {
+                const daysSince = (Date.now() - new Date(lastAlarm.val).getTime()) / 86400000;
+                if (daysSince < COOLDOWN_DAYS) {
+                    this.log.debug(`[Drift] Cooldown aktiv (${daysSince.toFixed(0)} von ${COOLDOWN_DAYS} Tagen)`);
+                    return;
+                }
+            }
+        } catch(e) {}
+
+        // Letzte 60 Tage laden
+        const days = [];
+        for (let i = 1; i <= 60; i++) {
+            const d = new Date(); d.setDate(d.getDate() - i);
+            const ds = d.toISOString().slice(0, 10);
+            const fp = path.join(historyDir, `${ds}.json`);
+            if (fs.existsSync(fp)) {
+                try {
+                    const h = JSON.parse(fs.readFileSync(fp, 'utf8'));
+                    const vec = h.todayVector || [];
+                    const act = vec.reduce((a, b) => a + b, 0);
+                    const gs  = (h.gaitSpeed > 0 && h.gaitSpeed < 60) ? h.gaitSpeed : 0;
+                    const nt  = h.nightMotionCount !== undefined ? h.nightMotionCount
+                                : Array.isArray(h.eventHistory)
+                                    ? h.eventHistory.filter(e => { const hr = new Date(e.timestamp||e.ts||0).getHours(); return hr>=22||hr<6; }).length
+                                    : 0;
+                    days.push({ date: ds, act, gs, nt });
+                } catch(e) {}
+            }
+        }
+        days.sort((a, b) => a.date.localeCompare(b.date));
+        if (days.length < MIN_DAYS) { this.log.debug(`[Drift] Zu wenig Daten (${days.length})`); return; }
+
+        // Mediane als Normalisierung
+        const median = arr => { const s=[...arr].sort((a,b)=>a-b); return s[Math.floor(s.length/2)]||1; };
+        const actVals = days.map(d=>d.act).filter(v=>v>0);
+        const mAct = median(actVals)||1;
+        const actNorm = days.map(d => d.act>0 ? Math.min(200, Math.round((d.act/mAct)*100)) : 0);
+
+        // Page-Hinkley (einfach, JS-intern, keine Python nötig)
+        const ph = (vals, direction='up', k=0.5) => {
+            const cal = Math.min(14, Math.max(7, Math.floor(vals.length/2)));
+            const calVals = vals.slice(0, cal).filter(v=>v>0);
+            if (calVals.length < 3) return { score: 0, threshold: 50, alarm: false };
+            const mu  = calVals.reduce((a,b)=>a+b,0)/calVals.length;
+            const std = Math.sqrt(calVals.reduce((a,b)=>a+(b-mu)**2,0)/calVals.length)||1;
+            const th  = Math.max(30, 3*std*Math.sqrt(Math.max(1, vals.length-cal)));
+            let M=0, m=0, score=0;
+            for (let i=cal; i<vals.length; i++) {
+                const x = direction==='down' ? -vals[i] : vals[i];
+                const muD = direction==='down' ? -mu : mu;
+                M = M + (x - muD - k*std);
+                m = Math.min(m, M);
+                score = Math.max(0, M - m);
+            }
+            return { score: Math.round(score*10)/10, threshold: Math.round(th*10)/10, alarm: score > th };
+        };
+
+        const actR   = ph(actNorm, 'down');
+        const gaitR  = ph(days.map(d=>d.gs).filter(v=>v>0), 'up');
+        const nightR = ph(days.map(d=>d.nt), 'up');
+
+        this.log.debug(`[Drift] Scores — Aktivität: ${actR.score}/${actR.threshold} | Gait: ${gaitR.score}/${gaitR.threshold} | Nacht: ${nightR.score}/${nightR.threshold}`);
+
+        // Pushover nur wenn mindestens eine Metrik Alarm schlägt
+        const alarms = [];
+        if (actR.alarm)   alarms.push(`🏃 Aktivität sinkt (Score ${actR.score}/${actR.threshold})`);
+        if (gaitR.alarm)  alarms.push(`🚶 Ganggeschwindigkeit steigt (Score ${gaitR.score}/${gaitR.threshold})`);
+        if (nightR.alarm) alarms.push(`😴 Nacht-Unruhe nimmt zu (Score ${nightR.score}/${nightR.threshold})`);
+
+        if (alarms.length > 0) {
+            const msg = `⚠️ DRIFT ERKANNT (${days.length} Tage Datenbasis)\n\n${alarms.join('\n')}\n\nBitte Admin-UI → Drift-Monitor für Details öffnen.`;
+            setup.sendNotification(this, msg, true, false, '⚠️ NUUKANNI: Verhaltens-Drift');
+            await this.setObjectNotExistsAsync('analysis.drift.lastAlarmDate', { type: 'state', common: { name: 'Letzter Drift-Alarm', type: 'string', role: 'text', read: true, write: false, def: '' }, native: {} });
+            await this.setStateAsync('analysis.drift.lastAlarmDate', { val: new Date().toISOString(), ack: true });
+            this.log.warn(`[Drift] ⚠️ Alarm ausgelöst: ${alarms.join(' | ')}`);
+        }
     }
 
     async integrateRoomTime() {
