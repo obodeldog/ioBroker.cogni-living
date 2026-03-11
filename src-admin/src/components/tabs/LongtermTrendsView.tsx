@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
     Box, Typography, Button, ButtonGroup, CircularProgress, Grid, Paper,
     Tooltip as MuiTooltip, IconButton
@@ -326,7 +326,14 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         consecutiveMissing = 0;
                         const todayVector = response.data.todayVector || [];
                         const totalEvents = todayVector.reduce((sum: number, count: number) => sum + count, 0);
-                        driftDailyData.push({ date: dateStr, activityPercent: totalEvents, gaitSpeed: 0, nightEvents: 0, uniqueRooms: 0, bathroomVisits: 0, windowOpenings: 0 });
+                        const gs = (response.data.gaitSpeed && response.data.gaitSpeed > 0 && response.data.gaitSpeed < 60) ? Number(response.data.gaitSpeed) : 0;
+                        const nightMot = response.data.nightMotionCount !== undefined ? Number(response.data.nightMotionCount)
+                            : Array.isArray(response.data.eventHistory)
+                                ? response.data.eventHistory.filter((e: any) => { const h = new Date(e.timestamp || e.ts || 0).getHours(); return h >= 22 || h < 6; }).length
+                                : 0;
+                        const roomsData = response.data.todayRoomMinutes || {};
+                        const uniqueRm = Object.keys(roomsData).filter(k => (roomsData[k] || 0) > 2).length;
+                        driftDailyData.push({ date: dateStr, activityPercent: totalEvents, gaitSpeed: gs, nightEvents: nightMot, uniqueRooms: uniqueRm, bathroomVisits: 0, windowOpenings: 0 });
                     } else {
                         consecutiveMissing++;
                         if (consecutiveMissing >= 14 && i > 21) break;
@@ -652,13 +659,160 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                         <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor((trendsData.mobility?.timeline?.length || 1) / 6)} />
                                         <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} />
                                         <Tooltip content={<MiniTooltip extraData="rooms" />} />
-                                        <Bar dataKey="value" fill="#00bcd4" opacity={0.7} name="Räume" />
+                                        <Bar dataKey="value" fill="#ffcc02" opacity={0.7} name="Räume" />
                                     <Line type="monotone" dataKey="movingAvg" stroke="#546e7a" strokeWidth={2} dot={false} name="Ø 7 Tage" connectNulls />
                                     </ComposedChart>
                                 </ResponsiveContainer>
                             </Paper>
                         </Grid>
 
+                    </Grid>
+
+                    {/* ═══ DRIFT-MONITOR – Langzeit-Trend-Überwachung ═══ */}
+                    <Grid item xs={12}>
+                        <Paper sx={{
+                            p: 2,
+                            bgcolor: isDark ? '#0a0a0a' : '#ffffff',
+                            border: `1px solid ${isDark ? '#333' : '#ddd'}`,
+                            borderLeft: '3px solid #ff9800'
+                        }}>
+                            {/* Kopfzeile */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
+                                        🔬 DRIFT-MONITOR
+                                    </Typography>
+                                    <ChartHelp text={"Erkennt schleichende Veränderungen über Wochen und Monate (Page-Hinkley-Test). Jede Kurve zeigt wie weit sich eine Metrik von ihrer persönlichen Baseline entfernt hat – in Prozent der Alarmschwelle. 0 % = kein Drift, 100 % = Alarm. Die ersten 7–14 Tage sind Kalibrierungsphase (Score = 0). Farben sind identisch mit den Einzelkacheln darüber."} />
+                                </Box>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem' }}>
+                                    {driftData?.n_days ? `${driftData.n_days} Tage · 0–100 % der persönl. Alarmschwelle` : ''}
+                                </Typography>
+                            </Box>
+
+                            {driftLoading ? (
+                                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', textAlign: 'center', py: 3 }}>
+                                    Lade Drift-Daten (bis zu 180 Tage)…
+                                </Typography>
+                            ) : driftData && !driftData.error ? (
+                                <>
+                                    {/* Status-Chips – normalisiert 0-100 % */}
+                                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                                        {([
+                                            { key: 'activity', label: 'Aktivität',           color: '#4fc3f7', icon: '🏃',
+                                              tip: 'Misst ob die Gesamtaktivität über Wochen sinkt. 100 % = Alarm. Schwelle = 3 × deine-persönl.-Schwankung × √(Erkennungstage). Je stärker du normalerweise schwankst, desto höher die Schwelle.' },
+                                            { key: 'gait',     label: 'Ganggeschwindigkeit', color: '#00e676', icon: '🚶',
+                                              tip: 'Misst ob du langsam langsamer wirst (längere Flur-Transitzeiten). Anstieg = ungünstig. 100 % = Alarm.' },
+                                            { key: 'night',    label: 'Nacht-Unruhe',        color: '#fd7e14', icon: '😴',
+                                              tip: 'Misst ob die nächtliche Bewegungsaktivität über Wochen zunimmt. Mehr Nacht-Events = schlechterer Schlaf. 100 % = Alarm.' },
+                                            { key: 'rooms',    label: 'Raum-Mobilität',     color: '#ffcc02', icon: '🏠',
+                                              tip: 'Misst ob du langfristig immer weniger Räume nutzt. Ein Rückzug auf wenige Räume kann ein Frühwarnsignal sein. 100 % = Alarm.' },
+                                        ] as Array<{key:string,label:string,color:string,icon:string,tip:string}>).map(({ key, label, color, icon, tip }) => {
+                                            const m = (driftData as any)[key];
+                                            if (!m || m.error) return (
+                                                <MuiTooltip key={key} title={tip} arrow>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.4, borderRadius: 1, bgcolor: isDark ? '#1a1a1a' : '#f5f5f5', cursor: 'help' }}>
+                                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, opacity: 0.4 }} />
+                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem' }}>
+                                                            {icon} {label}: {m?.error || 'Keine Daten'}
+                                                        </Typography>
+                                                    </Box>
+                                                </MuiTooltip>
+                                            );
+                                            const pct = Math.min(100, Math.round((m.current_score / (m.threshold || 1)) * 100));
+                                            const chipColor = m.drift_detected ? '#dc3545' : pct > 50 ? '#fd7e14' : '#28a745';
+                                            const status    = m.drift_detected ? 'Drift erkannt' : pct > 50 ? 'Beobachten' : 'Stabil';
+                                            return (
+                                                <MuiTooltip key={key} title={tip} arrow>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1.2, py: 0.4, borderRadius: 1,
+                                                        bgcolor: chipColor + '22', border: `1px solid ${chipColor}55`, cursor: 'help' }}>
+                                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color }} />
+                                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: chipColor, fontSize: '0.7rem' }}>
+                                                            {icon} {label}
+                                                        </Typography>
+                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem' }}>
+                                                            {status} · {pct} %
+                                                        </Typography>
+                                                    </Box>
+                                                </MuiTooltip>
+                                            );
+                                        })}
+                                    </Box>
+
+                                    {/* Normalisierter 0–100%-Chart */}
+                                    {(() => {
+                                        const metrics = [
+                                            { key: 'activity', color: '#4fc3f7', name: 'act'   },
+                                            { key: 'gait',     color: '#00e676', name: 'gait'  },
+                                            { key: 'night',    color: '#fd7e14', name: 'night' },
+                                            { key: 'rooms',    color: '#ffcc02', name: 'rooms' },
+                                        ];
+                                        // Normalisiere jeden Score auf 0-100% seiner eigenen Schwelle
+                                        const maxLen = Math.max(...metrics.map(m => (driftData as any)[m.key]?.scores?.length || 0));
+                                        if (maxLen === 0) return null;
+                                        const chartData = Array.from({ length: maxLen }, (_: any, i: number) => {
+                                            const pt: any = { i: i + 1 };
+                                            metrics.forEach(({ key, name }) => {
+                                                const m = (driftData as any)[key];
+                                                if (m?.scores?.[i] != null && m.threshold > 0) {
+                                                    pt[name] = Math.min(110, Math.round((m.scores[i] / m.threshold) * 100));
+                                                }
+                                            });
+                                            return pt;
+                                        });
+                                        return (
+                                            <ResponsiveContainer width="100%" height={160}>
+                                                <LineChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                                                    <CartesianGrid strokeDasharray="2 4" stroke={isDark ? '#222' : '#eee'} />
+                                                    <XAxis dataKey="i" stroke={lineColor} style={{ fontSize: '0.55rem' }}
+                                                        label={{ value: 'Tage (älteste → neueste)', position: 'insideBottomRight', offset: -5, fill: lineColor, fontSize: 9 }} />
+                                                    <YAxis stroke={lineColor} style={{ fontSize: '0.55rem' }} domain={[0, 110]}
+                                                        tickFormatter={(v: number) => `${v} %`} />
+                                                    <Tooltip
+                                                        formatter={(v: any, name: string) => {
+                                                            const labels: Record<string,string> = { act: '🏃 Aktivität', gait: '🚶 Ganggeschw.', night: '😴 Nacht', rooms: '🏠 Räume' };
+                                                            return [v != null ? `${v} %` : '–', labels[name] || name];
+                                                        }}
+                                                        contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: '1px solid #444', fontSize: '0.7rem' }}
+                                                    />
+                                                    <ReferenceLine y={100} stroke="#dc3545" strokeDasharray="4 3"
+                                                        label={{ value: 'Alarm (100 %)', position: 'right', fill: '#dc3545', fontSize: 9 }} />
+                                                    <ReferenceLine y={50} stroke="#fd7e14" strokeDasharray="2 4" strokeOpacity={0.5} />
+                                                    {metrics.map(({ key, color, name }) =>
+                                                        (driftData as any)[key]?.scores && (
+                                                            <Line key={name} type="monotone" dataKey={name} stroke={color}
+                                                                strokeWidth={1.8} dot={false} connectNulls name={name} />
+                                                        )
+                                                    )}
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        );
+                                    })()}
+
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', display: 'block', mt: 1 }}>
+                                        <span style={{ color: '#4fc3f7' }}>&#9632;</span> Aktivität 
+                                        <span style={{ color: '#00e676' }}>&#9632;</span> Ganggeschwindigkeit 
+                                        <span style={{ color: '#fd7e14' }}>&#9632;</span> Nacht-Unruhe 
+                                        <span style={{ color: '#ffcc02' }}>&#9632;</span> Raum-Mobilität  |  
+                                        Gelbe Linie = 50 % (Beobachten) · Rote Linie = 100 % (Alarm)
+                                        {(driftData as any).activity?.calibration_days ? ` | Erste ${(driftData as any).activity.calibration_days} Tage = Kalibrierung.` : ''}
+                                    </Typography>
+                                </>
+                            ) : driftData?.error ? (
+                                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.65rem' }}>
+                                    {driftData.error}
+                                </Typography>
+                            ) : (
+                                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', textAlign: 'center', py: 3 }}>
+                                    Drift-Analyse lädt… (min. 10 Tage Daten nötig)
+                                </Typography>
+                            )}
+                        </Paper>
+                    </Grid>
+
+                    <Grid item xs={12} style={{ display: 'none' }}>{/* keeps grid structure */}</Grid>
+
+                    {/* Weitere Gesundheitskacheln */}
+                    <Grid container spacing={2} sx={{ mt: 2 }}>
                         {/* 4. Hygiene-Frequenz */}
                         <Grid item xs={12} md={6} lg={4}>
                             <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
@@ -709,60 +863,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             </Paper>
                         </Grid>
 
-                        {/* 6. 🔬 DRIFT-MONITOR (Beobachtungsphase) */}
-                        <Grid item xs={12} md={6} lg={4}>
-                            <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%', border: `1px dashed ${isDark ? '#444' : '#ccc'}` }}>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
-                                    🔬 DRIFT-MONITOR
-                                </Typography>
-                                <Typography variant="caption" sx={{ display: 'block', color: '#ff9800', fontSize: '0.6rem', mb: 0.5 }}>
-                                    {driftData?.adaptive
-                                        ? `Adaptiv kalibriert — Baseline: ${driftData.calibration_days} Tage, σ=${driftData.baseline_sigma}`
-                                        : 'Fester Schwellwert'}
-                                </Typography>
-                                {driftLoading ? (
-                                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 2, textAlign: 'center' }}>
-                                        Lade Drift-Daten…
-                                    </Typography>
-                                ) : driftData && !driftData.error ? (
-                                    <>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                            <Box sx={{
-                                                width: 10, height: 10, borderRadius: '50%',
-                                                bgcolor: driftData.drift_detected ? '#dc3545' : (driftData.current_score > driftData.threshold * 0.5 ? '#fd7e14' : '#28a745')
-                                            }} />
-                                            <Typography variant="caption" sx={{ fontWeight: 'bold', color: driftData.drift_detected ? 'error.main' : (driftData.current_score > driftData.threshold * 0.5 ? '#fd7e14' : '#28a745') }}>
-                                                {driftData.drift_detected ? '⚠️ Drift erkannt' : (driftData.current_score > driftData.threshold * 0.5 ? 'Möglicher Drift' : 'Kein Drift')}
-                                            </Typography>
-                                        </Box>
-                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
-                                            PH-Score: {driftData.current_score?.toFixed(1)} / Schwelle: {driftData.threshold?.toFixed(0)}{driftData.adaptive ? ' (adaptiv)' : ''}
-                                        </Typography>
-                                        <ResponsiveContainer width="100%" height={100}>
-                                            <LineChart data={driftData.scores?.map((v: number, i: number) => ({ i: i + 1, score: Math.round(v) })) || []}>
-                                                <XAxis dataKey="i" stroke={lineColor} style={{ fontSize: '0.55rem' }} />
-                                                <YAxis stroke={lineColor} style={{ fontSize: '0.55rem' }} domain={[0, Math.ceil(Math.max(driftData.current_score || 0, driftData.threshold || 50) * 1.2)]} />
-                                                <Tooltip formatter={(v: any) => [`${v}`, 'PH-Score']} />
-                                                <ReferenceLine y={driftData.threshold} stroke="#dc3545" strokeDasharray="3 3" label={{ value: 'Schwelle', position: 'right', fill: '#dc3545', fontSize: 9 }} />
-                                                <Line type="monotone" dataKey="score" stroke="#ff9800" strokeWidth={1.5} dot={false} name="Drift-Score" />
-                                            </LineChart>
-                                        </ResponsiveContainer>
-                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem' }}>
-                                            Anstieg = Verhaltensmuster ändert sich. Rote Linie = Alarm-Schwelle.
-                                            {driftData.calibration_days ? ` Erste ${driftData.calibration_days} Tage = Kalibrierung (Score=0).` : ''}
-                                        </Typography>
-                                    </>
-                                ) : driftData?.error ? (
-                                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1, fontSize: '0.65rem' }}>
-                                        {driftData.error}
-                                    </Typography>
-                                ) : (
-                                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 2, textAlign: 'center' }}>
-                                        Drift-Analyse lädt… (min. 10 Tage Daten nötig)
-                                    </Typography>
-                                )}
-                            </Paper>
-                        </Grid>
+
                     </Grid>
                 </>
             )}

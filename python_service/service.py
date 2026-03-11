@@ -231,12 +231,25 @@ def process_message(msg):
             night_vals = [d.get('nightEvents', 0)     for d in all_data]
             rooms_vals = [d.get('uniqueRooms', 0)     for d in all_data]
 
+            # Normalize night + rooms to % of personal calibration mean
+            # This prevents extremely high PH thresholds from raw counts
+            def normalize_to_baseline(vals, min_val=0.1):
+                """Normalize values to % of calibration mean (first 14 or half of data)."""
+                import numpy as np
+                cal_n = max(7, min(14, len(vals) // 2))
+                cal_vals = [v for v in vals[:cal_n] if v > min_val]
+                cal_mean = float(np.mean(cal_vals)) if cal_vals else 1.0
+                return [min(300.0, round((v / cal_mean) * 100, 1)) for v in vals]
+
+            night_norm = normalize_to_baseline(night_vals)   # 100% = personal baseline, increase = bad
+            rooms_norm = normalize_to_baseline(rooms_vals, 0.5)  # 100% = personal baseline, decrease = bad
+
             MIN_DAYS = 10
             # Abnahme-Metriken: Werte negieren (Aktivität sinkt = schlecht, Raum-Nutzung sinkt = schlecht)
-            act_r   = health_brain.detect_drift_page_hinkley([-v for v in act_vals])   if len(act_vals)   >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(act_vals)} Tage nötig'}
-            gait_r  = health_brain.detect_drift_page_hinkley(gait_vals)                if len(gait_vals)  >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(gait_vals)} Tage nötig'}
-            night_r = health_brain.detect_drift_page_hinkley(night_vals)               if len(night_vals) >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(night_vals)} Tage nötig'}
-            rooms_r = health_brain.detect_drift_page_hinkley([-v for v in rooms_vals]) if len([v for v in rooms_vals if v > 0]) >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len([v for v in rooms_vals if v > 0])} Tage nötig'}
+            act_r   = health_brain.detect_drift_page_hinkley([-v for v in act_vals])     if len(act_vals)   >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(act_vals)} Tage nötig'}
+            gait_r  = health_brain.detect_drift_page_hinkley(gait_vals)                  if len(gait_vals)  >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(gait_vals)} Tage nötig'}
+            night_r = health_brain.detect_drift_page_hinkley(night_norm)                 if len(night_norm) >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(night_norm)} Tage nötig'}
+            rooms_r = health_brain.detect_drift_page_hinkley([-v for v in rooms_norm])   if len([v for v in rooms_norm if v > 10]) >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len([v for v in rooms_norm if v > 10])} Tage nötig'}
 
             overall = any([
                 isinstance(act_r,   dict) and act_r.get('drift_detected',   False),
