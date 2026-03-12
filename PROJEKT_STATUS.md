@@ -3,96 +3,141 @@
 
 ---
 
-## 1. Aktueller Stand (diese Sitzung)
+## 🗓️ Sitzung 12.03.2026 — Version 0.31.3
 
-### ✅ Root-Cause des "alten Builds" endgültig gefunden und behoben (v0.31.3)
+### ✅ Abgeschlossen
 
-**Das eigentliche Problem (hinter allen bisherigen Fresh Air Fehlschlägen):**
-ioBroker serviert die Admin UI aus dem Verzeichnis `admin/` — NICHT aus `src-admin/build/`.
-Vite hat aber immer in `src-admin/build/` gebaut. Deshalb hat ioBroker stets das alte `index-DaLhtVVS.js` (mit Keyword-Matching-Logik) geladen, egal wie oft wir `src-admin/build/` aktualisiert haben.
+**Root-Cause des "falschen Builds" gefunden — Fresh Air endlich wirklich gefixt:**
+- ioBroker serviert Admin UI aus `admin/`, Vite baute aber immer in `src-admin/build/`
+- Deshalb lud ioBroker stets `index-DaLhtVVS.js` (ALT) — egal was wir in `src-admin/build/` änderten
+- Fix: `vite.config.mjs` → `outDir: '../admin'` (zukünftige Builds gehen direkt ins richtige Verz.)
+- `admin/assets/index-DaLhtVVS.js` entfernt, `index-CBIshDQD.js` dorthin kopiert
+- `.gitignore`: `src-admin/build/` wird nicht mehr getrackt
 
-**Fixes in v0.31.3:**
-1. `admin/assets/index-DaLhtVVS.js` (alter Build) entfernt
-2. `admin/assets/index-CBIshDQD.js` + `admin/index.html` auf neuen Stand gebracht
-3. `src-admin/vite.config.mjs`: `outDir` von `'build'` auf `'../admin'` geändert → zukünftige Builds landen direkt im richtigen Verzeichnis
-4. `.gitignore`: `src-admin/build/` ignoriert (kein doppelter Build mehr)
-5. 62 temporäre `_*.js`, `_*.ps1`, `old_*.*` Dateien aus dem Repo entfernt
+**Repo-Bereinigung:**
+- 62 temporäre `_*.js`, `_*.ps1`, `old_*.*` Skripte aus dem Repo entfernt
 
-### ✅ Score 0.10 erklärt und Normalisierungsformel verbessert
+**Score-Normalisierung verbessert:**
+- `health.py predict()`: Neue Formel → `0.0 = normal, 0.5 = mäßig anomal, 1.0 = stark anomal`
+- Beweis-Logging: `[HealthBrain.predict] raw_score=... | norm_score=... | inlier=...` im ioBroker-Log sichtbar
+- Alter Score `0.10` für normale Tage war kein Bug, aber missverständlich skaliert
 
-**Mathematischer Beweis:** `IsolationForest(contamination=0.1)` liefert für normale Tage `raw_score ≈ -0.10`. Die alte Formel `−raw_score` ergab dadurch 0.10 für vollständig normale Tage — das wirkte wie "10% anomal", war aber "100% normal".
+**PROJEKT_STATUS.md auf Append-Only umgestellt:**
+- Cursor Rule aktualisiert: neue Sitzungen werden oben eingefügt, alte bleiben erhalten
+- Vollständiges Langzeit-Gedächtnis über Kontext-Resets hinweg
 
-**Neue Formel (zentriert):**
-- 0.0 = vollständig normal (raw ≈ -0.10)
-- 0.5 = mäßig anomal (raw ≈ -0.30)
-- 1.0 = stark anomal (raw ≤ -0.50)
-
-**Beweis-Logging:** `health.py predict()` gibt jetzt im ioBroker-Log aus:
-`[HealthBrain.predict] raw_score=-0.1023 | norm_score=0.0057 | inlier=True`
-
----
-
-### ✅ Root-Cause gefunden und behoben (v0.31.2): Fresh Air Kachel zeigt immer "0x"
-
-In `processEvents` (`HealthTab.tsx`): `evt.name.toLowerCase()` crashte bei Events ohne `name`-Feld → `setFreshAirCount` wurde nie aufgerufen.
-Fix: `(evt.name || '').toLowerCase()` + Dead Code + Doppelter State-Setter entfernt.
-
----
-
-## 2. Funktionierende Basis
-
-| Feature | Status | Anmerkung |
-|---|---|---|
-| Sensor-Typ-System ("Tuer/Fenster" → `type: "door"`) | ✅ | Korrekt in recorder.js |
-| Frischluft-Zählung (Öffnungen heute) | ✅ | Fix v0.31.2 |
-| Stoßlüftung ≥5 Min Zähler | ✅ | Fix v0.31.1 |
-| Admin UI Fresh Air Kachel | ✅ | Fix v0.31.2 (null-safety) |
-| Drift-Monitor mit Datumsachse | ✅ | v0.31.0 |
-| KI-Analyse Auto-Trigger (08:05 + 20:00) | ✅ | v0.31.0 |
-| Tages/Nacht Anomalie-Score | ✅ | v0.30.x |
-| Ganggeschwindigkeit | ✅ | v0.28.0 |
-| Raum-Mobilität | ✅ | v0.30.x |
-| Nacht-Unruhe Kachel | ✅ | v0.30.x |
-| Bad-Nutzung | ✅ | v0.28.0 |
-| Pushover Briefing (08:00 + 20:00) | ⚠️ | User berichtet weiterhin Probleme |
-| Garmin-Style Drift-Monitor | ✅ | v0.30.74 |
-| Feature-Module-Status Tab | ✅ | v0.30.x |
-| PROJEKT_STATUS.md Auto-Update Rule | ✅ | .cursor/rules/ |
-
----
-
-## 3. Offene Baustellen
+### 🔧 Offene Baustellen
 
 | Problem | Priorität | Beschreibung |
 |---|---|---|
-| Morning Briefing Uhrzeit | 🔴 HOCH | User bekommt Pushover-Briefing nicht um 08:00 Uhr. Mehrfach besprochen, noch nicht zuverlässig gelöst |
-| `freshAirLong` in `loadWeekData` | 🟡 MITTEL | Zeile 464 in HealthTab.tsx: `freshAirLong` wird in Week-Data als `undefined` referenziert, da nie berechnet. Muss noch die freshAirLong-Berechnung in den `loadWeekData`-Today-Block integriert werden |
-| `loadWeekData` useEffect Dependency | 🟡 MITTEL | `[weekOffset]` — `loadWeekData` fehlt in den deps. React wird warnen |
-| LSTM für stündliche Erwartung | 🟢 NIEDRIG | Geplant — Zeitlich-bewusstes Anomalie-Modell |
-| Graduelle Drift-Detektion (CUSUM) | 🟢 NIEDRIG | Geplant für Langzeit-Demenz-Früherkennung |
+| Morning Briefing Uhrzeit | 🔴 HOCH | User bekommt Pushover-Briefing nicht um 08:00 Uhr — mehrfach besprochen, noch nicht zuverlässig gelöst |
+| `freshAirLong` in `loadWeekData` | 🟡 MITTEL | Berechnung in HealthTab.tsx fehlt für den Weekly-Data-Pfad (~Zeile 464) |
+| Python Bridge Timeout | 🟡 MITTEL | `python_bridge.js` hat 10s Timeout, Frontend wartet 30s → Drift-Berechnung kann abbrechen |
+| Aktivitäts-Belastung Tagesvergleich | 🟡 MITTEL | User-Idee: Balken nur bis aktuelle Uhrzeit vergleichen (Time-of-Day Normalisierung) |
+| LSTM stündliche Erwartung | 🟢 NIEDRIG | Geplant — zeitlich-bewusstes Anomalie-Modell |
+
+### 🎯 Nächster logischer Schritt
+
+1. Adapter v0.31.3 von GitHub laden, neu starten
+2. Admin UI öffnen → Fresh Air Kachel sollte jetzt korrekt zählen
+3. Im ioBroker-Log nach `[HealthBrain.predict]` suchen → Score-Beweis sichtbar
+4. Danach: `freshAirLong` in `loadWeekData` berechnen + Morning Briefing debuggen
 
 ---
 
-## 4. Nächster logischer Schritt
+## 🗓️ Sitzung 12.03.2026 — Version 0.31.2
 
-**SOFORT nach nächstem Adapter-Update (v0.31.2) testen:**
-1. Adapter von GitHub neu laden und neu starten
-2. Admin UI öffnen, Ctrl+F5 (Hard Refresh)
-3. Fenster/Tür öffnen und Tab „Gesundheit" prüfen
-4. Fresh Air Kachel sollte jetzt > 0 anzeigen (Zähler steigt)
+### ✅ Abgeschlossen
 
-**Danach (nächste Sitzung):**
-- `freshAirLong` in `loadWeekData` berechnen (fehlende Zeile ~435 in loadWeekData)
-- Morning Briefing Timing-Problem endgültig debuggen (ggf. direkt im ioBroker-Log prüfen ob Scheduler feuert)
+**Root-Cause Fresh Air "0x" behoben:**
+- `processEvents` in `HealthTab.tsx` crashte bei `evt.name.toLowerCase()` wenn `evt.name == null`
+- Fix: `(evt.name || '').toLowerCase()` an Zeilen 752 + 757
+- Dead Code (alte Keyword-Matching-Logik) und doppelter `setFreshAirLongCount`-Aufruf entfernt
+- `lib/main.js`: Doppelter `const FRESH_AIR_MIN_MS` Block entfernt (SyntaxError)
+
+**Bestätigter Datenfluss:**
+- `events.history` enthält Door-Events: `type: "door"`, `value: 1` (numerisch) ✅
+- `processEvents` Filter: `evt.type === 'door' && evt.value === 1` korrekt ✅
+
+### 🔧 Offene Baustellen (zum damaligen Zeitpunkt)
+- Browser lud noch alten Build (Index-DaLhtVVS.js) trotz Inkognito → Root-Cause unklar (→ in v0.31.3 gelöst)
 
 ---
 
-## 5. Versions-Historie (letzte Änderungen)
+## 🗓️ Sitzung 11.03.2026 — Version 0.31.0 / 0.31.1
 
-| Version | Datum | Änderung |
+### ✅ Abgeschlossen
+
+- Fresh Air: Sensor-Typ-basierte Erkennung (`evt.type === 'door'`) statt Keyword-Matching
+- Stoßlüftung ≥5 Min Zähler (`freshAirLongCount`) berechnet und angezeigt
+- Drift-Monitor: X-Achse zeigt jetzt Kalenderdaten (TT.MM) statt Indices
+- KI-Analyse Auto-Trigger: täglich 08:05 + 20:00 Uhr via `node-schedule`
+- "Flur-Räume" TextField aus Settings entfernt
+- PROJEKT_STATUS.md Cursor Rule erstellt
+
+### 🔧 Offene Baustellen (zum damaligen Zeitpunkt)
+- Morning Briefing kommt immer noch nicht um 08:00 (mehrfach besprochen)
+- Fresh Air zeigt noch 0x (→ Root-Cause in v0.31.2 / v0.31.3 gefunden)
+
+---
+
+## 🗓️ Sitzung 10.03.2026 — Version 0.30.74
+
+### ✅ Abgeschlossen
+
+- Feature-Module-Status Tab im System-Bereich (Übersicht aller Algorithmen mit Status-Icons)
+- Garmin-Style Drift-Monitor mit Page-Hinkley-Test (CUSUM-ähnlich)
+- Aktivitäts-Level-Normalisierung: persönlicher Median = 100%
+- Drift-Monitor v2: 4 Metriken (Aktivität, Ganggeschwindigkeit, Nacht-Unruhe, Raum-Mobilität)
+- Farbkodierung: Drift-Monitor-Linien stimmen mit den Kachel-Farben überein
+- Layout-Verbesserung: Kacheln gruppiert, Drift-Monitor als Zusammenfassung abgesetzt
+- Tooltip-Erklärtexte für alle Kacheln (Fragezeichen-Icon)
+
+---
+
+## 🏗️ Funktionierende Basis (Stand v0.31.3)
+
+| Feature | Status | Version |
 |---|---|---|
-| **0.31.3** | 12.03.2026 | **FIX**: Vite outDir auf admin/ korrigiert (ioBroker lädt nun richtigen Build); 62 temp-Dateien entfernt; Score-Normalisierung verbessert (0=normal, 1=anomal) |
-| 0.31.2 | 12.03.2026 | **FIX**: processEvents TypeError bei null name → Fresh Air immer 0; lib/main.js SyntaxError; Dead Code entfernt |
-| 0.31.1 | 12.03.2026 | Fresh Air: type-based Erkennung, Stoßlüftung ≥5 Min, freshAirLongCount |
-| 0.31.0 | 11.03.2026 | Drift-Monitor Datumsachse, KI-Analyse Auto-Trigger, Flur-Räume entfernt |
-| 0.30.74 | 10.03.2026 | Feature-Module-Status Tab, Garmin Drift-Monitor |
+| Sensor-Typ-System (`type: "door"`) | ✅ | recorder.js |
+| Frischluft-Zählung (Öffnungen heute) | ✅ | v0.31.2 |
+| Stoßlüftung ≥5 Min Zähler | ✅ | v0.31.1 |
+| Admin UI baut korrekt nach `admin/` | ✅ | v0.31.3 |
+| Drift-Monitor mit Datumsachse | ✅ | v0.31.0 |
+| KI-Analyse Auto-Trigger (08:05 + 20:00) | ✅ | v0.31.0 |
+| Tages/Nacht Anomalie-Score | ✅ | v0.30.x |
+| Ganggeschwindigkeit (Flur-Transit) | ✅ | v0.28.0 |
+| Raum-Mobilität Kachel | ✅ | v0.30.x |
+| Nacht-Unruhe Kachel | ✅ | v0.30.x |
+| Bad-Nutzung Kachel | ✅ | v0.28.0 |
+| Feature-Module-Status Tab | ✅ | v0.30.74 |
+| Garmin-Style Drift-Monitor | ✅ | v0.30.74 |
+| Pushover Briefing (08:00 + 20:00) | ⚠️ | Weiterhin problematisch |
+
+---
+
+## 📦 Versionshistorie
+
+| Version | Datum | Hauptänderung |
+|---|---|---|
+| **0.31.3** | 12.03.2026 | Vite outDir → `admin/` (falsches Build gefixt); Score-Normalisierung; 62 temp-Dateien entfernt |
+| 0.31.2 | 12.03.2026 | processEvents TypeError (null name) → Fresh Air 0x; lib/main.js SyntaxError |
+| 0.31.1 | 12.03.2026 | Fresh Air type-basiert; Stoßlüftung ≥5 Min; freshAirLongCount |
+| 0.31.0 | 11.03.2026 | Drift-Monitor Datum-Achse; Auto-KI-Analyse; Flur-Räume entfernt |
+| 0.30.74 | 10.03.2026 | Relative Aktivitäts-Normalisierung; Page-Hinkley Drift-Monitor; Feature-Tab |
+| 0.30.73 | ~08.03.2026 | Sparkline Tooltip fixes; Nacht-Text JSON-Parsing |
+| 0.30.x | Feb/März 2026 | Diverse Kacheln, Layout, Farben, Tooltips |
+| 0.28.0 | Jan 2026 | Ganggeschwindigkeit, Bad-Nutzung, Frischluft |
+| 0.25.x | Dez 2025 | KI-Berichte (Gemini), Pushover |
+
+---
+
+## 🔑 Architektur-Grundsätze
+
+- **Backend**: Node.js (ioBroker Adapter) → `main.js` ist Einstiegspunkt (NICHT `lib/main.js`)
+- **Python-Service**: Scikit-Learn, NumPy — IsolationForest, lineare Regression, Page-Hinkley
+- **Admin UI**: React + TypeScript + Recharts — baut nach `admin/` (seit v0.31.3)
+- **ioBroker serviert**: `admin/` Verzeichnis (NICHT `src-admin/build/`)
+- **Obfuskierung**: Nur Backend (`main.js` / `lib/`) via `javascript-obfuscator` bei `npm run build:prod`
+- **Sensor-Typen**: `type: "door"` für Türen/Fenster, kein Keyword-Matching
+- **Versionierung**: Immer beide `package.json` UND `io-package.json` bumpen
