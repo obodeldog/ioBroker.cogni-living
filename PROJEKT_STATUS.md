@@ -1,4 +1,4 @@
-# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
+﻿# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
 **Letzte Aktualisierung:** 12.03.2026 | **Version:** 0.32.0 (Phase 2: Krankheits-Risiko-Scores)
 
 ---
