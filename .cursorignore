@@ -1,0 +1,47 @@
+﻿# --- Abhaengigkeiten -----------------------------------------------------------
+node_modules/
+src-admin/node_modules/
+
+# --- Build-Artefakte ----------------------------------------------------------
+src-admin/build/
+admin/assets/
+src/
+
+# --- Lock-Dateien -------------------------------------------------------------
+package-lock.json
+src-admin/package-lock.json
+
+# --- Alte / Backup-Dateien ----------------------------------------------------
+old_main_full.js
+old_HealthTab.tsx
+
+# --- Bilder & Medien ----------------------------------------------------------
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.webp
+
+# --- Python-Cache -------------------------------------------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+python_service/venv/
+python_service/.venv/
+
+# --- IDE & System-Dateien -----------------------------------------------------
+.git/
+.idea/
+Thumbs.db
+
+# --- Paket-Archive ------------------------------------------------------------
+*.tgz
+*.tar.gz
+*.zip
+
+# --- Logs ---------------------------------------------------------------------
+*.log
+npm-debug.log*

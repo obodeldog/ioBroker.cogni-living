@@ -1,7 +1,7 @@
 # PROJEKT_STATUS — cogni-living (NUUKANNI / AURA)
 
 > **Übergabeprotokoll für die nächste Sitzung**
-> Letzte Aktualisierung: **12.03.2026** | Aktuelle Version: **v0.31.0** | Letzter Commit: `6e2d231`
+> Letzte Aktualisierung: **02.03.2026** | Aktuelle Version: **v0.31.1** | Letzter Commit: ausstehend
 
 ---
 
@@ -9,7 +9,9 @@
 
 | # | Version | Feature / Fix | Details |
 |---|---------|---------------|---------|
-| 1 | v0.31.0 | **Fresh Air: Typ-System statt Keywords** | `freshAirCount` nutzt jetzt `e.type === 'door'` (aus Sensorliste: Tür/Fenster). Vorher: Keyword-Matching auf Sensornamen → unzuverlässig. |
+| 1 | v0.31.1 | **Fresh Air: Live-Pfad Fix (HealthTab)** | Live-Berechnung in `HealthTab.tsx` (beim Klick auf "System prüfen") nutzte noch altes Keyword-Matching (`haustür`, `terrasse`). Jetzt korrekt: `e.type === 'door'`. |
+| 2 | v0.31.1 | **Stoßlüftungs-Zähler (≥5 Min)** | Backend berechnet `freshAirLongCount`: Anzahl Tür-Öffnungen die ≥5 Minuten dauerten (OPEN/CLOSE-Paare). Frontend zeigt "davon 2× ≥5 Min (Empf.: 3×)" in oranger/grüner Farbe. Wenn Öffnungen < 5 Min: rote Warnung "Zu kurz – Stoßlüftung ≥5 Min empfohlen". |
+| 3 | v0.31.0 | **Fresh Air: Typ-System statt Keywords** | `freshAirCount` nutzt jetzt `e.type === 'door'` (aus Sensorliste: Tür/Fenster). Vorher: Keyword-Matching auf Sensornamen → unzuverlässig. |
 | 2 | v0.31.0 | **Flur-Räume-Textfeld entfernt** | War toter Code: UI-Feld vorhanden, aber `config.flurRooms` wurde nirgendwo gelesen. Aus `Settings.tsx`, State-Interface und `io-package.json` entfernt. |
 | 3 | v0.31.0 | **Versionsnummer auf 0.31.0** | Ab sofort wird nach jedem Feature-Commit die Version hochgezählt. Sichtbar in ioBroker-Adapter-Ansicht. |
 | 4 | v0.30.x | **Auto KI-Analyse (08:05 + 20:00)** | Täglich um 08:05 (Nacht-Protokoll) und 20:00 (Tages-Situation) wird `analysis.training.triggerHealth` automatisch gesetzt → Gemini generiert frische Texte ohne manuellen Klick. |
@@ -30,7 +32,8 @@
 |-------|--------|-----------|
 | Sensor-Fusion (PIR) | ✅ | `isHallway`, `isBathroomSensor`, `isNightSensor`, `type==='door'` |
 | `saveDailyHistory` (23:59) | ✅ | TDZ-Bug behoben; Ganggeschwindigkeit täglich frisch |
-| Fresh Air Zählung | ✅ | Jetzt via `e.type === 'door'` — kein Keyword-Matching mehr |
+| Fresh Air Zählung | ✅ | Via `e.type === 'door'` — kein Keyword-Matching mehr. Auch Live-Pfad (HealthTab) gefixt. |
+|| Fresh Air Stoßlüftungs-Zähler | ✅ | `freshAirLongCount` = Öffnungen ≥5 Min. Gespeichert im Daily-Snapshot, in Kachel angezeigt. |
 | IsolationForest (Tag + Nacht) | ✅ | Auto-Training ab 7 Digests |
 | Sicherheits-Anomalie | ✅ | Kein Fallback-Spam, 1h Cooldown |
 | Morgenbriefing (08:00) | ✅ | `node-schedule`, korrekter Trigger zu `sendMorningBriefing` |
@@ -68,7 +71,7 @@
 | 🔴 Verifizieren | **Wochenbericht** | Erst nächsten Sonntag testbar. |
 | 🟡 Neustart | **Drift-Monitor Kalender-Datum** | Fix deployed, aber Adapter muss neugestartet werden damit Python-Service `dates`-Feld liefert. |
 | 🟡 Mittel | **IsolationForest Trainingsphase** | Beide Modelle zeigen `⚠️ Warnung` bis 7+ Digests vorhanden — normal, kein Bug. |
-| 🟡 Mittel | **Fresh Air: Mindestdauer** | Diskutiert: 5-Minuten-Stoßlüftung medizinisch sinnvoll. Noch NICHT implementiert. Idee: Zähler "davon ≥5 Min: 3x" als Zusatzzeile. |
+| ✅ Erledigt | **Fresh Air: Stoßlüftungs-Zähler** | `freshAirLongCount` = Öffnungen ≥5 Min. Kachel zeigt "davon Nx ≥5 Min (Empf.: 3×)". Forschungsbasis: DIN EN 15251, Pettenkofer-Zahl. |
 | 🟡 Mittel | **Aktivitätsbelastung 100%-Formel** | Alle Balken zeigen 100% — Rolling-Median-Normalisierung noch falsch. Roadmap: `⚠️ Teilweise`. |
 | 🔵 Langfristig | **LSTM Sequenz-Vorhersage** | Nächstes großes ML-Feature. Roadmap: `🔬 Geplant`. |
 | 🔵 Info | **Hallway Keywords Fallback** | `['flur','diele','gang','korridor']` als Fallback behalten — `isHallway`-Checkbox ist primär. Kein Bug, keine Kollision. |
@@ -84,7 +87,7 @@
 
 **Nächstes Feature:**
 > **Aktivitätsbelastung-Normalisierung reparieren** — Alle Balken zeigen 100%. Das ist das letzte `⚠️`-Item in der Gesundheits-Roadmap und ein sauberer, isolierter Fix.
-> Oder: **Fresh Air Mindestdauer** (5-Min-Stoßlüftungs-Zähler) falls der Nutzer das priorisiert.
+> **Naechster Schritt: Aktivitaetsbelastung-Normalisierung** — Alle Balken zeigen 100%. Letztes ⚠️-Item in der Gesundheits-Roadmap.
 
 ---
 
@@ -92,6 +95,7 @@
 
 | Version | Commit | Inhalt |
 |---------|--------|--------|
+|| **v0.31.1** | ausstehend | Fresh Air Live-Pfad Fix; Stoßlüftungs-Zähler (≥5 Min) |
 | **v0.31.0** | `6e2d231` | Fresh Air auf Typ-System; Flur-Räume entfernt; Version hochgezählt |
 | v0.30.x | `1a23c24` | Auto-KI-Analyse (08:05+20:00); Briefing-Trigger-Fix; Score 0.10 behoben |
 | v0.30.x | `926bc52` | Drift-Monitor X-Achse: Kalenderdaten (braucht Neustart) |

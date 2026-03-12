@@ -1,8 +1,9 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.31.0",
+    "version": "0.31.1",
     "news": {
+      "0.31.1": "FIX: Fresh Air Live-Pfad nutzt jetzt Sensor-Typ statt Keywords; freshAirLongCount (>=5 Min Stoesslueftung) berechnet und angezeigt",
       "0.31.0": "Fresh Air nutzt Sensor-Typ statt Keywords; Flur-Raeume-Feld entfernt; Auto-KI-Analyse 08:05+20:00; Briefing-Fix; Score 0.10 behoben",
       "0.30.75": {
         "en": "FIX: constâ†’let dailyData (build error); Gemini prompt uses aiContext name, no JSON format; status_bericht/antwort JSON keys added; sparkline tooltip with date and icons",

@@ -153,6 +153,7 @@ export default function HealthTab(props: any) {
     const [roomHistory, setRoomHistory] = useState<Record<string, number[]>>({});
 
     const [freshAirCount, setFreshAirCount] = useState(0);
+    const [freshAirLongCount, setFreshAirLongCount] = useState(0);
     const [lastFreshAir, setLastFreshAir] = useState('-');
     const [meals, setMeals] = useState({ breakfast: false, lunch: false, dinner: false });
     const [badStatus, setBadStatus] = useState({ status: 'FREI', last: '-', duration: 0 });
@@ -223,7 +224,7 @@ export default function HealthTab(props: any) {
                     setGeminiNightTs(d.geminiNightTs || null);
                     setGeminiDay(d.geminiDay || "Keine Daten");
                     setGeminiDayTs(d.geminiDayTs || null);
-                    setAnomalyScore(d.anomalyScore || 0.1);
+                    setAnomalyScore(d.anomalyScore != null ? d.anomalyScore : 0.1);
                     
                     // Berechne batteryLevel RELATIV zur Baseline (wie Wochenansicht!)
                     if (d.eventHistory && d.eventHistory.length > 0) {
@@ -250,6 +251,8 @@ export default function HealthTab(props: any) {
                     }
                     
                     setFreshAirCount(d.freshAirCount || 0);
+                    setFreshAirLongCount(d.freshAirLongCount || 0);
+                    setFreshAirLongCount(d.freshAirLongCount || 0);
 
                     // MERGE TODAYVECTOR: Schlaf-Radar (22:00-08:00) braucht Daten von GESTERN + HEUTE
                     if (d.todayVector) {
@@ -379,6 +382,7 @@ export default function HealthTab(props: any) {
                     setAnomalyScore(0);
                     setBatteryLevel(0);
                     setFreshAirCount(0);
+                    setFreshAirLongCount(0);
                     setMeals({ breakfast: false, lunch: false, dinner: false });
                     setBadStatus({ status: 'KEINE DATEN', last: '-', duration: 0 });
                     setDmRoom("-");
@@ -430,8 +434,8 @@ export default function HealthTab(props: any) {
                                 startOfDay.setHours(0, 0, 0, 0);
                                 const freshAir = eventHist.filter((e: any) => {
                                     if (e.timestamp < startOfDay.getTime()) return false;
-                                    const nameLower = (e.name || '').toLowerCase();
-                                    const isActive = e.value === true || e.value === 1 || e.value === 'on' || e.value === 'true';
+                                    const isOpen = e.value === true || e.value === 1 || e.value === 'on' || e.value === 'true' || e.value === 'open';
+                                    return e.type === 'door' && isOpen;
                                     return (nameLower.includes('haustür') || nameLower.includes('terrasse')) && isActive;
                                 }).length;
                                 
@@ -457,6 +461,7 @@ export default function HealthTab(props: any) {
                                             ? Math.min(100, Math.max(20, Math.round(80 + (res.stats.activityTrend * 5)))) 
                                             : 85,
                                         freshAirCount: freshAir,
+                                        freshAirLongCount: freshAirLong,
                                         geminiDay: geminiDay,
                                         geminiNight: geminiNight
                                     }
@@ -601,7 +606,11 @@ export default function HealthTab(props: any) {
         setHasData(true);
 
         socket.getState(`${namespace}.analysis.health.lastCheck`).then((s:any) => { if (s) setLastCheck(s.ts || s.val); });
-        socket.getState(`${namespace}.analysis.security.lastScore`).then((s:any) => setAnomalyScore(s?.val ? Number(s.val) : 0.1));
+        // Priorisiere health.anomalyScore (aus ANALYZE_HEALTH / LTM-Digest), Fallback: security.lastScore
+        socket.getState(`${namespace}.analysis.health.anomalyScore`).then((h:any) => {
+            if (h?.val != null) { setAnomalyScore(Number(h.val)); }
+            else { socket.getState(`${namespace}.analysis.security.lastScore`).then((s:any) => { if (s?.val != null) setAnomalyScore(Number(s.val)); }); }
+        });
 
         // Use raw value first, fallback to calculation if missing
         socket.getState(`${namespace}.analysis.health.activityTrend`).then((s:any) => {
@@ -737,7 +746,7 @@ export default function HealthTab(props: any) {
             const date = new Date(evt.timestamp);
             const isActive = evt.value === true || evt.value === 1 || evt.value === 'on' || evt.value === 'true';
 
-            if ((evt.name.toLowerCase().includes('haustür') || evt.name.toLowerCase().includes('terrasse')) && isActive) {
+            if (evt.type === 'door' && isActive) {
                 faCount++; lastFA = date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
             }
             if (evt.name.toLowerCase().includes('küche') || evt.name.toLowerCase().includes('kitchen')) {
@@ -807,12 +816,13 @@ export default function HealthTab(props: any) {
     };
 
     // --- NARRATORS ---
-    const getFreshAirNarrative = () => {
-        if (!hasData) return "Keine Daten.";
-        if (freshAirCount === 0) return "Keine Öffnung erkannt (Wetter schlecht?).";
-        if (freshAirCount > 2) return "Vorbildlich gelüftet heute.";
-        return "Minimale Frischluftzufuhr.";
-    };
+        const getFreshAirNarrative = () => {
+            if (!hasData) return "Keine Daten.";
+            if (freshAirCount === 0) return "Keine Öffnung erkannt (Wetter schlecht?).";
+            if (freshAirLongCount >= 3) return "Vorbildlich gelüftet (≥5 Min, 3× empfohlen).";
+            if (freshAirLongCount > 0) return freshAirLongCount + "× ≥5 Min – fast optimal (3× empfohlen).";
+            return "Geöffnet, aber kürzer als 5 Min (Stoßlüftung empfohlen).";
+        };
 
     const getMealNarrative = () => {
         if (!hasData) return "Keine Daten.";
@@ -1820,9 +1830,20 @@ export default function HealthTab(props: any) {
                 {renderMobility()}
 
                 <div style={{display:'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px'}}>
-                    <TerminalBox title="FRESH AIR" themeType={themeType} helpText={"Zeigt wie oft heute Fenster oder Türen geöffnet wurden. Regelmäßiges Lüften ist ein Zeichen für aktiven Alltag. Nur Kontaktsensoren vom Typ Tür werden berücksichtigt."}>
+                    <TerminalBox title="FRESH AIR" themeType={themeType} helpText={"Zeigt wie oft heute Tür/Fenster-Sensoren (Typ: Tür/Fenster) geöffnet wurden. Stoßlüftung = mind. 5 Min offen. Empfehlung: 3× täglich ≥5 Min (Forschungsbasiert: DIN EN 15251, Pettenkofer-Zahl)."}>
                         <div style={{textAlign:'center'}}>
                             <div style={{fontSize:'2rem', color: hasData ? '#00e676' : '#888', fontWeight:'bold'}}>{freshAirCount}x</div>
+                            {hasData && freshAirLongCount > 0 && (
+                                <div style={{fontSize:'0.8rem', color: freshAirLongCount >= 3 ? '#00e676' : '#ffb300', marginTop:'2px'}}>
+                                    davon {freshAirLongCount}× ≥5 Min
+                                    <span style={{color: isDark?'#666':'#aaa'}}> (Empf.: 3×)</span>
+                                </div>
+                            )}
+                            {hasData && freshAirLongCount === 0 && freshAirCount > 0 && (
+                                <div style={{fontSize:'0.75rem', color:'#ff7043', marginTop:'2px'}}>
+                                    Zu kurz – Stoßlüftung ≥5 Min empfohlen
+                                </div>
+                            )}
                             <Divider sx={{my:1, borderColor: isDark?'#333':'#eee'}} />
                             <div style={{fontSize:'0.8rem'}}>{hasData ? getFreshAirNarrative() : "Keine Daten"}</div>
                         </div>

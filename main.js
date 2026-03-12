@@ -329,6 +329,20 @@ class CogniLiving extends utils.Adapter {
                 const isOpen = e.value === true || e.value === 1 || e.value === 'true' || e.value === 'open';
                 return isDoorSensor && isOpen;
             }).length;
+            // 5-Min-Stoßlüftungen: OPEN/CLOSE-Paare >= 5 Min
+            const FRESH_AIR_MIN_MS = 5 * 60 * 1000;
+            const doorEventsToday = this.eventHistory
+                .filter(e => { const ts = e.timestamp || e.ts || 0; return ts >= startOfDayTimestamp && e.type === 'door'; })
+                .sort((a, b) => (a.timestamp || a.ts || 0) - (b.timestamp || b.ts || 0));
+            const openMap = {};
+            let freshAirLongCount = 0;
+            for (const e of doorEventsToday) {
+                const ts = e.timestamp || e.ts || 0;
+                const isOpen = e.value === true || e.value === 1 || e.value === 'true' || e.value === 'open';
+                if (isOpen) { openMap[e.id] = ts; }
+                else { if (openMap[e.id] && (ts - openMap[e.id] >= FRESH_AIR_MIN_MS)) freshAirLongCount++; delete openMap[e.id]; }
+            }
+            for (const openTs of Object.values(openMap)) { if ((Date.now() - openTs) >= FRESH_AIR_MIN_MS) freshAirLongCount++; }
 
             let battery = 85;
             if (activityTrend && activityTrend.val !== undefined) battery = Math.min(100, Math.max(20, Math.round(80 + (Number(activityTrend.val) * 5))));
@@ -387,6 +401,7 @@ class CogniLiving extends utils.Adapter {
                 })(),
                 batteryLevel: battery,
                 freshAirCount: freshAirCount,
+                freshAirLongCount: freshAirLongCount,
                 windowOpenings: freshAirCount,
                 gaitSpeed: (() => {
                     // Berechne heutige Gait-Speed direkt aus Sequenzen (kein async noetig)
