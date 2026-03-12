@@ -1,5 +1,43 @@
-# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 12.03.2026 | **Version:** 0.31.4
+﻿# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
+**Letzte Aktualisierung:** 02.03.2026 | **Version:** 0.31.6
+
+---
+
+## Session 02.03.2026 - Version 0.31.5 + 0.31.6
+
+### Abgeschlossen
+
+**Fresh Air Stoesslueftungs-Erkennung gefixt (v0.31.5):**
+- reshAirLongCount (>= 5 Min Lueftung) war in processEvents und loadWeekData nicht berechnet
+- Fix: vollstaendige Open/Close-Pairing-Logik in HealthTab.tsx implementiert
+- doorOpenMap trackt geoeffnete Sensoren per sensorId, bei Schliessen wird Dauer geprueft
+- Noch-offene Fenster mit >= 5 Min zaehlen ebenfalls als Stoesslueftung
+
+**Tageszeit-Normalisierung im Aktivitaets-Belastungsdiagramm (v0.31.6):**
+- Problem: heutiger Balken verglich Teilaktivitaet (z.B. 08:00-11:30) mit vollen 24h der Vortage
+- Ansatz B umgesetzt in LongtermTrendsView.tsx:
+  - currentSlot = floor((Stunde*60 + Minute) / 30) berechnet aktuelle 30-Min-Periode
+  - Alle Tage: nur 	odayVector.slice(0, currentSlot+1) summiert (fair vergleichbar)
+  - Normalisierung (Median = 100%) basiert ebenfalls auf partiellen Summen
+- Visuelles Kennzeichen fuer heutigen Balken: tuerkiser Rand + halbtransparent + Tooltip "Bis HH:MM Uhr (laufend)"
+- Cell-Komponente aus Recharts fuer individuelle Balkenfarben importiert
+- Build erfolgreich, keine Linter-Fehler
+
+### Offene Baustellen
+
+| Problem | Prioritaet | Beschreibung |
+|---|---|---|
+| Python Bridge Timeout | MITTEL | python_bridge.js hat 10s Timeout, Frontend wartet 30s - Drift kann abbrechen |
+| LSTM stuendliche Erwartung | NIEDRIG | Geplant - zeitlich-bewusstes Anomalie-Modell |
+
+### Naechster logischer Schritt
+
+1. Adapter in ioBroker neu starten (damit io-package.json v0.31.6 geladen wird)
+2. Admin UI neu laden (Strg+F5) - Build ist bereits in dmin/ abgelegt
+3. KI-Analyse triggern ("System pruefen") - dann ist heutiges History-File aktuell
+4. Aktivitaets-Balkendiagramm pruefen: heutiger Balken sollte tuerkisen Rand haben
+
+---
 
 ---
 

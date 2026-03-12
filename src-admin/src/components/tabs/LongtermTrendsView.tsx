@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import {
-    LineChart, Line, AreaChart, Area, BarChart, Bar, ComposedChart,
+    LineChart, Line, AreaChart, Area, BarChart, Bar, ComposedChart, Cell,
     XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
     ReferenceLine, ReferenceArea, Legend
 } from 'recharts';
@@ -27,6 +27,7 @@ interface DailyDataPoint {
     uniqueRooms: number;
     bathroomVisits: number;
     windowOpenings: number;
+    isPartialDay?: boolean;
 }
 
 function ChartHelp({ text }: { text: string }) {
@@ -86,6 +87,9 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
             // SCHRITT 1: History-Files laden (alle verfügbaren Tage)
             let dailyData: DailyDataPoint[] = [];
             const today = new Date();
+            // Tageszeit-Normalisierung: nur Events bis zur aktuellen Uhrzeit vergleichen
+            const currentSlot = Math.floor((today.getHours() * 60 + today.getMinutes()) / 30);
+            const todayDateStr = today.toISOString().split('T')[0];
 
             for (let i = 0; i < days; i++) {
                 const d = new Date(today);
@@ -118,7 +122,9 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         // AKTIVITÄT: Roher Event-Total aus todayVector (wird später
                         // relativ zum persönlichen Median normalisiert – kein fixer Divisor!)
                         // ============================================================
-                        const totalEvents = todayVector.reduce((sum: number, count: number) => sum + count, 0);
+                        // Nur Events bis zur aktuellen Tageszeit (Ansatz B: fairer Tagesvergleich)
+                        const partialVector = (todayVector as number[]).slice(0, currentSlot + 1);
+                        const totalEvents = partialVector.reduce((sum: number, count: number) => sum + count, 0);
                         const activityPercent = totalEvents; // temporär: roh, wird unten normalisiert
                         
 // ============================================================
@@ -219,7 +225,8 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             windowOpenings,
                             roomActivity,
                             windowsByRoom,
-                            todayVector: todayVector  // Für Python Nacht-IsolationForest
+                            todayVector: todayVector,  // Fuer Python Nacht-IsolationForest
+                            isPartialDay: dateStr === todayDateStr
                         });
                     } else {
                         console.log(`[LongtermTrends] ❌ No data for ${dateStr}`);
@@ -382,9 +389,12 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
     // Custom Tooltip
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (!active || !payload || payload.length === 0) return null;
+        const isPartialBar = payload[0]?.payload?.isPartial;
+        const compTime = payload[0]?.payload?.compTime;
         return (
             <Paper sx={{ p: 1, bgcolor: isDark ? '#1a1a1a' : '#ffffff', border: `1px solid ${isDark ? '#444' : '#ddd'}` }}>
                 <Typography variant="caption" sx={{ fontWeight: 'bold' }}>{label} <span style={{fontWeight:'normal',opacity:0.7}}>{getWeekday(label)}</span></Typography>
+                {isPartialBar && <Typography variant="caption" sx={{ color: '#00bcd4', display: 'block', fontStyle: 'italic' }}> Bis {compTime} Uhr (laufend)</Typography>}
                 {payload.map((entry: any, idx: number) => (
                     <Typography key={idx} variant="caption" sx={{ color: entry.color, display: 'block' }}>
                         {entry.name}: {entry.value}
@@ -417,6 +427,8 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
     // Tooltip-Factory fuer Mini-Charts mit optionalem Aufschluessel
     const MiniTooltip = ({ active, payload, label, extraData, extraLabel }: any) => {
         if (!active || !payload || payload.length === 0) return null;
+        const isPartialBar = payload[0]?.payload?.isPartial;
+        const compTime = payload[0]?.payload?.compTime;
         const dayEntry = dailyDataRaw.find((d: any) => d.date && d.date.substring(5) === label);
         return (
             <Paper sx={{ p: 1, bgcolor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#444' : '#ddd'}`, maxWidth: 240 }}>
@@ -465,11 +477,18 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
     const gridColor = isDark ? '#333' : '#e0e0e0';
 
     // Bereite Haupt-Graph-Daten vor
+    const nowForChart = new Date();
+    const todayMD = nowForChart.toISOString().split('T')[0].substring(5);
+    const hh = nowForChart.getHours().toString().padStart(2,'0');
+    const mm = nowForChart.getMinutes().toString().padStart(2,'0');
+    const compTimeStr = hh + ':' + mm;
     const mainChartData = trendsData?.activity?.timeline?.map((date: string, idx: number) => ({
-        date: date.substring(5), // MM-DD
+        date: date.substring(5),
         value: Math.round(trendsData.activity.values[idx]),
         movingAvg: Math.round(trendsData.activity.moving_avg[idx]),
-        baseline: trendsData.activity.baseline
+        baseline: trendsData.activity.baseline,
+        isPartial: date.substring(5) === todayMD,
+        compTime: date.substring(5) === todayMD ? compTimeStr : undefined
     })) || [];
 
     const baseline = trendsData?.activity?.baseline || 100;
@@ -562,7 +581,11 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                         <ReferenceArea y1={60}  y2={140} fill="rgba(40,167,69,0.15)" />
                                         <ReferenceArea y1={140} y2={200} fill="rgba(253,126,20,0.15)" />
                                         <ReferenceLine y={100} stroke="#888" strokeDasharray="5 5" label={{ value: "Normalwert", position: "insideRight", fontSize: 10 }} />
-                                        <Bar dataKey="value" fill="#4fc3f7" opacity={0.85} name="Tageswert %" radius={[2,2,0,0]} />
+                                        <Bar dataKey="value" name="Tageswert %" radius={[2,2,0,0]}>
+                                            {mainChartData.map((entry: any, index: number) => (
+                                                <Cell key={"cell-" + index} fill="#4fc3f7" opacity={entry.isPartial ? 0.5 : 0.85} stroke={entry.isPartial ? '#00e5ff' : 'none'} strokeWidth={entry.isPartial ? 2 : 0} />
+                                            ))}
+                                        </Bar>
                                         <Line type="monotone" dataKey="movingAvg" stroke="#546e7a" strokeWidth={2} dot={false} name="Ø 7 Tage" />
                                     </ComposedChart>
                                 </ResponsiveContainer>
