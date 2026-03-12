@@ -1,50 +1,62 @@
-# PROJEKT_STATUS - cogni-living (NUUKANNI / AURA)
+# PROJEKT_STATUS — cogni-living (NUUKANNI / AURA)
 
 > **Übergabeprotokoll für die nächste Sitzung**
-> Letzte Aktualisierung: 02.03.2026 | Aktuelle Version: **v0.30.96**
+> Letzte Aktualisierung: **12.03.2026** | Aktuelle Version: **v0.31.0** | Letzter Commit: `6e2d231`
 
 ---
 
-## ✅ 1. Aktueller Stand – Was haben wir in dieser Sitzung abgeschlossen?
+## ✅ 1. Aktueller Stand — Was haben wir in dieser Sitzung abgeschlossen?
 
-| # | Ergebnis | Details |
-|---|----------|---------|
-| 1 | **Morgenbriefing-Ursache vollständig identifiziert & behoben** | Der Nutzer empfing nie ein echtes 08:00-Briefing. Stattdessen kam jede Nacht um 03:00 eine Push-Nachricht vom internen Daily Digest (LTM-Komprimierung), die fälschlicherweise als Push-Benachrichtigung konfiguriert war. Diese Debug-Zeile wurde entfernt. |
-| 2 | **Briefing-Scheduler von `setInterval` auf `node-schedule` umgestellt** | Der `setInterval`-Ansatz (jede Minute prüfen) war fehleranfällig: `toISOString()` liefert UTC-Zeit, `getHours()` Lokalzeit → Zeitzonenkonflikte. Jetzt nutzt das Briefing dieselbe `node-schedule`-Technik wie der zuverlässig funktionierende 03:00-Digest. Cron-Ausdruck z.B. `0 8 * * *` für 08:00. |
-| 3 | **Kritischer TDZ-Bug behoben (Garmin-Charts fehlten ab 07.03.)** | `root/main.js` war eine veraltete Version (v0.30.38) mit einem JavaScript Temporal Dead Zone Fehler in `saveDailyHistory()`: `nightMotionCount` und `bathroomMinutes` wurden vor der Deklaration von `todayEvents`/`roomHistoryData` verwendet → täglicher Crash um 23:59 → keine History-Dateien ab 07.03. Fix: Korrekte `src/main.js` in `root/main.js` deployed. |
-| 4 | **Ganggeschwindigkeit-Berechnung grundlegend neu implementiert** | Alter Fehler: Globaler Median aus der gesamten Sequenz-History → jeden Tag identischer Wert (155.88s). Neu: Tagesaktuelle Berechnung direkt in `saveDailyHistory()` via JavaScript. Filtert nur heutige `[Raum A → Flur → Raum B]`-Muster, berechnet Median der Flur-Transitzeiten. |
+| # | Version | Feature / Fix | Details |
+|---|---------|---------------|---------|
+| 1 | v0.31.0 | **Fresh Air: Typ-System statt Keywords** | `freshAirCount` nutzt jetzt `e.type === 'door'` (aus Sensorliste: Tür/Fenster). Vorher: Keyword-Matching auf Sensornamen → unzuverlässig. |
+| 2 | v0.31.0 | **Flur-Räume-Textfeld entfernt** | War toter Code: UI-Feld vorhanden, aber `config.flurRooms` wurde nirgendwo gelesen. Aus `Settings.tsx`, State-Interface und `io-package.json` entfernt. |
+| 3 | v0.31.0 | **Versionsnummer auf 0.31.0** | Ab sofort wird nach jedem Feature-Commit die Version hochgezählt. Sichtbar in ioBroker-Adapter-Ansicht. |
+| 4 | v0.30.x | **Auto KI-Analyse (08:05 + 20:00)** | Täglich um 08:05 (Nacht-Protokoll) und 20:00 (Tages-Situation) wird `analysis.training.triggerHealth` automatisch gesetzt → Gemini generiert frische Texte ohne manuellen Klick. |
+| 5 | v0.30.x | **Briefing-Trigger-Reihenfolge** | Bug: `analysis.triggerBriefing` wurde von generischer Bedingung abgefangen → `sendMorningBriefing` nie aufgerufen. Fix: spezifische Checks vor generischem `analysis.trigger`. |
+| 6 | v0.30.x | **Score 0.10 Fix** | `analysis.security.lastScore` wurde nie gesetzt (ANALYZE_SEQUENCE nirgendwo aufgerufen). Fix: `HEALTH_RESULT` setzt jetzt beide States. HealthTab liest `health.anomalyScore` primär. |
+| 7 | v0.30.x | **Drift-Monitor X-Achse: Kalenderdaten** | Python gibt `dates` und `gait_dates` zurück. Frontend baut `chartData` mit `TT.MM` statt Index-Nummern. **Braucht Adapter-Neustart zum Aktivieren.** |
+| 8 | v0.30.x | **Wochenbericht (Sonntag 09:00)** | `node-schedule` Cron, sendet Aktivitätstrend + Schlafdaten per Pushover. |
+| 9 | v0.30.x | **Modul-Status Dashboard** | System-Tab: Accordion mit allen 16 Algorithmen, 4 Säulen (Gesundheit/Sicherheit/Komfort/Energie), Pro/Free-Badges, Status-Chips mit Tooltips. |
+| 10 | — | **Cursor-Regel angelegt** | `.cursor/rules/update-projekt-status.mdc` — KI updatet PROJEKT_STATUS.md automatisch nach jedem Push. |
 
 ---
 
-## 🏗️ 2. Funktionierende Basis – Was läuft bereits fehlerfrei?
-
-### Architektur-Prinzipien (vollständig umgesetzt)
-| Sensor-Typ | Erkennung |
-|---|---|
-| Fenster/Türen | `e.type === 'door'` (kein Keyword-Matching) |
-| Nacht-Räume | `isNightSensor`-Checkbox in Config |
-| Bad-Räume | `isBathroomSensor`-Checkbox in Config |
-| Flur-Räume | `isHallway`-Checkbox in Config |
+## 🏗️ 2. Funktionierende Basis — Was läuft bereits fehlerfrei?
 
 ### Backend (Node.js + Python)
-- **Sensor-Fusion & Bewegungserkennung** — alle PIR-Sensoren, strukturiert nach Typ
-- **Schlafanalyse** — Nacht-Events (22:00–08:00), Bad-Frequenz, Tagesbeginn-Erkennung
-- **IsolationForest Anomalie-Erkennung** — inkl. Auto-Training ab 7 Tages-Digests
-- **Security-Erkennung** — kein Fallback-Spam, 1h Cooldown, Status `untrained`/`ready`
-- **Dynamische Tagesbeginn-Erkennung** — erste Bewegung im Nicht-Nacht-Sensor-Raum, Cap 08:00
-- **`saveDailyHistory`** — vollständiger täglicher Snapshot (todayVector, roomHistory, windowOpenCounts, nightMotionCount, bathroomMinutes, gaitSpeed, eventHistory u.v.m.)
-- **Ganggeschwindigkeit** — täglich neu berechnet, Median der Flur-Transitzeiten in Sekunden (physikalisch plausibel, 3–15 Sek. = normal)
-- **Morgenbriefing** — feuert zuverlässig via `node-schedule` zur konfigurierten Uhrzeit (08:00)
-- **Daily Digest (03:00)** — stilles Hintergrundprotokoll, kein Push mehr
 
-### Admin UI (React)
-- **Garmin-Style Charts** — 6 Kacheln: Aktivitätsbelastung, Ganggeschwindigkeit, Nacht-Unruhe, Raum-Mobilität, Bad-Nutzung, Frischluft
-- **Sensor-Konfigurationstabelle** — Icons, stickyHeader, volle Breite, alle Checkbox-Spalten
-- **Hilfe-Tooltips (`?`)** — bei allen 6 Garmin-Kacheln und allen 9 TerminalBox-Kacheln
-- **Wochentag + Zeitraum** — in allen Chart-Tooltips und Subtitles
+| Modul | Status | Anmerkung |
+|-------|--------|-----------|
+| Sensor-Fusion (PIR) | ✅ | `isHallway`, `isBathroomSensor`, `isNightSensor`, `type==='door'` |
+| `saveDailyHistory` (23:59) | ✅ | TDZ-Bug behoben; Ganggeschwindigkeit täglich frisch |
+| Fresh Air Zählung | ✅ | Jetzt via `e.type === 'door'` — kein Keyword-Matching mehr |
+| IsolationForest (Tag + Nacht) | ✅ | Auto-Training ab 7 Digests |
+| Sicherheits-Anomalie | ✅ | Kein Fallback-Spam, 1h Cooldown |
+| Morgenbriefing (08:00) | ✅ | `node-schedule`, korrekter Trigger zu `sendMorningBriefing` |
+| Auto KI-Analyse (08:05 + 20:00) | ✅ | Nacht-Protokoll und Tages-Situation täglich frisch |
+| Wochenbericht (Sonntag 09:00) | 👁️ | Implementiert, erster Test nächsten Sonntag |
+| Drift-Monitor (PH-Test) | 👁️ | Kalibrierungsphase ~10–14 Tage; X-Achse-Fix braucht Neustart |
 
-### PWA (Mobile)
-- **Anomalie-Anzeige** — zeigt `Lernt noch` wenn Security-Modell noch nicht trainiert (kein "Score: 0.10")
+### Admin UI (React v0.31.0)
+
+| Bereich | Status |
+|---------|--------|
+| Langzeit-Trends: 6 Garmin-Kacheln | ✅ |
+| Drift-Monitor: 4 Metriken, 0–100% normalisiert | ✅ |
+| Drift-Monitor X-Achse | ⏳ nach Adapter-Neustart aktiv |
+| Gruppen-Container (Drift-Analyse + Hygiene) | ✅ |
+| System-Tab: Modul-Status Accordion | ✅ |
+| Settings: Flur-Räume-Feld entfernt | ✅ |
+| Sensor-Konfiguration: Typ-System | ✅ |
+
+### PWA NUUKANNI
+
+| Feature | Status |
+|---------|--------|
+| Tages-Status, Anomalie-Score | ✅ |
+| Score: zeigt Health-Score statt 0.10 | ✅ (nach LTM-Digest um 03:00) |
+| KI-Analyse (Fließtext, kein JSON) | ✅ |
 
 ---
 
@@ -52,54 +64,56 @@
 
 | Priorität | Problem | Beschreibung |
 |-----------|---------|--------------|
-| 🔴 Test nötig | **Morgenbriefing: Erstmals testen** | Nach Adapter-Neustart muss das 08:00-Briefing morgen früh erstmals ankommen. Vorher ist die Korrektur nicht verifiziert. |
-| 🟡 Mittel | **Ganggeschwindigkeit: Erste frische Daten** | Die neue tagesaktuelle Berechnung wirkt erst nach dem nächsten `saveDailyHistory`-Lauf (23:59 Uhr). Alte Snapshot-Werte (155s) bleiben bis dahin sichtbar. |
-| 🟡 Mittel | **Sensor-Checkboxen noch nicht gesetzt** | Nutzer muss einmalig in Admin → Sensoren: 🚿 Bad-Räume, 🌙 Nacht-Räume, 🚶 Flur-Räume markieren — sonst greifen Typ-basierte Berechnungen auf Fallback-Keywords zurück. |
-| 🟡 Mittel | **Garmin-Charts: Fehlende Tage 08.–10.03.** | Aufgrund des TDZ-Bugs gibt es für 08.–10.03. keine History-Dateien. Diese Lücke bleibt in den Charts sichtbar und füllt sich erst durch neue Tage. |
-| 🔵 Idee | **Wochenzusammenfassung per Pushover** | Jeden Sonntag automatisch: Aktivitätstrend, unruhige Nächte, Veränderungen. Echter Pflegemehrwert. |
-| 🔵 Idee | **Tagesvergleich-Ansicht** | "Heute vs. gleicher Wochentag letzte Woche" in Admin UI |
+| 🔴 Verifizieren | **Morgenbriefing testen** | User hat Adapter neugestartet und Briefing aktiviert. Nächster Test: morgen 08:00. Im Log prüfen: `🌅 Briefing geplant für 8:0 Uhr`. |
+| 🔴 Verifizieren | **Wochenbericht** | Erst nächsten Sonntag testbar. |
+| 🟡 Neustart | **Drift-Monitor Kalender-Datum** | Fix deployed, aber Adapter muss neugestartet werden damit Python-Service `dates`-Feld liefert. |
+| 🟡 Mittel | **IsolationForest Trainingsphase** | Beide Modelle zeigen `⚠️ Warnung` bis 7+ Digests vorhanden — normal, kein Bug. |
+| 🟡 Mittel | **Fresh Air: Mindestdauer** | Diskutiert: 5-Minuten-Stoßlüftung medizinisch sinnvoll. Noch NICHT implementiert. Idee: Zähler "davon ≥5 Min: 3x" als Zusatzzeile. |
+| 🟡 Mittel | **Aktivitätsbelastung 100%-Formel** | Alle Balken zeigen 100% — Rolling-Median-Normalisierung noch falsch. Roadmap: `⚠️ Teilweise`. |
+| 🔵 Langfristig | **LSTM Sequenz-Vorhersage** | Nächstes großes ML-Feature. Roadmap: `🔬 Geplant`. |
+| 🔵 Info | **Hallway Keywords Fallback** | `['flur','diele','gang','korridor']` als Fallback behalten — `isHallway`-Checkbox ist primär. Kein Bug, keine Kollision. |
 
 ---
 
 ## 🎯 4. Nächster logischer Schritt
 
-**Sofortige Nutzer-Aktion (nach Adapter-Neustart):**
+**Sofortmaßnahmen (kein Code nötig):**
+1. **Adapter neu starten** → Drift-Monitor X-Achse zeigt Kalenderdaten
+2. **Log prüfen nach Neustart**: `🌅 Briefing geplant für 8:0 Uhr` und `🤖 Tägliche KI-Analyse geplant`
+3. **Morgen 08:00 abwarten** → Pushover-Briefing testen
 
-1. **Adapter neu starten** → `node-schedule` wird aktiv, Log zeigt `🌅 Briefing geplant für 8:00 Uhr`
-2. **Morgen früh 08:00** abwarten → Kommt das Briefing an? Falls ja: Bug behoben ✅
-3. **Einmalig Sensor-Checkboxen setzen** in Admin → Sensoren: 🚿 Bad, 🌙 Nacht, 🚶 Flur
-
-**Nächste Feature-Arbeit (nach Verifikation):**
-- Wochenzusammenfassung per Pushover (jeden Sonntag)
+**Nächstes Feature:**
+> **Aktivitätsbelastung-Normalisierung reparieren** — Alle Balken zeigen 100%. Das ist das letzte `⚠️`-Item in der Gesundheits-Roadmap und ein sauberer, isolierter Fix.
+> Oder: **Fresh Air Mindestdauer** (5-Min-Stoßlüftungs-Zähler) falls der Nutzer das priorisiert.
 
 ---
 
 ## 📦 Versionshistorie
 
-| Version | Inhalt |
-|---------|--------|
-| v0.30.87 | Typ-basierte Fenster/Tür-Erkennung (`e.type === 'door'`) |
-| v0.30.88 | Wochentag im Tooltip aller Kacheln |
-| v0.30.89 | Zeitraum in alle Kachel-Subtitles |
-| v0.30.90 | Frischluft-Bug: `contact` → `door` |
-| v0.30.91 | Fundament: `isNightSensor` + `isBathroomSensor` typ-basiert |
-| v0.30.92 | SensorList: Bad-Checkbox + Layout-Fix |
-| v0.30.93 | SensorList: Icons, stickyHeader, full-width |
-| v0.30.94 | Ganggeschwindigkeit: Sekunden statt %, Debug-Zeile entfernt |
-| v0.30.95 | Daily Digest: Push-Benachrichtigung entfernt (03:00 Nacht-Alarm) |
-| v0.30.96 | Briefing-Scheduler: `setInterval` → `node-schedule`; TDZ-Bug `saveDailyHistory`; Ganggeschwindigkeit tagesfrisch |
+| Version | Commit | Inhalt |
+|---------|--------|--------|
+| **v0.31.0** | `6e2d231` | Fresh Air auf Typ-System; Flur-Räume entfernt; Version hochgezählt |
+| v0.30.x | `1a23c24` | Auto-KI-Analyse (08:05+20:00); Briefing-Trigger-Fix; Score 0.10 behoben |
+| v0.30.x | `926bc52` | Drift-Monitor X-Achse: Kalenderdaten (braucht Neustart) |
+| v0.30.x | `ac12356` | Modul-Status nach Säulen (Gesundheit/Sicherheit/Komfort/Energie) + Pro/Free + Tooltips |
+| v0.30.x | `de56a54` | Gruppen-Container Drift-Analyse + Hygiene (Option B) |
+| v0.30.x | `9130dfc` | Drift-Monitor Layout-Fix + Nacht-Unruhe 0%-Bug |
+| v0.30.x | `a7d03df` | DRIFT-MONITOR: Page-Hinkley, 4 Metriken, Pushover-Alarm |
+| v0.30.x | `89e5980` | Wochenbericht jeden Sonntag per Pushover |
+| v0.30.x | `fd409f3` | Briefing-Scheduler: `setInterval` → `node-schedule` |
 
 ---
 
-## 🔑 Architektur-Prinzipien (gelernte Lektionen)
+## 🔑 Architektur-Prinzipien (nie wieder rückgängig machen!)
 
 | Problem | Falsch ❌ | Richtig ✅ |
 |---------|-----------|-----------|
 | Fenster/Tür erkennen | `name.includes('fenster')` | `e.type === 'door'` |
 | Nacht-Raum erkennen | `name.includes('schlaf')` | `device.isNightSensor === true` |
 | Bad-Raum erkennen | `/bad\|wc\|toilet/i` | `device.isBathroomSensor === true` |
-| Flur erkennen | `name.includes('flur')` | `device.isHallway === true` |
-| Gesundheits-Metrik | Abstraktes `percent_change` | Physikalischer Messwert (Sekunden) |
+| Flur erkennen | Keyword-Textfeld | `device.isHallway === true` (+ Keywords als Fallback) |
+| Fresh Air zählen | Keyword auf Sensorname | `e.type === 'door'` aus eventHistory |
 | Zeitplanung | `setInterval` + `getHours()` | `node-schedule` Cron-Ausdruck |
-| Sensor-Daten in UI | Live aus eventHistory filtern | Vorberechnet im Snapshot speichern |
-| Hintergrundprozess | Push-Benachrichtigung senden | Nur ioBroker-Log schreiben |
+| Debug-Output | Push-Benachrichtigung | Nur ioBroker-Log |
+| Trigger-Reihenfolge | Generisch vor Spezifisch | **Spezifisch vor Generisch** (triggerBriefing vor analysis.trigger) |
+| Drift-Metriken | Rohe Event-Counts | Normalisiert auf pers. Baseline (0–100%) |
