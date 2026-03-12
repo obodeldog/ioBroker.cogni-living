@@ -436,6 +436,20 @@ export default function HealthTab(props: any) {
                                     const isOpen = e.value === true || e.value === 1 || e.value === 'on' || e.value === 'true' || e.value === 'open';
                                     return e.type === 'door' && isOpen;
                                 }).length;
+                                // Stosslueftungs-Pairing fuer heute (loadWeekData)
+                                const FA_MIN_MS = 5 * 60 * 1000;
+                                const doorEvtsSorted = eventHist
+                                    .filter((e: any) => e.type === 'door' && e.timestamp >= startOfDay.getTime())
+                                    .sort((a: any, b: any) => a.timestamp - b.timestamp);
+                                const openMapToday: Record<string, number> = {};
+                                let freshAirLong = 0;
+                                doorEvtsSorted.forEach((e: any) => {
+                                    const isO = e.value === true || e.value === 1 || e.value === 'on' || e.value === 'true' || e.value === 'open';
+                                    const sid = e.id || e.name || 'x';
+                                    if (isO) { openMapToday[sid] = e.timestamp; }
+                                    else { if (openMapToday[sid] && (e.timestamp - openMapToday[sid] >= FA_MIN_MS)) freshAirLong++; delete openMapToday[sid]; }
+                                });
+                                Object.values(openMapToday).forEach((ts: any) => { if ((Date.now() - ts) >= FA_MIN_MS) freshAirLong++; });
                                 
                                 // Parse roomHistory aus State
                                 let roomHistoryData = null;
@@ -728,7 +742,7 @@ export default function HealthTab(props: any) {
 
         const now = new Date();
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-        let faCount = 0; let lastFA = '-';
+        let faCount = 0; let lastFA = '-'; let faLongCount = 0;
         let hasBreakfast = false; let hasLunch = false; let hasDinner = false;
         let badState = 'FREI'; let badLast = '-';
         let kitchenEventsMorning = 0; let kitchenEventsNoon = 0; let kitchenEventsEvening = 0;
@@ -739,6 +753,26 @@ export default function HealthTab(props: any) {
 
         let lastBadEventTime = 0;
         let lastBadEventActive = false;
+
+        // Stosslueftungs-Pairing: open/close Paare messen, >=5 Min = Stosslueftung
+        const FRESH_AIR_MIN_MS_LIVE = 5 * 60 * 1000;
+        const doorOpenMap: Record<string, number> = {};
+        const doorEventsSorted = [...todaysEvents]
+            .filter((e: any) => e.type === 'door')
+            .sort((a: any, b: any) => a.timestamp - b.timestamp);
+        doorEventsSorted.forEach((evt: any) => {
+            const isOpenEvt = evt.value === true || evt.value === 1 || evt.value === 'on' || evt.value === 'true' || evt.value === 'open';
+            const sensorId = evt.id || evt.name || 'unknown';
+            if (isOpenEvt) { doorOpenMap[sensorId] = evt.timestamp; }
+            else {
+                if (doorOpenMap[sensorId] && (evt.timestamp - doorOpenMap[sensorId] >= FRESH_AIR_MIN_MS_LIVE)) faLongCount++;
+                delete doorOpenMap[sensorId];
+            }
+        });
+        // Noch offene Fenster: Falls seit >=5 Min offen -> auch Stosslueftung
+        Object.values(doorOpenMap).forEach((openTs: any) => {
+            if ((Date.now() - openTs) >= FRESH_AIR_MIN_MS_LIVE) faLongCount++;
+        });
 
         todaysEvents.forEach((evt: any) => {
             const date = new Date(evt.timestamp);
@@ -794,6 +828,7 @@ export default function HealthTab(props: any) {
         if (kitchenEventsEvening > 5) hasDinner = true;
 
         setFreshAirCount(faCount);
+        setFreshAirLongCount(faLongCount);
         setLastFreshAir(lastFA);
         setMeals({ breakfast: hasBreakfast, lunch: hasLunch, dinner: hasDinner });
         setBadStatus({ status: badState, last: badLast, duration: 0 });

@@ -1,9 +1,9 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.31.4",
+    "version": "0.31.5",
     "news": {
-      "0.31.4": "FIX: Morning Briefing nie erhalten - subscribeStates fuer analysis.triggerBriefing fehlte; Obfuskierung wieder aktiv",`n      "0.31.3": "FIX: Vite outDir korrigiert (admin/ statt src-admin/build/) - ioBroker lud bisher altes Build; Score-Normalisierung verbessert (0=normal, 1=anomal); 62 temp-Dateien entfernt",
+      "0.31.5": "FIX: Fresh Air Stosslueftungs-Erkennung live (processEvents) und Wochenansicht korrekt; freshAirLong Pairing-Logik eingefuegt",`n      "0.31.4": "FIX: Morning Briefing nie erhalten - subscribeStates fuer analysis.triggerBriefing fehlte; Obfuskierung wieder aktiv",`n      "0.31.3": "FIX: Vite outDir korrigiert (admin/ statt src-admin/build/) - ioBroker lud bisher altes Build; Score-Normalisierung verbessert (0=normal, 1=anomal); 62 temp-Dateien entfernt",
       "0.31.2": "FIX: processEvents TypeError bei null event.name behoben (Fresh Air 0x); lib/main.js SyntaxError behoben; Dead Code entfernt",
       "0.31.1": "FIX: Fresh Air Live-Pfad nutzt jetzt Sensor-Typ statt Keywords; freshAirLongCount (>=5 Min Stoesslueftung) berechnet und angezeigt",
       "0.31.0": "Fresh Air nutzt Sensor-Typ statt Keywords; Flur-Raeume-Feld entfernt; Auto-KI-Analyse 08:05+20:00; Briefing-Fix; Score 0.10 behoben",
