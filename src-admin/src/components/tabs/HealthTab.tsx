@@ -252,7 +252,6 @@ export default function HealthTab(props: any) {
                     
                     setFreshAirCount(d.freshAirCount || 0);
                     setFreshAirLongCount(d.freshAirLongCount || 0);
-                    setFreshAirLongCount(d.freshAirLongCount || 0);
 
                     // MERGE TODAYVECTOR: Schlaf-Radar (22:00-08:00) braucht Daten von GESTERN + HEUTE
                     if (d.todayVector) {
@@ -436,7 +435,6 @@ export default function HealthTab(props: any) {
                                     if (e.timestamp < startOfDay.getTime()) return false;
                                     const isOpen = e.value === true || e.value === 1 || e.value === 'on' || e.value === 'true' || e.value === 'open';
                                     return e.type === 'door' && isOpen;
-                                    return (nameLower.includes('haustür') || nameLower.includes('terrasse')) && isActive;
                                 }).length;
                                 
                                 // Parse roomHistory aus State
@@ -749,12 +747,12 @@ export default function HealthTab(props: any) {
             if (evt.type === 'door' && isActive) {
                 faCount++; lastFA = date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
             }
-            if (evt.name.toLowerCase().includes('küche') || evt.name.toLowerCase().includes('kitchen')) {
+            if ((evt.name || '').toLowerCase().includes('küche') || (evt.name || '').toLowerCase().includes('kitchen')) {
                 if (date.getHours() >= 6 && date.getHours() <= 10) kitchenEventsMorning++;
                 if (date.getHours() >= 12 && date.getHours() <= 14) kitchenEventsNoon++;
                 if (date.getHours() >= 18 && date.getHours() <= 20) kitchenEventsEvening++;
             }
-            if (evt.name.toLowerCase().includes('bad') || evt.name.toLowerCase().includes('wc')) {
+            if ((evt.name || '').toLowerCase().includes('bad') || (evt.name || '').toLowerCase().includes('wc')) {
                 if (evt.timestamp > lastBadEventTime) {
                     lastBadEventTime = evt.timestamp;
                     lastBadEventActive = isActive;

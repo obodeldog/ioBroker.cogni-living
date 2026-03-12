@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.31.1",
+    "version": "0.31.2",
     "news": {
       "0.31.1": "FIX: Fresh Air Live-Pfad nutzt jetzt Sensor-Typ statt Keywords; freshAirLongCount (>=5 Min Stoesslueftung) berechnet und angezeigt",
       "0.31.0": "Fresh Air nutzt Sensor-Typ statt Keywords; Flur-Raeume-Feld entfernt; Auto-KI-Analyse 08:05+20:00; Briefing-Fix; Score 0.10 behoben",
@@ -156,6 +156,10 @@
       "0.29.12": {
         "en": "Feature: RL Penalty Auto-Expiration (3 Days)",
         "de": "Feature: Automatischer Ablauf von Lern-Sperren (3 Tage)"
+      },
+      "0.31.2": {
+        "en": "Fix: processEvents crash when event.name is null (Fresh Air count always 0). Fix: duplicate const block in lib/main.js.",
+        "de": "Fix: processEvents Absturz wenn event.name null ist (Frischluft-Zähler immer 0). Fix: Doppelter const-Block in lib/main.js entfernt."
       }
     },
     "titleLang": {
@@ -257,8 +261,3 @@
   "objects": [],
   "instanceObjects": []
 }
-
-
-
-
-

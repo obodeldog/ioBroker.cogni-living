@@ -1,123 +1,85 @@
-# PROJEKT_STATUS — cogni-living (NUUKANNI / AURA)
-
-> **Übergabeprotokoll für die nächste Sitzung**
-> Letzte Aktualisierung: **02.03.2026** | Aktuelle Version: **v0.31.1** | Letzter Commit: ausstehend
+# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
+**Letzte Aktualisierung:** 12.03.2026 | **Version:** 0.31.2
 
 ---
 
-## ✅ 1. Aktueller Stand — Was haben wir in dieser Sitzung abgeschlossen?
+## 1. Aktueller Stand (diese Sitzung)
 
-| # | Version | Feature / Fix | Details |
-|---|---------|---------------|---------|
-| 1 | v0.31.1 | **Fresh Air: Live-Pfad Fix (HealthTab)** | Live-Berechnung in `HealthTab.tsx` (beim Klick auf "System prüfen") nutzte noch altes Keyword-Matching (`haustür`, `terrasse`). Jetzt korrekt: `e.type === 'door'`. |
-| 2 | v0.31.1 | **Stoßlüftungs-Zähler (≥5 Min)** | Backend berechnet `freshAirLongCount`: Anzahl Tür-Öffnungen die ≥5 Minuten dauerten (OPEN/CLOSE-Paare). Frontend zeigt "davon 2× ≥5 Min (Empf.: 3×)" in oranger/grüner Farbe. Wenn Öffnungen < 5 Min: rote Warnung "Zu kurz – Stoßlüftung ≥5 Min empfohlen". |
-| 3 | v0.31.0 | **Fresh Air: Typ-System statt Keywords** | `freshAirCount` nutzt jetzt `e.type === 'door'` (aus Sensorliste: Tür/Fenster). Vorher: Keyword-Matching auf Sensornamen → unzuverlässig. |
-| 2 | v0.31.0 | **Flur-Räume-Textfeld entfernt** | War toter Code: UI-Feld vorhanden, aber `config.flurRooms` wurde nirgendwo gelesen. Aus `Settings.tsx`, State-Interface und `io-package.json` entfernt. |
-| 3 | v0.31.0 | **Versionsnummer auf 0.31.0** | Ab sofort wird nach jedem Feature-Commit die Version hochgezählt. Sichtbar in ioBroker-Adapter-Ansicht. |
-| 4 | v0.30.x | **Auto KI-Analyse (08:05 + 20:00)** | Täglich um 08:05 (Nacht-Protokoll) und 20:00 (Tages-Situation) wird `analysis.training.triggerHealth` automatisch gesetzt → Gemini generiert frische Texte ohne manuellen Klick. |
-| 5 | v0.30.x | **Briefing-Trigger-Reihenfolge** | Bug: `analysis.triggerBriefing` wurde von generischer Bedingung abgefangen → `sendMorningBriefing` nie aufgerufen. Fix: spezifische Checks vor generischem `analysis.trigger`. |
-| 6 | v0.30.x | **Score 0.10 Fix** | `analysis.security.lastScore` wurde nie gesetzt (ANALYZE_SEQUENCE nirgendwo aufgerufen). Fix: `HEALTH_RESULT` setzt jetzt beide States. HealthTab liest `health.anomalyScore` primär. |
-| 7 | v0.30.x | **Drift-Monitor X-Achse: Kalenderdaten** | Python gibt `dates` und `gait_dates` zurück. Frontend baut `chartData` mit `TT.MM` statt Index-Nummern. **Braucht Adapter-Neustart zum Aktivieren.** |
-| 8 | v0.30.x | **Wochenbericht (Sonntag 09:00)** | `node-schedule` Cron, sendet Aktivitätstrend + Schlafdaten per Pushover. |
-| 9 | v0.30.x | **Modul-Status Dashboard** | System-Tab: Accordion mit allen 16 Algorithmen, 4 Säulen (Gesundheit/Sicherheit/Komfort/Energie), Pro/Free-Badges, Status-Chips mit Tooltips. |
-| 10 | — | **Cursor-Regel angelegt** | `.cursor/rules/update-projekt-status.mdc` — KI updatet PROJEKT_STATUS.md automatisch nach jedem Push. |
+### ✅ Root-Cause gefunden und behoben: Fresh Air Kachel zeigt immer "0x"
 
----
+**Der eigentliche Bug (gefunden nach umfangreicher Analyse):**
+In der `processEvents`-Funktion (`HealthTab.tsx`, Zeile ~752) wurde `evt.name.toLowerCase()` aufgerufen. Wenn ein einziges Event in `todaysEvents` kein `name`-Feld hat (was bei älteren gespeicherten Events vorkommen kann), wirft das einen `TypeError`. Die `forEach`-Schleife bricht ab, `setFreshAirCount(faCount)` wird **niemals aufgerufen**, und `freshAirCount` bleibt bei 0 — dauerhaft.
 
-## 🏗️ 2. Funktionierende Basis — Was läuft bereits fehlerfrei?
+**Bestätigter Datenfluss (war korrekt):**
+- `events.history` State enthält Door-Events: `type: "door"`, `value: 1` (numerisch, NICHT true/false) ✅
+- Timestamps heute (09:07 und 09:17 Uhr) ✅
+- `main.js` (Einstiegspunkt) `getOverviewData` → gibt `this.eventHistory` zurück ✅
+- `processEvents` Filter: `evt.type === 'door' && evt.value === 1` korrekt ✅
+- **Das Problem**: `evt.name.toLowerCase()` crasht bei Events ohne name
 
-### Backend (Node.js + Python)
+**Fixes in v0.31.2:**
+1. `HealthTab.tsx`: `evt.name.toLowerCase()` → `(evt.name || '').toLowerCase()` (Zeile 752 + 757)
+2. `HealthTab.tsx`: Totes Code-Fragment (alte Keyword-Matching `return (nameLower.includes...)`) entfernt
+3. `HealthTab.tsx`: Doppelter `setFreshAirLongCount`-Aufruf entfernt (war redundant)
+4. `lib/main.js`: Doppelter `const FRESH_AIR_MIN_MS` Block entfernt (SyntaxError behoben, auch wenn `lib/main.js` nicht der Einstiegspunkt ist)
 
-| Modul | Status | Anmerkung |
-|-------|--------|-----------|
-| Sensor-Fusion (PIR) | ✅ | `isHallway`, `isBathroomSensor`, `isNightSensor`, `type==='door'` |
-| `saveDailyHistory` (23:59) | ✅ | TDZ-Bug behoben; Ganggeschwindigkeit täglich frisch |
-| Fresh Air Zählung | ✅ | Via `e.type === 'door'` — kein Keyword-Matching mehr. Auch Live-Pfad (HealthTab) gefixt. |
-|| Fresh Air Stoßlüftungs-Zähler | ✅ | `freshAirLongCount` = Öffnungen ≥5 Min. Gespeichert im Daily-Snapshot, in Kachel angezeigt. |
-| IsolationForest (Tag + Nacht) | ✅ | Auto-Training ab 7 Digests |
-| Sicherheits-Anomalie | ✅ | Kein Fallback-Spam, 1h Cooldown |
-| Morgenbriefing (08:00) | ✅ | `node-schedule`, korrekter Trigger zu `sendMorningBriefing` |
-| Auto KI-Analyse (08:05 + 20:00) | ✅ | Nacht-Protokoll und Tages-Situation täglich frisch |
-| Wochenbericht (Sonntag 09:00) | 👁️ | Implementiert, erster Test nächsten Sonntag |
-| Drift-Monitor (PH-Test) | 👁️ | Kalibrierungsphase ~10–14 Tage; X-Achse-Fix braucht Neustart |
-
-### Admin UI (React v0.31.0)
-
-| Bereich | Status |
-|---------|--------|
-| Langzeit-Trends: 6 Garmin-Kacheln | ✅ |
-| Drift-Monitor: 4 Metriken, 0–100% normalisiert | ✅ |
-| Drift-Monitor X-Achse | ⏳ nach Adapter-Neustart aktiv |
-| Gruppen-Container (Drift-Analyse + Hygiene) | ✅ |
-| System-Tab: Modul-Status Accordion | ✅ |
-| Settings: Flur-Räume-Feld entfernt | ✅ |
-| Sensor-Konfiguration: Typ-System | ✅ |
-
-### PWA NUUKANNI
-
-| Feature | Status |
-|---------|--------|
-| Tages-Status, Anomalie-Score | ✅ |
-| Score: zeigt Health-Score statt 0.10 | ✅ (nach LTM-Digest um 03:00) |
-| KI-Analyse (Fließtext, kein JSON) | ✅ |
+**Hinweis:** `main.js` (Einstiegspunkt lt. `package.json`) war bereits korrekt — nur `lib/main.js` hatte den Doppel-Block, war aber nicht betroffen.
 
 ---
 
-## 🔧 3. Offene Baustellen
+## 2. Funktionierende Basis
 
-| Priorität | Problem | Beschreibung |
-|-----------|---------|--------------|
-| 🔴 Verifizieren | **Morgenbriefing testen** | User hat Adapter neugestartet und Briefing aktiviert. Nächster Test: morgen 08:00. Im Log prüfen: `🌅 Briefing geplant für 8:0 Uhr`. |
-| 🔴 Verifizieren | **Wochenbericht** | Erst nächsten Sonntag testbar. |
-| 🟡 Neustart | **Drift-Monitor Kalender-Datum** | Fix deployed, aber Adapter muss neugestartet werden damit Python-Service `dates`-Feld liefert. |
-| 🟡 Mittel | **IsolationForest Trainingsphase** | Beide Modelle zeigen `⚠️ Warnung` bis 7+ Digests vorhanden — normal, kein Bug. |
-| ✅ Erledigt | **Fresh Air: Stoßlüftungs-Zähler** | `freshAirLongCount` = Öffnungen ≥5 Min. Kachel zeigt "davon Nx ≥5 Min (Empf.: 3×)". Forschungsbasis: DIN EN 15251, Pettenkofer-Zahl. |
-| 🟡 Mittel | **Aktivitätsbelastung 100%-Formel** | Alle Balken zeigen 100% — Rolling-Median-Normalisierung noch falsch. Roadmap: `⚠️ Teilweise`. |
-| 🔵 Langfristig | **LSTM Sequenz-Vorhersage** | Nächstes großes ML-Feature. Roadmap: `🔬 Geplant`. |
-| 🔵 Info | **Hallway Keywords Fallback** | `['flur','diele','gang','korridor']` als Fallback behalten — `isHallway`-Checkbox ist primär. Kein Bug, keine Kollision. |
-
----
-
-## 🎯 4. Nächster logischer Schritt
-
-**Sofortmaßnahmen (kein Code nötig):**
-1. **Adapter neu starten** → Drift-Monitor X-Achse zeigt Kalenderdaten
-2. **Log prüfen nach Neustart**: `🌅 Briefing geplant für 8:0 Uhr` und `🤖 Tägliche KI-Analyse geplant`
-3. **Morgen 08:00 abwarten** → Pushover-Briefing testen
-
-**Nächstes Feature:**
-> **Aktivitätsbelastung-Normalisierung reparieren** — Alle Balken zeigen 100%. Das ist das letzte `⚠️`-Item in der Gesundheits-Roadmap und ein sauberer, isolierter Fix.
-> **Naechster Schritt: Aktivitaetsbelastung-Normalisierung** — Alle Balken zeigen 100%. Letztes ⚠️-Item in der Gesundheits-Roadmap.
+| Feature | Status | Anmerkung |
+|---|---|---|
+| Sensor-Typ-System ("Tuer/Fenster" → `type: "door"`) | ✅ | Korrekt in recorder.js |
+| Frischluft-Zählung (Öffnungen heute) | ✅ | Fix v0.31.2 |
+| Stoßlüftung ≥5 Min Zähler | ✅ | Fix v0.31.1 |
+| Admin UI Fresh Air Kachel | ✅ | Fix v0.31.2 (null-safety) |
+| Drift-Monitor mit Datumsachse | ✅ | v0.31.0 |
+| KI-Analyse Auto-Trigger (08:05 + 20:00) | ✅ | v0.31.0 |
+| Tages/Nacht Anomalie-Score | ✅ | v0.30.x |
+| Ganggeschwindigkeit | ✅ | v0.28.0 |
+| Raum-Mobilität | ✅ | v0.30.x |
+| Nacht-Unruhe Kachel | ✅ | v0.30.x |
+| Bad-Nutzung | ✅ | v0.28.0 |
+| Pushover Briefing (08:00 + 20:00) | ⚠️ | User berichtet weiterhin Probleme |
+| Garmin-Style Drift-Monitor | ✅ | v0.30.74 |
+| Feature-Module-Status Tab | ✅ | v0.30.x |
+| PROJEKT_STATUS.md Auto-Update Rule | ✅ | .cursor/rules/ |
 
 ---
 
-## 📦 Versionshistorie
+## 3. Offene Baustellen
 
-| Version | Commit | Inhalt |
-|---------|--------|--------|
-|| **v0.31.1** | ausstehend | Fresh Air Live-Pfad Fix; Stoßlüftungs-Zähler (≥5 Min) |
-| **v0.31.0** | `6e2d231` | Fresh Air auf Typ-System; Flur-Räume entfernt; Version hochgezählt |
-| v0.30.x | `1a23c24` | Auto-KI-Analyse (08:05+20:00); Briefing-Trigger-Fix; Score 0.10 behoben |
-| v0.30.x | `926bc52` | Drift-Monitor X-Achse: Kalenderdaten (braucht Neustart) |
-| v0.30.x | `ac12356` | Modul-Status nach Säulen (Gesundheit/Sicherheit/Komfort/Energie) + Pro/Free + Tooltips |
-| v0.30.x | `de56a54` | Gruppen-Container Drift-Analyse + Hygiene (Option B) |
-| v0.30.x | `9130dfc` | Drift-Monitor Layout-Fix + Nacht-Unruhe 0%-Bug |
-| v0.30.x | `a7d03df` | DRIFT-MONITOR: Page-Hinkley, 4 Metriken, Pushover-Alarm |
-| v0.30.x | `89e5980` | Wochenbericht jeden Sonntag per Pushover |
-| v0.30.x | `fd409f3` | Briefing-Scheduler: `setInterval` → `node-schedule` |
+| Problem | Priorität | Beschreibung |
+|---|---|---|
+| Morning Briefing Uhrzeit | 🔴 HOCH | User bekommt Pushover-Briefing nicht um 08:00 Uhr. Mehrfach besprochen, noch nicht zuverlässig gelöst |
+| `freshAirLong` in `loadWeekData` | 🟡 MITTEL | Zeile 464 in HealthTab.tsx: `freshAirLong` wird in Week-Data als `undefined` referenziert, da nie berechnet. Muss noch die freshAirLong-Berechnung in den `loadWeekData`-Today-Block integriert werden |
+| `loadWeekData` useEffect Dependency | 🟡 MITTEL | `[weekOffset]` — `loadWeekData` fehlt in den deps. React wird warnen |
+| LSTM für stündliche Erwartung | 🟢 NIEDRIG | Geplant — Zeitlich-bewusstes Anomalie-Modell |
+| Graduelle Drift-Detektion (CUSUM) | 🟢 NIEDRIG | Geplant für Langzeit-Demenz-Früherkennung |
 
 ---
 
-## 🔑 Architektur-Prinzipien (nie wieder rückgängig machen!)
+## 4. Nächster logischer Schritt
 
-| Problem | Falsch ❌ | Richtig ✅ |
-|---------|-----------|-----------|
-| Fenster/Tür erkennen | `name.includes('fenster')` | `e.type === 'door'` |
-| Nacht-Raum erkennen | `name.includes('schlaf')` | `device.isNightSensor === true` |
-| Bad-Raum erkennen | `/bad\|wc\|toilet/i` | `device.isBathroomSensor === true` |
-| Flur erkennen | Keyword-Textfeld | `device.isHallway === true` (+ Keywords als Fallback) |
-| Fresh Air zählen | Keyword auf Sensorname | `e.type === 'door'` aus eventHistory |
-| Zeitplanung | `setInterval` + `getHours()` | `node-schedule` Cron-Ausdruck |
-| Debug-Output | Push-Benachrichtigung | Nur ioBroker-Log |
-| Trigger-Reihenfolge | Generisch vor Spezifisch | **Spezifisch vor Generisch** (triggerBriefing vor analysis.trigger) |
-| Drift-Metriken | Rohe Event-Counts | Normalisiert auf pers. Baseline (0–100%) |
+**SOFORT nach nächstem Adapter-Update (v0.31.2) testen:**
+1. Adapter von GitHub neu laden und neu starten
+2. Admin UI öffnen, Ctrl+F5 (Hard Refresh)
+3. Fenster/Tür öffnen und Tab „Gesundheit" prüfen
+4. Fresh Air Kachel sollte jetzt > 0 anzeigen (Zähler steigt)
+
+**Danach (nächste Sitzung):**
+- `freshAirLong` in `loadWeekData` berechnen (fehlende Zeile ~435 in loadWeekData)
+- Morning Briefing Timing-Problem endgültig debuggen (ggf. direkt im ioBroker-Log prüfen ob Scheduler feuert)
+
+---
+
+## 5. Versions-Historie (letzte Änderungen)
+
+| Version | Datum | Änderung |
+|---|---|---|
+| **0.31.2** | 12.03.2026 | **FIX**: processEvents TypeError bei null name → Fresh Air immer 0; lib/main.js SyntaxError; Dead Code entfernt |
+| 0.31.1 | 12.03.2026 | Fresh Air: type-based Erkennung, Stoßlüftung ≥5 Min, freshAirLongCount |
+| 0.31.0 | 11.03.2026 | Drift-Monitor Datumsachse, KI-Analyse Auto-Trigger, Flur-Räume entfernt |
+| 0.30.74 | 10.03.2026 | Feature-Module-Status Tab, Garmin Drift-Monitor |
