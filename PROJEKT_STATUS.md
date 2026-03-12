@@ -71,6 +71,124 @@
 
 ---
 
+## 🧠 Konzept-Kontext (Sitzung 12.03.2026) — für Kontext-Reset-Festigkeit
+
+> Chat-Referenz: UUID `a985de23-ae43-48ca-9afe-2333a0bf899f` (Cursor Agent Transcripts)
+> Vollständiges Brainstorming dort abrufbar. Hier die wichtigsten Entscheidungen komprimiert.
+
+### 🎯 Strategische Produktvision: AURA als medizinisches AAL-System
+
+Das System soll durch **passive Gebäude-Sensorik** (keine Wearables) den Gesundheitszustand
+von Bewohnern monitoren. Kernzielgruppen: Angehörige von Senioren (Pflegeheim vermeiden),
+Eltern von kranken Kindern (Epilepsie, Diabetes T1).
+
+**Zwei UI-Perspektiven** (implementiert in Phase 1):
+- **Technische Perspektive**: bisherige Tabs (Dashboard, Komfort, Sicherheit, Energie, Gesundheit, System)
+- **Medizinische Perspektive**: neuer Tab "Medizinisch" — Krankheitsbilder als Checkboxen,
+  Algorithmen laufen im Hintergrund, Sensor-Validierung mit Ampel-System
+
+### 📊 Priorisierung der 14 implementierten Krankheitsprofile
+
+**Implementierungsreihenfolge (Phase 2+):**
+- Phase 2 (sofort): Sturzrisiko + Demenz + Frailty (höchster Markt-Score, Algorithmen fast fertig)
+- Phase 3: Depression + Schlafstörungen + Diabetes T2
+- Phase 4 (Kinder, Differenzierung): Epilepsie + Diabetes T1 + ADHS
+
+**Wichtigste Erkenntnis Mehrpersonen vs. Einperson:**
+- Sturzrisiko, Epilepsie, Diabetes T1 funktionieren GUT im Mehrpersonenhaushalt
+  (diskrete Events / dedizierter Raum)
+- Demenz, Frailty, Depression SCHWIERIG ohne Multi-Person-Tracking
+- **Aqara FP2 (mmWave-Radar) ist der strategische Enabler für Mehrpersonenhaushalte**
+
+### 🔬 Sensorik-Empfehlungen (diskutiert und entschieden)
+
+**Aqara FP2 vs. FP300:**
+| | FP2 | FP300 |
+|---|---|---|
+| Sturzerkennung | ✅ JA | ❌ NEIN |
+| Multi-Person (bis 5) | ✅ JA | ❌ Nur 1 Person |
+| Schlaf-Monitoring | ✅ JA | ❌ NEIN |
+| Batterie | ❌ Kabel | ✅ 3 Jahre |
+| Temp/Feuchte | ❌ | ✅ JA |
+| Preis | ~70€ | ~50€ |
+
+**Empfohlenes Layout pro Wohnung:**
+- FP2 an Decke: Schlafzimmer (Sturz + Schlaf), Wohnzimmer (Multi-Person), Flur (Ganggeschwindigkeit)
+- FP300 batteriebetrieben: Bad, Küche, Nebenräume
+- Kosten gesamt: ~385€ für 4-Zimmer-Wohnung vs. 3.000-5.000€/Monat Pflegeheim
+
+**Weitere empfohlene Spezialsensoren:**
+- Vibrationssensor Bett (Aqara, ~12€): Epilepsie + Diabetes T1 Ergänzung
+- Kontaktsensor Kühlschrank (~10€): Mahlzeiten-Tracking, Demenz
+- CO2-Sensor Schlafzimmer: Schlafqualität-Korrelation
+- Smarte Waage: Herzinsuffizienz (Ödeme), Niereninsuffizienz
+
+### 🗺️ Geplante Phasen-Roadmap
+
+```
+Phase 1 (DONE v0.31.6): Fundament
+  ✅ healthProfiles in io-package.json
+  ✅ diseaseProfiles.ts (14 Profile + Validierung)
+  ✅ MedicalTab.tsx (Sidebar, Ampel, Disease-Dashboard)
+  ✅ app.tsx Tab-Erweiterung
+
+Phase 2 (NEXT — v0.32.x): Erste echte Krankheits-Scores
+  🔜 Python: compute_disease_scores() im HealthBrain
+     → gewichtet existierende Metriken zu krankheitsspezifischen Risiko-Scores
+     → Sturzrisiko: 0.25*gaitSpeed + 0.25*bathroomSilence + 0.20*nightEvents + ...
+  🔜 Frontend: MedicalTab Disease-Dashboard mit echten ioBroker-States
+  🔜 Zuerst: Sturzrisiko + Demenz + Frailty
+
+Phase 3 (v0.33.x): Krankheits-Signatur-Engine
+  🔜 Python: DISEASE_SIGNATURES dict (welche Metriken-Kombination → welche Krankheit)
+  🔜 Proaktives Screening (Reverse-Diagnose, mit Disclaimer)
+  🔜 Gemini-Integration: Screening-Hinweise in natürlicher Sprache
+
+Phase 4 (v0.34.x): FP2-Integration + Mehrpersonen
+  🔜 Neuer Sensortyp presence_radar_zoned im Recorder
+  🔜 Multi-Target Particle Filter (personVectors statt todayVector)
+  🔜 Personen-spezifische Aktivitätsvektoren
+
+Phase 5 (v0.35.x): Kinder-Krankheitsbilder
+  🔜 Epilepsie-Profil mit Anfallserkennung
+  🔜 Diabetes T1 mit Hypoglykämie-Erkennung
+  🔜 Vibrationssensor-Integration als neuer Sensortyp
+```
+
+### 💡 Proaktives Screening — Konzept (noch nicht implementiert)
+
+Das System soll proaktiv Hinweise geben OHNE Diagnose zu stellen:
+- Algorithmus erkennt Muster → vergleicht mit DISEASE_SIGNATURES-Datenbank
+- Formulierung: "Auffälligkeiten erkannt, die bei X typisch auftreten — Arztbesuch empfohlen"
+- Dreistufige Alarm-Kaskade: Dashboard-Hinweis → Wochenbericht → Push an Angehörige
+- Gemini formuliert Hinweis in natürlicher Sprache (mit festem Disclaimer-Template)
+- Rechtlich: Screening ≠ Diagnose (klar kommuniziert in der UI)
+
+### 🏗️ Architektonischer Schlüsselentscheid
+
+Die bestehenden 14 Algorithmen liefern bereits ~80% der Rohdaten für alle 14 Krankheitsbilder.
+Was fehlt ist die **Interpretationsebene** in Python:
+
+```python
+def compute_disease_scores(self, metrics, enabled_profiles):
+    scores = {}
+    if enabled_profiles.get('dementia'):
+        scores['dementia'] = (
+            0.25 * metrics['night_anomaly'] +
+            0.20 * metrics['room_mobility_decline'] +
+            0.20 * metrics['gait_speed_decline'] +
+            0.15 * metrics['activity_drift'] +
+            0.10 * metrics['exit_night_attempts'] +
+            0.10 * metrics['morning_routine_missed']
+        )
+    # ... analog für andere Profile
+    return scores
+```
+
+Neuer Python-Befehl: `ANALYZE_DISEASE_SCORES` in service.py dispatch-table.
+
+---
+
 ## Session 02.03.2026 - Version 0.31.5 + 0.31.6
 
 ### Abgeschlossen
