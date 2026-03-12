@@ -735,9 +735,7 @@ export default function HealthTab(props: any) {
 
         const viewStart = isLive ? startOfDay : new Date(viewDate).setHours(0,0,0,0);
 
-        console.log('[FRESHAIR DEBUG] processEvents called, events:', events.length, 'isLive:', isLive, 'startOfDay:', new Date(isLive ? new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()).getTime() : new Date(viewDate).setHours(0,0,0,0)).toISOString());
         const todaysEvents = events.filter((e:any) => e.timestamp >= viewStart);
-        console.log('[FRESHAIR DEBUG] todaysEvents count:', todaysEvents.length, 'door events:', todaysEvents.filter((e:any) => e.type === "door").length);
 
         let lastBadEventTime = 0;
         let lastBadEventActive = false;
@@ -796,7 +794,6 @@ export default function HealthTab(props: any) {
         if (kitchenEventsEvening > 5) hasDinner = true;
 
         setFreshAirCount(faCount);
-        console.log('[FRESHAIR DEBUG] setFreshAirCount called with:', faCount, '| lastFA:', lastFA);
         setLastFreshAir(lastFA);
         setMeals({ breakfast: hasBreakfast, lunch: hasLunch, dinner: hasDinner });
         setBadStatus({ status: badState, last: badLast, duration: 0 });
