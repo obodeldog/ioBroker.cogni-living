@@ -1,4 +1,4 @@
-﻿{
+{
   "common": {
     "name": "cogni-living",
     "version": "0.31.6",
@@ -261,7 +261,23 @@
     "pwaEnabled": false,
     "pwaPort": 8095,
     "familyShareToken": "",
-    "cloudflareEnabled": false
+    "cloudflareEnabled": false,
+    "healthProfiles": {
+      "fallRisk":        { "enabled": false, "sensitivity": "medium" },
+      "dementia":        { "enabled": false, "sensitivity": "medium" },
+      "frailty":         { "enabled": false, "sensitivity": "medium" },
+      "depression":      { "enabled": false, "sensitivity": "medium" },
+      "diabetes2":       { "enabled": false, "sensitivity": "medium" },
+      "sleepDisorder":   { "enabled": false, "sensitivity": "medium" },
+      "cardiovascular":  { "enabled": false, "sensitivity": "medium" },
+      "parkinson":       { "enabled": false, "sensitivity": "medium" },
+      "copd":            { "enabled": false, "sensitivity": "medium" },
+      "socialIsolation": { "enabled": false, "sensitivity": "medium" },
+      "epilepsy":        { "enabled": false, "sensitivity": "medium" },
+      "diabetes1":       { "enabled": false, "sensitivity": "medium" },
+      "longCovid":       { "enabled": false, "sensitivity": "medium" },
+      "bipolar":         { "enabled": false, "sensitivity": "medium" }
+    }
   },
   "objects": [],
   "instanceObjects": []

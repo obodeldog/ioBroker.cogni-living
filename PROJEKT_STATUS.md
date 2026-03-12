@@ -1,5 +1,73 @@
-﻿# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 02.03.2026 | **Version:** 0.31.6
+# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
+**Letzte Aktualisierung:** 12.03.2026 | **Version:** 0.31.6 (Phase 1: Medizinische Perspektive)
+
+---
+
+## 🗓️ Sitzung 12.03.2026 — Phase 1: Medizinische Perspektive (v0.31.6)
+
+### ✅ Abgeschlossen
+
+**1a — Datenmodell `healthProfiles` in `io-package.json`:**
+- 14 Krankheitsprofile als native Config angelegt: `fallRisk`, `dementia`, `frailty`, `depression`, `diabetes2`, `sleepDisorder`, `cardiovascular`, `parkinson`, `copd`, `socialIsolation`, `epilepsy`, `diabetes1`, `longCovid`, `bipolar`
+- Jedes Profil: `{ enabled: false, sensitivity: "medium" }`
+
+**1b — Sensor-Validierungslogik (`diseaseProfiles.ts`):**
+- Neues Modul: `src-admin/src/components/medical/diseaseProfiles.ts`
+- 14 vollständige Krankheitsprofile mit klinischer Evidenz (Literaturzitate)
+- Sensor-Anforderungen (required + optional) pro Krankheitsbild
+- `validateDiseaseReadiness()`: prüft vorhandene Sensoren gegen Anforderungen
+- `validateAllProfiles()`: validiert alle 14 Profile auf einmal
+- Markt-Scores (Einperson + Mehrperson), Machbarkeit-Flags, FP2-Empfehlung
+
+**1c + 1d — MedicalTab.tsx (neue "Medizinische Perspektive"):**
+- Neuer Tab "Medizinisch" (MedicalServicesIcon, pink #e91e63) in `app.tsx`
+- Sidebar (320px): Krankheiten gruppiert nach Senioren/Erwachsene/Kinder
+- Toggle-Switch pro Krankheit mit Ampel-Badge (🟢/🟡/🔴)
+- Kollabierbare Sensor-Schnellansicht pro Karte
+- Rechtes Panel: Disease-Dashboard mit:
+  - Sensor-Bereitschaft Progress-Bar
+  - Fehlende/vorhandene Sensoren Banner
+  - Klinische Evidenz
+  - Relevante Metriken-Karten (verknüpft mit Gesundheit-Tab)
+  - Mehrpersonen-Machbarkeit-Hinweis
+  - Markt-Score Visualisierung
+- Sensor-Validierungs-Dialog mit vollständiger Checkliste + Kaufhinweisen
+- FP2-Empfehlung für Krankheiten die Multi-Person-Tracking benötigen
+- Wichtiger Disclaimer: kein Diagnose-System
+
+**Build & Deploy:**
+- `npm run build` ✅ (Vite 7.2.4, 8.45s)
+- `npm run build:backend:dev` ✅
+- `iobroker upload cogni-living` ✅
+
+### 🔧 Offene Baustellen
+- Phase 2: Krankheits-Risiko-Score Aggregation in `HealthBrain.compute_disease_scores()` (Python)
+- Phase 2: Disease-spezifische Dashboard-Kacheln mit echten ioBroker-States
+- Phase 3: Proaktives Screening / Reverse-Diagnose
+- Phase 4: Aqara FP2 als neuer Sensortyp `presence_radar_zoned` im Recorder
+
+### 🎯 Nächster logischer Schritt
+- Phase 2: Backend — `compute_disease_scores()` im HealthBrain implementieren
+- Sturzrisiko + Demenz + Frailty als erste drei vollständige Profile mit echten Score-Werten
+
+### 📊 Medizinische Perspektive — Krankheitsprofile
+
+| Krankheit | Zielgruppe | Score 1P | Score MP | Machbarkeit MP |
+|-----------|-----------|---------|---------|----------------|
+| Sturzrisiko | Senior | 98 | 90 | Sehr gut |
+| Demenz | Senior | 97 | 49 | Schwierig |
+| Frailty | Senior | 92 | 46 | Schwierig |
+| Diabetes T2 | Senior | 80 | 60 | Eingeschränkt |
+| Schlafstörungen | Alle | 78 | 59 | Eingeschränkt |
+| Depression | Erwachsene | 75 | 38 | Schwierig |
+| Herzinsuffizienz | Senior | 75 | 38 | Schwierig |
+| COPD | Senior | 72 | 36 | Schwierig |
+| Soz. Isolation | Senior | 70 | 7 | N/A |
+| Epilepsie | Kinder | 68 | 76 | Sehr gut |
+| Parkinson | Senior | 65 | 52 | Eingeschränkt |
+| Diabetes T1 | Kinder | 65 | 72 | Sehr gut |
+| Long-COVID | Erwachsene | 62 | 31 | Schwierig |
+| Bipolar | Erwachsene | 58 | 29 | Schwierig |
 
 ---
 

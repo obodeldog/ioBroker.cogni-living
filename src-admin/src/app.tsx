@@ -8,6 +8,7 @@ import ComfortTab from './components/tabs/ComfortTab';
 import SecurityTab from './components/tabs/SecurityTab';
 import EnergyTab from './components/tabs/EnergyTab';
 import HealthTab from './components/tabs/HealthTab';
+import MedicalTab from './components/tabs/MedicalTab';
 import Overview from './components/Overview';
 import Help from './components/Help';
 
@@ -20,6 +21,7 @@ import SmartToyIcon from '@mui/icons-material/SmartToy';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import BoltIcon from '@mui/icons-material/Bolt';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 
 import enLang from './i18n/en.json';
 import deLang from './i18n/de.json';
@@ -55,11 +57,10 @@ class App extends GenericApp<any, AppState> {
         const { themeType, native } = this.state;
         const isDark = themeType === 'dark';
 
-        // FEATURE TOGGLES (Fallback to true if undefined)
-        const showHealth = native.moduleHealth !== false;
+        const showHealth   = native.moduleHealth   !== false;
         const showSecurity = native.moduleSecurity !== false;
-        const showEnergy = native.moduleEnergy !== false;
-        const showComfort = native.moduleComfort !== false;
+        const showEnergy   = native.moduleEnergy   !== false;
+        const showComfort  = native.moduleComfort  !== false;
 
         const cogniTheme = createTheme({
             palette: {
@@ -73,10 +74,8 @@ class App extends GenericApp<any, AppState> {
                 MuiTab: {
                     styleOverrides: {
                         root: {
-                            textTransform: 'none', fontWeight: 'bold', minWidth: 100,
-                            flex: 1,
-                            opacity: 0.7,
-                            transition: 'all 0.3s',
+                            textTransform: 'none', fontWeight: 'bold', minWidth: 80,
+                            flex: 1, opacity: 0.7, transition: 'all 0.3s',
                             '&.Mui-selected': { opacity: 1, backgroundColor: 'rgba(255,255,255,0.1)' }
                         }
                     }
@@ -99,21 +98,21 @@ class App extends GenericApp<any, AppState> {
                                 onChange={(_e, newVal) => this.setState({ selectedTab: newVal })}
                                 indicatorColor="secondary"
                                 textColor="inherit"
-                                variant="fullWidth"
-                                centered={false}
-                                sx={{ flexGrow: 1, maxWidth: 1400 }}
+                                variant="scrollable"
+                                scrollButtons="auto"
+                                sx={{ flexGrow: 1, maxWidth: 1600 }}
                             >
-                                <Tab value="overview" label="Dashboard" icon={<DashboardIcon />} iconPosition="start" />
-                                {showComfort && <Tab value="comfort" label="Komfort" icon={<SmartToyIcon />} iconPosition="start" sx={pillarStyle('#2196f3')} />}
-                                {showSecurity && <Tab value="security" label="Sicherheit" icon={<HealthAndSafetyIcon />} iconPosition="start" sx={pillarStyle('#4caf50')} />}
-                                {showEnergy && <Tab value="energy" label="Energie" icon={<BoltIcon />} iconPosition="start" sx={pillarStyle('#ff9800')} />}
-                                {showHealth && <Tab value="health" label="Gesundheit" icon={<MonitorHeartIcon />} iconPosition="start" sx={pillarStyle('#f44336')} />}
-                                <Tab value="system" label="System" icon={<SettingsIcon />} iconPosition="start" />
-                                <Tab value="help" label="Handbuch" icon={<MenuBookIcon />} iconPosition="start" />
+                                <Tab value="overview"  label="Dashboard"   icon={<DashboardIcon />}        iconPosition="start" />
+                                {showComfort  && <Tab value="comfort"   label="Komfort"     icon={<SmartToyIcon />}         iconPosition="start" sx={pillarStyle('#2196f3')} />}
+                                {showSecurity && <Tab value="security"  label="Sicherheit"  icon={<HealthAndSafetyIcon />}  iconPosition="start" sx={pillarStyle('#4caf50')} />}
+                                {showEnergy   && <Tab value="energy"    label="Energie"     icon={<BoltIcon />}             iconPosition="start" sx={pillarStyle('#ff9800')} />}
+                                {showHealth   && <Tab value="health"    label="Gesundheit"  icon={<MonitorHeartIcon />}     iconPosition="start" sx={pillarStyle('#f44336')} />}
+                                <Tab value="medical"   label="Medizinisch"  icon={<MedicalServicesIcon />}  iconPosition="start" sx={pillarStyle('#e91e63')} />
+                                <Tab value="system"    label="System"       icon={<SettingsIcon />}         iconPosition="start" />
+                                <Tab value="help"      label="Handbuch"     icon={<MenuBookIcon />}         iconPosition="start" />
                             </Tabs>
-
                             <Box sx={{ position: 'absolute', right: 16 }}>
-                                <Tooltip title={this.state.hasChanges ? "Änderungen speichern" : "Keine Änderungen"}>
+                                <Tooltip title={this.state.hasChanges ? 'Aenderungen speichern' : 'Keine Aenderungen'}>
                                     <span><IconButton color="inherit" onClick={this.handleSave} disabled={!this.state.hasChanges} size="small" sx={{ opacity: 0.7 }}><SaveIcon /></IconButton></span>
                                 </Tooltip>
                             </Box>
@@ -122,38 +121,26 @@ class App extends GenericApp<any, AppState> {
 
                     <Box sx={{ p: 0, pb: 12, flexGrow: 1, overflowY: 'auto' }}>
                         {this.state.selectedTab === 'overview' && (
-                            <Overview
-                                socket={this.socket}
-                                adapterName={this.adapterName}
-                                instance={this.instance}
-                                theme={this.state.theme}
-                                themeType={themeType}
-                                activeModules={native} // Pass config to overview
-                            />
+                            <Overview socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} activeModules={native} />
                         )}
-                        {showComfort && this.state.selectedTab === 'comfort' && <ComfortTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
-                        {showSecurity && this.state.selectedTab === 'security' && <SecurityTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
-
-                        {showEnergy && this.state.selectedTab === 'energy' && (
-                            <EnergyTab
-                                socket={this.socket}
-                                adapterName={this.adapterName}
-                                instance={this.instance}
-                                theme={this.state.theme}
-                                themeType={themeType}
-                                devices={native.devices || []}
-                                native={native}
-                            />
+                        {showComfort  && this.state.selectedTab === 'comfort'   && <ComfortTab  socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+                        {showSecurity && this.state.selectedTab === 'security'  && <SecurityTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+                        {showEnergy   && this.state.selectedTab === 'energy'    && (
+                            <EnergyTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} devices={native.devices || []} native={native} />
                         )}
-
-                        {showHealth && this.state.selectedTab === 'health' && <HealthTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
-                        {this.state.selectedTab === 'system' && <SystemTab native={native} onChange={(attr:string, val:any) => this.updateNativeValue(attr, val)} socket={this.socket} themeType={themeType} theme={this.state.theme} adapterName={this.adapterName} instance={this.instance} />}
-                        {this.state.selectedTab === 'help' && <Help themeType={themeType} />}
+                        {showHealth   && this.state.selectedTab === 'health'    && <HealthTab   socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
+                        {this.state.selectedTab === 'medical' && (
+                            <MedicalTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} native={native} onChange={(attr: string, val: any) => this.updateNativeValue(attr, val)} />
+                        )}
+                        {this.state.selectedTab === 'system'  && <SystemTab native={native} onChange={(attr: string, val: any) => this.updateNativeValue(attr, val)} socket={this.socket} themeType={themeType} theme={this.state.theme} adapterName={this.adapterName} instance={this.instance} />}
+                        {this.state.selectedTab === 'help'    && <Help themeType={themeType} />}
                     </Box>
 
                     <Zoom in={this.state.hasChanges}>
                         <Tooltip title="Einstellungen speichern" placement="left">
-                            <Fab color="primary" aria-label="save" onClick={this.handleSave} sx={{ position: 'fixed', bottom: 30, right: 30, zIndex: 1000, boxShadow: '0px 4px 20px rgba(0,0,0,0.4)' }}><SaveIcon fontSize="large" /></Fab>
+                            <Fab color="primary" aria-label="save" onClick={this.handleSave} sx={{ position: 'fixed', bottom: 30, right: 30, zIndex: 1000, boxShadow: '0px 4px 20px rgba(0,0,0,0.4)' }}>
+                                <SaveIcon fontSize="large" />
+                            </Fab>
                         </Tooltip>
                     </Zoom>
                     {this.renderError()}
