@@ -30,6 +30,20 @@
 - Disclaimer: "Kein Diagnose-System"
 - State-Fetch via socket.getState + socket.subscribeState (live-aktuell)
 
+### 🐛 Kritische Erkenntnisse (Build-Architektur)
+
+**WICHTIG für zukünftige Sitzungen — Build-Workflow:**
+- ❌ `lib/main.js` = NUR lesbare Kopie, wird NICHT gebaut (täuscht als Quelle)
+- ✅ `src/main.js` = ECHTER Quellcode → wird zu root `main.js` obfuskiert
+- ✅ `src/lib/*.js` → werden zu `lib/*.js` obfuskiert
+- Root `main.js` wird von ioBroker ausgeführt (aus `node_modules/iobroker.cogni-living/`)
+- Richtiger Deploy-Workflow: `src/main.js` bearbeiten → `npm run build:backend:prod` → `iobroker restart cogni-living`
+
+**Drei Bugs die Phase 2 blockierten (alle gefixt):**
+1. Code wurde in `lib/main.js` statt `src/main.js` geschrieben → Build ignorierte Änderungen
+2. `socket.getState` in MedicalTab mit Callback statt Promise (`.then()`) → State wurde nie gelesen
+3. Disease-Score-Berechnung war in `if (this.isProVersion)` Block → ohne Lizenz nie ausgeführt
+
 ### 🔧 Offene Baustellen
 - Phase 3: Proaktives Screening / Reverse-Diagnose
 - Phase 3: Gemini-Integration für Screening-Hinweise in natürlicher Sprache
