@@ -1,5 +1,61 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 12.03.2026 | **Version:** 0.31.6 (Phase 1: Medizinische Perspektive)
+**Letzte Aktualisierung:** 12.03.2026 | **Version:** 0.32.0 (Phase 2: Krankheits-Risiko-Scores)
+
+---
+
+## 🗓️ Sitzung 12.03.2026 — Phase 2: Krankheits-Risiko-Scores (v0.32.0)
+
+### ✅ Abgeschlossen
+
+**Python `compute_disease_scores()` in `health.py`:**
+- Kalibrierungsbasierter Vergleich: erste 14 Tage = persönliche Baseline
+- Erkennungsphase: letzte 7 Tage vs. Baseline
+- Normalisierte Komponenten (0-100): Gangverlangsamung, Nacht-Unruhe, Raum-Rückgang, Aktivitätsrückgang, Hygiene-Rückgang
+- Implementiert für: **Sturzrisiko, Demenz, Frailty** (Phase 2)
+- Risk-Level: MINIMAL / LOW / MODERATE / HIGH / CRITICAL
+
+**Python `ANALYZE_DISEASE_SCORES` Command in `service.py`:**
+- Neuer Dispatch-Handler: empfängt `digests + enabledProfiles`, gibt `DISEASE_SCORES_RESULT` zurück
+
+**Node.js `main.js` — Disease States:**
+- Neue ioBroker-States: `analysis.health.disease.scores` (JSON) + `analysis.health.disease.<id>` (Zahl) für alle 14 Profile
+- Automatischer Aufruf nach `TRAIN_HEALTH` (wenn `triggerHealth` feuert)
+- Callback speichert Scores als States (persistent über Neustarts)
+
+**Frontend `MedicalTab.tsx` — RiskScorePanel:**
+- Neue Komponente `RiskScorePanel` zeigt echten Score als Progress-Balken
+- Level-Badge (farbig: grün/gelb/rot/lila)
+- Einzel-Faktor-Balken pro Komponente (Gangverlangsamung, Nacht-Unruhe etc.)
+- Kalibrierungs- und Datenpunkte-Info
+- Disclaimer: "Kein Diagnose-System"
+- State-Fetch via socket.getState + socket.subscribeState (live-aktuell)
+
+### 🔧 Offene Baustellen
+- Phase 3: Proaktives Screening / Reverse-Diagnose
+- Phase 3: Gemini-Integration für Screening-Hinweise in natürlicher Sprache
+- Phase 2 Erweiterung: Weitere Profile (Depression, Schlaf, Diabetes T2)
+- Phase 4: Aqara FP2 als neuer Sensortyp `presence_radar_zoned` im Recorder
+
+### 🎯 Nächster logischer Schritt
+- Phase 3: `DISEASE_SIGNATURES` dict in Python — Reverse-Diagnose
+  Muster erkannt → Hinweis: "Auffälligkeiten, die bei X typisch sind" (mit Disclaimer)
+- Gemini-Integration: Proaktive Hinweise in Wochenberichten
+
+### 📋 Neue ioBroker-States (v0.32.0)
+| State | Typ | Beschreibung |
+|---|---|---|
+| `analysis.health.disease.scores` | JSON | Alle Scores komplett mit Faktoren |
+| `analysis.health.disease.fallRisk` | Zahl | Sturzrisiko-Score 0-100 |
+| `analysis.health.disease.dementia` | Zahl | Demenz-Score 0-100 |
+| `analysis.health.disease.frailty` | Zahl | Frailty-Score 0-100 |
+| `analysis.health.disease.<profil>` | Zahl | Alle 14 Profile |
+
+### ⚙️ Wie die Scores aktualisiert werden
+1. Nutzer klickt "Analyse starten" im Gesundheit-Tab
+2. `triggerHealth` State → Node.js → `TRAIN_HEALTH` an Python
+3. **NEU**: danach automatisch `ANALYZE_DISEASE_SCORES` falls Profile aktiviert
+4. Python berechnet Scores → Node.js speichert als States
+5. MedicalTab liest States und zeigt RiskScorePanel live
 
 ---
 
