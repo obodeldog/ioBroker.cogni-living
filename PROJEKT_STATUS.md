@@ -1,29 +1,41 @@
 # PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 12.03.2026 | **Version:** 0.31.2
+**Letzte Aktualisierung:** 12.03.2026 | **Version:** 0.31.3
 
 ---
 
 ## 1. Aktueller Stand (diese Sitzung)
 
-### ✅ Root-Cause gefunden und behoben: Fresh Air Kachel zeigt immer "0x"
+### ✅ Root-Cause des "alten Builds" endgültig gefunden und behoben (v0.31.3)
 
-**Der eigentliche Bug (gefunden nach umfangreicher Analyse):**
-In der `processEvents`-Funktion (`HealthTab.tsx`, Zeile ~752) wurde `evt.name.toLowerCase()` aufgerufen. Wenn ein einziges Event in `todaysEvents` kein `name`-Feld hat (was bei älteren gespeicherten Events vorkommen kann), wirft das einen `TypeError`. Die `forEach`-Schleife bricht ab, `setFreshAirCount(faCount)` wird **niemals aufgerufen**, und `freshAirCount` bleibt bei 0 — dauerhaft.
+**Das eigentliche Problem (hinter allen bisherigen Fresh Air Fehlschlägen):**
+ioBroker serviert die Admin UI aus dem Verzeichnis `admin/` — NICHT aus `src-admin/build/`.
+Vite hat aber immer in `src-admin/build/` gebaut. Deshalb hat ioBroker stets das alte `index-DaLhtVVS.js` (mit Keyword-Matching-Logik) geladen, egal wie oft wir `src-admin/build/` aktualisiert haben.
 
-**Bestätigter Datenfluss (war korrekt):**
-- `events.history` State enthält Door-Events: `type: "door"`, `value: 1` (numerisch, NICHT true/false) ✅
-- Timestamps heute (09:07 und 09:17 Uhr) ✅
-- `main.js` (Einstiegspunkt) `getOverviewData` → gibt `this.eventHistory` zurück ✅
-- `processEvents` Filter: `evt.type === 'door' && evt.value === 1` korrekt ✅
-- **Das Problem**: `evt.name.toLowerCase()` crasht bei Events ohne name
+**Fixes in v0.31.3:**
+1. `admin/assets/index-DaLhtVVS.js` (alter Build) entfernt
+2. `admin/assets/index-CBIshDQD.js` + `admin/index.html` auf neuen Stand gebracht
+3. `src-admin/vite.config.mjs`: `outDir` von `'build'` auf `'../admin'` geändert → zukünftige Builds landen direkt im richtigen Verzeichnis
+4. `.gitignore`: `src-admin/build/` ignoriert (kein doppelter Build mehr)
+5. 62 temporäre `_*.js`, `_*.ps1`, `old_*.*` Dateien aus dem Repo entfernt
 
-**Fixes in v0.31.2:**
-1. `HealthTab.tsx`: `evt.name.toLowerCase()` → `(evt.name || '').toLowerCase()` (Zeile 752 + 757)
-2. `HealthTab.tsx`: Totes Code-Fragment (alte Keyword-Matching `return (nameLower.includes...)`) entfernt
-3. `HealthTab.tsx`: Doppelter `setFreshAirLongCount`-Aufruf entfernt (war redundant)
-4. `lib/main.js`: Doppelter `const FRESH_AIR_MIN_MS` Block entfernt (SyntaxError behoben, auch wenn `lib/main.js` nicht der Einstiegspunkt ist)
+### ✅ Score 0.10 erklärt und Normalisierungsformel verbessert
 
-**Hinweis:** `main.js` (Einstiegspunkt lt. `package.json`) war bereits korrekt — nur `lib/main.js` hatte den Doppel-Block, war aber nicht betroffen.
+**Mathematischer Beweis:** `IsolationForest(contamination=0.1)` liefert für normale Tage `raw_score ≈ -0.10`. Die alte Formel `−raw_score` ergab dadurch 0.10 für vollständig normale Tage — das wirkte wie "10% anomal", war aber "100% normal".
+
+**Neue Formel (zentriert):**
+- 0.0 = vollständig normal (raw ≈ -0.10)
+- 0.5 = mäßig anomal (raw ≈ -0.30)
+- 1.0 = stark anomal (raw ≤ -0.50)
+
+**Beweis-Logging:** `health.py predict()` gibt jetzt im ioBroker-Log aus:
+`[HealthBrain.predict] raw_score=-0.1023 | norm_score=0.0057 | inlier=True`
+
+---
+
+### ✅ Root-Cause gefunden und behoben (v0.31.2): Fresh Air Kachel zeigt immer "0x"
+
+In `processEvents` (`HealthTab.tsx`): `evt.name.toLowerCase()` crashte bei Events ohne `name`-Feld → `setFreshAirCount` wurde nie aufgerufen.
+Fix: `(evt.name || '').toLowerCase()` + Dead Code + Doppelter State-Setter entfernt.
 
 ---
 
@@ -79,7 +91,8 @@ In der `processEvents`-Funktion (`HealthTab.tsx`, Zeile ~752) wurde `evt.name.to
 
 | Version | Datum | Änderung |
 |---|---|---|
-| **0.31.2** | 12.03.2026 | **FIX**: processEvents TypeError bei null name → Fresh Air immer 0; lib/main.js SyntaxError; Dead Code entfernt |
+| **0.31.3** | 12.03.2026 | **FIX**: Vite outDir auf admin/ korrigiert (ioBroker lädt nun richtigen Build); 62 temp-Dateien entfernt; Score-Normalisierung verbessert (0=normal, 1=anomal) |
+| 0.31.2 | 12.03.2026 | **FIX**: processEvents TypeError bei null name → Fresh Air immer 0; lib/main.js SyntaxError; Dead Code entfernt |
 | 0.31.1 | 12.03.2026 | Fresh Air: type-based Erkennung, Stoßlüftung ≥5 Min, freshAirLongCount |
 | 0.31.0 | 11.03.2026 | Drift-Monitor Datumsachse, KI-Analyse Auto-Trigger, Flur-Räume entfernt |
 | 0.30.74 | 10.03.2026 | Feature-Module-Status Tab, Garmin Drift-Monitor |

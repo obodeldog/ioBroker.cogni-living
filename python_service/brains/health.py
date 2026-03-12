@@ -50,9 +50,15 @@ class HealthBrain:
             X = self._prepare_features([digest])
             res = self.model.predict(X)[0]
             raw_score = self.model.score_samples(X)[0]
-            # IsolationForest: negativ = Anomalie. 0-1 Skala: 0=normal, 1=stark anomal
-            norm_score = max(0.0, min(1.0, -raw_score))
-            return res, norm_score, f"Anomaly Score: {raw_score:.3f}"
+            # IsolationForest(contamination=0.1): Normale Tage liefern raw_score ~ -0.10.
+            # Alte Formel (-raw_score) ergab 0.10 fuer normale Tage → verwirrend.
+            # Neue Formel: 0.0 = normal, 1.0 = stark anomal (zentriert um -0.10 Baseline).
+            # Bereich: -0.10 (normal) bis -0.50 (sehr anomal) → skaliert auf 0.0 bis 1.0
+            BASELINE_RAW = -0.10  # Erwarteter Score fuer normalen Tag bei contamination=0.1
+            RANGE_RAW = 0.40      # Spanne von normal (-0.10) bis stark anomal (-0.50)
+            norm_score = max(0.0, min(1.0, (BASELINE_RAW - raw_score) / RANGE_RAW))
+            print(f"[HealthBrain.predict] raw_score={raw_score:.4f} | norm_score={norm_score:.4f} | inlier={res==1}")
+            return res, norm_score, f"Anomaly Score: {raw_score:.3f} (norm: {norm_score:.2f})"
         except Exception as e: return 0, 0.0, str(e)
 
     def analyze_gait_speed(self, sequences, hallway_locations=None):
