@@ -542,21 +542,18 @@ export default function MedicalTab({ socket, adapterName, instance, theme, theme
     const [diseaseScores, setDiseaseScores] = useState<Record<string, DiseaseScore>>({});
     const namespace = `${adapterName}.${instance}`;
 
-    // Krankheits-Risiko-Scores aus ioBroker States laden
+    // Krankheits-Risiko-Scores aus ioBroker States laden (Promise-basiert wie HealthTab)
     useEffect(() => {
         const stateId = `${namespace}.analysis.health.disease.scores`;
-        const loadScores = () => {
-            socket.getState(stateId, (err: any, state: any) => {
-                if (!err && state?.val) {
-                    try { setDiseaseScores(JSON.parse(state.val)); } catch(e) {}
-                }
-            });
-        };
-        loadScores();
-        socket.subscribeState(stateId, (_id: string, state: any) => {
+        socket.getState(stateId).then((s: any) => {
+            if (s?.val) { try { setDiseaseScores(JSON.parse(s.val)); } catch(e) {} }
+        }).catch(() => {});
+        // Live-Update wenn neue Scores berechnet werden
+        const handler = (_id: string, state: any) => {
             if (state?.val) { try { setDiseaseScores(JSON.parse(state.val)); } catch(e) {} }
-        });
-        return () => { socket.unsubscribeState(stateId, () => {}); };
+        };
+        socket.subscribeState(stateId, handler);
+        return () => { try { socket.unsubscribeState(stateId, handler); } catch(e) {} };
     }, [namespace, socket]);
 
     const devices: DeviceConfig[] = useMemo(() => native?.devices || [], [native]);
