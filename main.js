@@ -320,14 +320,14 @@ class CogniLiving extends utils.Adapter {
 
             const startOfDayTimestamp = new Date().setHours(0,0,0,0);
             // Fenster/Tür-Öffnungen: alle Sensoren mit fenster/haustür/terrasse/balkon/window im Namen
-            const FRESH_AIR_KEYWORDS = ['fenster', 'haustür', 'haustuer', 'terrasse', 'balkon', 'balkontür', 'window', 'door'];
+            // Frischluft: Verwende Sensor-Typ "door" aus dem Typ-System (Sensorliste: Tür/Fenster)
+            // Identisch zum Architektur-Prinzip: e.type === "door" statt Keyword-Matching
             const freshAirCount = this.eventHistory.filter(e => {
                 const ts = e.timestamp || e.ts || 0;
                 if (ts < startOfDayTimestamp) return false;
-                const name = (e.name || e.id || e.deviceName || '').toLowerCase();
-                const isWindowSensor = FRESH_AIR_KEYWORDS.some(k => name.includes(k));
+                const isDoorSensor = e.type === 'door';
                 const isOpen = e.value === true || e.value === 1 || e.value === 'true' || e.value === 'open';
-                return isWindowSensor && isOpen;
+                return isDoorSensor && isOpen;
             }).length;
 
             let battery = 85;

@@ -1,8 +1,9 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.30.94",
+    "version": "0.31.0",
     "news": {
+      "0.31.0": "Fresh Air nutzt Sensor-Typ statt Keywords; Flur-Raeume-Feld entfernt; Auto-KI-Analyse 08:05+20:00; Briefing-Fix; Score 0.10 behoben",
       "0.30.75": {
         "en": "FIX: constâ†’let dailyData (build error); Gemini prompt uses aiContext name, no JSON format; status_bericht/antwort JSON keys added; sparkline tooltip with date and icons",
         "de": "FIX: constâ†’let dailyData (Build-Fehler); Gemini nutzt aiContext-Namen, kein JSON-Format; status_bericht/antwort JSON-Keys ergÃ¤nzt; Sparkline-Tooltip mit Datum und Icons"
@@ -213,7 +214,6 @@
     "aiPersona": "generic",
     "livingContext": "",
     "minDaysForBaseline": 7,
-    "flurRooms": "flur, diele, gang, treppe",
     "inactivityMonitoringEnabled": false,
     "inactivityThresholdHours": 12,
     "notifyTelegramEnabled": false,
