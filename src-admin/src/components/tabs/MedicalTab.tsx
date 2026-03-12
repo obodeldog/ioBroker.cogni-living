@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import {
     Box, Typography, Grid, Card, CardContent, Chip, Divider, LinearProgress,
     Tooltip, Alert, AlertTitle, Paper, Badge, IconButton, Collapse,
@@ -158,7 +158,7 @@ function SensorValidationDialog({ open, onClose, profile, validation, isDark }: 
                                         </ListItemIcon>
                                         <ListItemText
                                             primary={s.label}
-                                            secondary={present ? s.description : `${s.description} � ${s.missingHint}`}
+                                            secondary={present ? s.description : `${s.description} � ${s.missingHint}`}
                                             primaryTypographyProps={{ variant: 'body2', color: present ? 'text.primary' : 'text.secondary' }}
                                             secondaryTypographyProps={{ variant: 'caption' }}
                                         />
@@ -173,7 +173,7 @@ function SensorValidationDialog({ open, onClose, profile, validation, isDark }: 
                     <Alert severity="info" sx={{ mt: 2 }} icon={<SensorsIcon />}>
                         <AlertTitle>Empfehlung: Aqara FP2</AlertTitle>
                         Dieses Krankheitsbild profitiert besonders vom Aqara Presence Sensor FP2 (mmWave-Radar):
-                        Sturzerkennung, Multi-Person-Tracking und Schlaf-Monitoring. ~70�/Sensor.
+                        Sturzerkennung, Multi-Person-Tracking und Schlaf-Monitoring. ~70�/Sensor.
                     </Alert>
                 )}
             </DialogContent>
@@ -262,22 +262,120 @@ function DiseaseCard({ profile, enabled, validation, selected, onToggle, onSelec
     );
 }
 
+// --- Risiko-Score Typen -------------------------------------------------------
+interface DiseaseScore {
+    score: number | null;
+    level: 'MINIMAL' | 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL' | 'INSUFFICIENT_DATA';
+    factors?: Record<string, number>;
+    values?: Record<string, number>;
+    dataPoints?: number;
+    calibrationDays?: number;
+    message?: string;
+}
+
+const RISK_LEVEL_META: Record<string, { label: string; color: string; bg: string }> = {
+    MINIMAL:           { label: 'Minimal',        color: '#4caf50', bg: '#4caf5018' },
+    LOW:               { label: 'Niedrig',         color: '#8bc34a', bg: '#8bc34a18' },
+    MODERATE:          { label: 'Moderat',         color: '#ff9800', bg: '#ff980018' },
+    HIGH:              { label: 'Hoch',            color: '#f44336', bg: '#f4433618' },
+    CRITICAL:          { label: 'Kritisch',        color: '#9c27b0', bg: '#9c27b018' },
+    INSUFFICIENT_DATA: { label: 'Zu wenig Daten',  color: '#9e9e9e', bg: '#9e9e9e18' },
+};
+
+const FACTOR_LABELS: Record<string, string> = {
+    gaitSlowdown:         'Gangverlangsamung',
+    nightRestlessness:    'Naecht. Unruhe',
+    nightWandering:       'Naecht. Wandern',
+    roomMobility:         'Raum-Mobilitaet',
+    roomMobilityDecline:  'Raum-Rueckgang',
+    activityDecline:      'Aktivitaetsrueckgang',
+    activityDrift:        'Langzeit-Drift',
+    hygieneDecline:       'Hygiene-Rueckgang',
+};
+
+// --- Risiko-Score Panel -------------------------------------------------------
+function RiskScorePanel({ score, isDark }: { score: DiseaseScore; isDark: boolean }) {
+    const meta = RISK_LEVEL_META[score.level] ?? RISK_LEVEL_META.INSUFFICIENT_DATA;
+
+    if (score.level === 'INSUFFICIENT_DATA' || score.score === null) {
+        return (
+            <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: isDark ? '#1a1a1a' : '#fafafa', borderColor: '#9e9e9e40' }}>
+                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>📊 Risiko-Indikator</Typography>
+                <Alert severity="info" sx={{ py: 0.5 }}>
+                    {score.message ?? `Mindestens 5 Tage Daten benoetigt (${score.dataPoints ?? 0} vorhanden). Score wird automatisch nach der naechsten Analyse berechnet.`}
+                </Alert>
+            </Paper>
+        );
+    }
+
+    return (
+        <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: meta.bg, borderColor: `${meta.color}50` }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    📊 Risiko-Indikator
+                    <Tooltip title={`Basierend auf ${score.dataPoints ?? '?'} Tagen. Kein Diagnose-System.`}>
+                        <InfoOutlinedIcon fontSize="small" sx={{ color: '#9e9e9e', ml: 0.5 }} />
+                    </Tooltip>
+                </Typography>
+                <Chip size="small" label={meta.label}
+                    sx={{ bgcolor: meta.color, color: '#fff', fontWeight: 'bold', fontSize: '0.75rem' }} />
+            </Box>
+            <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary">Auffaelligkeits-Score</Typography>
+                    <Typography variant="body2" fontWeight="bold" sx={{ color: meta.color }}>{score.score.toFixed(1)} / 100</Typography>
+                </Box>
+                <LinearProgress variant="determinate" value={Math.min(score.score, 100)}
+                    sx={{ height: 12, borderRadius: 6, bgcolor: isDark ? '#2a2a2a' : '#e0e0e0',
+                        '& .MuiLinearProgress-bar': { bgcolor: meta.color, borderRadius: 6 } }} />
+            </Box>
+            {score.factors && Object.keys(score.factors).length > 0 && (
+                <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>Einzel-Indikatoren:</Typography>
+                    <Grid container spacing={0.5}>
+                        {Object.entries(score.factors).map(([key, val]) => (
+                            <Grid item xs={6} key={key}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <LinearProgress variant="determinate" value={Math.min(val, 100)}
+                                        sx={{ flexGrow: 1, height: 5, borderRadius: 3, bgcolor: isDark ? '#2a2a2a' : '#e0e0e0',
+                                            '& .MuiLinearProgress-bar': { bgcolor: val < 25 ? '#4caf50' : val < 50 ? '#ff9800' : '#f44336', borderRadius: 3 } }} />
+                                    <Typography variant="caption" sx={{ minWidth: 24, textAlign: 'right', color: 'text.secondary', fontSize: '0.65rem' }}>
+                                        {val.toFixed(0)}
+                                    </Typography>
+                                </Box>
+                                <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary' }}>
+                                    {FACTOR_LABELS[key] ?? key}
+                                </Typography>
+                            </Grid>
+                        ))}
+                    </Grid>
+                </Box>
+            )}
+            <Typography variant="caption" color="text.secondary"
+                sx={{ mt: 1, display: 'block', fontStyle: 'italic', fontSize: '0.65rem' }}>
+                Kein Diagnose-System. Score zeigt Verhaltensveraenderungen gegenueber persoenlicher Baseline.
+            </Typography>
+        </Paper>
+    );
+}
+
 // --- Disease Dashboard (rechtes Panel) ---------------------------------------
-function DiseaseDashboard({ profile, validation, isDark }: {
+function DiseaseDashboard({ profile, validation, isDark, diseaseScore }: {
     profile: DiseaseProfile; validation: ValidationResult; isDark: boolean;
+    diseaseScore?: DiseaseScore | null;
 }) {
     const [dialogOpen, setDialogOpen] = useState(false);
 
     const METRIC_LABELS: Record<string, { label: string; icon: string }> = {
-        gaitSpeed:           { label: 'Ganggeschwindigkeit', icon: '??' },
-        nightRestlessness:   { label: 'Nacht-Unruhe', icon: '??' },
-        roomSilence:         { label: 'Raum-Stille-Alarm', icon: '??' },
-        activityLevel:       { label: 'Aktivitaets-Level', icon: '??' },
-        roomMobility:        { label: 'Raum-Mobilitaet', icon: '??' },
-        activityDrift:       { label: 'Langzeit-Drift (PH-Test)', icon: '??' },
-        heatmap:             { label: 'Aktivitaets-Heatmap', icon: '???' },
-        hygieneFrequency:    { label: 'Hygiene-Frequenz', icon: '??' },
-        ventilationBehavior: { label: 'Lueftungsverhalten', icon: '??' }
+        gaitSpeed:           { label: 'Ganggeschwindigkeit', icon: '🚶' },
+        nightRestlessness:   { label: 'Nacht-Unruhe', icon: '🌙' },
+        roomSilence:         { label: 'Raum-Stille-Alarm', icon: '🔇' },
+        activityLevel:       { label: 'Aktivitaets-Level', icon: '📊' },
+        roomMobility:        { label: 'Raum-Mobilitaet', icon: '🏠' },
+        activityDrift:       { label: 'Langzeit-Drift (PH-Test)', icon: '📉' },
+        heatmap:             { label: 'Aktivitaets-Heatmap', icon: '🌡️' },
+        hygieneFrequency:    { label: 'Hygiene-Frequenz', icon: '🚿' },
+        ventilationBehavior: { label: 'Lueftungsverhalten', icon: '🌬️' }
     };
 
     return (
@@ -298,6 +396,9 @@ function DiseaseDashboard({ profile, validation, isDark }: {
                     </Typography>
                 </Box>
             </Box>
+
+            {/* Risiko-Score Panel (echte Daten aus Python) */}
+            {diseaseScore && <RiskScorePanel score={diseaseScore} isDark={isDark} />}
 
             {/* Sensor-Status Banner */}
             {validation.missingRequired.length > 0 ? (
@@ -381,7 +482,7 @@ function DiseaseDashboard({ profile, validation, isDark }: {
                         ? 'Dieses Krankheitsbild ist nur fuer Einpersonenhaushalte relevant.'
                         : 'Im Mehrpersonenhaushalt koennen die Bewegungsmuster anderer Personen die Erkennung beintraechtigen. Empfehlung: Aqara FP2 fuer Multi-Person-Tracking verwenden.'}
                     {profile.needsFP2 && !profile.multiPersonFeasibility.includes('good') && (
-                        <Box sx={{ mt: 1 }}><strong>Aqara FP2 (mmWave-Radar)</strong> loest dieses Problem durch Multi-Person-Tracking. ~70�/Raum.</Box>
+                        <Box sx={{ mt: 1 }}><strong>Aqara FP2 (mmWave-Radar)</strong> loest dieses Problem durch Multi-Person-Tracking. ~70�/Raum.</Box>
                     )}
                 </Alert>
             )}
@@ -425,7 +526,7 @@ function WelcomeScreen({ isDark }: { isDark: boolean }) {
             <Alert severity="info" sx={{ maxWidth: 500, textAlign: 'left' }}>
                 <AlertTitle>Hinweis</AlertTitle>
                 Diese Ansicht ist eine Ergaenzung zur technischen Perspektive (Gesundheit-Tab).
-                Alle Algorithmen laufen im Hintergrund � hier sehen Sie sie durch die Linse eines Krankheitsbildes.
+                Alle Algorithmen laufen im Hintergrund � hier sehen Sie sie durch die Linse eines Krankheitsbildes.
                 <Box sx={{ mt: 1, p: 1, bgcolor: isDark ? '#1a2a1a' : '#e8f5e9', borderRadius: 1, fontSize: '0.75rem' }}>
                     <strong>Wichtig:</strong> Dieses System stellt keine medizinische Diagnose. Es erkennt Verhaltensauffaelligkeiten und weist auf Muster hin, die bei bestimmten Erkrankungen typisch auftreten. Bitte konsultieren Sie immer einen Arzt.
                 </Box>
@@ -438,7 +539,25 @@ function WelcomeScreen({ isDark }: { isDark: boolean }) {
 export default function MedicalTab({ socket, adapterName, instance, theme, themeType, native, onChange }: MedicalTabProps) {
     const isDark = themeType === 'dark';
     const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+    const [diseaseScores, setDiseaseScores] = useState<Record<string, DiseaseScore>>({});
     const namespace = `${adapterName}.${instance}`;
+
+    // Krankheits-Risiko-Scores aus ioBroker States laden
+    useEffect(() => {
+        const stateId = `${namespace}.analysis.health.disease.scores`;
+        const loadScores = () => {
+            socket.getState(stateId, (err: any, state: any) => {
+                if (!err && state?.val) {
+                    try { setDiseaseScores(JSON.parse(state.val)); } catch(e) {}
+                }
+            });
+        };
+        loadScores();
+        socket.subscribeState(stateId, (_id: string, state: any) => {
+            if (state?.val) { try { setDiseaseScores(JSON.parse(state.val)); } catch(e) {} }
+        });
+        return () => { socket.unsubscribeState(stateId, () => {}); };
+    }, [namespace, socket]);
 
     const devices: DeviceConfig[] = useMemo(() => native?.devices || [], [native]);
 
@@ -529,7 +648,12 @@ export default function MedicalTab({ socket, adapterName, instance, theme, theme
             <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 3 }}>
                 {!selectedProfile && <WelcomeScreen isDark={isDark} />}
                 {selectedProfile && selectedValidation && (
-                    <DiseaseDashboard profile={selectedProfile} validation={selectedValidation} isDark={isDark} />
+                    <DiseaseDashboard
+                        profile={selectedProfile}
+                        validation={selectedValidation}
+                        isDark={isDark}
+                        diseaseScore={selectedProfileId ? (diseaseScores[selectedProfileId] ?? null) : null}
+                    />
                 )}
             </Box>
         </Box>

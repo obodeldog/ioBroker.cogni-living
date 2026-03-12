@@ -694,6 +694,230 @@ class HealthBrain:
         
         except Exception as e:
             return {'error': str(e)}
+    # ======================================================================
+    # KRANKHEITS-RISIKO-SCORES (Phase 2 — v0.32.0)
+    # ======================================================================
+
+    def compute_disease_scores(self, daily_digests, enabled_profiles):
+        """
+        Berechnet krankheitsspezifische Risiko-Scores aus historischen Daily Digests.
+
+        Methodik:
+          Kalibrierungsphase (erste 14 Tage oder Haelfte der Daten):
+            Berechnet persoenliche Baselines fuer alle Metriken.
+          Erkennungsphase (aktuellste 7 Tage):
+            Vergleicht aktuelle Werte mit Baselines.
+            Je groesser die negative Abweichung, desto hoeher der Risiko-Score.
+
+        Args:
+            daily_digests: Liste von Daily Digest Objekten (mind. 5, empfohlen 30+)
+            enabled_profiles: Liste aktivierter Krankheits-Profile,
+                              z.B. ['fallRisk', 'dementia', 'frailty']
+
+        Returns:
+            {
+                'fallRisk': {
+                    'score': 32.5,           # 0-100, hoeher = mehr Risiko-Indikatoren
+                    'level': 'LOW',          # MINIMAL / LOW / MODERATE / HIGH / CRITICAL
+                    'factors': {             # Einzel-Komponenten (0-100 je)
+                        'gait': 45.0,
+                        'nightRestlessness': 22.0,
+                        ...
+                    },
+                    'values': {              # Rohwerte fuer Transparenz
+                        'gaitSpeedBaseline': 4.2,
+                        'gaitSpeedRecent': 5.1,
+                        ...
+                    },
+                    'dataPoints': 30
+                },
+                ...
+            }
+        """
+        try:
+            if not daily_digests or len(daily_digests) < 5:
+                return {p: {'score': None, 'level': 'INSUFFICIENT_DATA',
+                            'dataPoints': len(daily_digests or []),
+                            'message': f'Mindestens 5 Tage Daten benoetigt ({len(daily_digests or [])} vorhanden)'}
+                        for p in enabled_profiles}
+
+            sorted_digests = sorted(daily_digests, key=lambda x: x.get('date', ''))
+            n = len(sorted_digests)
+
+            # Kalibrierungsphase: erste 14 Tage (mindestens 5, maximal 14)
+            cal_n = min(14, max(5, n // 2))
+            cal = sorted_digests[:cal_n]
+            recent = sorted_digests[cal_n:] if len(sorted_digests) > cal_n else sorted_digests[-7:]
+
+            def safe_median(lst, default=0.0):
+                vals = [float(v) for v in lst if v is not None and float(v) > 0]
+                return float(np.median(vals)) if vals else default
+
+            def safe_mean(lst, default=0.0):
+                vals = [float(v) for v in lst if v is not None and float(v) > 0]
+                return float(np.mean(vals)) if vals else default
+
+            # Persoenliche Baselines aus Kalibrierungsphase
+            cal_activity  = safe_median([d.get('activityPercent', 100) for d in cal], 100.0)
+            cal_gait      = safe_median([d.get('gaitSpeed', 0) for d in cal if d.get('gaitSpeed', 0) > 0.5], 0.0)
+            cal_night     = safe_mean([d.get('nightEvents', 0) for d in cal], 3.0)
+            cal_rooms     = safe_mean([d.get('uniqueRooms', 0) for d in cal if d.get('uniqueRooms', 0) > 0], 4.0)
+            cal_bathroom  = safe_mean([d.get('bathroomVisits', 0) for d in cal if d.get('bathroomVisits', 0) > 0], 3.0)
+
+            # Aktuelle Werte: letzte 7 Tage der Erkennungsphase
+            last7 = recent[-7:] if len(recent) >= 7 else recent
+            rec_activity  = safe_median([d.get('activityPercent', 100) for d in last7], cal_activity)
+            rec_gait      = safe_median([d.get('gaitSpeed', 0) for d in last7 if d.get('gaitSpeed', 0) > 0.5], cal_gait)
+            rec_night     = safe_mean([d.get('nightEvents', 0) for d in last7], cal_night)
+            rec_rooms     = safe_mean([d.get('uniqueRooms', 0) for d in last7 if d.get('uniqueRooms', 0) > 0], cal_rooms)
+            rec_bathroom  = safe_mean([d.get('bathroomVisits', 0) for d in last7 if d.get('bathroomVisits', 0) > 0], cal_bathroom)
+
+            # --- Normalisierungs-Hilfsfunktionen (0=normal, 100=maximale Verschlechterung) ---
+
+            def decline_score(baseline, recent_val, sensitivity=1.0):
+                """Rückgang: 50% Rückgang → 100 Score."""
+                if baseline <= 0:
+                    return 0.0
+                decline_ratio = max(0.0, (baseline - recent_val) / baseline)
+                return min(100.0, decline_ratio * 200.0 * sensitivity)
+
+            def increase_score(baseline, recent_val, sensitivity=1.0):
+                """Anstieg (z.B. Gait-Zeit): 50% Anstieg → 100 Score."""
+                if baseline <= 0:
+                    return 0.0
+                increase_ratio = max(0.0, (recent_val - baseline) / baseline)
+                return min(100.0, increase_ratio * 200.0 * sensitivity)
+
+            def night_excess_score(baseline, recent_val):
+                """Naechtliche Unruhe-Zunahme: 3x Baseline → 100 Score."""
+                if baseline <= 0:
+                    return min(100.0, recent_val * 5.0)
+                ratio = recent_val / baseline
+                return min(100.0, max(0.0, (ratio - 1.0) * 100.0))
+
+            def risk_level(score):
+                if score is None:   return 'INSUFFICIENT_DATA'
+                if score < 10:      return 'MINIMAL'
+                if score < 25:      return 'LOW'
+                if score < 45:      return 'MODERATE'
+                if score < 65:      return 'HIGH'
+                return 'CRITICAL'
+
+            # --- Vorberechnete Einzel-Komponenten ---
+            act_decline   = decline_score(cal_activity, rec_activity)
+            gait_slow     = increase_score(cal_gait, rec_gait) if cal_gait > 0 and rec_gait > 0 else 0.0
+            night_excess  = night_excess_score(cal_night, rec_night)
+            rooms_decline = decline_score(cal_rooms, rec_rooms)
+            hygiene_decl  = decline_score(cal_bathroom, rec_bathroom)
+
+            results = {}
+
+            # ---- STURZRISIKO ----
+            if 'fallRisk' in enabled_profiles:
+                # Klinische Basis: Ganggeschwindigkeit + naechtliche Stuerze + reduzierte Mobilitaet
+                # Referenz: Tinetti ME (1986), Podsiadlo et al. (1991)
+                fall_score = round(
+                    0.35 * gait_slow    +   # Gangverlangsamung (starkster Preaediktor)
+                    0.25 * night_excess +   # Naechtliche Unruhe / Toilettengaenge
+                    0.25 * rooms_decline+   # Reduzierte Raumnutzung = Immobilitaet
+                    0.15 * act_decline, 1   # Allgemeiner Aktivitaetsrueckgang
+                )
+                results['fallRisk'] = {
+                    'score': fall_score,
+                    'level': risk_level(fall_score),
+                    'factors': {
+                        'gaitSlowdown':       round(gait_slow, 1),
+                        'nightRestlessness':  round(night_excess, 1),
+                        'roomMobility':       round(rooms_decline, 1),
+                        'activityDecline':    round(act_decline, 1),
+                    },
+                    'values': {
+                        'gaitSpeedBaseline':  round(cal_gait, 1),
+                        'gaitSpeedRecent':    round(rec_gait, 1),
+                        'nightBaseline':      round(cal_night, 1),
+                        'nightRecent':        round(rec_night, 1),
+                        'roomsBaseline':      round(cal_rooms, 1),
+                        'roomsRecent':        round(rec_rooms, 1),
+                    },
+                    'calibrationDays': cal_n,
+                    'dataPoints': n,
+                }
+
+            # ---- DEMENZ ----
+            if 'dementia' in enabled_profiles:
+                # Klinische Basis: schleichende Verhaltensaenderung ueber Monate
+                # Referenz: Kaye et al. (2011) ORCATECH, Dodge et al. (2015)
+                drift_component = 0.0
+                try:
+                    act_vals = [d.get('activityPercent', 100) for d in sorted_digests]
+                    drift_r = self.detect_drift_page_hinkley([-v for v in act_vals])
+                    if isinstance(drift_r, dict) and 'current_score' in drift_r:
+                        thr = max(drift_r.get('threshold', 30), 1)
+                        drift_component = min(100.0, (drift_r['current_score'] / thr) * 100.0)
+                except Exception:
+                    pass
+
+                dem_score = round(
+                    0.30 * drift_component +   # Schleichende Verhaltensaenderung (Page-Hinkley)
+                    0.25 * rooms_decline   +   # Reduzierte Raumnutzung = soziale/raeumliche Einschraenkung
+                    0.20 * gait_slow       +   # Gangverlangsamung
+                    0.15 * night_excess    +   # Naechtliches Wandern
+                    0.10 * act_decline, 1      # Allgemeiner Aktivitaetsrueckgang
+                )
+                results['dementia'] = {
+                    'score': dem_score,
+                    'level': risk_level(dem_score),
+                    'factors': {
+                        'activityDrift':          round(drift_component, 1),
+                        'roomMobilityDecline':     round(rooms_decline, 1),
+                        'gaitSlowdown':            round(gait_slow, 1),
+                        'nightWandering':          round(night_excess, 1),
+                        'activityDecline':         round(act_decline, 1),
+                    },
+                    'values': {
+                        'activityBaseline':  round(cal_activity, 1),
+                        'activityRecent':    round(rec_activity, 1),
+                        'roomsBaseline':     round(cal_rooms, 1),
+                        'roomsRecent':       round(rec_rooms, 1),
+                    },
+                    'calibrationDays': cal_n,
+                    'dataPoints': n,
+                }
+
+            # ---- FRAILTY ----
+            if 'frailty' in enabled_profiles:
+                # Klinische Basis: Fried Frailty Phenotype (2001) — Aktivitaet + Kraft + Erschoepfung
+                # Passiv erfassbar: Aktivitaetsrueckgang + Gangverlangsamung + Hygienerueckgang + Raumnutzung
+                frailty_score = round(
+                    0.30 * act_decline   +   # Erschoepfung / reduzierte Aktivitaet
+                    0.25 * gait_slow     +   # Verlangsamung (Kraft-Proxy)
+                    0.25 * rooms_decline +   # Physische Immobilitaet
+                    0.20 * hygiene_decl, 1   # Vernachlaessigung der Koerperpflege
+                )
+                results['frailty'] = {
+                    'score': frailty_score,
+                    'level': risk_level(frailty_score),
+                    'factors': {
+                        'activityDecline':    round(act_decline, 1),
+                        'gaitSlowdown':       round(gait_slow, 1),
+                        'roomMobility':       round(rooms_decline, 1),
+                        'hygieneDecline':     round(hygiene_decl, 1),
+                    },
+                    'values': {
+                        'activityBaseline':   round(cal_activity, 1),
+                        'activityRecent':     round(rec_activity, 1),
+                        'bathroomBaseline':   round(cal_bathroom, 1),
+                        'bathroomRecent':     round(rec_bathroom, 1),
+                    },
+                    'calibrationDays': cal_n,
+                    'dataPoints': n,
+                }
+
+            return results
+
+        except Exception as e:
+            return {'error': str(e)}
+
     def detect_drift_page_hinkley(self, values, delta_factor=0.02, lambda_threshold=None):
         """
         Page-Hinkley-Test mit adaptivem Schwellwert.

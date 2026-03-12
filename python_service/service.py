@@ -221,6 +221,14 @@ def process_message(msg):
                 'ventilation': ventilation_trend
             })
 
+        elif cmd == "ANALYZE_DISEASE_SCORES":
+            # Phase 2: Krankheits-Risiko-Score Aggregation
+            digests = data.get("digests", [])
+            enabled_profiles = data.get("enabledProfiles", [])
+            log(f"Disease Score Analysis: {len(digests)} digests, profiles: {enabled_profiles}")
+            scores = health_brain.compute_disease_scores(digests, enabled_profiles)
+            send_result("DISEASE_SCORES_RESULT", scores)
+
         elif cmd == "ANALYZE_DRIFT":
             # Multi-Metrik Drift: Aktivitaet (Abnahme), Ganggeschwindigkeit (Zunahme), Nacht-Unruhe (Zunahme)
             all_data = sorted(data.get("dailyData", []), key=lambda x: x.get('date', ''))
