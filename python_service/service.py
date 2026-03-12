@@ -263,7 +263,9 @@ def process_message(msg):
                 'gait':          gait_r,
                 'night':         night_r,
                 'rooms':         rooms_r,
-                'n_days':        len(all_data)
+                'n_days':        len(all_data),
+                'dates':         [d.get('date', '') for d in all_data],
+                'gait_dates':    [d.get('date', '') for d in all_data if d.get('gaitSpeed', 0) > 0 and d.get('gaitSpeed', 0) < 60],
             })
 
         # 3. ENERGY

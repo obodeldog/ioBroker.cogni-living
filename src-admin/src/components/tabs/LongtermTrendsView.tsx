@@ -771,14 +771,25 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                             { key: 'night',    color: '#fd7e14', name: 'night' },
                                             { key: 'rooms',    color: '#ffcc02', name: 'rooms' },
                                         ];
-                                        // Normalisiere jeden Score auf 0-100% seiner eigenen Schwelle
-                                        const maxLen = Math.max(...metrics.map(m => (driftData as any)[m.key]?.scores?.length || 0));
+                                        // Build date-indexed chart data (aligned to calendar dates)
+                                        const allDates: string[] = (driftData as any).dates || [];
+                                        const gaitDates: string[] = (driftData as any).gait_dates || [];
+                                        const fmtDate = (iso: string) => { if (!iso) return ''; const p = iso.split('-'); return p.length === 3 ? p[2] + '.' + p[1] : iso; };
+                                        // Map gait scores by date for alignment with other metrics
+                                        const gaitByDate: Record<string, number> = {};
+                                        const gaitScores: number[] = (driftData as any).gait?.scores || [];
+                                        gaitDates.forEach((d: string, i: number) => { if (gaitScores[i] != null) gaitByDate[d] = gaitScores[i]; });
+                                        const maxLen = allDates.length > 0 ? allDates.length : Math.max(...metrics.filter(m => m.key !== 'gait').map(m => (driftData as any)[m.key]?.scores?.length || 0));
                                         if (maxLen === 0) return null;
                                         const chartData = Array.from({ length: maxLen }, (_: any, i: number) => {
-                                            const pt: any = { i: i + 1 };
+                                            const iso = allDates[i] || '';
+                                            const pt: any = { date: fmtDate(iso) || String(i + 1) };
                                             metrics.forEach(({ key, name }) => {
                                                 const m = (driftData as any)[key];
-                                                if (m?.scores?.[i] != null && m.threshold > 0) {
+                                                if (key === 'gait') {
+                                                    const gv = iso ? gaitByDate[iso] : m?.scores?.[i];
+                                                    if (gv != null && m?.threshold > 0) pt[name] = Math.min(110, Math.round((gv / m.threshold) * 100));
+                                                } else if (m?.scores?.[i] != null && m.threshold > 0) {
                                                     pt[name] = Math.min(110, Math.round((m.scores[i] / m.threshold) * 100));
                                                 }
                                             });
@@ -788,8 +799,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                             <ResponsiveContainer width="100%" height={160}>
                                                 <LineChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                                                     <CartesianGrid strokeDasharray="2 4" stroke={isDark ? '#222' : '#eee'} />
-                                                    <XAxis dataKey="i" stroke={lineColor} style={{ fontSize: '0.55rem' }}
-                                                        label={{ value: 'Tage (älteste → neueste)', position: 'insideBottomRight', offset: -5, fill: lineColor, fontSize: 9 }} />
+                                                    <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.55rem' }} interval={Math.max(1, Math.floor(chartData.length / 8))} />
                                                     <YAxis stroke={lineColor} style={{ fontSize: '0.55rem' }} domain={[0, 110]}
                                                         tickFormatter={(v: number) => `${v} %`} />
                                                     <Tooltip
@@ -797,6 +807,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                             const labels: Record<string,string> = { act: '🏃 Aktivität', gait: '🚶 Ganggeschw.', night: '😴 Nacht', rooms: '🏠 Räume' };
                                                             return [v != null ? `${v} %` : '–', labels[name] || name];
                                                         }}
+                                                        labelFormatter={(label: any) => label ? `${label}` : ''}
                                                         contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: '1px solid #444', fontSize: '0.7rem' }}
                                                     />
                                                     <ReferenceLine y={100} stroke="#dc3545" strokeDasharray="4 3"
