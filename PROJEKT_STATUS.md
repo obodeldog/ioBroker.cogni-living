@@ -1,5 +1,37 @@
 # PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 12.03.2026 | **Version:** 0.31.3
+**Letzte Aktualisierung:** 12.03.2026 | **Version:** 0.31.4
+
+---
+
+## 🗓️ Sitzung 12.03.2026 — Version 0.31.4
+
+### ✅ Abgeschlossen
+
+**Morning Briefing Root-Cause gefunden und behoben (seit Wochen offen!):**
+- `subscribeStates('analysis.triggerBriefing')` fehlte komplett in `main.js`
+- ioBroker ruft `onStateChange` nur für subscribed States auf — da nie subscribed, wurde der Handler nie aufgerufen
+- Gleiches Problem für `analysis.triggerWeeklyBriefing`
+- Fix: beide subscribeStates in `src/main.js` ergänzt (Zeile 142-143)
+
+**Obfuskierung reaktiviert:**
+- `src/` war veraltet — Sync von aktuellen `lib/` und root `main.js` → `src/`
+- `npm run build:backend:prod` ausgeführt → alle `.js`-Dateien in `main.js` + `lib/` unleserlich
+- Workflow ab jetzt: Quellcode in `src/` bearbeiten, dann `npm run build:backend:prod` vor Commit
+
+### 🔧 Offene Baustellen
+
+| Problem | Priorität | Beschreibung |
+|---|---|---|
+| `freshAirLong` in `loadWeekData` | 🟡 MITTEL | Wochenansicht berechnet Stoßlüftung noch nicht |
+| Python Bridge Timeout | 🟡 MITTEL | 10s Timeout vs. 30s Frontend → Drift kann abbrechen |
+| Aktivitäts-Balken Tagesvergleich | 🟡 MITTEL | Balken nur bis aktuelle Uhrzeit vergleichen |
+
+### 🎯 Nächster logischer Schritt
+
+1. Adapter v0.31.4 von GitHub laden, neu starten
+2. Warten bis 08:00 Uhr morgen → Morning Briefing sollte jetzt kommen
+3. Im ioBroker-Log bei Adapter-Start nach `Briefing geplant für 8:00` suchen
+4. Danach: `freshAirLong` in `loadWeekData` + Python Bridge Timeout
 
 ---
 
@@ -103,6 +135,7 @@
 | Frischluft-Zählung (Öffnungen heute) | ✅ | v0.31.2 |
 | Stoßlüftung ≥5 Min Zähler | ✅ | v0.31.1 |
 | Admin UI baut korrekt nach `admin/` | ✅ | v0.31.3 |
+| Obfuskierung (main.js + lib/) | ✅ | v0.31.4 |
 | Drift-Monitor mit Datumsachse | ✅ | v0.31.0 |
 | KI-Analyse Auto-Trigger (08:05 + 20:00) | ✅ | v0.31.0 |
 | Tages/Nacht Anomalie-Score | ✅ | v0.30.x |
@@ -112,7 +145,7 @@
 | Bad-Nutzung Kachel | ✅ | v0.28.0 |
 | Feature-Module-Status Tab | ✅ | v0.30.74 |
 | Garmin-Style Drift-Monitor | ✅ | v0.30.74 |
-| Pushover Briefing (08:00 + 20:00) | ⚠️ | Weiterhin problematisch |
+| Pushover Briefing (08:00 + 20:00) | ✅ | v0.31.4 — subscribeStates fehlte (Root-Cause gefunden) |
 
 ---
 
@@ -120,7 +153,8 @@
 
 | Version | Datum | Hauptänderung |
 |---|---|---|
-| **0.31.3** | 12.03.2026 | Vite outDir → `admin/` (falsches Build gefixt); Score-Normalisierung; 62 temp-Dateien entfernt |
+| **0.31.4** | 12.03.2026 | **FIX**: Morning Briefing subscribeStates fehlte → Briefing nie gefeuert; Obfuskierung reaktiviert |
+| 0.31.3 | 12.03.2026 | Vite outDir → `admin/` (falsches Build gefixt); Score-Normalisierung; 62 temp-Dateien entfernt |
 | 0.31.2 | 12.03.2026 | processEvents TypeError (null name) → Fresh Air 0x; lib/main.js SyntaxError |
 | 0.31.1 | 12.03.2026 | Fresh Air type-basiert; Stoßlüftung ≥5 Min; freshAirLongCount |
 | 0.31.0 | 11.03.2026 | Drift-Monitor Datum-Achse; Auto-KI-Analyse; Flur-Räume entfernt |
