@@ -1,5 +1,52 @@
-﻿# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 13.03.2026 | **Version:** 0.33.0 (Phase 3: Proaktives Screening)
+# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
+**Letzte Aktualisierung:** 13.03.2026 | **Version:** 0.33.1
+
+---
+
+## Sitzung 13.03.2026 — Bugfix v0.33.1: ScreeningPanel ReferenceError
+
+### Problem
+Beim Klick auf "Proaktives Screening" im Medizinisch-Tab: weißer Bildschirm mit
+`ReferenceError: ScreeningPanel is not defined`.
+
+### Ursache
+Die `ScreeningPanel`-Funktion wurde in einem früheren PowerShell-Einfüge-Block nie
+korrekt in `MedicalTab.tsx` geschrieben. Der Block landete still im Nirvana.
+Nur die Verwendungsstellen (JSX-Aufruf + State-Hooks) waren vorhanden, nicht die
+Funktionsdefinition selbst.
+
+### Fix
+- `ScreeningPanel`-Komponente vollständig neu in `MedicalTab.tsx` eingefügt (via Node.js-Skript, sicher vor PowerShell-Escaping)
+- Enthält: Typ-Interfaces (`ScreeningResult`, `ScreeningHint`, `ScreeningSignalDetail`), Helper-Funktionen (`confidenceColor`, `confidenceLabel`, `SCREENING_SIGNAL_LABELS`), vollständige Render-Logik mit Disclaimer, Hint-Cards, Metrik-Übersicht
+- Version auf `0.33.1` gebumpt
+- Neugebaut: `index-Ch623hFD.js` → Upload + Restart → Push `01f812f`
+
+### Versionierungs-Regel (NEU — gilt ab sofort)
+**Jede einzelne Änderung, die in GitHub hochgeladen wird, bekommt eine eigene Versionsnummer.**
+Auch kleinste Bugfixes → Patch-Version (z.B. 0.33.0 → 0.33.1 → 0.33.2).
+So ist GitHub immer eindeutig und man sieht sofort wenn ein neuer Upload vorhanden ist.
+
+```
+Patch:  0.33.0 → 0.33.1  (Bugfix / kleines Fix)
+Minor:  0.33.x → 0.34.0  (neue Feature / Phase)
+Major:  0.x.y  → 1.0.0   (grundlegendes Redesign)
+```
+
+### Deploy-Workflow (vollständig, immer ausführen)
+```
+1. npm run build                       # Vite baut nach ../admin/
+2. node iobroker.js upload cogni-living  # Admin-Dateien zu ioBroker
+3. node iobroker.js restart cogni-living # Adapter neu starten
+4. Version in package.json + io-package.json bumpen
+5. git add -A && git commit -m "..."
+6. git push
+7. PROJEKT_STATUS.md updaten (APPEND-ONLY, neuer Block oben)
+```
+Strg+Shift+R (Hard Refresh) im Browser nach jedem Deploy!
+
+---
+
+## Sitzung 13.03.2026 — KRITISCHER BUGFIX: Build-Script kaputt seit v0.31.3
 
 ---
 
@@ -627,6 +674,9 @@ Neuer Python-Befehl: `ANALYZE_DISEASE_SCORES` in service.py dispatch-table.
 
 | Version | Datum | Hauptänderung |
 |---|---|---|
+| **0.33.1** | 13.03.2026 | **FIX**: ScreeningPanel-Komponente fehlte -> ReferenceError; Versionierungsregel eingefuehrt |
+| 0.33.0 | 13.03.2026 | Phase 3: Proaktives Screening (DISEASE_SIGNATURES, compute_screening_hints, ScreeningPanel) + Icon-Import Fix |
+| 0.32.x | 13.03.2026 | Kritischer Build-Fix (rimraf+xcopy entfernt); MedicalTab + Phase 2 Disease Scores erstmals live deployed |
 | **0.31.4** | 12.03.2026 | **FIX**: Morning Briefing subscribeStates fehlte → Briefing nie gefeuert; Obfuskierung reaktiviert |
 | 0.31.3 | 12.03.2026 | Vite outDir → `admin/` (falsches Build gefixt); Score-Normalisierung; 62 temp-Dateien entfernt |
 | 0.31.2 | 12.03.2026 | processEvents TypeError (null name) → Fresh Air 0x; lib/main.js SyntaxError |
