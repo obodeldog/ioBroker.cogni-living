@@ -379,6 +379,28 @@ class CogniLiving extends utils.Adapter {
                 await this.setStateAsync('analysis.activity.roomStats', { val: JSON.stringify(existingStats), ack: true });
             } catch(e) {}
 
+            // Nykturie: Badezimmer-Sensor-Ereignisse zwischen 22:00 und 06:00 (einzigartige Stunden)
+            const _bathroomDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor; }).map(function(d) { return d.id; }));
+            const _kitchenDevIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor; }).map(function(d) { return d.id; }));
+            const nocturiaCount = (function() {
+                var nightHours = new Set();
+                todayEvents.forEach(function(e) {
+                    if (!e.isBathroomSensor && !_bathroomDevIds.has(e.id)) return;
+                    var hr = new Date(e.timestamp || e.ts || 0).getHours();
+                    if (hr >= 22 || hr < 6) nightHours.add(hr);
+                });
+                return nightHours.size;
+            })();
+            const kitchenVisits = (function() {
+                var hours = new Set();
+                todayEvents.forEach(function(e) {
+                    if (!e.isKitchenSensor && !_kitchenDevIds.has(e.id)) return;
+                    var hr = new Date(e.timestamp || e.ts || 0).getHours();
+                    hours.add(hr);
+                });
+                return hours.size;
+            })();
+
             const snapshot = {
                 date: dateStr,
                 timestamp: Date.now(),
@@ -443,7 +465,9 @@ class CogniLiving extends utils.Adapter {
                         return Math.round(median * 10) / 10;
                     } catch(e) { return null; }
                 })(),
-                eventHistory: todayEvents
+                eventHistory: todayEvents,
+                nocturiaCount: nocturiaCount,
+                kitchenVisits: kitchenVisits
             };
 
             const dataDir = utils.getAbsoluteDefaultDataDir();
@@ -912,6 +936,8 @@ class CogniLiving extends utils.Adapter {
                         const _dsDataDir = utils.getAbsoluteDefaultDataDir();
                         const _dsHistDir = path.join(_dsDataDir, 'cogni-living', 'history');
                         const _histDigests = [];
+                        const _bathroomIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor; }).map(function(d) { return d.id; }));
+                        const _kitchenIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor; }).map(function(d) { return d.id; }));
                         for (let _di = 0; _di <= 59; _di++) {
                             const _dObj = new Date(); _dObj.setDate(_dObj.getDate() - _di);
                             const _dStr = _dObj.toISOString().slice(0, 10);
@@ -927,13 +953,32 @@ class CogniLiving extends utils.Adapter {
                                     const _rooms = Object.keys(_h.todayRoomMinutes || {}).filter(function(k) { return (_h.todayRoomMinutes[k]||0) > 0; }).length || 1;
                                     const _bathArr = Array.isArray(_h.eventHistory) ? _h.eventHistory.filter(function(e) { return e.isBathroomSensor; }).map(function(e) { return Math.floor((e.timestamp||e.ts||0) / 3600000); }) : [];
                                     const _bathSet = new Set(_bathArr);
+                                    // Fallback fuer nocturiaCount aus alten History-Dateien ohne Flag
+                                    var _nocturiaVal = _h.nocturiaCount;
+                                    if (_nocturiaVal === undefined && Array.isArray(_h.eventHistory)) {
+                                        var _nightBathHours = new Set(_h.eventHistory.filter(function(e) {
+                                            if (!e.isBathroomSensor && !_bathroomIds.has(e.id)) return false;
+                                            var hr = new Date(e.timestamp || e.ts || 0).getHours();
+                                            return hr >= 22 || hr < 6;
+                                        }).map(function(e) { return new Date(e.timestamp || e.ts || 0).getHours(); }));
+                                        _nocturiaVal = _nightBathHours.size;
+                                    }
+                                    var _kitchenVal = _h.kitchenVisits;
+                                    if (_kitchenVal === undefined && Array.isArray(_h.eventHistory)) {
+                                        var _kitchenHrs = new Set(_h.eventHistory.filter(function(e) {
+                                            return e.isKitchenSensor || _kitchenIds.has(e.id);
+                                        }).map(function(e) { return new Date(e.timestamp || e.ts || 0).getHours(); }));
+                                        _kitchenVal = _kitchenHrs.size;
+                                    }
                                     _histDigests.push({
                                         date: _dStr,
                                         activityPercent: _actSum,
                                         gaitSpeed: _h.gaitSpeed || 0,
                                         nightEvents: _nightEv,
                                         uniqueRooms: _rooms,
-                                        bathroomVisits: _bathSet.size
+                                        bathroomVisits: _bathSet.size,
+                                        nocturiaCount: _nocturiaVal || 0,
+                                        kitchenVisits: _kitchenVal || 0
                                     });
                                 } catch(e) {}
                             }

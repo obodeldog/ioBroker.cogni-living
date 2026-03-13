@@ -763,6 +763,8 @@ class HealthBrain:
             cal_night     = safe_mean([d.get('nightEvents', 0) for d in cal], 3.0)
             cal_rooms     = safe_mean([d.get('uniqueRooms', 0) for d in cal if d.get('uniqueRooms', 0) > 0], 4.0)
             cal_bathroom  = safe_mean([d.get('bathroomVisits', 0) for d in cal if d.get('bathroomVisits', 0) > 0], 3.0)
+            cal_nocturia  = safe_mean([d.get('nocturiaCount', 0) for d in cal], 0.5)
+            cal_kitchen   = safe_mean([d.get('kitchenVisits',  0) for d in cal if d.get('kitchenVisits', 0) > 0], 6.0)
 
             # Aktuelle Werte: letzte 7 Tage der Erkennungsphase
             last7 = recent[-7:] if len(recent) >= 7 else recent
@@ -771,6 +773,8 @@ class HealthBrain:
             rec_night     = safe_mean([d.get('nightEvents', 0) for d in last7], cal_night)
             rec_rooms     = safe_mean([d.get('uniqueRooms', 0) for d in last7 if d.get('uniqueRooms', 0) > 0], cal_rooms)
             rec_bathroom  = safe_mean([d.get('bathroomVisits', 0) for d in last7 if d.get('bathroomVisits', 0) > 0], cal_bathroom)
+            rec_nocturia  = safe_mean([d.get('nocturiaCount', 0) for d in last7], cal_nocturia)
+            rec_kitchen   = safe_mean([d.get('kitchenVisits',  0) for d in last7 if d.get('kitchenVisits', 0) > 0], cal_kitchen)
 
             # --- Normalisierungs-Hilfsfunktionen (0=normal, 100=maximale Verschlechterung) ---
 
@@ -803,12 +807,21 @@ class HealthBrain:
                 if score < 65:      return 'HIGH'
                 return 'CRITICAL'
 
+            def nocturia_score(baseline_n, recent_n):
+                """Nykturie: Zunahme naecht. Badezimmerbesuche gegenueber Baseline."""
+                if baseline_n <= 0:
+                    return min(100.0, recent_n * 20.0)
+                ratio = recent_n / baseline_n
+                return min(100.0, max(0.0, (ratio - 1.0) * 150.0))
+
             # --- Vorberechnete Einzel-Komponenten ---
-            act_decline   = decline_score(cal_activity, rec_activity)
-            gait_slow     = increase_score(cal_gait, rec_gait) if cal_gait > 0 and rec_gait > 0 else 0.0
-            night_excess  = night_excess_score(cal_night, rec_night)
-            rooms_decline = decline_score(cal_rooms, rec_rooms)
-            hygiene_decl  = decline_score(cal_bathroom, rec_bathroom)
+            act_decline    = decline_score(cal_activity, rec_activity)
+            gait_slow      = increase_score(cal_gait, rec_gait) if cal_gait > 0 and rec_gait > 0 else 0.0
+            night_excess   = night_excess_score(cal_night, rec_night)
+            rooms_decline  = decline_score(cal_rooms, rec_rooms)
+            hygiene_decl   = decline_score(cal_bathroom, rec_bathroom)
+            nocturia_comp  = nocturia_score(cal_nocturia, rec_nocturia)
+            kitchen_decl   = decline_score(cal_kitchen, rec_kitchen)
 
             results = {}
 
@@ -908,6 +921,97 @@ class HealthBrain:
                         'activityRecent':     round(rec_activity, 1),
                         'bathroomBaseline':   round(cal_bathroom, 1),
                         'bathroomRecent':     round(rec_bathroom, 1),
+                    },
+                    'calibrationDays': cal_n,
+                    'dataPoints': n,
+                }
+
+            # ---- DIABETES TYP 2 ----
+            if 'diabetes2' in enabled_profiles:
+                # Klinisch: Nykturie + unregelm. Essen + Aktivitaet + Hygiene
+                # Ref: van Dijk et al., Diabetologia 2006
+                has_nocturia = cal_nocturia > 0 or rec_nocturia > 0
+                has_kitchen  = cal_kitchen  > 0 or rec_kitchen  > 0
+                diab2_score  = round(
+                    0.45 * nocturia_comp +
+                    0.25 * kitchen_decl  +
+                    0.20 * act_decline   +
+                    0.10 * hygiene_decl, 1
+                )
+                results['diabetes2'] = {
+                    'score':  diab2_score if (has_nocturia or has_kitchen) else None,
+                    'level':  risk_level(diab2_score) if (has_nocturia or has_kitchen) else 'SENSOR_MISSING',
+                    'factors': {
+                        'nocturiaIncrease': round(nocturia_comp, 1),
+                        'kitchenDecline':   round(kitchen_decl, 1),
+                        'activityDecline':  round(act_decline, 1),
+                        'hygieneDecline':   round(hygiene_decl, 1),
+                    },
+                    'values': {
+                        'nocturiaBaseline': round(cal_nocturia, 1),
+                        'nocturiaRecent':   round(rec_nocturia, 1),
+                        'kitchenBaseline':  round(cal_kitchen, 1),
+                        'kitchenRecent':    round(rec_kitchen, 1),
+                    },
+                    'sensorNote': None if (has_nocturia or has_kitchen) else 'Badezimmer-Sensor (isBathroomSensor) und Kuechen-Sensor (isKitchenSensor) benoetigt',
+                    'calibrationDays': cal_n,
+                    'dataPoints': n,
+                }
+
+            # ---- DEPRESSION ----
+            if 'depression' in enabled_profiles:
+                # Klinisch: Antriebslosigkeit + Appetitlosigkeit + Rueckzug + Hygiene
+                # Ref: APA DSM-5; Panza et al. (2010)
+                dep_score = round(
+                    0.30 * act_decline   +
+                    0.25 * kitchen_decl  +
+                    0.25 * rooms_decline +
+                    0.20 * hygiene_decl, 1
+                )
+                results['depression'] = {
+                    'score':  dep_score,
+                    'level':  risk_level(dep_score),
+                    'factors': {
+                        'activityDecline':  round(act_decline, 1),
+                        'kitchenDecline':   round(kitchen_decl, 1),
+                        'roomMobility':     round(rooms_decline, 1),
+                        'hygieneDecline':   round(hygiene_decl, 1),
+                    },
+                    'values': {
+                        'activityBaseline': round(cal_activity, 1),
+                        'activityRecent':   round(rec_activity, 1),
+                        'kitchenBaseline':  round(cal_kitchen, 1),
+                        'kitchenRecent':    round(rec_kitchen, 1),
+                    },
+                    'sensorNote': None if cal_kitchen > 0 else 'Kuechen-Sensor empfohlen fuer Essrhythmus-Erkennung',
+                    'calibrationDays': cal_n,
+                    'dataPoints': n,
+                }
+
+            # ---- SOZIALE ISOLATION ----
+            if 'socialIsolation' in enabled_profiles:
+                # Klinisch: Rueckzug auf wenige Raeume + Aktivitaet + Kochen/Essen + Hygiene
+                # Ref: Cacioppo & Hawkley (2003); Cornwell & Waite (2009)
+                soc_score = round(
+                    0.35 * rooms_decline +
+                    0.30 * act_decline   +
+                    0.20 * kitchen_decl  +
+                    0.15 * hygiene_decl, 1
+                )
+                results['socialIsolation'] = {
+                    'score':  soc_score,
+                    'level':  risk_level(soc_score),
+                    'factors': {
+                        'roomMobility':     round(rooms_decline, 1),
+                        'activityDecline':  round(act_decline, 1),
+                        'kitchenDecline':   round(kitchen_decl, 1),
+                        'hygieneDecline':   round(hygiene_decl, 1),
+                    },
+                    'values': {
+                        'roomsBaseline':    round(cal_rooms, 1),
+                        'roomsRecent':      round(rec_rooms, 1),
+                        'activityBaseline': round(cal_activity, 1),
+                        'activityRecent':   round(rec_activity, 1),
                     },
                     'calibrationDays': cal_n,
                     'dataPoints': n,
