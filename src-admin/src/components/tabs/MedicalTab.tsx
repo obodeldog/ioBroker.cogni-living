@@ -21,6 +21,9 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import WarningIcon from '@mui/icons-material/Warning';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import BiotechIcon from '@mui/icons-material/Biotech';
+import TroubleshootIcon from '@mui/icons-material/Troubleshoot';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 
 import {
     DISEASE_PROFILES,
@@ -509,6 +512,212 @@ function DiseaseDashboard({ profile, validation, isDark, diseaseScore }: {
             </Paper>
 
             <SensorValidationDialog open={dialogOpen} onClose={() => setDialogOpen(false)} profile={profile} validation={validation} isDark={isDark} />
+        </Box>
+    );
+}
+
+
+// --- Screening Types ---------------------------------------------------------
+interface ScreeningSignalDetail { value: number; threshold: number; active: boolean; }
+interface ScreeningHint {
+    disease: string;
+    label: string;
+    confidence: number;
+    matchedSignals: string[];
+    onset_speed: string;
+    signalDetails: Record<string, ScreeningSignalDetail>;
+}
+interface ScreeningResult {
+    hints: ScreeningHint[];
+    metrics: Record<string, number>;
+    dataPoints: number;
+    screeningDate?: string;
+    error?: string;
+}
+
+const SCREENING_SIGNAL_LABELS: Record<string, string> = {
+    activityDecline:     'Aktivitaetsrueckgang',
+    gaitSlowdown:        'Gangverlangsamung',
+    nightExcess:         'Naecht. Unruhe',
+    roomMobilityDecline: 'Raum-Mobilitaet',
+    hygieneDecline:      'Hygiene-Rueckgang',
+    ventilationDecline:  'Lueftung ruecklaeufig',
+    ventilationIncrease: 'Lueftung erhoet',
+    activityDrift:       'Langzeit-Drift',
+};
+
+function confidenceColor(c: number): string {
+    if (c >= 0.7) return '#f44336';
+    if (c >= 0.5) return '#ff9800';
+    if (c >= 0.3) return '#ffc107';
+    return '#4caf50';
+}
+function confidenceLabel(c: number): string {
+    if (c >= 0.7) return 'Deutlich';
+    if (c >= 0.5) return 'Auffaellig';
+    if (c >= 0.3) return 'Leicht';
+    return 'Gering';
+}
+
+// --- Screening Panel ---------------------------------------------------------
+function ScreeningPanel({ result, isDark, enabledProfiles }: {
+    result: ScreeningResult | null;
+    isDark: boolean;
+    enabledProfiles: string[];
+}) {
+    if (!result) {
+        return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', minHeight: 300 }}>
+                <BiotechIcon sx={{ fontSize: 56, color: '#9e9e9e', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" gutterBottom>Noch keine Screening-Daten</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400, textAlign: 'center' }}>
+                    Das Screening wird automatisch nach der naechsten Gesundheitsanalyse berechnet (taeglich um 08:05 und 20:00 Uhr).
+                </Typography>
+            </Box>
+        );
+    }
+
+    if (result.error) {
+        return (
+            <Alert severity="warning" sx={{ m: 2 }}>
+                <AlertTitle>Screening nicht verfuegbar</AlertTitle>
+                {result.error}
+            </Alert>
+        );
+    }
+
+    const hints = result.hints || [];
+    const dateStr = result.screeningDate
+        ? new Date(result.screeningDate).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : '';
+
+    return (
+        <Box>
+            <Box sx={{ mb: 3, display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: '#7b1fa220', border: '2px solid #7b1fa2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <TroubleshootIcon sx={{ color: '#7b1fa2' }} />
+                </Box>
+                <Box sx={{ flexGrow: 1 }}>
+                    <Typography variant="h5" fontWeight="bold">Proaktives Screening</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        AURA analysiert automatisch Bewegungsmuster und weist auf Auffaelligkeiten hin.
+                        {dateStr && <> &mdash; Letztes Screening: <strong>{dateStr}</strong></>}
+                    </Typography>
+                </Box>
+                <Chip size="small" label={result.dataPoints + ' Tage Basis'} variant="outlined" sx={{ flexShrink: 0 }} />
+            </Box>
+
+            <Alert severity="info" sx={{ mb: 3 }} icon={<InfoOutlinedIcon />}>
+                <AlertTitle>Kein Diagnose-System</AlertTitle>
+                AURA stellt <strong>keine medizinischen Diagnosen</strong>. Die folgenden Hinweise zeigen
+                Verhaltensauffaelligkeiten, die bei bestimmten Erkrankungen typisch auftreten koennen.
+                Sie ersetzen <strong>keinen Arztbesuch</strong>. Bei auffaelligen Ergebnissen empfehlen
+                wir das Gespraech mit einem Arzt oder einer Aerztin.
+            </Alert>
+
+            {hints.length === 0 ? (
+                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', bgcolor: isDark ? '#1a2a1a' : '#f1f8f1', borderColor: '#4caf5040' }}>
+                    <CheckCircleIcon sx={{ fontSize: 48, color: '#4caf50', mb: 1 }} />
+                    <Typography variant="h6" sx={{ color: '#4caf50', mb: 1 }}>Keine Auffaelligkeiten erkannt</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Alle gemessenen Verhaltensmuster liegen im persoenlichen Normbereich. Basis: {result.dataPoints} Tage.
+                    </Typography>
+                </Paper>
+            ) : (
+                <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                        <NotificationsActiveIcon sx={{ color: '#ff9800' }} />
+                        <Typography variant="subtitle1" fontWeight="bold">
+                            {hints.length} Auffaelligkeit{hints.length !== 1 ? 'en' : ''} erkannt
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">(Sortiert nach Staerke)</Typography>
+                    </Box>
+
+                    {hints.map((hint, idx) => {
+                        const conf = hint.confidence;
+                        const col = confidenceColor(conf);
+                        const isEnabled = enabledProfiles.includes(hint.disease);
+                        return (
+                            <Paper key={hint.disease} variant="outlined" sx={{
+                                mb: 2, p: 2.5,
+                                bgcolor: isDark ? col + '08' : col + '05',
+                                borderColor: col + '50',
+                                borderLeft: '4px solid ' + col,
+                            }}>
+                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
+                                    <Typography variant="subtitle1" fontWeight="bold" sx={{ flexGrow: 1 }}>
+                                        {idx + 1}. {hint.label}
+                                    </Typography>
+                                    <Chip size="small" label={confidenceLabel(conf) + ' (' + Math.round(conf * 100) + '%)'}
+                                        sx={{ bgcolor: col, color: '#fff', fontWeight: 'bold' }} />
+                                    {isEnabled
+                                        ? <Chip size="small" label="Ueberwachung aktiv" icon={<CheckCircleIcon />}
+                                            sx={{ bgcolor: '#4caf5020', color: '#4caf50', border: '1px solid #4caf5040', fontSize: '0.7rem' }} />
+                                        : <Chip size="small" label="Nicht aktiviert" icon={<InfoOutlinedIcon />}
+                                            sx={{ bgcolor: '#9e9e9e20', color: '#9e9e9e', border: '1px solid #9e9e9e40', fontSize: '0.7rem' }} />
+                                    }
+                                </Box>
+
+                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1.5 }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', mr: 0.5 }}>Aktive Signale:</Typography>
+                                    {hint.matchedSignals.map(sig => (
+                                        <Chip key={sig} size="small"
+                                            label={(SCREENING_SIGNAL_LABELS[sig] || sig) + ': ' + (hint.signalDetails[sig]?.value?.toFixed(0) || '?') + '%'}
+                                            sx={{ bgcolor: col + '15', color: col, border: '1px solid ' + col + '40', fontSize: '0.65rem', height: 20 }}
+                                        />
+                                    ))}
+                                </Box>
+
+                                <Box sx={{ p: 1.5, bgcolor: isDark ? '#ffffff08' : '#00000008', borderRadius: 1 }}>
+                                    <Typography variant="caption" sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+                                        <InfoOutlinedIcon fontSize="inherit" sx={{ mt: 0.2, flexShrink: 0, color: '#9e9e9e' }} />
+                                        {isEnabled
+                                            ? 'Die Ueberwachung fuer "' + hint.label + '" ist aktiv. Der Risiko-Score wird taeglich aktualisiert.'
+                                            : 'Auffaelligkeiten erkannt, die bei "' + hint.label + '" typisch auftreten koennen. Bitte besprechen Sie diese Beobachtungen mit Ihrem Arzt. Sie koennen dieses Profil links aktivieren fuer detailliertere Auswertungen.'
+                                        }
+                                    </Typography>
+                                </Box>
+                            </Paper>
+                        );
+                    })}
+                </Box>
+            )}
+
+            {result.metrics && Object.keys(result.metrics).filter(k => k !== 'raw').length > 0 && (
+                <Paper variant="outlined" sx={{ p: 2, mt: 2, bgcolor: isDark ? '#1a1a1a' : '#fafafa' }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <MonitorHeartIcon fontSize="small" />
+                        Gemessene Metrik-Abweichungen (vs. persoenliche Baseline)
+                    </Typography>
+                    <Grid container spacing={1}>
+                        {Object.entries(result.metrics)
+                            .filter(([k]) => k !== 'raw')
+                            .sort(([, a], [, b]) => (b as number) - (a as number))
+                            .map(([key, val]) => {
+                                const numVal = val as number;
+                                const barColor = numVal >= 30 ? '#f44336' : numVal >= 15 ? '#ff9800' : '#4caf50';
+                                return (
+                                    <Grid item xs={6} sm={4} key={key}>
+                                        <Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.3 }}>
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                                                    {SCREENING_SIGNAL_LABELS[key] || key}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: barColor, fontWeight: 'bold', fontSize: '0.65rem' }}>
+                                                    {numVal.toFixed(0)}%
+                                                </Typography>
+                                            </Box>
+                                            <LinearProgress variant="determinate" value={Math.min(numVal, 100)}
+                                                sx={{ height: 4, borderRadius: 2, bgcolor: isDark ? '#2a2a2a' : '#e0e0e0',
+                                                    '& .MuiLinearProgress-bar': { bgcolor: barColor, borderRadius: 2 } }} />
+                                        </Box>
+                                    </Grid>
+                                );
+                            })
+                        }
+                    </Grid>
+                </Paper>
+            )}
         </Box>
     );
 }
