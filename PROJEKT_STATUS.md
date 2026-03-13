@@ -3,6 +3,39 @@
 
 ---
 
+## Sitzung 13.03.2026 - KRITISCHER BUGFIX: Build-Script kaputt seit v0.31.3
+
+### Root Cause (warum MedicalTab NIE wirklich deployed war)
+
+Das build:react Script in package.json hatte einen fatalen Fehler:
+```
+# ALT (kaputt):
+cd src-admin && npm install && npm run build
+  && cd .. && rimraf admin && xcopy src-admin\build admin
+#                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# Vite schreibt nach ../admin (outDir: ../admin)
+# rimraf loescht den frisch gebauten admin/ sofort wieder!
+# xcopy kopiert danach den ALTEN src-admin\build (kein MedicalTab) zurueck
+
+# NEU (gefixt):
+cd src-admin && npm install && npm run build
+# Vite schreibt mit emptyOutDir:true selbst nach ../admin - fertig.
+```
+Folge: Phase 1 (MedicalTab) und Phase 2 (Scores) waren NIE wirklich served.
+ioBroker lief mit dem Build von vor Phase 1 (v0.31.3 Vorlage).
+
+### Was im Fix-Commit (13.03.2026 16:xx) enthalten ist
+- build:react Script in package.json gefixt (rimraf+xcopy entfernt)
+- Neugebaut: index-DNZbWo9k.js (enthaelt MedicalTab + Screening)
+- Versionen korrekt auf 0.33.0 gebumpt (doppeltes Leerzeichen im JSON beachten!)
+- git push origin main
+
+### Verifikation
+index-DNZbWo9k.js enthaelt: Medizinisch=True, Krankheitsbild=True, Screening=True
+iobroker upload zeigt: version 0.33.0
+
+---
+
 ## Sitzung 13.03.2026 - Phase 3: Proaktives Screening / Reverse-Diagnose (v0.33.0)
 
 ### Abgeschlossen
