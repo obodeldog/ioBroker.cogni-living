@@ -918,6 +918,324 @@ class HealthBrain:
         except Exception as e:
             return {'error': str(e)}
 
+    # ======================================================================
+    # PROAKTIVES SCREENING / REVERSE-DIAGNOSE (Phase 3 — v0.33.0)
+    # ======================================================================
+
+    # Signatur-Datenbank: Welche Metriken-Kombination deutet auf welche Krankheit?
+    # Jedes Signal hat:
+    #   weight      Gewichtung im Gesamt-Confidence-Score
+    #   threshold   Ab welchem Metrik-Wert (0-100) gilt das Signal als "aktiv"
+    # min_signals_for_hint: Mindestanzahl aktiver Signale, damit ein Hinweis generiert wird
+    DISEASE_SIGNATURES = {
+        'fallRisk': {
+            'label': 'Sturzrisiko',
+            'onset_speed': 'gradual',
+            'signals': {
+                'gaitSlowdown':        {'weight': 0.35, 'threshold': 18},
+                'nightExcess':         {'weight': 0.25, 'threshold': 30},
+                'roomMobilityDecline': {'weight': 0.25, 'threshold': 20},
+                'activityDecline':     {'weight': 0.15, 'threshold': 15},
+            },
+            'min_signals_for_hint': 2,
+        },
+        'dementia': {
+            'label': 'Demenz / Alzheimer',
+            'onset_speed': 'gradual',
+            'signals': {
+                'activityDrift':       {'weight': 0.30, 'threshold': 25},
+                'roomMobilityDecline': {'weight': 0.25, 'threshold': 20},
+                'gaitSlowdown':        {'weight': 0.20, 'threshold': 15},
+                'nightExcess':         {'weight': 0.15, 'threshold': 40},
+                'activityDecline':     {'weight': 0.10, 'threshold': 15},
+            },
+            'min_signals_for_hint': 3,
+        },
+        'frailty': {
+            'label': 'Gebrechlichkeit (Frailty)',
+            'onset_speed': 'gradual',
+            'signals': {
+                'activityDecline':     {'weight': 0.30, 'threshold': 20},
+                'gaitSlowdown':        {'weight': 0.25, 'threshold': 15},
+                'roomMobilityDecline': {'weight': 0.25, 'threshold': 20},
+                'hygieneDecline':      {'weight': 0.20, 'threshold': 25},
+            },
+            'min_signals_for_hint': 2,
+        },
+        'depression': {
+            'label': 'Depression / Depressive Episode',
+            'onset_speed': 'gradual',
+            'signals': {
+                'activityDecline':     {'weight': 0.30, 'threshold': 20},
+                'roomMobilityDecline': {'weight': 0.20, 'threshold': 25},
+                'hygieneDecline':      {'weight': 0.20, 'threshold': 25},
+                'ventilationDecline':  {'weight': 0.15, 'threshold': 30},
+                'nightExcess':         {'weight': 0.15, 'threshold': 35},
+            },
+            'min_signals_for_hint': 3,
+        },
+        'socialIsolation': {
+            'label': 'Soziale Isolation',
+            'onset_speed': 'gradual',
+            'signals': {
+                'activityDecline':     {'weight': 0.35, 'threshold': 15},
+                'roomMobilityDecline': {'weight': 0.35, 'threshold': 30},
+                'hygieneDecline':      {'weight': 0.20, 'threshold': 20},
+                'ventilationDecline':  {'weight': 0.10, 'threshold': 35},
+            },
+            'min_signals_for_hint': 2,
+        },
+        'cardiovascular': {
+            'label': 'Herzinsuffizienz',
+            'onset_speed': 'gradual',
+            'signals': {
+                'activityDecline':     {'weight': 0.35, 'threshold': 25},
+                'gaitSlowdown':        {'weight': 0.30, 'threshold': 20},
+                'roomMobilityDecline': {'weight': 0.20, 'threshold': 20},
+                'nightExcess':         {'weight': 0.15, 'threshold': 40},
+            },
+            'min_signals_for_hint': 2,
+        },
+        'parkinson': {
+            'label': 'Parkinson-Erkrankung',
+            'onset_speed': 'gradual',
+            'signals': {
+                'gaitSlowdown':        {'weight': 0.45, 'threshold': 20},
+                'activityDecline':     {'weight': 0.25, 'threshold': 15},
+                'nightExcess':         {'weight': 0.20, 'threshold': 45},
+                'roomMobilityDecline': {'weight': 0.10, 'threshold': 20},
+            },
+            'min_signals_for_hint': 2,
+        },
+        'copd': {
+            'label': 'COPD / Chronische Atemwegserkrankung',
+            'onset_speed': 'gradual',
+            'signals': {
+                'activityDecline':     {'weight': 0.35, 'threshold': 20},
+                'gaitSlowdown':        {'weight': 0.25, 'threshold': 20},
+                'ventilationDecline':  {'weight': 0.25, 'threshold': -30}, # COPD: mehr Lueften (negativ = Anstieg)
+                'roomMobilityDecline': {'weight': 0.15, 'threshold': 20},
+            },
+            'min_signals_for_hint': 2,
+        },
+        'sleepDisorder': {
+            'label': 'Schlafstörungen (Insomnie/Hypersomnie)',
+            'onset_speed': 'gradual',
+            'signals': {
+                'nightExcess':         {'weight': 0.50, 'threshold': 40},
+                'activityDecline':     {'weight': 0.25, 'threshold': 20},
+                'roomMobilityDecline': {'weight': 0.25, 'threshold': 15},
+            },
+            'min_signals_for_hint': 2,
+        },
+        'longCovid': {
+            'label': 'Long-COVID / Post-COVID-Syndrom',
+            'onset_speed': 'gradual',
+            'signals': {
+                'activityDecline':     {'weight': 0.40, 'threshold': 20},
+                'gaitSlowdown':        {'weight': 0.30, 'threshold': 15},
+                'roomMobilityDecline': {'weight': 0.20, 'threshold': 20},
+                'activityDrift':       {'weight': 0.10, 'threshold': 20},
+            },
+            'min_signals_for_hint': 2,
+        },
+    }
+
+    def compute_screening_hints(self, daily_digests):
+        """
+        Proaktives Screening: Vergleicht aktuelle Metrik-Werte mit DISEASE_SIGNATURES
+        und generiert Hinweise auf moegliche gesundheitliche Veraenderungen.
+
+        WICHTIG: Dieses System stellt KEINE Diagnosen. Es erkennt Auffaelligkeiten,
+        die bei bestimmten Erkrankungen typischerweise auftreten, und empfiehlt
+        einen Arztbesuch zur weiteren Abklaerung.
+
+        Args:
+            daily_digests: Liste von Daily Digest Objekten (mind. 5, empfohlen 21+)
+
+        Returns:
+            {
+                'hints': [
+                    {
+                        'disease': 'fallRisk',
+                        'label': 'Sturzrisiko',
+                        'confidence': 0.72,        # 0-1, gewichteter Anteil aktiver Signale
+                        'matchedSignals': [...],    # Aktive Signalnamen
+                        'onset_speed': 'gradual',
+                        'signalDetails': {...},     # Rohwerte der aktiven Signale
+                    }, ...
+                ],
+                'metrics': { ... },                # Alle berechneten Rohmetriken
+                'dataPoints': 30,
+                'screeningDate': 'ISO-Datum'
+            }
+        """
+        try:
+            import datetime
+            if not daily_digests or len(daily_digests) < 5:
+                return {
+                    'hints': [],
+                    'metrics': {},
+                    'dataPoints': len(daily_digests or []),
+                    'error': f'Mindestens 5 Tage Daten benoetigt ({len(daily_digests or [])} vorhanden)'
+                }
+
+            sorted_digests = sorted(daily_digests, key=lambda x: x.get('date', ''))
+            n = len(sorted_digests)
+
+            # Kalibrierungsphase (erste 14 Tage oder Haelfte), Erkennungsphase (letzte 7 Tage)
+            cal_n = min(14, max(5, n // 2))
+            cal   = sorted_digests[:cal_n]
+            last7 = sorted_digests[-7:] if n >= 7 else sorted_digests
+
+            def safe_median(lst, default=0.0):
+                vals = [float(v) for v in lst if v is not None and float(v) > 0]
+                return float(np.median(vals)) if vals else default
+
+            def safe_mean(lst, default=0.0):
+                vals = [float(v) for v in lst if v is not None and float(v) > 0]
+                return float(np.mean(vals)) if vals else default
+
+            # Baselines
+            cal_activity = safe_median([d.get('activityPercent', 100) for d in cal], 100.0)
+            cal_gait     = safe_median([d.get('gaitSpeed', 0) for d in cal if d.get('gaitSpeed', 0) > 0.5], 0.0)
+            cal_night    = safe_mean([d.get('nightEvents', 0) for d in cal], 3.0)
+            cal_rooms    = safe_mean([d.get('uniqueRooms', 0) for d in cal if d.get('uniqueRooms', 0) > 0], 4.0)
+            cal_bathroom = safe_mean([d.get('bathroomVisits', 0) for d in cal if d.get('bathroomVisits', 0) > 0], 3.0)
+            cal_ventil   = safe_mean([d.get('windowOpenings', 0) for d in cal], 2.0)
+
+            # Aktuelle Werte (letzte 7 Tage)
+            rec_activity = safe_median([d.get('activityPercent', 100) for d in last7], cal_activity)
+            rec_gait     = safe_median([d.get('gaitSpeed', 0) for d in last7 if d.get('gaitSpeed', 0) > 0.5], cal_gait)
+            rec_night    = safe_mean([d.get('nightEvents', 0) for d in last7], cal_night)
+            rec_rooms    = safe_mean([d.get('uniqueRooms', 0) for d in last7 if d.get('uniqueRooms', 0) > 0], cal_rooms)
+            rec_bathroom = safe_mean([d.get('bathroomVisits', 0) for d in last7 if d.get('bathroomVisits', 0) > 0], cal_bathroom)
+            rec_ventil   = safe_mean([d.get('windowOpenings', 0) for d in last7], cal_ventil)
+
+            # Metrik-Scores (0-100, positiv = Verschlechterung)
+            def decline_pct(base, recent):
+                if base <= 0: return 0.0
+                return max(0.0, min(100.0, ((base - recent) / base) * 100.0))
+
+            def increase_pct(base, recent):
+                if base <= 0: return 0.0
+                return max(0.0, min(100.0, ((recent - base) / base) * 100.0))
+
+            act_decline   = decline_pct(cal_activity, rec_activity)
+            gait_slow     = increase_pct(cal_gait, rec_gait) if cal_gait > 0 and rec_gait > 0 else 0.0
+            night_excess  = increase_pct(cal_night, rec_night) if cal_night > 0 else min(100.0, rec_night * 5.0)
+            rooms_decline = decline_pct(cal_rooms, rec_rooms)
+            hygiene_decl  = decline_pct(cal_bathroom, rec_bathroom)
+            ventil_decl   = decline_pct(cal_ventil, rec_ventil)
+            ventil_incr   = increase_pct(cal_ventil, rec_ventil)
+
+            # Page-Hinkley Drift fuer Aktivitaet
+            drift_score = 0.0
+            try:
+                act_vals = [d.get('activityPercent', 100) for d in sorted_digests]
+                drift_r = self.detect_drift_page_hinkley([-v for v in act_vals])
+                if isinstance(drift_r, dict) and 'current_score' in drift_r:
+                    thr = max(drift_r.get('threshold', 30), 1)
+                    drift_score = min(100.0, (drift_r['current_score'] / thr) * 100.0)
+            except Exception:
+                pass
+
+            # Alle berechneten Rohmetriken
+            metrics = {
+                'activityDecline':     round(act_decline, 1),
+                'gaitSlowdown':        round(gait_slow, 1),
+                'nightExcess':         round(night_excess, 1),
+                'roomMobilityDecline': round(rooms_decline, 1),
+                'hygieneDecline':      round(hygiene_decl, 1),
+                'ventilationDecline':  round(ventil_decl, 1),
+                'ventilationIncrease': round(ventil_incr, 1),
+                'activityDrift':       round(drift_score, 1),
+                # Rohwerte fuer Transparenz
+                'raw': {
+                    'cal_activity': round(cal_activity, 1),
+                    'rec_activity': round(rec_activity, 1),
+                    'cal_gait':     round(cal_gait, 1),
+                    'rec_gait':     round(rec_gait, 1),
+                    'cal_night':    round(cal_night, 1),
+                    'rec_night':    round(rec_night, 1),
+                    'cal_rooms':    round(cal_rooms, 1),
+                    'rec_rooms':    round(rec_rooms, 1),
+                }
+            }
+
+            # Signalwerte-Map (Signalname → aktueller Metrik-Score)
+            signal_values = {
+                'activityDecline':     act_decline,
+                'gaitSlowdown':        gait_slow,
+                'nightExcess':         night_excess,
+                'roomMobilityDecline': rooms_decline,
+                'hygieneDecline':      hygiene_decl,
+                'ventilationDecline':  ventil_decl,
+                'ventilationIncrease': ventil_incr,
+                'activityDrift':       drift_score,
+            }
+
+            # Screening: Jede Signatur gegen aktuelle Metriken pruefen
+            hints = []
+            for disease_id, sig in self.DISEASE_SIGNATURES.items():
+                matched_signals = []
+                weighted_confidence = 0.0
+                total_weight = sum(s['weight'] for s in sig['signals'].values())
+                signal_details = {}
+
+                for signal_name, signal_cfg in sig['signals'].items():
+                    threshold = signal_cfg['threshold']
+                    weight    = signal_cfg['weight']
+                    value     = signal_values.get(signal_name, 0.0)
+
+                    # Sonderfall: negative Schwelle = Anstieg wird als Signal gewertet
+                    if threshold < 0:
+                        actual_threshold = abs(threshold)
+                        actual_value = signal_values.get('ventilationIncrease', 0.0)
+                        is_active = actual_value >= actual_threshold
+                        value = actual_value
+                    else:
+                        is_active = value >= threshold
+
+                    signal_details[signal_name] = {
+                        'value':     round(value, 1),
+                        'threshold': abs(threshold),
+                        'active':    is_active
+                    }
+
+                    if is_active:
+                        matched_signals.append(signal_name)
+                        contribution = (value / max(abs(threshold), 1)) * weight
+                        weighted_confidence += contribution
+
+                if len(matched_signals) < sig['min_signals_for_hint']:
+                    continue
+
+                # Normalisierter Confidence-Score: 1.0 = alle Signale auf 2x Schwellwert aktiv
+                confidence = min(1.0, weighted_confidence / total_weight)
+
+                hints.append({
+                    'disease':        disease_id,
+                    'label':          sig['label'],
+                    'confidence':     round(confidence, 3),
+                    'matchedSignals': matched_signals,
+                    'onset_speed':    sig['onset_speed'],
+                    'signalDetails':  signal_details,
+                })
+
+            # Sortiere nach Confidence (hoeher = relevanter)
+            hints.sort(key=lambda h: h['confidence'], reverse=True)
+
+            return {
+                'hints':       hints,
+                'metrics':     metrics,
+                'dataPoints':  n,
+                'screeningDate': datetime.datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            return {'hints': [], 'metrics': {}, 'dataPoints': 0, 'error': str(e)}
+
     def detect_drift_page_hinkley(self, values, delta_factor=0.02, lambda_threshold=None):
         """
         Page-Hinkley-Test mit adaptivem Schwellwert.

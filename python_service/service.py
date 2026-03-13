@@ -229,6 +229,14 @@ def process_message(msg):
             scores = health_brain.compute_disease_scores(digests, enabled_profiles)
             send_result("DISEASE_SCORES_RESULT", scores)
 
+        elif cmd == "ANALYZE_SCREENING":
+            # Phase 3: Proaktives Screening (Reverse-Diagnose mit Disclaimer)
+            digests = data.get("digests", [])
+            log(f"Screening Analysis: {len(digests)} digests")
+            result = health_brain.compute_screening_hints(digests)
+            log(f"Screening: {len(result.get('hints', []))} Hinweise generiert")
+            send_result("SCREENING_RESULT", result)
+
         elif cmd == "ANALYZE_DRIFT":
             # Multi-Metrik Drift: Aktivitaet (Abnahme), Ganggeschwindigkeit (Zunahme), Nacht-Unruhe (Zunahme)
             all_data = sorted(data.get("dailyData", []), key=lambda x: x.get('date', ''))

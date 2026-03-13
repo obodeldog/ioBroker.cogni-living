@@ -540,6 +540,7 @@ export default function MedicalTab({ socket, adapterName, instance, theme, theme
     const isDark = themeType === 'dark';
     const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
     const [diseaseScores, setDiseaseScores] = useState<Record<string, DiseaseScore>>({});
+    const [screeningResult, setScreeningResult] = useState<ScreeningResult | null>(null);
     const namespace = `${adapterName}.${instance}`;
 
     // Krankheits-Risiko-Scores aus ioBroker States laden (Promise-basiert wie HealthTab)
@@ -554,6 +555,19 @@ export default function MedicalTab({ socket, adapterName, instance, theme, theme
         };
         socket.subscribeState(stateId, handler);
         return () => { try { socket.unsubscribeState(stateId, handler); } catch(e) {} };
+    }, [namespace, socket]);
+
+    // Phase 3: Screening-Hints aus ioBroker State laden
+    useEffect(() => {
+        const screenId = `${namespace}.analysis.health.screening.hints`;
+        socket.getState(screenId).then((s: any) => {
+            if (s?.val) { try { setScreeningResult(JSON.parse(s.val)); } catch(e) {} }
+        }).catch(() => {});
+        const screenHandler = (_id: string, state: any) => {
+            if (state?.val) { try { setScreeningResult(JSON.parse(state.val)); } catch(e) {} }
+        };
+        socket.subscribeState(screenId, screenHandler);
+        return () => { try { socket.unsubscribeState(screenId, screenHandler); } catch(e) {} };
     }, [namespace, socket]);
 
     const devices: DeviceConfig[] = useMemo(() => native?.devices || [], [native]);
@@ -613,6 +627,35 @@ export default function MedicalTab({ socket, adapterName, instance, theme, theme
                     )}
                 </Box>
 
+                {/* Proaktives Screening Button */}
+                <Card
+                    onClick={() => setSelectedProfileId('screening')}
+                    sx={{
+                        mb: 2, cursor: 'pointer', transition: 'all 0.2s',
+                        border: selectedProfileId === 'screening' ? '2px solid #7b1fa2' : ` 1px solid ${isDark ? '#333' : '#ddd'} `,
+                        bgcolor: selectedProfileId === 'screening' ? (isDark ? '#7b1fa215' : '#7b1fa208') : (isDark ? '#1e1e1e' : '#fff'),
+                        '&:hover': { transform: 'translateX(2px)', borderColor: '#7b1fa2' }
+                    }}
+                    elevation={selectedProfileId === 'screening' ? 3 : 1}
+                >
+                    <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <TroubleshootIcon fontSize="small" sx={{ color: '#7b1fa2' }} />
+                            <Typography variant="body2" fontWeight={selectedProfileId === 'screening' ? 'bold' : 'normal'}
+                                sx={{ flexGrow: 1, color: selectedProfileId === 'screening' ? '#7b1fa2' : 'text.primary' }}>
+                                Proaktives Screening
+                            </Typography>
+                            {screeningResult && screeningResult.hints && screeningResult.hints.length > 0 && (
+                                <Badge badgeContent={screeningResult.hints.length} color="warning" />
+                            )}
+                        </Box>
+                        <Typography variant="caption" color="text.secondary" sx={{ pl: 3.5, display: 'block', mt: 0.3 }}>
+                            Automatische Muster-Erkennung
+                        </Typography>
+                    </CardContent>
+                </Card>
+                <Divider sx={{ mb: 2 }} />
+
                 {(['senior', 'adult', 'child', 'all'] as const).map(group => {
                     const profiles = groupedProfiles[group];
                     if (!profiles.length) return null;
@@ -643,8 +686,15 @@ export default function MedicalTab({ socket, adapterName, instance, theme, theme
 
             {/* -- MAIN PANEL ----------------------------------------- */}
             <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 3 }}>
-                {!selectedProfile && <WelcomeScreen isDark={isDark} />}
-                {selectedProfile && selectedValidation && (
+                {selectedProfileId === 'screening' && (
+                    <ScreeningPanel
+                        result={screeningResult}
+                        isDark={isDark}
+                        enabledProfiles={enabledProfiles.map(p => p.id)}
+                    />
+                )}
+                {selectedProfileId !== 'screening' && !selectedProfile && <WelcomeScreen isDark={isDark} />}
+                {selectedProfileId !== 'screening' && selectedProfile && selectedValidation && (
                     <DiseaseDashboard
                         profile={selectedProfile}
                         validation={selectedValidation}

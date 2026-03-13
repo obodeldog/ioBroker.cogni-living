@@ -1,4 +1,138 @@
 ﻿# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
+**Letzte Aktualisierung:** 13.03.2026 | **Version:** 0.33.0 (Phase 3: Proaktives Screening)
+
+---
+
+## Sitzung 13.03.2026 - Phase 3: Proaktives Screening / Reverse-Diagnose (v0.33.0)
+
+### Abgeschlossen
+
+**Python `compute_screening_hints()` + `DISEASE_SIGNATURES` in `health.py`:**
+- 10 Krankheits-Signaturen implementiert: fallRisk, dementia, frailty, depression, socialIsolation, cardiovascular, parkinson, copd, sleepDisorder, longCovid
+- Jede Signatur definiert: gewichtete Signale + Schwellwerte + min. aktive Signale für Hinweis
+- `compute_screening_hints()`: berechnet 8 Metrik-Scores (activityDecline, gaitSlowdown, nightExcess, roomMobilityDecline, hygieneDecline, ventilationDecline, activityDrift, ...)
+- Confidence-Score pro Krankheit: gewichteter Anteil aktiver Signale (0-1)
+- Sortierung nach Confidence (hoher Wert = relevanter Hinweis)
+- Inkl. Disclaimer-Logik: "Kein Diagnose-System"
+
+**Python `ANALYZE_SCREENING` Command in `service.py`:**
+- Neuer Dispatch-Handler: empfängt `digests`, gibt `SCREENING_RESULT` mit hints, metrics, dataPoints, screeningDate zurück
+
+**Node.js `src/main.js`:**
+- Neuer State: `analysis.health.screening.hints` (JSON)
+- `ANALYZE_SCREENING` wird automatisch nach `ANALYZE_DISEASE_SCORES` ausgeführt
+- Enabled Profiles jetzt **dynamisch** aus `this.config.healthProfiles` gelesen (statt hardcoded `['fallRisk', 'dementia', 'frailty']`)
+- Fallback: wenn keine Profile aktiviert → Basis-Profile werden trotzdem berechnet
+
+**Frontend `MedicalTab.tsx` - ScreeningPanel:**
+- Neue Komponente `ScreeningPanel` mit:
+  - Header (Datum, Datenpunkte)
+  - Großer Disclaimer (kein Diagnose-System)
+  - "Keine Auffälligkeiten" Success-Screen (wenn alles normal)
+  - Hint-Karten pro Krankheitsbild: Confidence-Badge (farbig), aktive Signal-Chips, Empfehlungstext
+  - Metrik-Übersicht (Balken aller 8 Metriken)
+- "Proaktives Screening" Button oben in der Sidebar (Badge zeigt Anzahl aktiver Hinweise)
+- State-Loading via `socket.getState + socket.subscribeState` für `screening.hints`
+- Unterscheidung: Krankheit bereits aktiviert vs. neu erkannte Auffälligkeit
+
+### Technische Details
+
+**Confidence-Farbsystem:**
+- >= 70%: Rot (Deutlich)
+- >= 50%: Orange (Auffällig)
+- >= 30%: Gelb (Leicht)
+- < 30%: Grün (Gering)
+
+**Signal-Schwellwerte (Beispiele):**
+- Sturzrisiko: gaitSlowdown >= 18%, nightExcess >= 30%, roomMobility >= 20% → min. 2 Signale
+- Demenz: activityDrift >= 25%, roomMobility >= 20%, gaitSlowdown >= 15% → min. 3 Signale
+- Depression: activityDecline >= 20%, roomMobility >= 25%, hygiene >= 25% → min. 3 Signale
+
+### Offene Baustellen
+- Phase 3 Erweiterung: Gemini-Integration — Screening-Hinweise als natürlichsprachlicher Wochenbericht
+- Phase 2 Erweiterung: Weitere Profile in Disease-Scores (Depression, Schlaf, Diabetes T2)
+- Phase 4: Aqara FP2 als neuer Sensortyp `presence_radar_zoned` im Recorder
+
+### Naechster logischer Schritt
+- Gemini-Integration: Screening-Ergebnisse werden als Wochenbericht formuliert (mit Disclaimer-Template)
+- Oder: Phase 2 erweitern — Depression + Schlafstörungen als weitere Score-Profile
+
+### Neue ioBroker-States (v0.33.0)
+| State | Typ | Beschreibung |
+|---|---|---|
+| `analysis.health.screening.hints` | JSON | Proaktive Screening-Hinweise (hints, metrics, dataPoints, screeningDate) |
+
+### Aufgeloeste Bugs / Verbesserungen
+- Enabled Profiles in DiseaseScore-Berechnung war hardcoded `['fallRisk', 'dementia', 'frailty']` — jetzt dynamisch aus Config
+
+---
+**Letzte Aktualisierung:** 13.03.2026 | **Version:** 0.33.0 (Phase 3: Proaktives Screening)
+
+---
+
+## Sitzung 13.03.2026 - Phase 3: Proaktives Screening / Reverse-Diagnose (v0.33.0)
+
+### Abgeschlossen
+
+**Python `compute_screening_hints()` + `DISEASE_SIGNATURES` in `health.py`:**
+- 10 Krankheits-Signaturen implementiert: fallRisk, dementia, frailty, depression, socialIsolation, cardiovascular, parkinson, copd, sleepDisorder, longCovid
+- Jede Signatur definiert: gewichtete Signale + Schwellwerte + min. aktive Signale für Hinweis
+- `compute_screening_hints()`: berechnet 8 Metrik-Scores (activityDecline, gaitSlowdown, nightExcess, roomMobilityDecline, hygieneDecline, ventilationDecline, activityDrift, ...)
+- Confidence-Score pro Krankheit: gewichteter Anteil aktiver Signale (0-1)
+- Sortierung nach Confidence (hoher Wert = relevanter Hinweis)
+- Inkl. Disclaimer-Logik: "Kein Diagnose-System"
+
+**Python `ANALYZE_SCREENING` Command in `service.py`:**
+- Neuer Dispatch-Handler: empfängt `digests`, gibt `SCREENING_RESULT` mit hints, metrics, dataPoints, screeningDate zurück
+
+**Node.js `src/main.js`:**
+- Neuer State: `analysis.health.screening.hints` (JSON)
+- `ANALYZE_SCREENING` wird automatisch nach `ANALYZE_DISEASE_SCORES` ausgeführt
+- Enabled Profiles jetzt **dynamisch** aus `this.config.healthProfiles` gelesen (statt hardcoded `['fallRisk', 'dementia', 'frailty']`)
+- Fallback: wenn keine Profile aktiviert → Basis-Profile werden trotzdem berechnet
+
+**Frontend `MedicalTab.tsx` - ScreeningPanel:**
+- Neue Komponente `ScreeningPanel` mit:
+  - Header (Datum, Datenpunkte)
+  - Großer Disclaimer (kein Diagnose-System)
+  - "Keine Auffälligkeiten" Success-Screen (wenn alles normal)
+  - Hint-Karten pro Krankheitsbild: Confidence-Badge (farbig), aktive Signal-Chips, Empfehlungstext
+  - Metrik-Übersicht (Balken aller 8 Metriken)
+- "Proaktives Screening" Button oben in der Sidebar (Badge zeigt Anzahl aktiver Hinweise)
+- State-Loading via `socket.getState + socket.subscribeState` für `screening.hints`
+- Unterscheidung: Krankheit bereits aktiviert vs. neu erkannte Auffälligkeit
+
+### Technische Details
+
+**Confidence-Farbsystem:**
+- >= 70%: Rot (Deutlich)
+- >= 50%: Orange (Auffällig)
+- >= 30%: Gelb (Leicht)
+- < 30%: Grün (Gering)
+
+**Signal-Schwellwerte (Beispiele):**
+- Sturzrisiko: gaitSlowdown >= 18%, nightExcess >= 30%, roomMobility >= 20% → min. 2 Signale
+- Demenz: activityDrift >= 25%, roomMobility >= 20%, gaitSlowdown >= 15% → min. 3 Signale
+- Depression: activityDecline >= 20%, roomMobility >= 25%, hygiene >= 25% → min. 3 Signale
+
+### Offene Baustellen
+- Phase 3 Erweiterung: Gemini-Integration — Screening-Hinweise als natürlichsprachlicher Wochenbericht
+- Phase 2 Erweiterung: Weitere Profile in Disease-Scores (Depression, Schlaf, Diabetes T2)
+- Phase 4: Aqara FP2 als neuer Sensortyp `presence_radar_zoned` im Recorder
+
+### Naechster logischer Schritt
+- Gemini-Integration: Screening-Ergebnisse werden als Wochenbericht formuliert (mit Disclaimer-Template)
+- Oder: Phase 2 erweitern — Depression + Schlafstörungen als weitere Score-Profile
+
+### Neue ioBroker-States (v0.33.0)
+| State | Typ | Beschreibung |
+|---|---|---|
+| `analysis.health.screening.hints` | JSON | Proaktive Screening-Hinweise (hints, metrics, dataPoints, screeningDate) |
+
+### Aufgeloeste Bugs / Verbesserungen
+- Enabled Profiles in DiseaseScore-Berechnung war hardcoded `['fallRisk', 'dementia', 'frailty']` — jetzt dynamisch aus Config
+
+---
 **Letzte Aktualisierung:** 12.03.2026 | **Version:** 0.32.0 (Phase 2: Krankheits-Risiko-Scores)
 
 ---
