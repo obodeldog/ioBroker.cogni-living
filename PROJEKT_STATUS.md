@@ -3,6 +3,56 @@
 
 ---
 
+## Sitzung 13.03.2026 — Phase 2 Vervollständigung: isKitchenSensor + Nykturie + Essrhythmus (v0.33.2)
+
+### Was umgesetzt wurde
+
+**SensorList.tsx — neues Flag `isKitchenSensor`:**
+- Import `KitchenIcon` (@mui/icons-material)
+- Neue Spalte in der Sensor-Tabelle (grünes Icon, Tooltip: "Kueche/Essbereich - Essrhythmus-Analyse")
+- Konsistent mit bestehenden Flags: `isHallway`, `isBathroomSensor`, `isNightSensor`, `isExit`
+
+**recorder.js — Flags in Events speichern:**
+- `isBathroomSensor` und `isKitchenSensor` werden ab jetzt in jedem eventObj gespeichert
+- Vorher: eventObj enthielt nur timestamp/id/name/type/location/value → Flags fehlten in History-Dateien!
+
+**main.js — saveDailyHistory: 2 neue Felder im Snapshot:**
+- `nocturiaCount`: Anzahl eindeutiger Nachtstunden (22-06 Uhr) mit Badezimmer-Sensor-Auslösung
+- `kitchenVisits`: Anzahl eindeutiger Stunden mit Küchen-Sensor-Aktivität
+- Beide per Device-ID-Lookup aus `this.config.devices` + Event-Flag als Fallback
+
+**main.js — Digest-Builder: neue Felder aus History-Dateien laden:**
+- `nocturiaCount` und `kitchenVisits` werden aus Snapshot gelesen
+- Fallback für alte Dateien ohne Flag: Device-ID-Lookup via `_bathroomIds`/`_kitchenIds`
+
+**health.py — 3 neue Disease Scores in `compute_disease_scores()`:**
+
+| Profil | Basiert auf | Min. Sensor | Referenz |
+|---|---|---|---|
+| `diabetes2` | Nykturie (45%) + Küche (25%) + Aktivität (20%) + Hygiene (10%) | isBathroomSensor | van Dijk et al., Diabetologia 2006 |
+| `depression` | Aktivität (30%) + Küche (25%) + Raum-Mobilität (25%) + Hygiene (20%) | isKitchenSensor empfohlen | APA DSM-5, Panza et al. 2010 |
+| `socialIsolation` | Raum-Mobilität (35%) + Aktivität (30%) + Küche (20%) + Hygiene (15%) | keine neuen Sensoren | Cacioppo & Hawkley 2003 |
+
+- `diabetes2`: Score ist `null` + Level `SENSOR_MISSING` wenn weder nocturia noch kitchen-Daten vorhanden
+- `depression` / `socialIsolation`: Score wird immer berechnet; `sensorNote` wenn Küche fehlt
+- Neue Hilfsfunktion `nocturia_score(baseline, recent)`: Ratio-basiert, 150% Empfindlichkeit
+
+### Warum isBathroomSensor für Nykturie reicht
+Normaler PIR-Sensor im Bad → AURA zählt Auslösungen zwischen 22-06 Uhr → eindeutige Stunden
+>2 nächtliche Stunden mit Bad-Aktivität über Baseline = Nykturie-Indikator (van Dijk 2006)
+Kein neues Gerät nötig!
+
+### Offene Baustellen (Phase 2)
+- `cardiovascular`, `parkinson`, `copd`, `sleepDisorder`: Benötigen noch spezifischere Daten
+  (Herzrhythmus, Tremor-Erkennung, SpO2 → Wearable nötig)
+- `diabetes1`, `epilepsy`, `bipolar`, `longCovid`: Phase 5 (spezialisierte Sensoren)
+
+### Nächster logischer Schritt
+- Phase 4: Haushaltstyp-Konfiguration (single/multi) — geplant (s. Block unten)
+- Oder: Gemini-Integration für Screening-Wochenbericht (Phase 3 Erweiterung)
+
+---
+
 ## Geplant: Phase 4 — Haushaltstyp-Konfiguration + Aqara FP2
 
 ### Idee
@@ -712,6 +762,7 @@ Neuer Python-Befehl: `ANALYZE_DISEASE_SCORES` in service.py dispatch-table.
 
 | Version | Datum | Hauptänderung |
 |---|---|---|
+| **0.33.2** | 13.03.2026 | **feat**: isKitchenSensor + Nykturie + Essrhythmus; Diabetes T2 / Depression / Soziale Isolation Scores |
 | **0.33.1** | 13.03.2026 | **FIX**: ScreeningPanel-Komponente fehlte -> ReferenceError; Versionierungsregel eingefuehrt |
 | 0.33.0 | 13.03.2026 | Phase 3: Proaktives Screening (DISEASE_SIGNATURES, compute_screening_hints, ScreeningPanel) + Icon-Import Fix |
 | 0.32.x | 13.03.2026 | Kritischer Build-Fix (rimraf+xcopy entfernt); MedicalTab + Phase 2 Disease Scores erstmals live deployed |
