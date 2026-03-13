@@ -48,6 +48,19 @@
 - Demenz: activityDrift >= 25%, roomMobility >= 20%, gaitSlowdown >= 15% → min. 3 Signale
 - Depression: activityDecline >= 20%, roomMobility >= 25%, hygiene >= 25% → min. 3 Signale
 
+### Deploy-Workflow (IMMER nach Code-Aenderungen)
+```
+1. npm run build                   # Frontend + Backend (dev)
+2. npm run build:backend:prod      # Backend obfuskieren (vor git push!)
+3. node node_modules/iobroker.js-controller/iobroker.js upload cogni-living
+4. node node_modules/iobroker.js-controller/iobroker.js restart cogni-living
+5. Versionsnummern hochzaehlen: package.json UND io-package.json
+6. git add .
+   git commit -m "feat/fix: Beschreibung vX.Y.Z"
+   git push origin main
+```
+HINWEIS: "npm run build:prod" existiert NICHT! Richtig: "npm run build:backend:prod"
+
 ### Offene Baustellen
 - Phase 3 Erweiterung: Gemini-Integration — Screening-Hinweise als natürlichsprachlicher Wochenbericht
 - Phase 2 Erweiterung: Weitere Profile in Disease-Scores (Depression, Schlaf, Diabetes T2)
