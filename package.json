@@ -1,6 +1,6 @@
 ﻿{
     "name":  "iobroker.cogni-living",
-    "version":  "0.32.0",
+    "version":  "0.33.0",
     "description":  "Analysiert Verhaltensmuster für Gesundheit \u0026 Komfort",
     "author":  {
                    "name":  "Marc Jaeger",
@@ -59,7 +59,7 @@
               ],
     "scripts":  {
                     "prebuild":  "rimraf admin/build",
-                    "build:react":  "cd src-admin \u0026\u0026 npm install \u0026\u0026 npm run build \u0026\u0026 cd .. \u0026\u0026 rimraf admin \u0026\u0026 xcopy src-admin\\build admin /s /e /y /i",
+                    "build:react":  "cd src-admin \u0026\u0026 npm install \u0026\u0026 npm run build",
                     "build:backend:dev":  "copy src\\main.js main.js \u0026\u0026 xcopy src\\lib lib /I /Y",
                     "build:backend:prod":  "javascript-obfuscator src/main.js --output main.js --compact true --self-defending true --disable-console-output false --debug-protection false \u0026\u0026 javascript-obfuscator src/lib --output lib --compact true --self-defending true --disable-console-output false --debug-protection false",
                     "build":  "npm run build:react \u0026\u0026 npm run build:backend:dev",
