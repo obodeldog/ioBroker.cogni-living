@@ -3,6 +3,44 @@
 
 ---
 
+## Geplant: Phase 4 — Haushaltstyp-Konfiguration + Aqara FP2
+
+### Idee
+Einstellung in der Admin-UI: **Einpersonenhaushalt** vs. **Mehrpersonenhaushalt**
+
+### Warum wichtig
+Alle ML-Modelle (IsolationForest, Aktivitaetsvektoren, Ganggeschwindigkeit) sind auf
+eine Person kalibriert. Bei mehreren Personen im Haus sind Bewegungsmuster nicht mehr
+eindeutig zuordenbar — Screening-Hinweise koennten sonst faelschlicherweise "Aktivitaetsrueckgang"
+melden, obwohl nur eine zweite Person ausgezogen ist.
+
+### Technische Umsetzung
+- Config-Variable: `this.config.householdType` (`'single'` | `'multi'`)
+- UI: Radiobutton im Settings-Tab unter neuem Block "Haushalts-Konfiguration"
+- Auswirkungen auf Algorithmen:
+
+| Feature | Einpersonenhaushalt | Mehrpersonenhaushalt |
+|---|---|---|
+| Screening-Hinweise | Normal aktiv | Mit Warnung + reduzierter Confidence |
+| Ganggeschwindigkeit | Zuverlaessig | Deaktiviert oder mit Disclaimer |
+| Nacht-Unruhe | Zuverlaessig | Nur wenn Schlafzimmer klar trennbar |
+| Disease Scores | Alle Profile | Nur Scores mit hoher Trennschaerfe |
+| Anomalie-Schwellwerte | Standard | Hoehere Toleranz (mehr Bewegung = normal) |
+
+### Zusammenhang mit Aqara FP2
+Der FP2 (mmWave-Radar) kann Personen zaehlen und Zonen tracken — damit wird
+Mehrpersonenhaushalt-Monitoring erst wirklich machbar (Person A vs. Person B trennen).
+Beides gehoert zusammen in Phase 4.
+
+### Offene Punkte fuer Umsetzung
+- Config-Feld `householdType` in io-package.json Schema eintragen
+- Settings-Tab: neuen Block "Haushalts-Konfiguration" mit RadioButton
+- `health.py` + `service.py`: `household_type` Parameter bei Analysen beruecksichtigen
+- Screening-Panel: Warnhinweis wenn `householdType === 'multi'`
+- Aqara FP2: neuer Sensortyp `presence_radar_zoned` im Recorder
+
+---
+
 ## Sitzung 13.03.2026 — Bugfix v0.33.1: ScreeningPanel ReferenceError
 
 ### Problem
