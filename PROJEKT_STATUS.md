@@ -53,6 +53,35 @@ Kein neues Gerät nötig!
 
 ---
 
+## Geplant: Phase 6 — Garmin-Uhr Integration (cardiovascular + sleep)
+
+### Idee
+Garmin-Uhr (Wearable) als zusaetzliche Datenquelle einbinden, um Krankheitsprofile
+zu ermoeglichen, die passive PIR-Sensoren allein nicht erfassen koennen.
+
+### Was die Uhr liefert
+| Garmin-Metrik | Krankheitsprofil | Bedeutung |
+|---|---|---|
+| Herzfrequenz (Ruhe-HF) | cardiovascular | Anstieg ueber Wochen = Risiko-Indikator |
+| HRV (Herzratenvariabilitaet) | cardiovascular, depression | Niedrige HRV = vegetative Dysfunktion |
+| SpO2 (Blutsauerstoff) | copd, cardiovascular | <94% nachts = Alarmsignal |
+| Schlafphasen (REM/Deep/Light) | sleepDisorder | Praezisere Schlafauswertung als PIR/FP2 |
+| Stress-Score | depression, bipolar | Erhoehter Dauerstress |
+| Atemfrequenz | copd | Erhoehung = Verschlechterung |
+| Schritte / VO2max | frailty, depression | Aktivitaetsrueckgang objektiv messbar |
+
+### Technische Umsetzung (geplant)
+- ioBroker-Adapter: iobroker.garmin (Community) ODER Garmin Connect API (OAuth2)
+- Alternativ: Garmin Health API (fuer Entwickler, kostenlos fuer Privatnutzung)
+- Config-Sektion: neuer Block "Wearable" in den Instanzeinstellungen
+- New States: wearable.heartRate, wearable.hrv, wearable.spo2, wearable.sleepScore
+- health.py: compute_disease_scores() nimmt optionale Wearable-Metriken entgegen
+
+### Prioritaet
+Mittel -- erst nach FP2-Integration (Phase 4) und Vibrations-/Wassersensor (Phase 5).
+Ermoeglicht: cardiovascular Score, praeziserer COPD Score, besserer sleepDisorder Score.
+
+---
 ## Geplant: Phase 4 — Haushaltstyp-Konfiguration + Aqara FP2
 
 ### Idee
