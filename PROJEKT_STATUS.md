@@ -114,6 +114,48 @@ Mittel -- erst nach FP2-Integration (Phase 4) und Vibrations-/Wassersensor (Phas
 Ermoeglicht: cardiovascular Score, praeziserer COPD Score, besserer sleepDisorder Score.
 
 ---
+## Sitzung 14.03.2026 — FP2 Architektur-Entscheidungen (noch kein Code)
+
+### Hardware vorhanden
+- 2x Aqara FP2 (mmWave 60GHz, WiFi, HomeKit) -- beide bereits in ioBroker via homekit-controller.0 eingebunden
+- 1x Vibrationssensor
+- 1x Wassersensor (Feuchtigkeitssensor fuer Bett/Inkontinenz)
+- Vorhandene Sensoren: PIR in allen Raeumen, SNZB-06P im Schlafzimmer
+
+### FP2 Platzierungs-Entscheidung
+| FP2 | Raum | Hauptnutzen |
+|---|---|---|
+| FP2 #1 | Wohnzimmer | Personenzaehlung (tagsaetzl. Hauptaufenthaltsbereich) |
+| FP2 #2 | Schlafzimmer | Zonenunterscheidung "im Bett" + Personenzaehlung nachts |
+
+Badezimmer braucht keinen FP2 -- normaler PIR reicht fuer Nykturie-Zaehlung (seit v0.33.2 implementiert).
+
+### Warum FP2 und nicht nur PIR/SNZB-06P
+| Faehigkeit | PIR | SNZB-06P | FP2 |
+|---|---|---|---|
+| Bewegung | OK | OK | OK |
+| Statische Praesenz | NEIN | OK | OK |
+| Personenzaehlen (0/1/2...) | NEIN | NEIN | JA (Hauptvorteil!) |
+| Zonen (Bett vs. Tuer) | NEIN | NEIN | JA |
+| Atemrate | NEIN | Kaum | JA (60GHz) -- ob via HomeKit verfuegbar: zu pruefen |
+
+### ioBroker States des FP2 (homekit-controller)
+Pfad: homekit-controller.0.IP-74DF7AC5:02:46.1
+- sensor-occupancy-2688.occupancy-detected  (boolean)
+- sensor-occupancy-2688.value               (Personenanzahl 0/1/2...)
+- sensor-occupancy-2692.*                   (Zone 2)
+- sensor-occupancy-2696.*                   (Zone 3)
+- sensor-light-2672.light-level-current     (Helligkeit lx)
+Fall-Detection: nicht verfuegbar (benoetigt Deckenmontage, konfliktiert mit Multipersonendetektion)
+
+### Geplante Integration (Option B)
+- Neuer Sensortyp "presence_radar" in der Sensor-Liste
+- Recorder subscribt auf BEIDE States: occupancy-detected + value (Personenanzahl)
+- Flags: isFP2Bed (Schlafzimmer-Bett-Zone), isFP2Living (Wohnzimmer)
+- health.py: max. erkannte Personenzahl in daily snapshot speichern
+- Automatische Haushaltstyp-Erkennung: wenn value >= 2 irgendwo -> multi-person bestaetigt
+
+---
 ## Geplant: Phase 4 — Haushaltstyp-Konfiguration + Aqara FP2
 
 ### Idee
