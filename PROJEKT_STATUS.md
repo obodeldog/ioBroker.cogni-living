@@ -53,6 +53,38 @@ Kein neues Gerät nötig!
 
 ---
 
+## Geplant: Phase 7 — Occupancy Tracker (Personenzaehlung)
+
+### Ziel
+Automatische Erkennung wie viele Personen sich gerade im Haus befinden.
+Zwei Ebenen getrennt behandeln:
+
+| Ebene | Art | Loesung |
+|---|---|---|
+| Wie viele Personen wohnen hier? | Statisch | Config-Einstellung (1-4 Personen) |
+| Wie viele sind gerade zu Hause? | Dynamisch | Occupancy Tracker Modul |
+
+### Technischer Ansatz (Hybrid)
+1. Config-Einstellung "Anzahl Bewohner" (1-4) -- wird fuer Algorithmus-Kalibrierung genutzt
+2. Bestehende isExit-Sensoren tracken Weggeh-Erkennung (bereits implementiert)
+3. Dritter FP2 im Wohnzimmer/Flur fuer direkte Personenzaehlung (FP2 meldet 1/2/3 Personen)
+4. Kombinierte Logik: Exit-Sensor-Zaehler + FP2-Bestaetigung
+
+### Warum nicht sofort
+- 2x FP2 stehen in Schlafzimmer + Bad (medizinischer Fokus wichtiger)
+- Exit-Sensor-Logik hat bekannte Schwaechen (schlafende Person = keine Bewegung)
+- Erst wenn dritter FP2 vorhanden: saubere Personenzaehlung im Flur/Wohnzimmer
+
+### Auswirkung auf Algorithmen
+Wenn Personenzahl > 1:
+- Alle ML-Baselines mit hoeherem Rausch-Toleranzwert kalibrieren
+- Screening-Hinweise mit Warnhinweis "Mehrpersonenhaushalt -- reduzierte Genauigkeit"
+- Ganggeschwindigkeit nur wenn Person allein im Flur (FP2-Bestaetigung)
+
+### Abhaengigkeiten
+Benoetigt: Phase 4 (FP2-Integration) + optional dritten FP2
+
+---
 ## Geplant: Phase 6 — Garmin-Uhr Integration (cardiovascular + sleep)
 
 ### Idee
