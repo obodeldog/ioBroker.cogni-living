@@ -555,11 +555,11 @@ class CogniLiving extends utils.Adapter {
             // ============================================================
             // Per-Person Nacht-Analyse
             // ============================================================
+            const _self = this;
             const personData = (function() {
                 var result = {};
                 var devices = (_self.config && _self.config.devices) ? _self.config.devices : [];
-                // Sammle alle Personen + ihre Sensor-IDs
-                var personSensorIds = {}; // { "Rob": Set<id>, ... }
+                var personSensorIds = {};
                 devices.forEach(function(d) {
                     if (!d.personTag || !d.personTag.trim()) return;
                     var p = d.personTag.trim();
@@ -567,26 +567,22 @@ class CogniLiving extends utils.Adapter {
                     personSensorIds[p].add(d.id);
                 });
                 if (Object.keys(personSensorIds).length === 0) return result;
-                // Schlaf-Fenster (dynamisch oder Fallback)
                 var winStart = sleepWindowCalc.start || (function(){ var d=new Date(); d.setHours(22,0,0,0); return d.getTime(); })();
                 var winEnd   = sleepWindowCalc.end   || (function(){ var d=new Date(); d.setHours(6,0,0,0); if(d.getTime()<winStart) d.setDate(d.getDate()+1); return d.getTime(); })();
                 Object.keys(personSensorIds).forEach(function(person) {
                     var ids = personSensorIds[person];
                     var personEvents = todayEvents.filter(function(e) { return ids.has(e.id); });
-                    // Nacht-Ereignisse im Schlaf-Fenster
                     var nightEvents = personEvents.filter(function(e) {
                         var ts = e.timestamp||e.ts||0;
                         return ts >= winStart && ts <= winEnd;
                     });
                     var nightActivityCount = nightEvents.length;
-                    // Erste Morgen-Aktivität (erster Event nach 05:00)
                     var morning5 = new Date(winEnd); morning5.setHours(5,0,0,0);
                     var morningEvt = personEvents.filter(function(e) {
                         var ts = e.timestamp||e.ts||0;
                         return ts >= morning5.getTime();
                     }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
                     var wakeTimeMin = morningEvt.length > 0 ? Math.round(((morningEvt[0].timestamp||0) - new Date(morningEvt[0].timestamp||0).setHours(0,0,0,0)) / 60000) : null;
-                    // Schlafbeginn-Schätzung (letztes Event vor langer Pause abends)
                     var eveningEvts = personEvents.filter(function(e) {
                         var ts = e.timestamp||e.ts||0; var hr = new Date(ts).getHours();
                         return hr >= 18 && hr <= 23;
@@ -599,7 +595,6 @@ class CogniLiving extends utils.Adapter {
                             break;
                         }
                     }
-                    // Nykturie-Attribution: Badezimmer-Event kurz nach Schlafzimmer-Event dieser Person
                     var bathroomIds = new Set((devices||[]).filter(function(d){ return d.isBathroomSensor || d.sensorFunction==='bathroom'; }).map(function(d){ return d.id; }));
                     var bathroomNightEvents = todayEvents.filter(function(e) {
                         if (!bathroomIds.has(e.id)) return false;
@@ -609,7 +604,6 @@ class CogniLiving extends utils.Adapter {
                     var nocturiaAttr = 0;
                     bathroomNightEvents.forEach(function(bathEvt) {
                         var bathTs = bathEvt.timestamp||0;
-                        // Schaue 10 Min. zurück: Hat diese Person kurz vorher ihr Schlafzimmer verlassen?
                         var recentPersonEvt = nightEvents.filter(function(e) {
                             var ts = e.timestamp||0;
                             return ts >= bathTs - 10*60*1000 && ts < bathTs;
@@ -625,7 +619,6 @@ class CogniLiving extends utils.Adapter {
                 });
                 return result;
             })();
-            // personData auch als ioBroker-State schreiben (für spätere Auswertung)
             try { await this.setStateAsync('system.personData', { val: JSON.stringify(personData), ack: true }); } catch(e) {}
 
             const snapshot = {
@@ -704,6 +697,189 @@ class CogniLiving extends utils.Adapter {
             };
 
             const dataDir = utils.getAbsoluteDefaultDataDir();
+            const historyDir = path.join(dataDir, 'cogni-living', 'history');
+            if (!fs.existsSync(historyDir)) fs.mkdirSync(historyDir, { recursive: true });
+
+            const filePath = path.join(historyDir, `${dateStr}.json`);
+            fs.writeFileSync(filePath, JSON.stringify(snapshot));
+            this.log.info(`âœ… History saved: ${filePath}`);
+
+            // NÃ¤chtliche Drift-PrÃ¼fung (nach dem Speichern)
+            this._checkDriftAlarm(historyDir).catch(e => this.log.warn(`[Drift] Alarm-Check Fehler: ${e.message}`));
+
+        } catch(e) { this.log.error(`History Save Error: ${e.message}`); }
+    }
+
+    async _checkDriftAlarm(historyDir) {
+        const setup = require('./lib/setup');
+        const COOLDOWN_DAYS = 14;
+        const MIN_DAYS      = 10;
+
+        // Cooldown prÃ¼fen
+        try {
+            const lastAlarm = await this.getStateAsync('analysis.drift.lastAlarmDate').catch(() => null);
+            if (lastAlarm && lastAlarm.val) {
+                const daysSince = (Date.now() - new Date(lastAlarm.val).getTime()) / 86400000;
+                if (daysSince < COOLDOWN_DAYS) {
+                    this.log.debug(`[Drift] Cooldown aktiv (${daysSince.toFixed(0)} von ${COOLDOWN_DAYS} Tagen)`);
+                    return;
+                }
+            }
+        } catch(e) {}
+
+        // Letzte 60 Tage laden
+        const days = [];
+        for (let i = 1; i <= 60; i++) {
+            const d = new Date(); d.setDate(d.getDate() - i);
+            const ds = d.toISOString().slice(0, 10);
+            const fp = path.join(historyDir, `${ds}.json`);
+            if (fs.existsSync(fp)) {
+                try {
+                    const h = JSON.parse(fs.readFileSync(fp, 'utf8'));
+                    const vec = h.todayVector || [];
+                    const act = vec.reduce((a, b) => a + b, 0);
+                    const gs  = (h.gaitSpeed > 0 && h.gaitSpeed < 60) ? h.gaitSpeed : 0;
+                    const nt  = h.nightMotionCount !== undefined ? h.nightMotionCount
+                                : Array.isArray(h.eventHistory)
+                                    ? h.eventHistory.filter(e => { const hr = new Date(e.timestamp||e.ts||0).getHours(); return hr>=22||hr<6; }).length
+                                    : 0;
+                    days.push({ date: ds, act, gs, nt });
+                } catch(e) {}
+            }
+        }
+        days.sort((a, b) => a.date.localeCompare(b.date));
+        if (days.length < MIN_DAYS) { this.log.debug(`[Drift] Zu wenig Daten (${days.length})`); return; }
+
+        // Mediane als Normalisierung
+        const median = arr => { const s=[...arr].sort((a,b)=>a-b); return s[Math.floor(s.length/2)]||1; };
+        const actVals = days.map(d=>d.act).filter(v=>v>0);
+        const mAct = median(actVals)||1;
+        const actNorm = days.map(d => d.act>0 ? Math.min(200, Math.round((d.act/mAct)*100)) : 0);
+
+        // Page-Hinkley (einfach, JS-intern, keine Python nÃ¶tig)
+        const ph = (vals, direction='up', k=0.5) => {
+            const cal = Math.min(14, Math.max(7, Math.floor(vals.length/2)));
+            const calVals = vals.slice(0, cal).filter(v=>v>0);
+            if (calVals.length < 3) return { score: 0, threshold: 50, alarm: false };
+            const mu  = calVals.reduce((a,b)=>a+b,0)/calVals.length;
+            const std = Math.sqrt(calVals.reduce((a,b)=>a+(b-mu)**2,0)/calVals.length)||1;
+            const th  = Math.max(30, 3*std*Math.sqrt(Math.max(1, vals.length-cal)));
+            let M=0, m=0, score=0;
+            for (let i=cal; i<vals.length; i++) {
+                const x = direction==='down' ? -vals[i] : vals[i];
+                const muD = direction==='down' ? -mu : mu;
+                M = M + (x - muD - k*std);
+                m = Math.min(m, M);
+                score = Math.max(0, M - m);
+            }
+            return { score: Math.round(score*10)/10, threshold: Math.round(th*10)/10, alarm: score > th };
+        };
+
+        const actR   = ph(actNorm, 'down');
+        const gaitR  = ph(days.map(d=>d.gs).filter(v=>v>0), 'up');
+        const nightR = ph(days.map(d=>d.nt), 'up');
+
+        this.log.debug(`[Drift] Scores â€” AktivitÃ¤t: ${actR.score}/${actR.threshold} | Gait: ${gaitR.score}/${gaitR.threshold} | Nacht: ${nightR.score}/${nightR.threshold}`);
+
+        // Pushover nur wenn mindestens eine Metrik Alarm schlÃ¤gt
+        const alarms = [];
+        if (actR.alarm)   alarms.push(`ðŸƒ AktivitÃ¤t sinkt (Score ${actR.score}/${actR.threshold})`);
+        if (gaitR.alarm)  alarms.push(`ðŸš¶ Ganggeschwindigkeit steigt (Score ${gaitR.score}/${gaitR.threshold})`);
+        if (nightR.alarm) alarms.push(`ðŸ˜´ Nacht-Unruhe nimmt zu (Score ${nightR.score}/${nightR.threshold})`);
+
+        if (alarms.length > 0) {
+            const msg = `âš ï¸ DRIFT ERKANNT (${days.length} Tage Datenbasis)\n\n${alarms.join('\n')}\n\nBitte Admin-UI â†’ Drift-Monitor fÃ¼r Details Ã¶ffnen.`;
+            setup.sendNotification(this, msg, true, false, 'âš ï¸ NUUKANNI: Verhaltens-Drift');
+            await this.setObjectNotExistsAsync('analysis.drift.lastAlarmDate', { type: 'state', common: { name: 'Letzter Drift-Alarm', type: 'string', role: 'text', read: true, write: false, def: '' }, native: {} });
+            await this.setStateAsync('analysis.drift.lastAlarmDate', { val: new Date().toISOString(), ack: true });
+            this.log.warn(`[Drift] âš ï¸ Alarm ausgelÃ¶st: ${alarms.join(' | ')}`);
+        }
+    }
+
+    async integrateRoomTime() {
+        if (!this.isPresent) return;
+        try {
+            let currentRoom = null;
+            try {
+                const trState = await this.getStateAsync('analysis.prediction.trackerTopRoom');
+                const tpState = await this.getStateAsync('analysis.prediction.trackerConfidence');
+                if (trState && trState.val && tpState && tpState.val && tpState.val > 0.3) {
+                    if (trState.val !== 'Unknown' && trState.val !== 'Init...') currentRoom = trState.val;
+                }
+            } catch(e) {}
+
+            if (!currentRoom) {
+                const devices = this.config.devices || [];
+                for (const dev of devices) {
+                    if (dev.type === 'motion' && dev.location) {
+                        try {
+                            const s = await this.getForeignStateAsync(dev.id);
+                            if (s && (s.val === true || s.val === 'on' || s.val === 1)) {
+                                currentRoom = dev.location;
+                                break;
+                            }
+                        } catch(e) {}
+                    }
+                }
+            }
+
+            if (!currentRoom) return;
+
+            const devices = this.config.devices || [];
+            let normalizedRoom = currentRoom;
+            const match = devices.find(d => d.location && d.location.toLowerCase() === currentRoom.toLowerCase());
+            if (match) normalizedRoom = match.location;
+
+            const histId = 'analysis.activity.roomHistory';
+            const histState = await this.getStateAsync(histId);
+            const todayStr = new Date().toLocaleDateString();
+            let histData = { history: {}, date: todayStr };
+
+            if (histState && histState.val) { try { histData = JSON.parse(histState.val); } catch(e){} }
+
+            if (histData.date !== todayStr) { histData.history = {}; histData.date = todayStr; }
+            if (!histData.history[normalizedRoom]) histData.history[normalizedRoom] = new Array(24).fill(0);
+
+            const currentHour = new Date().getHours();
+            if (histData.history[normalizedRoom][currentHour] < 60) histData.history[normalizedRoom][currentHour]++;
+
+            await this.setStateAsync(histId, { val: JSON.stringify(histData), ack: true });
+
+        } catch(e) { this.log.warn(`[Integrator] Error: ${e.message}`); }
+    }
+
+    async onMessage(obj) {
+        if (typeof obj === 'object' && obj.message) {
+            if (obj.command === 'getHistoryData') {
+                const requestedDate = obj.message.date;
+                const dataDir = utils.getAbsoluteDefaultDataDir();
+                const filePath = path.join(dataDir, 'cogni-living', 'history', `${requestedDate}.json`);
+                if (fs.existsSync(filePath)) {
+                    try {
+                        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                        this.sendTo(obj.from, obj.command, { success: true, data: data }, obj.callback);
+                    } catch(e) { this.sendTo(obj.from, obj.command, { success: false, error: "Corrupt" }, obj.callback); }
+                } else { this.sendTo(obj.from, obj.command, { success: false, error: "No data" }, obj.callback); }
+            }
+            else if (obj.command === 'getOverviewData') {
+                const digestCount = this.dailyDigests.length;
+
+                let hourlyActivity = new Array(48).fill(0);
+                let hourlyDetails = Array.from({ length: 48 }, () => []);
+                try {
+                    const vecState = await this.getStateAsync('analysis.health.todayVector');
+                    if (vecState && vecState.val) hourlyActivity = JSON.parse(vecState.val);
+
+                    const detState = await this.getStateAsync('analysis.health.todayRoomDetails');
+                    if (detState && detState.val) hourlyDetails = JSON.parse(detState.val);
+                } catch(e) {}
+
+                // LOAD YESTERDAY'S DATA
+                let yesterdayActivity = new Array(48).fill(0);
+                try {
+                    const y = new Date(); y.setDate(y.getDate() - 1);
+                    const yStr = y.toISOString().split('T')[0];
+                    const dataDir = utils.getAbsoluteDefaultDataDir();
                     const yPath = path.join(dataDir, 'cogni-living', 'history', `${yStr}.json`);
                     if (fs.existsSync(yPath)) {
                         const yData = JSON.parse(fs.readFileSync(yPath, 'utf8'));
