@@ -27,6 +27,10 @@ interface DailyDataPoint {
     uniqueRooms: number;
     bathroomVisits: number;
     windowOpenings: number;
+    bedPresenceMinutes?: number | null;
+    nightVibrationCount?: number | null;
+    maxPersonsDetected?: number | null;
+    nocturiaCount?: number | null;
     isPartialDay?: boolean;
 }
 
@@ -198,6 +202,12 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         // 🔍 DEBUG: Zeige berechnete Metriken
                         console.log(`[LongtermTrends] ✅ ${dateStr}: activity=${activityPercent}%, night=${nightEvents}, rooms=${uniqueRooms}, bathroom=${bathroomVisits}, windows=${windowOpenings}, gait=${gaitSpeed.toFixed(1)}`);
 
+                        // FP2 + Vibration Schlaf-Metriken (seit v0.33.3, null fuer alte Files)
+                        const bedPresenceMinutes = histData.bedPresenceMinutes !== undefined ? Number(histData.bedPresenceMinutes) : null;
+                        const nightVibrationCount = histData.nightVibrationCount !== undefined ? Number(histData.nightVibrationCount) : null;
+                        const maxPersonsDetected = histData.maxPersonsDetected !== undefined ? Number(histData.maxPersonsDetected) : null;
+                        const nocturiaCount = histData.nocturiaCount !== undefined ? Number(histData.nocturiaCount) : null;
+
                         // Raum-Aktivitaet fuer Tooltip (Minuten pro Raum)
                         const roomActivity: {[key: string]: number} = histData.todayRoomMinutes || {};
 
@@ -223,6 +233,10 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             uniqueRooms,
                             bathroomVisits,
                             windowOpenings,
+                            bedPresenceMinutes,
+                            nightVibrationCount,
+                            maxPersonsDetected,
+                            nocturiaCount,
                             roomActivity,
                             windowsByRoom,
                             todayVector: todayVector,  // Fuer Python Nacht-IsolationForest
@@ -951,11 +965,282 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
 
                     </Grid>
                     </Box>
+
+                    {/* SCHLAF & SENSORIK Gruppe */}
+                    {(() => {
+                        // Pruefe ob Schlaf-Daten vorhanden sind (erst ab v0.33.3)
+                        const hasBedData = dailyDataRaw.some((d: any) => d.bedPresenceMinutes != null);
+                        const hasVibData = dailyDataRaw.some((d: any) => d.nightVibrationCount != null);
+                        const hasPersonData = dailyDataRaw.some((d: any) => d.maxPersonsDetected != null);
+                        const hasNocturiaData = dailyDataRaw.some((d: any) => d.nocturiaCount != null);
+                        if (!hasBedData && !hasVibData && !hasPersonData) return null;
+
+                        // Hilfsfunktion: Moving Average direkt aus dailyDataRaw
+                        const makeRawMiniData = (field: string) => {
+                            const sorted = [...dailyDataRaw].sort((a: any, b: any) => a.date.localeCompare(b.date));
+                            const vals = sorted.map((d: any) => (d[field] != null ? Number(d[field]) : null));
+                            return sorted.map((d: any, i: number) => {
+                                const slice = vals.slice(Math.max(0, i - 6), i + 1).filter((v: any) => v != null) as number[];
+                                const avg = slice.length > 0 ? Math.round(slice.reduce((a, b) => a + b, 0) / slice.length * 10) / 10 : null;
+                                return {
+                                    date: d.date ? d.date.substring(5) : '',
+                                    value: d[field] != null ? Number(d[field]) : null,
+                                    movingAvg: avg
+                                };
+                            }).filter((d: any) => d.date);
+                        };
+
+                        return (
+                            <Box sx={{
+                                mt: 3,
+                                borderLeft: '4px solid #7b1fa2',
+                                borderRadius: '0 8px 8px 0',
+                                bgcolor: isDark ? 'rgba(123,31,162,0.04)' : 'rgba(123,31,162,0.03)',
+                                pl: 2,
+                                pr: 0.5,
+                                pt: 2,
+                                pb: 1,
+                            }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                                    <Typography variant="overline" sx={{
+                                        color: '#7b1fa2',
+                                        fontWeight: 'bold',
+                                        letterSpacing: '0.12em',
+                                        fontSize: '0.7rem',
+                                        lineHeight: 1,
+                                    }}>
+                                        🛏️ SCHLAF & SENSORIK
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', ml: 1.5, fontSize: '0.62rem' }}>
+                                        FP2-Bett + Vibrationssensor — ab v0.33.3 verfügbar
+                                    </Typography>
+                                </Box>
+
+                                <Grid container spacing={2} sx={{ mt: 0 }}>
+                                    {/* BETT-PRAESENZ */}
+                                    {hasBedData && (() => {
+                                        const data = makeRawMiniData('bedPresenceMinutes').map((d: any) => ({
+                                            ...d,
+                                            hours: d.value != null ? Math.round((d.value / 60) * 10) / 10 : null,
+                                            movingAvgH: d.movingAvg != null ? Math.round((d.movingAvg / 60) * 10) / 10 : null,
+                                        }));
+                                        const avgH = data.filter((d: any) => d.hours != null).map((d: any) => d.hours);
+                                        const meanH = avgH.length > 0 ? Math.round(avgH.reduce((a: number, b: number) => a + b, 0) / avgH.length * 10) / 10 : 0;
+                                        return (
+                                            <Grid item xs={12} md={6} lg={4}>
+                                                <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#7b1fa2' }}>
+                                                            BETT-PRÄSENZ
+                                                        </Typography>
+                                                        <ChartHelp text={"Zeigt wie viele Stunden pro Nacht die Bett-Zone des FP2 belegt war. Grün = 6–9h (optimal), Gelb = 4–6h (wenig), Rot = unter 4h oder über 10h (auffällig). Nur wenn FP2 mit Funktion 'Bett/Schlafzimmer' konfiguriert ist."} />
+                                                    </Box>
+                                                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                                                        Ø {meanH}h/Nacht · 0–24 Uhr
+                                                    </Typography>
+                                                    <ResponsiveContainer width="100%" height={150}>
+                                                        <ComposedChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                            <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                interval={Math.floor(data.length / 6)} />
+                                                            <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                tickFormatter={(v: number) => `${v}h`} domain={[0, 12]} />
+                                                            <Tooltip
+                                                                formatter={(v: any, name: string) => [
+                                                                    name === 'hours' ? `${v}h` : `Ø ${v}h`,
+                                                                    name === 'hours' ? 'Bettzeit' : '7-Tage-Ø'
+                                                                ]}
+                                                                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#444' : '#ddd'}`, fontSize: '0.7rem' }}
+                                                            />
+                                                            {/* Zonen: rot <4, gelb 4-6, gruen 6-9, blau >10 */}
+                                                            <ReferenceArea y1={0} y2={4}  fill="rgba(220,53,69,0.12)" />
+                                                            <ReferenceArea y1={4} y2={6}  fill="rgba(253,126,20,0.12)" />
+                                                            <ReferenceArea y1={6} y2={9}  fill="rgba(40,167,69,0.12)" />
+                                                            <ReferenceArea y1={9} y2={12} fill="rgba(253,126,20,0.08)" />
+                                                            <ReferenceLine y={7} stroke="#7b1fa255" strokeDasharray="4 3" />
+                                                            <Bar dataKey="hours" name="hours" radius={[2,2,0,0]}>
+                                                                {data.map((entry: any, i: number) => {
+                                                                    const h = entry.hours;
+                                                                    const col = h == null ? '#555' : h < 4 ? '#dc3545' : h < 6 ? '#fd7e14' : h <= 9 ? '#28a745' : '#fd7e14';
+                                                                    return <Cell key={i} fill={col} opacity={0.8} />;
+                                                                })}
+                                                            </Bar>
+                                                            <Line type="monotone" dataKey="movingAvgH" stroke="#7b1fa2" strokeWidth={2}
+                                                                dot={false} name="movingAvgH" connectNulls />
+                                                        </ComposedChart>
+                                                    </ResponsiveContainer>
+                                                    <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                                        <span style={{color:'#dc3545'}}>■ &lt;4h</span>
+                                                        <span style={{color:'#fd7e14'}}>■ 4–6h</span>
+                                                        <span style={{color:'#28a745'}}>■ 6–9h (optimal)</span>
+                                                    </Box>
+                                                </Paper>
+                                            </Grid>
+                                        );
+                                    })()}
+
+                                    {/* NACHT-VIBRATION */}
+                                    {hasVibData && (() => {
+                                        const data = makeRawMiniData('nightVibrationCount');
+                                        const avgVib = data.filter((d: any) => d.value != null).map((d: any) => d.value as number);
+                                        const meanVib = avgVib.length > 0 ? Math.round(avgVib.reduce((a, b) => a + b, 0) / avgVib.length) : 0;
+                                        return (
+                                            <Grid item xs={12} md={6} lg={4}>
+                                                <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#e91e63' }}>
+                                                            SCHLAF-UNRUHE (VIBRATION)
+                                                        </Typography>
+                                                        <ChartHelp text={"Zählt Vibrationsimpulse am Bett zwischen 22:00 und 06:00 Uhr. Viele Impulse deuten auf unruhigen Schlaf hin. Relevant für: Schlafstörungen, Parkinson-Tremor (nächtlich), REM-Schlafstörung. Nur wenn Vibrationssensor mit Funktion 'Bett/Schlafzimmer' konfiguriert ist."} />
+                                                    </Box>
+                                                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                                                        Ø {meanVib} Impulse/Nacht · 22–06 Uhr
+                                                    </Typography>
+                                                    <ResponsiveContainer width="100%" height={150}>
+                                                        <ComposedChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                            <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                interval={Math.floor(data.length / 6)} />
+                                                            <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} />
+                                                            <Tooltip
+                                                                formatter={(v: any, name: string) => [
+                                                                    name === 'value' ? `${v} Impulse` : `Ø ${v}`,
+                                                                    name === 'value' ? 'Nacht-Vibration' : '7-Tage-Ø'
+                                                                ]}
+                                                                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#444' : '#ddd'}`, fontSize: '0.7rem' }}
+                                                            />
+                                                            <Bar dataKey="value" name="value" fill="#e91e63" opacity={0.75} radius={[2,2,0,0]} />
+                                                            <Line type="monotone" dataKey="movingAvg" stroke="#880e4f" strokeWidth={2}
+                                                                dot={false} name="movingAvg" connectNulls />
+                                                        </ComposedChart>
+                                                    </ResponsiveContainer>
+                                                </Paper>
+                                            </Grid>
+                                        );
+                                    })()}
+
+                                    {/* PERSONENBELEGUNG */}
+                                    {hasPersonData && (() => {
+                                        const data = makeRawMiniData('maxPersonsDetected');
+                                        const multiDays = data.filter((d: any) => d.value != null && d.value >= 2).length;
+                                        return (
+                                            <Grid item xs={12} md={6} lg={4}>
+                                                <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#1976d2' }}>
+                                                            PERSONENBELEGUNG
+                                                        </Typography>
+                                                        <ChartHelp text={"Zeigt das tägliche Maximum gleichzeitig erkannter Personen (FP2 Wohnzimmer). 1 = alleine, 2+ = Mehrpersonen-Haushalt an diesem Tag. Wichtig für: Soziale Isolation, korrekte Einordnung anderer Metriken (z.B. Nacht-Unruhe bei Gast). Nur wenn FP2 mit Funktion 'Wohnzimmer/Hauptraum' konfiguriert ist."} />
+                                                    </Box>
+                                                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                                                        {multiDays} Tage mit ≥2 Personen im Zeitraum
+                                                    </Typography>
+                                                    <ResponsiveContainer width="100%" height={150}>
+                                                        <ComposedChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                            <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                interval={Math.floor(data.length / 6)} />
+                                                            <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                tickFormatter={(v: number) => `${v}P`} domain={[0, 4]} />
+                                                            <Tooltip
+                                                                formatter={(v: any, name: string) => [
+                                                                    name === 'value' ? `${v} Person(en)` : `Ø ${v}`,
+                                                                    name === 'value' ? 'Max. Personen' : '7-Tage-Ø'
+                                                                ]}
+                                                                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#444' : '#ddd'}`, fontSize: '0.7rem' }}
+                                                            />
+                                                            <ReferenceLine y={2} stroke="#1976d255" strokeDasharray="4 3"
+                                                                label={{ value: 'Mehrpersonen', position: 'insideRight', fontSize: 9, fill: '#1976d2' }} />
+                                                            <Bar dataKey="value" name="value" radius={[2,2,0,0]}>
+                                                                {data.map((entry: any, i: number) => {
+                                                                    const v = entry.value;
+                                                                    const col = v == null ? '#555' : v >= 2 ? '#1976d2' : '#90caf9';
+                                                                    return <Cell key={i} fill={col} opacity={0.8} />;
+                                                                })}
+                                                            </Bar>
+                                                            <Line type="monotone" dataKey="movingAvg" stroke="#0d47a1" strokeWidth={2}
+                                                                dot={false} name="movingAvg" connectNulls />
+                                                        </ComposedChart>
+                                                    </ResponsiveContainer>
+                                                    <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1 }}>
+                                                        <span style={{color:'#90caf9'}}>■ 1 Person (allein)</span>
+                                                        <span style={{color:'#1976d2'}}>■ ≥2 Personen</span>
+                                                    </Box>
+                                                </Paper>
+                                            </Grid>
+                                        );
+                                    })()}
+
+                                    {/* NYKTURIE */}
+                                    {hasNocturiaData && (() => {
+                                        const data = makeRawMiniData('nocturiaCount');
+                                        const avgN = data.filter((d: any) => d.value != null).map((d: any) => d.value as number);
+                                        const meanN = avgN.length > 0 ? Math.round(avgN.reduce((a, b) => a + b, 0) / avgN.length * 10) / 10 : 0;
+                                        return (
+                                            <Grid item xs={12} md={6} lg={4}>
+                                                <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#00acc1' }}>
+                                                            NYKTURIE
+                                                        </Typography>
+                                                        <ChartHelp text={"Zählt eindeutige Nachtstunden (22–06 Uhr) mit Badezimmer-Aktivität. Regelmäßig >2 Besuche/Nacht können auf Nykturie hinweisen — ein Frühzeichen bei Diabetes, Herzinsuffizienz oder Harnwegsinfekt. Nur wenn Bad-Sensor mit Funktion 'Bad/WC' konfiguriert ist."} />
+                                                    </Box>
+                                                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                                                        Ø {meanN} Nachtstunden/Nacht · 22–06 Uhr
+                                                    </Typography>
+                                                    <ResponsiveContainer width="100%" height={150}>
+                                                        <ComposedChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                            <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                interval={Math.floor(data.length / 6)} />
+                                                            <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} domain={[0, 6]} />
+                                                            <Tooltip
+                                                                formatter={(v: any, name: string) => [
+                                                                    name === 'value' ? `${v} Stunden` : `Ø ${v}`,
+                                                                    name === 'value' ? 'Nachtstunden aktiv' : '7-Tage-Ø'
+                                                                ]}
+                                                                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#444' : '#ddd'}`, fontSize: '0.7rem' }}
+                                                            />
+                                                            <ReferenceArea y1={0} y2={2} fill="rgba(40,167,69,0.12)" />
+                                                            <ReferenceArea y1={2} y2={6} fill="rgba(253,126,20,0.12)" />
+                                                            <ReferenceLine y={2} stroke="#fd7e1455" strokeDasharray="4 3"
+                                                                label={{ value: 'Nykturie-Grenze', position: 'insideRight', fontSize: 8, fill: '#fd7e14' }} />
+                                                            <Bar dataKey="value" name="value" radius={[2,2,0,0]}>
+                                                                {data.map((entry: any, i: number) => {
+                                                                    const v = entry.value;
+                                                                    const col = v == null ? '#555' : v >= 2 ? '#fd7e14' : '#00acc1';
+                                                                    return <Cell key={i} fill={col} opacity={0.8} />;
+                                                                })}
+                                                            </Bar>
+                                                            <Line type="monotone" dataKey="movingAvg" stroke="#006064" strokeWidth={2}
+                                                                dot={false} name="movingAvg" connectNulls />
+                                                        </ComposedChart>
+                                                    </ResponsiveContainer>
+                                                </Paper>
+                                            </Grid>
+                                        );
+                                    })()}
+
+                                </Grid>
+
+                                {/* Hinweis wenn noch keine Daten */}
+                                {!hasBedData && !hasVibData && (
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic', display: 'block', py: 2 }}>
+                                        Noch keine Schlaf-Sensordaten vorhanden. FP2 (Funktion: Bett) und/oder Vibrationssensor konfigurieren — Daten werden ab dem nächsten Tag gesammelt.
+                                    </Typography>
+                                )}
+                            </Box>
+                        );
+                    })()}
                 </>
             )}
         </Box>
     );
 }
+
+
+
+
 
 
 
