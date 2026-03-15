@@ -1,5 +1,5 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 13.03.2026 | **Version:** 0.33.1
+**Letzte Aktualisierung:** 14.03.2026 | **Version:** 0.33.3
 
 ---
 
@@ -194,6 +194,53 @@ Beides gehoert zusammen in Phase 4.
 
 ---
 
+## Sitzung 14.03.2026 — Phase 4: FP2 + Vibrationssensor Integration (v0.33.3)
+
+### Umgesetzt
+
+**SensorList.tsx -- neue Typen + Flags:**
+- Sensortyp "Praesenz-Radar (FP2)" (presence_radar)
+- Sensortyp "Vibration"
+- Sensortyp "Feuchtigkeit/Wasser" (moisture, fuer spaeter)
+- Flag isFP2Bed -- Bett-Zone (Schlafanalyse)
+- Flag isFP2Living -- Wohnzimmer (Personenzaehlung)
+- Flag isVibrationBed -- Vibrationssensor am Lattenrost
+
+**recorder.js:**
+- isFP2Bed, isFP2Living, isVibrationBed werden in Events gespeichert
+
+**main.js:**
+- Abonniert automatisch .value-States aller presence_radar Sensoren
+- Neue Snapshot-Felder: maxPersonsDetected, bedPresenceMinutes, nightVibrationCount
+- FP2 value-State-Aenderungen aktualisieren personCount im letzten Event
+
+**health.py -- neuer sleepDisorder Score:**
+- Basiert auf: Bett-Praesenz-Rueckgang (35%) + Vibrations-Zunahme (30%) + Nacht-Unruhe (20%) + Nykturie (15%)
+- Zeigt SENSOR_MISSING wenn weder FP2-Bett noch Vibrationssensor konfiguriert
+- Automatische Haushaltstyp-Erkennung: wenn maxPersonsDetected >= 2 -> household_type = multi
+- _meta Block in allen Disease-Score-Ergebnissen: householdType, maxPersonsDetected
+
+### Sensor-Pfade (einzutragen in Settings)
+| Sensor | ioBroker-Pfad | Typ | Flag |
+|---|---|---|---|
+| FP2 Schlafzimmer gesamt | homekit-controller.0.IP-3A:63:AF:4F:8E:37.1.sensor-occupancy-2688.occupancy-detected | presence_radar | - |
+| FP2 Schlafzimmer Bett-Zone | homekit-controller.0.IP-3A:63:AF:4F:8E:37.1.sensor-occupancy-2692.occupancy-detected | presence_radar | isFP2Bed |
+| FP2 Wohnzimmer Zone1 | homekit-controller.0.IP-74DF7A:C5:02:46.1.sensor-occupancy-2688.occupancy-detected | presence_radar | isFP2Living |
+| FP2 Wohnzimmer Zone2 | homekit-controller.0.IP-74DF7A:C5:02:46.1.sensor-occupancy-2692.occupancy-detected | presence_radar | isFP2Living |
+| FP2 Wohnzimmer Zone3 | homekit-controller.0.IP-74DF7A:C5:02:46.1.sensor-occupancy-2696.occupancy-detected | presence_radar | isFP2Living |
+| Vibrationssensor Bett | zigbee.0.00158d008bc16ddd.vibration | vibration | isVibrationBed |
+| Wassersensor | zigbee.0.00158d000b7e8275 | moisture | - (Phase 5) |
+
+### Was jetzt funktioniert
+- FP2 Sensoren werden in der Sensor-Liste eingetragen und aufgezeichnet
+- Nach 7+ Tagen: sleepDisorder Score wird berechnet
+- Nach ersten Tagen mit value >= 2: Haushaltstyp wird automatisch erkannt
+
+### Noch offen (Phase 5)
+- Wassersensor: neues Krankheitsprofil UTI/Inkontinenz
+- Parkinson Score mit Vibrationssensor-Tremor-Intensitaet (strength-Wert)
+
+---
 ## Sitzung 13.03.2026 — Bugfix v0.33.1: ScreeningPanel ReferenceError
 
 ### Problem
@@ -865,6 +912,7 @@ Neuer Python-Befehl: `ANALYZE_DISEASE_SCORES` in service.py dispatch-table.
 
 | Version | Datum | Hauptänderung |
 |---|---|---|
+| **0.33.3** | 14.03.2026 | **feat**: FP2 presence_radar + Vibration + sleepDisorder Score + auto Haushaltstyp |
 | **0.33.2** | 13.03.2026 | **feat**: isKitchenSensor + Nykturie + Essrhythmus; Diabetes T2 / Depression / Soziale Isolation Scores |
 | **0.33.1** | 13.03.2026 | **FIX**: ScreeningPanel-Komponente fehlte -> ReferenceError; Versionierungsregel eingefuehrt |
 | 0.33.0 | 13.03.2026 | Phase 3: Proaktives Screening (DISEASE_SIGNATURES, compute_screening_hints, ScreeningPanel) + Icon-Import Fix |
