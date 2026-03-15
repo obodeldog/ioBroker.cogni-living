@@ -552,81 +552,6 @@ class CogniLiving extends utils.Adapter {
                 return hours.size;
             })();
 
-            const snapshot = {
-                date: dateStr,
-                timestamp: Date.now(),
-                roomHistory: roomHistoryData,
-                todayRoomMinutes: todayRoomMinutes,   // { 'EG Bad': 25, ... }
-                geminiNight: geminiNight?.val || null,
-                geminiDay: geminiDay?.val || null,
-                anomalyScore: anomalyScore?.val !== undefined && anomalyScore?.val !== null
-                    ? Number(anomalyScore.val) : null,
-                todayVector: (() => {
-                    // PrimÃ¤r: aus analysis.health.todayVector State (rawEventLog-basiert)
-                    // Fallback: direkt aus eventHistory des heutigen Tages berechnen
-                    let vec = todayVector?.val ? JSON.parse(todayVector.val) : null;
-                    const vecIsEmpty = !vec || vec.every(v => v === 0);
-                    if (vecIsEmpty && todayEvents.length > 0) {
-                        // Fallback: Vector aus heutigen Events berechnen
-                        vec = new Array(48).fill(0);
-                        const dayStart = new Date().setHours(0,0,0,0);
-                        todayEvents.forEach(e => {
-                            const ts = e.timestamp || e.ts || 0;
-                            if (ts >= dayStart) {
-                                const d = new Date(ts);
-                                const slot = d.getHours() * 2 + Math.floor(d.getMinutes() / 30);
-                                if (slot >= 0 && slot < 48) vec[slot]++;
-                            }
-                        });
-                    }
-                    return vec || new Array(48).fill(0);
-                })(),
-                batteryLevel: battery,
-                freshAirCount: freshAirCount,
-                freshAirLongCount: freshAirLongCount,
-                windowOpenings: freshAirCount,
-                gaitSpeed: (() => {
-                    // Berechne heutige Gait-Speed direkt aus Sequenzen (kein async noetig)
-                    try {
-                        const seqState = this._lastSeqState; // wird unten gesetzt
-                        if (!seqState) return null;
-                        const allSeqs = JSON.parse(seqState);
-                        const todayStr = dateStr; // bereits oben definiert
-                        const todaySeqs = allSeqs.filter(s => (s.timestamp || '').startsWith(todayStr));
-                        if (todaySeqs.length < 1) return null;
-
-                        const hallwayConf = (this.config.devices || []).filter(d => d.isHallway || d.sensorFunction === 'hallway').map(d => d.location || d.name || '');
-                        const hallwayKw = ['flur', 'diele', 'gang', 'korridor'];
-                        const isHallway = (loc) => hallwayConf.includes(loc) || hallwayKw.some(k => (loc || '').toLowerCase().includes(k));
-
-                        const transits = [];
-                        for (const seq of todaySeqs) {
-                            const steps = seq.steps || [];
-                            if (steps.length < 3) continue;
-                            for (let i = 1; i < steps.length - 1; i++) {
-                                if (!isHallway(steps[i].loc)) continue;
-                                if (isHallway(steps[i-1].loc) || isHallway(steps[i+1].loc)) continue;
-                                const transit = (steps[i+1].t_delta || 0) - (steps[i].t_delta || 0);
-                                if (transit >= 1 && transit <= 20) transits.push(transit);
-                            }
-                        }
-                        if (transits.length < 2) return null;
-                        transits.sort((a, b) => a - b);
-                        const median = transits[Math.floor(transits.length / 2)];
-                        return Math.round(median * 10) / 10;
-                    } catch(e) { return null; }
-                })(),
-                eventHistory: todayEvents,
-                nocturiaCount: nocturiaCount,
-                kitchenVisits: kitchenVisits,
-                sleepWindowStart: sleepWindowCalc.start,   // ms-Timestamp Schlafbeginn (null wenn kein FP2)
-                sleepWindowEnd:   sleepWindowCalc.end,     // ms-Timestamp Aufwachen (null wenn kein FP2)
-                maxPersonsDetected: maxPersonsDetected,
-                bedPresenceMinutes: bedPresenceMinutes,
-                nightVibrationCount: nightVibrationCount,
-                personData: personData
-            };
-
             // ============================================================
             // Per-Person Nacht-Analyse
             // ============================================================
@@ -702,6 +627,82 @@ class CogniLiving extends utils.Adapter {
             })();
             // personData auch als ioBroker-State schreiben (für spätere Auswertung)
             try { await this.setStateAsync('system.personData', { val: JSON.stringify(personData), ack: true }); } catch(e) {}
+
+            const dataDir = utils.getAbsoluteDefaultDataDir();
+            const snapshot = {
+                date: dateStr,
+                timestamp: Date.now(),
+                roomHistory: roomHistoryData,
+                todayRoomMinutes: todayRoomMinutes,   // { 'EG Bad': 25, ... }
+                geminiNight: geminiNight?.val || null,
+                geminiDay: geminiDay?.val || null,
+                anomalyScore: anomalyScore?.val !== undefined && anomalyScore?.val !== null
+                    ? Number(anomalyScore.val) : null,
+                todayVector: (() => {
+                    // PrimÃ¤r: aus analysis.health.todayVector State (rawEventLog-basiert)
+                    // Fallback: direkt aus eventHistory des heutigen Tages berechnen
+                    let vec = todayVector?.val ? JSON.parse(todayVector.val) : null;
+                    const vecIsEmpty = !vec || vec.every(v => v === 0);
+                    if (vecIsEmpty && todayEvents.length > 0) {
+                        // Fallback: Vector aus heutigen Events berechnen
+                        vec = new Array(48).fill(0);
+                        const dayStart = new Date().setHours(0,0,0,0);
+                        todayEvents.forEach(e => {
+                            const ts = e.timestamp || e.ts || 0;
+                            if (ts >= dayStart) {
+                                const d = new Date(ts);
+                                const slot = d.getHours() * 2 + Math.floor(d.getMinutes() / 30);
+                                if (slot >= 0 && slot < 48) vec[slot]++;
+                            }
+                        });
+                    }
+                    return vec || new Array(48).fill(0);
+                })(),
+                batteryLevel: battery,
+                freshAirCount: freshAirCount,
+                freshAirLongCount: freshAirLongCount,
+                windowOpenings: freshAirCount,
+                gaitSpeed: (() => {
+                    // Berechne heutige Gait-Speed direkt aus Sequenzen (kein async noetig)
+                    try {
+                        const seqState = this._lastSeqState; // wird unten gesetzt
+                        if (!seqState) return null;
+                        const allSeqs = JSON.parse(seqState);
+                        const todayStr = dateStr; // bereits oben definiert
+                        const todaySeqs = allSeqs.filter(s => (s.timestamp || '').startsWith(todayStr));
+                        if (todaySeqs.length < 1) return null;
+
+                        const hallwayConf = (this.config.devices || []).filter(d => d.isHallway || d.sensorFunction === 'hallway').map(d => d.location || d.name || '');
+                        const hallwayKw = ['flur', 'diele', 'gang', 'korridor'];
+                        const isHallway = (loc) => hallwayConf.includes(loc) || hallwayKw.some(k => (loc || '').toLowerCase().includes(k));
+
+                        const transits = [];
+                        for (const seq of todaySeqs) {
+                            const steps = seq.steps || [];
+                            if (steps.length < 3) continue;
+                            for (let i = 1; i < steps.length - 1; i++) {
+                                if (!isHallway(steps[i].loc)) continue;
+                                if (isHallway(steps[i-1].loc) || isHallway(steps[i+1].loc)) continue;
+                                const transit = (steps[i+1].t_delta || 0) - (steps[i].t_delta || 0);
+                                if (transit >= 1 && transit <= 20) transits.push(transit);
+                            }
+                        }
+                        if (transits.length < 2) return null;
+                        transits.sort((a, b) => a - b);
+                        const median = transits[Math.floor(transits.length / 2)];
+                        return Math.round(median * 10) / 10;
+                    } catch(e) { return null; }
+                })(),
+                eventHistory: todayEvents,
+                nocturiaCount: nocturiaCount,
+                kitchenVisits: kitchenVisits,
+                sleepWindowStart: sleepWindowCalc.start,   // ms-Timestamp Schlafbeginn (null wenn kein FP2)
+                sleepWindowEnd:   sleepWindowCalc.end,     // ms-Timestamp Aufwachen (null wenn kein FP2)
+                maxPersonsDetected: maxPersonsDetected,
+                bedPresenceMinutes: bedPresenceMinutes,
+                nightVibrationCount: nightVibrationCount,
+                personData: personData
+            };
 
             const dataDir = utils.getAbsoluteDefaultDataDir();
                     const yPath = path.join(dataDir, 'cogni-living', 'history', `${yStr}.json`);
