@@ -413,8 +413,8 @@ class CogniLiving extends utils.Adapter {
             }).length;
 
             // Nykturie: Badezimmer-Sensor-Ereignisse zwischen 22:00 und 06:00 (einzigartige Stunden)
-            const _bathroomDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor; }).map(function(d) { return d.id; }));
-            const _kitchenDevIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor; }).map(function(d) { return d.id; }));
+            const _bathroomDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
+            const _kitchenDevIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
             const nocturiaCount = (function() {
                 var nightHours = new Set();
                 todayEvents.forEach(function(e) {
@@ -477,7 +477,7 @@ class CogniLiving extends utils.Adapter {
                         const todaySeqs = allSeqs.filter(s => (s.timestamp || '').startsWith(todayStr));
                         if (todaySeqs.length < 1) return null;
 
-                        const hallwayConf = (this.config.devices || []).filter(d => d.isHallway).map(d => d.location || d.name || '');
+                        const hallwayConf = (this.config.devices || []).filter(d => d.isHallway || d.sensorFunction === 'hallway').map(d => d.location || d.name || '');
                         const hallwayKw = ['flur', 'diele', 'gang', 'korridor'];
                         const isHallway = (loc) => hallwayConf.includes(loc) || hallwayKw.some(k => (loc || '').toLowerCase().includes(k));
 
@@ -972,8 +972,8 @@ class CogniLiving extends utils.Adapter {
                         const _dsDataDir = utils.getAbsoluteDefaultDataDir();
                         const _dsHistDir = path.join(_dsDataDir, 'cogni-living', 'history');
                         const _histDigests = [];
-                        const _bathroomIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor; }).map(function(d) { return d.id; }));
-                        const _kitchenIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor; }).map(function(d) { return d.id; }));
+                        const _bathroomIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
+                        const _kitchenIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
                         for (let _di = 0; _di <= 59; _di++) {
                             const _dObj = new Date(); _dObj.setDate(_dObj.getDate() - _di);
                             const _dStr = _dObj.toISOString().slice(0, 10);
@@ -1082,7 +1082,7 @@ class CogniLiving extends utils.Adapter {
                         const s = await this.getStateAsync('LTM.rawEventLog');
                         if(s && s.val) {
                             const deviceMap = {};
-                            // FP2 value-state tracking (person count)
+                            // FP2 value-state tracking (person count + Zwei-Ebenen-Belegungslogik)
             if (id.endsWith('.value')) {
                 var _fpBase = id.replace('.value', '.occupancy-detected');
                 var _fpConf = (this.config.devices||[]).find(function(d){ return d.id === _fpBase; });
@@ -1090,6 +1090,19 @@ class CogniLiving extends utils.Adapter {
                     var _personCount = state ? Number(state.val) : 0;
                     var _evIdx = this.eventHistory.findIndex(function(e){ return e.id === _fpBase && !e._hasPCount; });
                     if (_evIdx > -1) { this.eventHistory[_evIdx].personCount = _personCount; this.eventHistory[_evIdx]._hasPCount = true; }
+                    // Zwei-Ebenen-Belegungslogik:
+                    // Wohnzimmer-FP2 (living) => bestimmt Haushaltstyp in Echtzeit
+                    var _isLiving = _fpConf.sensorFunction === 'living' || _fpConf.isFP2Living;
+                    if (_isLiving) {
+                        this._livePersonCount = _personCount;
+                        // Multi-Person wenn >= 2 Personen gleichzeitig im Wohnbereich erkannt
+                        var _liveHT = _personCount >= 2 ? 'multi' : 'single';
+                        this.setStateAsync('system.currentPersonCount', { val: _personCount, ack: true }).catch(function(){});
+                        this.setStateAsync('system.householdType', { val: _liveHT, ack: true }).catch(function(){});
+                    }
+                    // Schlafzimmer-FP2 (bed) => Bettbelegung-Cache fuer Schlafanalyse
+                    var _isBed = _fpConf.sensorFunction === 'bed' || _fpConf.isFP2Bed;
+                    if (_isBed) { this._liveBedPersonCount = _personCount; }
                 }
             }
                         if (this.config.devices) this.config.devices.forEach(d => { if (d.id && d.type) deviceMap[d.id] = d.type; });
@@ -1505,3 +1518,5 @@ class CogniLiving extends utils.Adapter {
 
 if (require.main !== module) module.exports = (options) => new CogniLiving(options);
 else new CogniLiving();
+
+
