@@ -142,7 +142,7 @@ export default function SystemTab(props: any) {
 
             {/* --- SENSOR-GESUNDHEIT SAMMELMELDUNG --- */}
             {(() => {
-                if (!sensorStatus || sensorStatus.sensors.length === 0) return (
+                if (!sensorStatus || !sensorStatus.sensors || sensorStatus.sensors.length === 0) return (
                     <Paper elevation={1} sx={{ mb: 3, p: 2, borderRadius: 2, border: "1px dashed", borderColor: isDark ? "#444" : "#ccc" }}>
                         <Stack direction="row" alignItems="center" spacing={1}>
                             <CheckCircleOutlineIcon sx={{ color: "#9e9e9e" }} />
