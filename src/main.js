@@ -252,10 +252,10 @@ class CogniLiving extends utils.Adapter {
         var now = Date.now();
         var devices = this.config.devices || [];
         // Schwellwerte pro Typ – Tür/Fenster 7 Tage (wochenlang geschlossen ist normal)
-        var thresholds = { motion: 4*3600000, presence_radar: 4*3600000, vibration: 4*3600000,
+        var thresholds = { motion: 24*3600000, presence_radar: 24*3600000, vibration: 24*3600000,
             door: 7*24*3600000, temperature: 2*3600000, light: 8*3600000, dimmer: 8*3600000, moisture: 8*3600000 };
         var defaultThreshold = 8 * 3600000;
-        var ALERT_COOLDOWN = 12 * 3600000;
+        var ALERT_COOLDOWN = 24 * 3600000; // max. 1 Pushover pro Sensor pro Tag
         // KNX/Loxone/BACnet: kabelgebunden, kein Heartbeat – Timeout-Check überspringen
         var WIRED_PREFIXES = ['knx.', 'loxone.', 'bacnet.', 'modbus.'];
         var alerts = [];
