@@ -153,6 +153,7 @@ class CogniLiving extends utils.Adapter {
             this.subscribeForeignStates(this.config.infrasoundSensorId);
         }
         const devices = this.config.devices; if (devices) { for (const d of devices) { await this.subscribeForeignStatesAsync(d.id); } }
+        if (devices) { for (const d of devices) { if ((d.type === 'presence_radar') && d.id) { var _vpId = d.id.replace('.occupancy-detected', '.value'); try { await this.subscribeStateAsync(_vpId); } catch(e) {} } } }
         const devs = this.config.presenceDevices; if (devs) { for (const id of devs) { await this.subscribeForeignStatesAsync(id); } }
 
         const schedule = require('node-schedule');
@@ -379,6 +380,38 @@ class CogniLiving extends utils.Adapter {
                 await this.setStateAsync('analysis.activity.roomStats', { val: JSON.stringify(existingStats), ack: true });
             } catch(e) {}
 
+            // FP2 Personenzaehlung: max. Personen die heute gleichzeitig erkannt wurden
+            const maxPersonsDetected = (function() {
+                var max = 0;
+                todayEvents.forEach(function(e) {
+                    if ((e.isFP2Bed || e.isFP2Living) && typeof e.personCount === 'number') {
+                        if (e.personCount > max) max = e.personCount;
+                    }
+                });
+                return max;
+            })();
+            // FP2 Bett-Praesenz: Minuten die Bett-Zone heute belegt war
+            const bedPresenceMinutes = (function() {
+                var presStart = null; var total = 0;
+                var bedEvts = todayEvents.filter(function(e) { return e.isFP2Bed; })
+                    .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+                bedEvts.forEach(function(e) {
+                    var v = e.value === true || e.value === 1 || e.value === 'true';
+                    if (v && !presStart) { presStart = e.timestamp||0; }
+                    else if (!v && presStart) { total += ((e.timestamp||0) - presStart) / 60000; presStart = null; }
+                });
+                if (presStart) total += (Date.now() - presStart) / 60000;
+                return Math.round(total);
+            })();
+            // Vibration Bett: Erschuetterungen nachts (22:00-06:00)
+            const nightVibrationCount = todayEvents.filter(function(e) {
+                if (!e.isVibrationBed) return false;
+                var v = e.value === true || e.value === 1 || e.value === 'true';
+                if (!v) return false;
+                var hr = new Date(e.timestamp||0).getHours();
+                return hr >= 22 || hr < 6;
+            }).length;
+
             // Nykturie: Badezimmer-Sensor-Ereignisse zwischen 22:00 und 06:00 (einzigartige Stunden)
             const _bathroomDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor; }).map(function(d) { return d.id; }));
             const _kitchenDevIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor; }).map(function(d) { return d.id; }));
@@ -467,7 +500,10 @@ class CogniLiving extends utils.Adapter {
                 })(),
                 eventHistory: todayEvents,
                 nocturiaCount: nocturiaCount,
-                kitchenVisits: kitchenVisits
+                kitchenVisits: kitchenVisits,
+                maxPersonsDetected: maxPersonsDetected,
+                bedPresenceMinutes: bedPresenceMinutes,
+                nightVibrationCount: nightVibrationCount
             };
 
             const dataDir = utils.getAbsoluteDefaultDataDir();
@@ -978,7 +1014,10 @@ class CogniLiving extends utils.Adapter {
                                         uniqueRooms: _rooms,
                                         bathroomVisits: _bathSet.size,
                                         nocturiaCount: _nocturiaVal || 0,
-                                        kitchenVisits: _kitchenVal || 0
+                                        kitchenVisits: _kitchenVal || 0,
+                                        maxPersonsDetected: _h.maxPersonsDetected || 0,
+                                        bedPresenceMinutes: _h.bedPresenceMinutes || 0,
+                                        nightVibrationCount: _h.nightVibrationCount || 0
                                     });
                                 } catch(e) {}
                             }
@@ -1043,7 +1082,17 @@ class CogniLiving extends utils.Adapter {
                         const s = await this.getStateAsync('LTM.rawEventLog');
                         if(s && s.val) {
                             const deviceMap = {};
-                            if (this.config.devices) this.config.devices.forEach(d => { if (d.id && d.type) deviceMap[d.id] = d.type; });
+                            // FP2 value-state tracking (person count)
+            if (id.endsWith('.value')) {
+                var _fpBase = id.replace('.value', '.occupancy-detected');
+                var _fpConf = (this.config.devices||[]).find(function(d){ return d.id === _fpBase; });
+                if (_fpConf && _fpConf.type === 'presence_radar') {
+                    var _personCount = state ? Number(state.val) : 0;
+                    var _evIdx = this.eventHistory.findIndex(function(e){ return e.id === _fpBase && !e._hasPCount; });
+                    if (_evIdx > -1) { this.eventHistory[_evIdx].personCount = _personCount; this.eventHistory[_evIdx]._hasPCount = true; }
+                }
+            }
+                        if (this.config.devices) this.config.devices.forEach(d => { if (d.id && d.type) deviceMap[d.id] = d.type; });
                             pythonBridge.send(this, 'TRAIN_COMFORT', { events: JSON.parse(s.val), deviceMap: deviceMap });
                         }
                     } catch(e){}

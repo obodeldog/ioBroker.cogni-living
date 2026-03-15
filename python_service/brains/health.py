@@ -765,6 +765,8 @@ class HealthBrain:
             cal_bathroom  = safe_mean([d.get('bathroomVisits', 0) for d in cal if d.get('bathroomVisits', 0) > 0], 3.0)
             cal_nocturia  = safe_mean([d.get('nocturiaCount', 0) for d in cal], 0.5)
             cal_kitchen   = safe_mean([d.get('kitchenVisits',  0) for d in cal if d.get('kitchenVisits', 0) > 0], 6.0)
+            cal_bed_pres  = safe_mean([d.get('bedPresenceMinutes', 0) for d in cal if d.get('bedPresenceMinutes', 0) > 0], 420.0)
+            cal_vibration = safe_mean([d.get('nightVibrationCount', 0) for d in cal], 2.0)
 
             # Aktuelle Werte: letzte 7 Tage der Erkennungsphase
             last7 = recent[-7:] if len(recent) >= 7 else recent
@@ -775,6 +777,10 @@ class HealthBrain:
             rec_bathroom  = safe_mean([d.get('bathroomVisits', 0) for d in last7 if d.get('bathroomVisits', 0) > 0], cal_bathroom)
             rec_nocturia  = safe_mean([d.get('nocturiaCount', 0) for d in last7], cal_nocturia)
             rec_kitchen   = safe_mean([d.get('kitchenVisits',  0) for d in last7 if d.get('kitchenVisits', 0) > 0], cal_kitchen)
+            rec_bed_pres  = safe_mean([d.get('bedPresenceMinutes', 0) for d in last7 if d.get('bedPresenceMinutes', 0) > 0], cal_bed_pres)
+            rec_vibration = safe_mean([d.get('nightVibrationCount', 0) for d in last7], cal_vibration)
+            # Maximale erkannte Personenzahl (fuer automatische Haushaltstyp-Erkennung)
+            max_persons_all = max([d.get('maxPersonsDetected', 0) for d in sorted_digests], default=0)
 
             # --- Normalisierungs-Hilfsfunktionen (0=normal, 100=maximale Verschlechterung) ---
 
@@ -822,6 +828,10 @@ class HealthBrain:
             hygiene_decl   = decline_score(cal_bathroom, rec_bathroom)
             nocturia_comp  = nocturia_score(cal_nocturia, rec_nocturia)
             kitchen_decl   = decline_score(cal_kitchen, rec_kitchen)
+            bed_pres_decl  = decline_score(cal_bed_pres, rec_bed_pres)
+            vibration_incr = increase_score(cal_vibration, rec_vibration, sensitivity=1.5)
+            # Haushaltstyp: multi wenn je >= 2 Personen gleichzeitig erkannt
+            household_type = 'multi' if max_persons_all >= 2 else 'single'
 
             results = {}
 
@@ -926,6 +936,39 @@ class HealthBrain:
                     'dataPoints': n,
                 }
 
+            # ---- SCHLAFSTOERUNGS-SCORE ----
+            if 'sleepDisorder' in enabled_profiles:
+                # Klinisch: verkuerzte Bett-Liegzeit + erhöhte Nacht-Unruhe + Vibration (Bewegung im Bett)
+                # Ref: AASM Sleep Disorder Criteria; Buysse et al. (1989) PSQI
+                has_bed_data = cal_bed_pres > 0 or rec_bed_pres > 0
+                has_vib_data = cal_vibration > 0 or rec_vibration > 0
+                sleep_score  = round(
+                    0.35 * bed_pres_decl  +   # Weniger Zeit im Bett (fruehes Aufwachen, Einschlafstoerung)
+                    0.30 * vibration_incr  +   # Mehr Bewegung im Bett (Unruhiger Schlaf)
+                    0.20 * night_excess    +   # Naechtliche Aktivitaet ausserhalb Bett
+                    0.15 * nocturia_comp,  1   # Haeufige Toilettengaenge nachts
+                )
+                results['sleepDisorder'] = {
+                    'score':  sleep_score if (has_bed_data or has_vib_data) else None,
+                    'level':  risk_level(sleep_score) if (has_bed_data or has_vib_data) else 'SENSOR_MISSING',
+                    'factors': {
+                        'bedPresenceDecline':  round(bed_pres_decl,  1),
+                        'vibrationIncrease':   round(vibration_incr, 1),
+                        'nightRestlessness':   round(night_excess,   1),
+                        'nocturiaIncrease':    round(nocturia_comp,  1),
+                    },
+                    'values': {
+                        'bedPresenceBaseline': round(cal_bed_pres,  0),
+                        'bedPresenceRecent':   round(rec_bed_pres,  0),
+                        'vibrationBaseline':   round(cal_vibration, 1),
+                        'vibrationRecent':     round(rec_vibration, 1),
+                    },
+                    'sensorNote': None if (has_bed_data or has_vib_data) else 'FP2 Bett-Zone (isFP2Bed) oder Vibrationssensor (isVibrationBed) benoetigt',
+                    'householdType': household_type,
+                    'calibrationDays': cal_n,
+                    'dataPoints': n,
+                }
+
             # ---- DIABETES TYP 2 ----
             if 'diabetes2' in enabled_profiles:
                 # Klinisch: Nykturie + unregelm. Essen + Aktivitaet + Hygiene
@@ -1017,6 +1060,13 @@ class HealthBrain:
                     'dataPoints': n,
                 }
 
+            # Metadaten fuer alle Profile
+            results['_meta'] = {
+                'householdType':      household_type,
+                'maxPersonsDetected': int(max_persons_all),
+                'calibrationDays':    cal_n,
+                'dataPoints':         n,
+            }
             return results
 
         except Exception as e:
