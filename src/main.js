@@ -51,6 +51,11 @@ class CogniLiving extends utils.Adapter {
         this.infrasoundLocked = false;
         this.pressureBuffer = [];
 
+        // Sensor-Ausfall-Erkennung
+        this.sensorLastSeen = {};    // { sensorId: timestamp }
+        this.sensorAlertSent = {};   // { sensorId: lastAlertTs } - verhindert Spam
+        this.sensorCheckInterval = null;
+
         // Active Modules
         this.activeModules = { health: true, security: true, energy: true, comfort: true };
 
@@ -164,6 +169,15 @@ class CogniLiving extends utils.Adapter {
 
         setTimeout(() => this.replayTodayEvents(), 5000);
 
+        // Sensor-LastSeen aus eventHistory initialisieren (auch nach Adapter-Neustart)
+        if (this.eventHistory && this.eventHistory.length > 0) {
+            this.eventHistory.forEach(function(e) { if (e.id && e.timestamp) { var cur = this.sensorLastSeen[e.id]; if (!cur || e.timestamp > cur) this.sensorLastSeen[e.id] = e.timestamp; } }.bind(this));
+        }
+        // Stündlicher Sensor-Ausfall-Check
+        if (this.sensorCheckInterval) clearInterval(this.sensorCheckInterval);
+        this.sensorCheckInterval = setInterval(() => { this.checkSensorHealth(); }, 60 * 60 * 1000);
+        setTimeout(() => this.checkSensorHealth(), 5 * 60 * 1000); // auch 5 min nach Start
+
         if (this.roomIntegratorTimer) clearInterval(this.roomIntegratorTimer);
         this.integrateRoomTime();
         this.roomIntegratorTimer = setInterval(async () => {
@@ -232,6 +246,38 @@ class CogniLiving extends utils.Adapter {
         }
     }
 
+    checkSensorHealth() {
+        var _self = this;
+        var now = Date.now();
+        var devices = this.config.devices || [];
+        // Schwellwerte pro Sensor-Typ (Millisekunden)
+        var thresholds = { motion: 4*3600000, presence_radar: 4*3600000, vibration: 4*3600000,
+            door: 24*3600000, temperature: 2*3600000, light: 8*3600000, dimmer: 8*3600000, moisture: 8*3600000 };
+        var defaultThreshold = 8 * 3600000;
+        var ALERT_COOLDOWN = 12 * 3600000; // max. 1 Alert pro 12h pro Sensor
+        var alerts = [];
+        devices.forEach(function(d) {
+            if (!d.id) return;
+            var lastSeen = _self.sensorLastSeen[d.id];
+            if (!lastSeen) return; // noch nie gesehen – kein Alarm (koennte erst heute konfiguriert worden sein)
+            var threshold = thresholds[d.type] || defaultThreshold;
+            var elapsed = now - lastSeen;
+            if (elapsed > threshold) {
+                var lastAlert = _self.sensorAlertSent[d.id] || 0;
+                if ((now - lastAlert) > ALERT_COOLDOWN) {
+                    _self.sensorAlertSent[d.id] = now;
+                    var hours = Math.round(elapsed / 3600000);
+                    alerts.push((d.name || d.id) + ' (' + (d.location || '?') + '): seit ' + hours + 'h inaktiv');
+                }
+            }
+        });
+        if (alerts.length > 0) {
+            var msg = '⚠️ Sensor-Ausfall:\n' + alerts.join('\n');
+            this.log.warn('[SENSOR-CHECK] ' + alerts.join(', '));
+            try { setup.sendNotification(this, msg, true, false, '⚠️ NUUKANNI: Sensor-Ausfall'); } catch(e) {}
+        }
+    }
+
     onUnload(callback) {
         if (this.historyJob) this.historyJob.cancel();
         this.saveDailyHistory().then(async () => {
@@ -239,6 +285,7 @@ class CogniLiving extends utils.Adapter {
             if (this.calendarCheckTimer) clearInterval(this.calendarCheckTimer);
             if (this.presenceCheckTimer) clearInterval(this.presenceCheckTimer);
             if (this.roomIntegratorTimer) clearInterval(this.roomIntegratorTimer);
+            if (this.sensorCheckInterval) clearInterval(this.sensorCheckInterval);
             recorder.abortExitTimer(this);
             pythonBridge.stopService(this);
             
@@ -403,24 +450,75 @@ class CogniLiving extends utils.Adapter {
                 if (presStart) total += (Date.now() - presStart) / 60000;
                 return Math.round(total);
             })();
-            // Vibration Bett: Erschuetterungen nachts (22:00-06:00)
+            // Vibration Bett: Erschuetterungen im Schlaf-Fenster (Fallback: 22-06)
             const nightVibrationCount = todayEvents.filter(function(e) {
                 if (!e.isVibrationBed) return false;
                 var v = e.value === true || e.value === 1 || e.value === 'true';
                 if (!v) return false;
-                var hr = new Date(e.timestamp||0).getHours();
+                var ts = e.timestamp||0;
+                if (sleepWindowCalc.start && sleepWindowCalc.end) {
+                    return ts >= sleepWindowCalc.start && ts <= sleepWindowCalc.end;
+                }
+                var hr = new Date(ts).getHours();
                 return hr >= 22 || hr < 6;
             }).length;
 
-            // Nykturie: Badezimmer-Sensor-Ereignisse zwischen 22:00 und 06:00 (einzigartige Stunden)
+            // Schlaf-Fenster aus FP2-Bett-Events berechnen (dynamisch statt fixem 22-06)
+            const sleepWindowCalc = (function() {
+                var bedEvts = todayEvents.filter(function(e) { return e.isFP2Bed; })
+                    .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+                if (bedEvts.length === 0) return { start: null, end: null };
+                // Schlafbeginn: letztes Mal dass Bett >= 10 Min belegt wurde zwischen 18:00-02:00
+                var sleepStartTs = null;
+                var presStart = null;
+                for (var _si = 0; _si < bedEvts.length; _si++) {
+                    var _se = bedEvts[_si];
+                    var _sv = _se.value === true || _se.value === 1 || _se.value === 'true';
+                    var _shr = new Date(_se.timestamp||0).getHours();
+                    if (_sv && !presStart && (_shr >= 18 || _shr < 3)) { presStart = _se.timestamp||0; }
+                    else if (!_sv && presStart) {
+                        var _dur = ((_se.timestamp||0) - presStart) / 60000;
+                        if (_dur >= 10) sleepStartTs = presStart; // merke diesen (evtl. wird er spaeter ueberschrieben)
+                        presStart = null;
+                    }
+                }
+                if (presStart) { var _dur2 = (Date.now() - presStart) / 60000; if (_dur2 >= 10) sleepStartTs = presStart; }
+                if (!sleepStartTs) return { start: null, end: null };
+                // Aufwachzeit: erstes Mal nach Schlafbeginn dass Bett >= 15 Min leer war nach 04:00
+                var wakeTs = null;
+                var emptyStart = null;
+                for (var _wi = 0; _wi < bedEvts.length; _wi++) {
+                    var _we = bedEvts[_wi];
+                    if ((_we.timestamp||0) < sleepStartTs) continue; // vor Schlafbeginn ignorieren
+                    var _wv = _we.value === true || _we.value === 1 || _we.value === 'true';
+                    var _whr = new Date(_we.timestamp||0).getHours();
+                    if (!_wv && (_whr >= 4 || _whr < 12)) {
+                        if (!emptyStart) emptyStart = _we.timestamp||0;
+                    } else if (_wv && emptyStart) {
+                        var _wdur = ((_we.timestamp||0) - emptyStart) / 60000;
+                        if (_wdur >= 15) { wakeTs = emptyStart + _wdur * 60000; emptyStart = null; break; }
+                        emptyStart = null;
+                    }
+                }
+                if (emptyStart) { var _wdur2 = (Date.now() - emptyStart) / 60000; if (_wdur2 >= 15) wakeTs = Date.now(); }
+                return { start: sleepStartTs, end: wakeTs };
+            })();
+
+            // Nykturie: Badezimmer-Sensor-Ereignisse – dynamisches Schlaf-Fenster (Fallback: 22-06)
             const _bathroomDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
             const _kitchenDevIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
             const nocturiaCount = (function() {
                 var nightHours = new Set();
+                var hasDyn = !!(sleepWindowCalc.start && sleepWindowCalc.end);
                 todayEvents.forEach(function(e) {
                     if (!e.isBathroomSensor && !_bathroomDevIds.has(e.id)) return;
-                    var hr = new Date(e.timestamp || e.ts || 0).getHours();
-                    if (hr >= 22 || hr < 6) nightHours.add(hr);
+                    var ts = e.timestamp || e.ts || 0;
+                    var hr = new Date(ts).getHours();
+                    if (hasDyn) {
+                        if (ts >= sleepWindowCalc.start && ts <= sleepWindowCalc.end) nightHours.add(hr);
+                    } else {
+                        if (hr >= 22 || hr < 6) nightHours.add(hr);
+                    }
                 });
                 return nightHours.size;
             })();
@@ -501,6 +599,8 @@ class CogniLiving extends utils.Adapter {
                 eventHistory: todayEvents,
                 nocturiaCount: nocturiaCount,
                 kitchenVisits: kitchenVisits,
+                sleepWindowStart: sleepWindowCalc.start,   // ms-Timestamp Schlafbeginn (null wenn kein FP2)
+                sleepWindowEnd:   sleepWindowCalc.end,     // ms-Timestamp Aufwachen (null wenn kein FP2)
                 maxPersonsDetected: maxPersonsDetected,
                 bedPresenceMinutes: bedPresenceMinutes,
                 nightVibrationCount: nightVibrationCount
