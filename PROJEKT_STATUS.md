@@ -53,147 +53,21 @@ Kein neues Gerät nötig!
 
 ---
 
-## Geplant: Phase 7 — Occupancy Tracker (Personenzaehlung)
+## Naechste Schritte (Stand 14.03.2026)
 
-### Ziel
-Automatische Erkennung wie viele Personen sich gerade im Haus befinden.
-Zwei Ebenen getrennt behandeln:
+1. **Phase 5 -- Wassersensor**: Sensortyp `moisture` + Funktion Bett + UTI/Inkontinenz-Profil in health.py
+   State-Pfad: `zigbee.0.00158d000b7e8275`
 
-| Ebene | Art | Loesung |
-|---|---|---|
-| Wie viele Personen wohnen hier? | Statisch | Config-Einstellung (1-4 Personen) |
-| Wie viele sind gerade zu Hause? | Dynamisch | Occupancy Tracker Modul |
+2. **Sensor-Tab**: FP2 + Vibrationssensor in Sensor-Liste eintragen (manuell durch Nutzer)
+   Dann: 7+ Tage Daten sammeln fuer sleepDisorder Baseline
 
-### Technischer Ansatz (Hybrid)
-1. Config-Einstellung "Anzahl Bewohner" (1-4) -- wird fuer Algorithmus-Kalibrierung genutzt
-2. Bestehende isExit-Sensoren tracken Weggeh-Erkennung (bereits implementiert)
-3. Dritter FP2 im Wohnzimmer/Flur fuer direkte Personenzaehlung (FP2 meldet 1/2/3 Personen)
-4. Kombinierte Logik: Exit-Sensor-Zaehler + FP2-Bestaetigung
+3. **Zwei-Ebenen-Belegungslogik**: Wohnzimmer-FP2 = Haus-Belegung, Schlafzimmer-FP2 = Persoenliche Zone
+   Algorithmus: wenn Schlafzimmer-FP2 value=1, laufen alle Bett-Analysen normal
+   (Konzept fertig, Umsetzung nach Phase 5)
 
-### Warum nicht sofort
-- 2x FP2 stehen in Schlafzimmer + Bad (medizinischer Fokus wichtiger)
-- Exit-Sensor-Logik hat bekannte Schwaechen (schlafende Person = keine Bewegung)
-- Erst wenn dritter FP2 vorhanden: saubere Personenzaehlung im Flur/Wohnzimmer
-
-### Auswirkung auf Algorithmen
-Wenn Personenzahl > 1:
-- Alle ML-Baselines mit hoeherem Rausch-Toleranzwert kalibrieren
-- Screening-Hinweise mit Warnhinweis "Mehrpersonenhaushalt -- reduzierte Genauigkeit"
-- Ganggeschwindigkeit nur wenn Person allein im Flur (FP2-Bestaetigung)
-
-### Abhaengigkeiten
-Benoetigt: Phase 4 (FP2-Integration) + optional dritten FP2
+Fuer Roadmap + Architektur-Entscheidungen: siehe BRAINSTORMING.md
 
 ---
-## Geplant: Phase 6 — Garmin-Uhr Integration (cardiovascular + sleep)
-
-### Idee
-Garmin-Uhr (Wearable) als zusaetzliche Datenquelle einbinden, um Krankheitsprofile
-zu ermoeglichen, die passive PIR-Sensoren allein nicht erfassen koennen.
-
-### Was die Uhr liefert
-| Garmin-Metrik | Krankheitsprofil | Bedeutung |
-|---|---|---|
-| Herzfrequenz (Ruhe-HF) | cardiovascular | Anstieg ueber Wochen = Risiko-Indikator |
-| HRV (Herzratenvariabilitaet) | cardiovascular, depression | Niedrige HRV = vegetative Dysfunktion |
-| SpO2 (Blutsauerstoff) | copd, cardiovascular | <94% nachts = Alarmsignal |
-| Schlafphasen (REM/Deep/Light) | sleepDisorder | Praezisere Schlafauswertung als PIR/FP2 |
-| Stress-Score | depression, bipolar | Erhoehter Dauerstress |
-| Atemfrequenz | copd | Erhoehung = Verschlechterung |
-| Schritte / VO2max | frailty, depression | Aktivitaetsrueckgang objektiv messbar |
-
-### Technische Umsetzung (geplant)
-- ioBroker-Adapter: iobroker.garmin (Community) ODER Garmin Connect API (OAuth2)
-- Alternativ: Garmin Health API (fuer Entwickler, kostenlos fuer Privatnutzung)
-- Config-Sektion: neuer Block "Wearable" in den Instanzeinstellungen
-- New States: wearable.heartRate, wearable.hrv, wearable.spo2, wearable.sleepScore
-- health.py: compute_disease_scores() nimmt optionale Wearable-Metriken entgegen
-
-### Prioritaet
-Mittel -- erst nach FP2-Integration (Phase 4) und Vibrations-/Wassersensor (Phase 5).
-Ermoeglicht: cardiovascular Score, praeziserer COPD Score, besserer sleepDisorder Score.
-
----
-## Sitzung 14.03.2026 — FP2 Architektur-Entscheidungen (noch kein Code)
-
-### Hardware vorhanden
-- 2x Aqara FP2 (mmWave 60GHz, WiFi, HomeKit) -- beide bereits in ioBroker via homekit-controller.0 eingebunden
-- 1x Vibrationssensor
-- 1x Wassersensor (Feuchtigkeitssensor fuer Bett/Inkontinenz)
-- Vorhandene Sensoren: PIR in allen Raeumen, SNZB-06P im Schlafzimmer
-
-### FP2 Platzierungs-Entscheidung
-| FP2 | Raum | Hauptnutzen |
-|---|---|---|
-| FP2 #1 | Wohnzimmer | Personenzaehlung (tagsaetzl. Hauptaufenthaltsbereich) |
-| FP2 #2 | Schlafzimmer | Zonenunterscheidung "im Bett" + Personenzaehlung nachts |
-
-Badezimmer braucht keinen FP2 -- normaler PIR reicht fuer Nykturie-Zaehlung (seit v0.33.2 implementiert).
-
-### Warum FP2 und nicht nur PIR/SNZB-06P
-| Faehigkeit | PIR | SNZB-06P | FP2 |
-|---|---|---|---|
-| Bewegung | OK | OK | OK |
-| Statische Praesenz | NEIN | OK | OK |
-| Personenzaehlen (0/1/2...) | NEIN | NEIN | JA (Hauptvorteil!) |
-| Zonen (Bett vs. Tuer) | NEIN | NEIN | JA |
-| Atemrate | NEIN | Kaum | JA (60GHz) -- ob via HomeKit verfuegbar: zu pruefen |
-
-### ioBroker States des FP2 (homekit-controller)
-Pfad: homekit-controller.0.IP-74DF7AC5:02:46.1
-- sensor-occupancy-2688.occupancy-detected  (boolean)
-- sensor-occupancy-2688.value               (Personenanzahl 0/1/2...)
-- sensor-occupancy-2692.*                   (Zone 2)
-- sensor-occupancy-2696.*                   (Zone 3)
-- sensor-light-2672.light-level-current     (Helligkeit lx)
-Fall-Detection: nicht verfuegbar (benoetigt Deckenmontage, konfliktiert mit Multipersonendetektion)
-
-### Geplante Integration (Option B)
-- Neuer Sensortyp "presence_radar" in der Sensor-Liste
-- Recorder subscribt auf BEIDE States: occupancy-detected + value (Personenanzahl)
-- Flags: isFP2Bed (Schlafzimmer-Bett-Zone), isFP2Living (Wohnzimmer)
-- health.py: max. erkannte Personenzahl in daily snapshot speichern
-- Automatische Haushaltstyp-Erkennung: wenn value >= 2 irgendwo -> multi-person bestaetigt
-
----
-## Geplant: Phase 4 — Haushaltstyp-Konfiguration + Aqara FP2
-
-### Idee
-Einstellung in der Admin-UI: **Einpersonenhaushalt** vs. **Mehrpersonenhaushalt**
-
-### Warum wichtig
-Alle ML-Modelle (IsolationForest, Aktivitaetsvektoren, Ganggeschwindigkeit) sind auf
-eine Person kalibriert. Bei mehreren Personen im Haus sind Bewegungsmuster nicht mehr
-eindeutig zuordenbar — Screening-Hinweise koennten sonst faelschlicherweise "Aktivitaetsrueckgang"
-melden, obwohl nur eine zweite Person ausgezogen ist.
-
-### Technische Umsetzung
-- Config-Variable: `this.config.householdType` (`'single'` | `'multi'`)
-- UI: Radiobutton im Settings-Tab unter neuem Block "Haushalts-Konfiguration"
-- Auswirkungen auf Algorithmen:
-
-| Feature | Einpersonenhaushalt | Mehrpersonenhaushalt |
-|---|---|---|
-| Screening-Hinweise | Normal aktiv | Mit Warnung + reduzierter Confidence |
-| Ganggeschwindigkeit | Zuverlaessig | Deaktiviert oder mit Disclaimer |
-| Nacht-Unruhe | Zuverlaessig | Nur wenn Schlafzimmer klar trennbar |
-| Disease Scores | Alle Profile | Nur Scores mit hoher Trennschaerfe |
-| Anomalie-Schwellwerte | Standard | Hoehere Toleranz (mehr Bewegung = normal) |
-
-### Zusammenhang mit Aqara FP2
-Der FP2 (mmWave-Radar) kann Personen zaehlen und Zonen tracken — damit wird
-Mehrpersonenhaushalt-Monitoring erst wirklich machbar (Person A vs. Person B trennen).
-Beides gehoert zusammen in Phase 4.
-
-### Offene Punkte fuer Umsetzung
-- Config-Feld `householdType` in io-package.json Schema eintragen
-- Settings-Tab: neuen Block "Haushalts-Konfiguration" mit RadioButton
-- `health.py` + `service.py`: `household_type` Parameter bei Analysen beruecksichtigen
-- Screening-Panel: Warnhinweis wenn `householdType === 'multi'`
-- Aqara FP2: neuer Sensortyp `presence_radar_zoned` im Recorder
-
----
-
 ## Sitzung 14.03.2026 — Phase 4: FP2 + Vibrationssensor Integration (v0.33.3)
 
 ### Umgesetzt

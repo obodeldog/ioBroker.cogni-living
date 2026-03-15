@@ -96,6 +96,24 @@ analysiert werden kann weil die relevante Zone mehrfach belegt ist:
 - Warn-Symbol im Medical Tab
 - Optional: Pushover an Angehoerige "Schlafueberwachung Opa unterbrochen - Besucher erkannt"
 
+
+### Geloest: 2-FP2-Loesung (14.03.2026)
+
+Nur 2 FP2 noetig (Wohnzimmer + Schlafzimmer). Zwei-Ebenen-Logik:
+
+- **Wohnzimmer-FP2** = Haus-Belegungsmelder (value >= 2 -> jemand sonst zu Hause)
+- **Schlafzimmer-FP2** = Persoenliche Zone (value = 1 -> Bett-Analysen immer valid)
+
+| Situation | WZ-FP2 | SZ-FP2 | Ergebnis |
+|---|---|---|---|
+| Allein | 1 | 1 | Alles normal |
+| Kinder im WZ, du schlaefst | 2 | 1 | Schlaf: normal, Flur/Kueche: +Toleranz |
+| Freundin schlaeft mit | 1 | 2 | Schlafanalyse: Warnsymbol |
+| Alle wach, alle da | 2 | 1 | Nur SZ-Analysen voll zuverlaessig |
+
+Raeume OHNE FP2 (Flur, Kueche, Bad): laufen bei Mehrpersonenbelegung mit
+erhoehtem Rausch-Schwellwert weiter -- sie stoppen NICHT.
+Dritter FP2 nicht noetig.
 ### Noch nicht geloest
 - Wie "Zone" eines Profils konfigurieren? Automatisch (aus Sensor-Funktionen) oder manuell?
 - Schwellwert: ab wann ist eine Zone "mehrfach belegt"? value >= 2 des FP2?
