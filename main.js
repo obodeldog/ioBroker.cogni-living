@@ -129,6 +129,7 @@ class CogniLiving extends utils.Adapter {
         }
         // Phase 3: Proaktives Screening State
         await this.setObjectNotExistsAsync('analysis.health.screening.hints', { type: 'state', common: { name: 'Proactive Screening Hints (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
+        await this.setObjectNotExistsAsync('system.sensorStatus', { type: 'state', common: { name: 'Sensor Health Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('analysis.energy.warmupTimes', { type: 'state', common: { name: 'Warm-Up Time', type: 'string', role: 'json', read: true, write: false }, native: {} });
 
         try {
@@ -246,23 +247,37 @@ class CogniLiving extends utils.Adapter {
         }
     }
 
-    checkSensorHealth() {
+    async checkSensorHealth() {
         var _self = this;
         var now = Date.now();
         var devices = this.config.devices || [];
-        // Schwellwerte pro Sensor-Typ (Millisekunden)
+        // Schwellwerte pro Typ – Tür/Fenster 7 Tage (wochenlang geschlossen ist normal)
         var thresholds = { motion: 4*3600000, presence_radar: 4*3600000, vibration: 4*3600000,
-            door: 24*3600000, temperature: 2*3600000, light: 8*3600000, dimmer: 8*3600000, moisture: 8*3600000 };
+            door: 7*24*3600000, temperature: 2*3600000, light: 8*3600000, dimmer: 8*3600000, moisture: 8*3600000 };
         var defaultThreshold = 8 * 3600000;
-        var ALERT_COOLDOWN = 12 * 3600000; // max. 1 Alert pro 12h pro Sensor
+        var ALERT_COOLDOWN = 12 * 3600000;
+        // KNX/Loxone/BACnet: kabelgebunden, kein Heartbeat – Timeout-Check überspringen
+        var WIRED_PREFIXES = ['knx.', 'loxone.', 'bacnet.', 'modbus.'];
         var alerts = [];
-        devices.forEach(function(d) {
-            if (!d.id) return;
-            var lastSeen = _self.sensorLastSeen[d.id];
-            if (!lastSeen) return; // noch nie gesehen – kein Alarm (koennte erst heute konfiguriert worden sein)
+        var statusList = [];
+        for (var _di = 0; _di < devices.length; _di++) {
+            var d = devices[_di];
+            if (!d.id) continue;
+            var isWired = WIRED_PREFIXES.some(function(p) { return d.id.toLowerCase().startsWith(p); });
+            if (isWired) continue;
+            // getForeignStateAsync: ts wird vom Basisadapter (zigbee, homekit etc.) bei jedem Heartbeat aktualisiert
+            var lastSeen = _self.sensorLastSeen[d.id] || 0;
+            try {
+                var fState = await _self.getForeignStateAsync(d.id);
+                if (fState && fState.ts && fState.ts > lastSeen) lastSeen = fState.ts;
+            } catch(e) {}
+            if (!lastSeen) continue;
             var threshold = thresholds[d.type] || defaultThreshold;
             var elapsed = now - lastSeen;
-            if (elapsed > threshold) {
+            var sinceH = Math.round(elapsed / 360000) / 10;
+            var isOffline = elapsed > threshold;
+            statusList.push({ id: d.id, name: d.name || d.id, location: d.location || '', type: d.type || '', lastSeen: lastSeen, sinceH: sinceH, status: isOffline ? 'offline' : 'ok' });
+            if (isOffline) {
                 var lastAlert = _self.sensorAlertSent[d.id] || 0;
                 if ((now - lastAlert) > ALERT_COOLDOWN) {
                     _self.sensorAlertSent[d.id] = now;
@@ -270,7 +285,11 @@ class CogniLiving extends utils.Adapter {
                     alerts.push((d.name || d.id) + ' (' + (d.location || '?') + '): seit ' + hours + 'h inaktiv');
                 }
             }
-        });
+        }
+        var offlineCount = statusList.filter(function(s) { return s.status === 'offline'; }).length;
+        try {
+            await this.setStateAsync('system.sensorStatus', { val: JSON.stringify({ timestamp: now, sensors: statusList, offlineCount: offlineCount }), ack: true });
+        } catch(e) {}
         if (alerts.length > 0) {
             var msg = '⚠️ Sensor-Ausfall:\n' + alerts.join('\n');
             this.log.warn('[SENSOR-CHECK] ' + alerts.join(', '));

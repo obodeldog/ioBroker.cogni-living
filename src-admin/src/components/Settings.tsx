@@ -48,6 +48,7 @@ interface SettingsState {
     simTargetValue: string; showBulkDialog: boolean; autoMode: string; autoThreshold: number; autoLastAction: string;
     thermostatMapping: Record<string, string>;
     valveMapping: Record<string, string>;
+    sensorProblems: Set<string>;
     thermostatDiagResults: ThermostatDiagItem[];
     isScanningThermostats: boolean;
 
@@ -73,6 +74,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         }
 
         this.state = {
+            sensorProblems: new Set<string>(),
             devices: native.devices || [], presenceDevices: native.presenceDevices || [], outdoorSensorId: native.outdoorSensorId || '', geminiApiKey: native.geminiApiKey || '',
             analysisInterval: native.analysisInterval || 15, minDaysForBaseline: native.minDaysForBaseline || 7, aiPersona: native.aiPersona || 'generic', livingContext: native.livingContext || '',
             licenseKey: native.licenseKey || '', ltmStbWindowDays: native.ltmStbWindowDays || 14, ltmLtbWindowDays: native.ltmLtbWindowDays || 60, ltmDriftCheckIntervalHours: native.ltmDriftCheckIntervalHours || 24,
@@ -120,7 +122,19 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         };
     }
 
-    componentDidMount() { this.fetchAvailableInstances(); this.fetchEnums(); }
+    componentDidMount() { this.fetchAvailableInstances(); this.fetchEnums(); this.loadSensorStatus(); }
+    loadSensorStatus() {
+        const ns = this.props.adapterName + '.' + this.props.instance;
+        this.props.socket.getState(ns + '.system.sensorStatus').then((state: any) => {
+            if (state && state.val) {
+                try {
+                    const parsed = JSON.parse(state.val);
+                    const problems = new Set<string>((parsed.sensors || []).filter((s: any) => s.status === 'offline').map((s: any) => s.id));
+                    this.setState({ sensorProblems: problems });
+                } catch(e) {}
+            }
+        }).catch(() => {});
+    }
 
     updateNativeValue(attr: string, value: any) {
         if (attr === 'livingContext' && typeof value === 'string' && value.length > 5000) value = value.substring(0, 1000);
@@ -523,8 +537,13 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 </AccordionDetails></Accordion>
 
                 {/* SENSORS */}
-                <Accordion expanded={expandedAccordion === 'panel4'} onChange={this.handleAccordionChange('panel4')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Sensoren</Typography></AccordionSummary><AccordionDetails>
-                    <SensorList devices={this.state.devices} isDark={isDark} uniqueLocations={this.collectUniqueLocations()} onDeviceChange={(i, a, v) => this.onDeviceChange(i, a, v)} onDelete={(i) => this.onDeleteDevice(i)} onAdd={() => this.onAddDevice()} onSelectId={(i) => this.openSelectIdDialog(i)} onWizard={this.handleOpenWizard} onBulk={() => this.setState({ showBulkDialog: true })} onDeleteAll={() => this.setState({showDeleteConfirm: true})} />
+                {this.state.sensorProblems.size > 0 && (
+                                    <Alert severity="error" sx={{ mb: 1, cursor: 'pointer' }} onClick={this.handleAccordionChange('panel4') as any}>
+                                        ⚠️ {this.state.sensorProblems.size} Sensor{this.state.sensorProblems.size > 1 ? 'en' : ''} nicht erreichbar – bitte Sensoren-Liste prüfen
+                                    </Alert>
+                                )}
+                                <Accordion expanded={expandedAccordion === 'panel4'} onChange={this.handleAccordionChange('panel4')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Sensoren{this.state.sensorProblems.size > 0 ? ' ⚠️' : ''}</Typography></AccordionSummary><AccordionDetails>
+                    <SensorList devices={this.state.devices} isDark={isDark} uniqueLocations={this.collectUniqueLocations()} sensorProblems={this.state.sensorProblems} onDeviceChange={(i, a, v) => this.onDeviceChange(i, a, v)} onDelete={(i) => this.onDeleteDevice(i)} onAdd={() => this.onAddDevice()} onSelectId={(i) => this.openSelectIdDialog(i)} onWizard={this.handleOpenWizard} onBulk={() => this.setState({ showBulkDialog: true })} onDeleteAll={() => this.setState({showDeleteConfirm: true})} />
                 </AccordionDetails></Accordion>
             </Box>
         );
