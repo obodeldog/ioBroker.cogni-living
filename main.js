@@ -628,7 +628,6 @@ class CogniLiving extends utils.Adapter {
             // personData auch als ioBroker-State schreiben (für spätere Auswertung)
             try { await this.setStateAsync('system.personData', { val: JSON.stringify(personData), ack: true }); } catch(e) {}
 
-            const dataDir = utils.getAbsoluteDefaultDataDir();
             const snapshot = {
                 date: dateStr,
                 timestamp: Date.now(),
