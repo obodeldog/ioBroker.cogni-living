@@ -18,3 +18,6 @@ admin/i18n/flat.txt
 admin/i18n/*/flat.txt
 src/
 src-admin/build/
+
+# Interne Dokumentation (nicht oeffentlich)
+_internal/
