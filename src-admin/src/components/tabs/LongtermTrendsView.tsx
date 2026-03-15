@@ -31,6 +31,7 @@ interface DailyDataPoint {
     nightVibrationCount?: number | null;
     maxPersonsDetected?: number | null;
     nocturiaCount?: number | null;
+    personData?: Record<string, { nightActivityCount: number; wakeTimeMin: number | null; sleepOnsetMin: number | null; nocturiaAttr: number }>;
     sleepWindowStart?: number | null;   // ms-Timestamp Schlafbeginn
     sleepWindowEnd?: number | null;     // ms-Timestamp Aufwachen
     isPartialDay?: boolean;
@@ -244,6 +245,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             nocturiaCount,
                             sleepWindowStart,
                             sleepWindowEnd,
+                            personData: histData.personData || undefined,
                             roomActivity,
                             windowsByRoom,
                             todayVector: todayVector,  // Fuer Python Nacht-IsolationForest
@@ -1294,7 +1296,77 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             </Box>
                         );
                     })()}
-                </>
+
+
+                    {/* ===== PERSONEN-NACHT-ANALYSE ===== */}
+                    {(() => {
+                        const personNames = new Set<string>();
+                        dailyData.forEach(d => { if (d.personData) Object.keys(d.personData).forEach((p: string) => personNames.add(p)); });
+                        if (personNames.size === 0) return null;
+                        const personArr = Array.from(personNames);
+                        return (
+                            <Box sx={{ mb: 4, p: 2, border: "2px solid", borderColor: "#00897b", borderRadius: 2 }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#00897b", mb: 0.5 }}>
+                                    🧑 PERSONEN-NACHT-ANALYSE
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 2 }}>
+                                    Individuelle Nacht-Metriken pro Person – Schlafzimmer-PIR + Badezimmer-Attribution
+                                </Typography>
+                                {personArr.map((person: string) => {
+                                    const pts = dailyData.map(d => ({
+                                        date: d.date,
+                                        nightActivity: d.personData?.[person]?.nightActivityCount ?? null,
+                                        wakeTimeMin: d.personData?.[person]?.wakeTimeMin ?? null,
+                                        nocturia: d.personData?.[person]?.nocturiaAttr ?? null,
+                                    })).filter(d => d.nightActivity !== null || d.wakeTimeMin !== null);
+                                    if (pts.length < 2) return null;
+                                    return (
+                                        <Box key={person} sx={{ mb: 3 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: "bold", mb: 1, color: "#00897b" }}>
+                                                {person}
+                                            </Typography>
+                                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2 }}>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">Schlaf-Unruhe (Ereignisse/Nacht)</Typography>
+                                                    <ResponsiveContainer width="100%" height={80}>
+                                                        <BarChart data={pts} margin={{ top: 4, right: 4, left: -25, bottom: 0 }}>
+                                                            <XAxis dataKey="date" hide />
+                                                            <YAxis tick={{ fontSize: 9 }} />
+                                                            <RechartsTooltip formatter={(v: any) => [v + " Ereignisse", "Nacht-Aktivität"]} labelFormatter={(l: any) => l} />
+                                                            <Bar dataKey="nightActivity" fill="#00897b" radius={[2,2,0,0]} maxBarSize={16} />
+                                                        </BarChart>
+                                                    </ResponsiveContainer>
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">Aufwachzeit</Typography>
+                                                    <ResponsiveContainer width="100%" height={80}>
+                                                        <LineChart data={pts} margin={{ top: 4, right: 4, left: -25, bottom: 0 }}>
+                                                            <XAxis dataKey="date" hide />
+                                                            <YAxis tick={{ fontSize: 9 }} domain={[270, 600]} tickFormatter={(v: number) => Math.floor(v/60)+":"+String(v%60).padStart(2,"0")} />
+                                                            <RechartsTooltip formatter={(v: any) => { const h=Math.floor(v/60); const mn=v%60; return [h+":"+String(mn).padStart(2,"0")+" Uhr","Aufwachzeit"]; }} labelFormatter={(l: any) => l} />
+                                                            <Line type="monotone" dataKey="wakeTimeMin" stroke="#4db6ac" dot={{ r: 2 }} strokeWidth={2} connectNulls />
+                                                        </LineChart>
+                                                    </ResponsiveContainer>
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">Nykturie (attr. Toilettengänge)</Typography>
+                                                    <ResponsiveContainer width="100%" height={80}>
+                                                        <BarChart data={pts} margin={{ top: 4, right: 4, left: -25, bottom: 0 }}>
+                                                            <XAxis dataKey="date" hide />
+                                                            <YAxis tick={{ fontSize: 9 }} />
+                                                            <RechartsTooltip formatter={(v: any) => [v + "x", "Nykturie"]} labelFormatter={(l: any) => l} />
+                                                            <ReferenceLine y={2} stroke="#ef5350" strokeDasharray="3 3" />
+                                                            <Bar dataKey="nocturia" fill="#80cbc4" radius={[2,2,0,0]} maxBarSize={16} />
+                                                        </BarChart>
+                                                    </ResponsiveContainer>
+                                                </Box>
+                                            </Box>
+                                        </Box>
+                                    );
+                                })}
+                            </Box>
+                        );
+                    })()}                </>
             )}
         </Box>
     );

@@ -110,6 +110,12 @@ export default function SensorList(props) {
                                     <span style={{ cursor: "help", textDecoration: "underline dotted" }}>Funktion / Rolle</span>
                                 </Tooltip>
                             </TableCell>
+                            <TableCell sx={{ width: "8%", bgcolor: stickyBg, fontSize: fs, fontWeight: 600, px: 0.3 }}>
+                                <Tooltip title="Optionaler Personenname (z.B. Rob, Ingrid). Sensoren mit gleichem Namen werden gemeinsam als Einzel-Person analysiert.">
+                                    <span style={{ cursor: "help", textDecoration: "underline dotted" }}>Person</span>
+                                </Tooltip>
+                            </TableCell>
+
                             <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3 }}>
                                 <Tooltip title="Suedfenster (Solar-Gain, nur Temp.-Sensoren)"><WbSunnyIcon sx={{ fontSize: 17, opacity: 0.55 }} /></Tooltip>
                             </TableCell>
@@ -253,6 +259,18 @@ export default function SensorList(props) {
                                                 </Select>
                                             </FormControl>
                                         </Tooltip>
+                                    </TableCell>
+
+                                    {/* Person-Tag */}
+                                    <TableCell sx={{ px: 0.5 }}>
+                                        <TextField
+                                            size="small"
+                                            value={device.personTag || ""}
+                                            placeholder="Person..."
+                                            title="Personenname für individuelle Nacht-Analyse (z.B. Rob)"
+                                            sx={{ width: "100%", "& input": { fontSize: "0.7rem", p: "3px 6px" } }}
+                                            onChange={e => props.onDeviceChange(index, "personTag", e.target.value)}
+                                        />
                                     </TableCell>
 
                                     {/* Solar */}
