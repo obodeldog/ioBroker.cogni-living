@@ -1301,7 +1301,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                     {/* ===== PERSONEN-NACHT-ANALYSE ===== */}
                     {(() => {
                         const personNames = new Set<string>();
-                        dailyData.forEach(d => { if (d.personData) Object.keys(d.personData).forEach((p: string) => personNames.add(p)); });
+                        dailyDataRaw.forEach(d => { if (d.personData) Object.keys(d.personData).forEach((p: string) => personNames.add(p)); });
                         if (personNames.size === 0) return null;
                         const personArr = Array.from(personNames);
                         return (
@@ -1313,7 +1313,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     Individuelle Nacht-Metriken pro Person – Schlafzimmer-PIR + Badezimmer-Attribution
                                 </Typography>
                                 {personArr.map((person: string) => {
-                                    const pts = dailyData.map(d => ({
+                                    const pts = dailyDataRaw.map(d => ({
                                         date: d.date,
                                         nightActivity: d.personData?.[person]?.nightActivityCount ?? null,
                                         wakeTimeMin: d.personData?.[person]?.wakeTimeMin ?? null,
