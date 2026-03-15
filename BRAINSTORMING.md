@@ -238,6 +238,121 @@ NICHT fuer MVP — erst wenn konkreter Kundenbedarf.
 
 ---
 
+## Geplant: Sensor-Ausfall-Benachrichtigung
+
+Wenn ein Sensor laenger als X Stunden kein Event liefert (Batterie leer, ausgefallen,
+Verbindungsproblem) soll folgendes passieren:
+- Dashboard: rotes Warn-Symbol am betroffenen Sensor in der Sensor-Liste
+- Nuukanni/Familienansicht: Hinweis "Sensor [Name] seit HH:MM inaktiv"
+- Pushover: Push-Benachrichtigung an konfigurierten Empfaenger
+
+Schwellwert: konfigurierbar pro Sensortyp (z.B. PIR: 6h, Tuer: 24h, Temperatur: 2h)
+Implementierung: Scheduler prueft taeglich/stuendlich lastSeen pro Sensor-ID
+State: events.lastEvent enthaelt timestamp -> Differenz zu jetzt berechnen
+
+Prioritaet: Mittel -- wichtig fuer Produktreife, nicht zeitkritisch
+
+---
+
+## Offene Frage: Ganggeschwindigkeit bei mehreren Fluren
+
+### Aktueller Stand (implementiert)
+Der Algorithmus in main.js/health.py nutzt ALLE Sensoren mit Flag isHallway.
+Transit = Zeit zwischen nicht-Flur -> Flur -> nicht-Flur (1-20 Sekunden).
+Alle Transits aus allen Fluren fliessen in den Median ein.
+
+### Das Problem
+Bei 3 Fluren (EG, OG, KG) haben diese ggf. sehr unterschiedliche Laengen.
+Ein kurzer Flur (2m) liefert andere Transitzeiten als ein langer (8m).
+Der gemeinsame Median ist dann wenig aussagekraeftig.
+
+### Loesungsansatz (noch nicht implementiert)
+Jeder Flur-Sensor bekommt eine optionale "Flur-Laenge" in Metern.
+Die Ganggeschwindigkeit wird dann normiert: m/s = Laenge / Transitzeit.
+Sensoren ohne Laengenangabe liefern nur Transitzeit (wie bisher).
+Dies wuerde eine neue optionale Textspalte "Laenge (m)" im Sensor-Tab erfordern.
+
+Alternativ: Konfiguration welcher Flur-Sensor als "Haupt-Gangweg" gilt.
+
+Prioritaet: Niedrig -- aktueller Median-Ansatz ist fuer Trend-Erkennung ausreichend
+
+---
+
+## Produktstrategie: Paketierung fuer Kunden
+
+Quelle: Diskussion 13-14.03.2026
+
+| Paket | Sensorik | Zielgruppe | Krankheitsbilder | Preis Sensorik |
+|---|---|---|---|---|
+| Safe Home Basic | PIR + Tuer/Fensterkontakte | Alleinlebende Senioren | Sturzrisiko, Demenz, Frailty | ~150-200 EUR |
+| Safe Home Premium | + 2x FP2 | Seniorenpaare, Familien | + Schlaf, Personenzaehlung | ~400-500 EUR |
+| Safe Home Family | FP2 Kinderzimmer + Vibration | Eltern kranker Kinder | Epilepsie, Diabetes T1, ADHS | ~75-100 EUR |
+| Safe Home Complete | Full-Stack | Pflegdienste, Kliniken | Alle 23 Profile + Screening | ~800+ EUR |
+
+B2B-Kanal: Pflegekassen koennen bis 4.000 EUR bezuschussen (SS40 Abs. 4 SGB XI)
+"Wohnumfeldverbessernde Massnahmen" -- AURA passt in diese Foerderkategorie.
+
+---
+
+## Krankheitsprofile: Noch nicht implementiert
+
+Profile die im Frontend konfigurierbar aber in health.py noch ohne Score sind:
+
+| Profil | Benoetigt neu | Aufwand | Prioritaet |
+|---|---|---|---|
+| parkinson | Vibration (Tremor), Gait-Variabilitaet | Mittel | Hoch (Vibration jetzt vorhanden) |
+| copd | Lueftungs-Aktivitaets-Korrelation | Klein | Mittel |
+| cardiovascular | Wearable (HRV, SpO2) ODER Nykturie+Aktivitaet | Mittel-Gross | Mittel (Garmin Phase 6) |
+| longCovid | PEM-Erkennung (Boom-Bust: hoher Aktivitaetstag -> Einbruch Folgetag) | Klein | Mittel |
+| bipolar | Wie Depression aber mit Manie-Detektion (Nacht sehr niedrig + Tag sehr hoch) | Klein | Niedrig |
+| epilepsy | Vibration Bett (rhythmische Bewegung) + FP2 Sturz | Mittel | Hoch (Hardware vorhanden) |
+| diabetes1 | Vibration + Feuchtigkeit + Nacht-Kueche | Mittel | Mittel |
+| uti | Akut-Erkennung Bad-Besuche (Tag-zu-Tag statt Wochen-Trend) | Klein | Niedrig |
+
+### Parkinson - Naechster sinnvoller Schritt
+Vibrationssensor ist jetzt im System (isVibrationBed). Fuer Parkinson-Score benoetigt:
+- strength-Wert aus Vibration (Tremor-Intensitaet) -> health.py: nightVibrationStrength
+- Gait-Intra-Tag-Variabilitaet (SD der Transitzeiten, nicht nur Median)
+- main.js: strength-Wert aus zigbee.0.00158d008bc16ddd.strength in Snapshot aufnehmen
+
+### Long-COVID - PEM-Erkennung
+Boom-Bust-Muster: Tag T hat activityPercent > 120% Baseline
+Tag T+1 hat activityPercent < 60% Baseline
+Ueber 3+ solche Paare in 30 Tagen = Long-COVID-Signal
+Algorithmisch einfach, da activityPercent bereits im Digest vorhanden.
+
+---
+
+## Weitere Sensortypen (noch nicht integriert)
+
+| Sensor | Protokoll | Preis | Krankheitsbilder | Produkt-Beispiel |
+|---|---|---|---|---|
+| Smarte Waage | WiFi/BLE | 30-80 EUR | Herzinsuffizienz (Oedeme), Niereninsuff., Essstoerungen | Withings Body+ |
+| CO2-/VOC-Sensor | Zigbee/WiFi | 30-60 EUR | Schlafqualitaet (CO2>1000ppm=schlechter Schlaf), COPD | Aqara TVOC |
+| Luftdruck/Barometer | Zigbee | 20-40 EUR | Schmerzsyndromen (Wetter-Korrelation), Migraene | In Multisensoren enthalten |
+| Kuehlschrank-Kontakt | Zigbee | 10-15 EUR | Essstoerungen, Demenz, Diabetes | Aqara Door Sensor |
+| Medikamentenschrank | Zigbee | 10-15 EUR | Demenz (Medikamenten-Compliance) | Aqara Door Sensor |
+| dB/Laermsensor | WiFi | 30-50 EUR | Epilepsie (iktaler Schrei), Sturzgeraeusch, Husten (COPD) | ESP32 DIY |
+| Stuhl/Sofa-Druck | Zigbee/DIY | 20-40 EUR | Sitzzeit-Monitoring, Frailty | Druckmatte + Relay |
+
+---
+
+## Langfristig: Multi-Target Particle Filter
+
+Aktueller tracker.py: 1000 Partikel fuer EINE Person
+Erweiterung: N Personen = N x 1000 Partikel (PHD-Filter / Multi-Target)
+
+Voraussetzungen:
+- FP2 muss Personenzahl zuverlaessig liefern (value=2 -> 2 Personen aktiv)
+- Person-ID-Tracking noetig (FP2 kann Zonen aber nicht persistente IDs liefern)
+
+Nutzen: Aktivitaetsvektoren werden personenspezifisch -> Demenz/Frailty auch
+        im Mehrpersonenhaushalt hochqualitativ erkennbar
+
+Aufwand: Gross (2-4 Wochen Entwicklung)
+Prioritaet: Phase 9+ -- erst wenn FP2 stabil laeuft und Kundenbedarf bestaetigt
+
+---
 ## Verweis auf PROJEKT_STATUS.md
 Fuer konkrete Deploy-Schritte, Versionshistorie und implementierte Features:
 → PROJEKT_STATUS.md
