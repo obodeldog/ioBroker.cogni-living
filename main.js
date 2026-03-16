@@ -531,6 +531,22 @@ class CogniLiving extends utils.Adapter {
                 var hr = new Date(ts).getHours();
                 return hr >= 22 || hr < 6;
             }).length;
+            // Vibration Staerke: Avg und Max im Schlaf-Fenster (fuer Parkinson/Epilepsie)
+            var _vibStrSum = 0; var _vibStrCount = 0; var _vibStrMax = 0;
+            todayEvents.forEach(function(e) {
+                if (!e.isVibrationStrength) return;
+                var ts = e.timestamp || 0;
+                var inWin = (sleepWindowCalc.start && sleepWindowCalc.end)
+                    ? (ts >= sleepWindowCalc.start && ts <= sleepWindowCalc.end)
+                    : (new Date(ts).getHours() >= 22 || new Date(ts).getHours() < 6);
+                if (!inWin) return;
+                var s = typeof e.value === 'number' ? e.value : parseFloat(e.value);
+                if (isNaN(s) || s <= 0) return;
+                _vibStrSum += s; _vibStrCount++; if (s > _vibStrMax) _vibStrMax = s;
+            });
+            const nightVibrationStrengthAvg = _vibStrCount > 0 ? Math.round(_vibStrSum / _vibStrCount) : null;
+            const nightVibrationStrengthMax = _vibStrCount > 0 ? _vibStrMax : null;
+
             // Nykturie: Badezimmer-Sensor-Ereignisse – dynamisches Schlaf-Fenster (Fallback: 22-06)
             const _bathroomDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
             const _kitchenDevIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
@@ -700,6 +716,8 @@ class CogniLiving extends utils.Adapter {
                 maxPersonsDetected: maxPersonsDetected,
                 bedPresenceMinutes: bedPresenceMinutes,
                 nightVibrationCount: nightVibrationCount,
+                nightVibrationStrengthAvg: nightVibrationStrengthAvg,
+                nightVibrationStrengthMax: nightVibrationStrengthMax,
                 personData: personData
             };
 
