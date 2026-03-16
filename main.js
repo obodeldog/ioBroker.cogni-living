@@ -171,6 +171,8 @@ class CogniLiving extends utils.Adapter {
         });
 
         setTimeout(() => this.replayTodayEvents(), 5000);
+        // Startup-Save: heute-Datei nach Replay schreiben damit Charts sofort Balken zeigen
+        setTimeout(() => this.saveDailyHistory().catch(e => {}), 90000);
 
         // Sensor-LastSeen aus eventHistory initialisieren (auch nach Adapter-Neustart)
         if (this.eventHistory && this.eventHistory.length > 0) {
@@ -179,6 +181,9 @@ class CogniLiving extends utils.Adapter {
         // Stündlicher Sensor-Ausfall-Check
         if (this.sensorCheckInterval) clearInterval(this.sensorCheckInterval);
         this.sensorCheckInterval = setInterval(() => { this.checkSensorHealth(); }, 60 * 60 * 1000);
+        // Stündlicher History-Save: heute-Datei aktuell halten damit Chart heute-Balken zeigt
+        if (this.hourlySaveInterval) clearInterval(this.hourlySaveInterval);
+        this.hourlySaveInterval = setInterval(() => { this.saveDailyHistory().catch(e => {}); }, 60 * 60 * 1000);
         setTimeout(() => this.checkSensorHealth(), 5 * 60 * 1000); // auch 5 min nach Start
 
         if (this.roomIntegratorTimer) clearInterval(this.roomIntegratorTimer);
@@ -307,6 +312,7 @@ class CogniLiving extends utils.Adapter {
             if (this.presenceCheckTimer) clearInterval(this.presenceCheckTimer);
             if (this.roomIntegratorTimer) clearInterval(this.roomIntegratorTimer);
             if (this.sensorCheckInterval) clearInterval(this.sensorCheckInterval);
+            if (this.hourlySaveInterval) clearInterval(this.hourlySaveInterval);
             recorder.abortExitTimer(this);
             pythonBridge.stopService(this);
             
