@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 'use strict';
 
 /*
@@ -160,7 +160,7 @@ class CogniLiving extends utils.Adapter {
             this.subscribeForeignStates(this.config.infrasoundSensorId);
         }
         const devices = this.config.devices; if (devices) { for (const d of devices) { await this.subscribeForeignStatesAsync(d.id); } }
-        if (devices) { for (const d of devices) { if ((d.type === 'presence_radar') && d.id) { var _vpId = d.id.replace('.occupancy-detected', '.value'); try { await this.subscribeStateAsync(_vpId); } catch(e) {} } } }
+        if (devices) { for (const d of devices) { if ((d.type === 'presence_radar') && d.id) { var _vpId = d.id.replace('.occupancy-detected', '.value'); try { await this.subscribeForeignStatesAsync(_vpId); } catch(e) {} } } }
         const devs = this.config.presenceDevices; if (devs) { for (const id of devs) { await this.subscribeForeignStatesAsync(id); } }
 
         const schedule = require('node-schedule');
