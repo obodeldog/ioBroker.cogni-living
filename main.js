@@ -477,18 +477,6 @@ class CogniLiving extends utils.Adapter {
                 if (presStart) total += (Date.now() - presStart) / 60000;
                 return Math.round(total);
             })();
-            // Vibration Bett: Erschuetterungen im Schlaf-Fenster (Fallback: 22-06)
-            const nightVibrationCount = todayEvents.filter(function(e) {
-                if (!e.isVibrationBed) return false;
-                var v = isActiveValue(e.value) || toPersonCount(e.value) > 0;
-                if (!v) return false;
-                var ts = e.timestamp||0;
-                if (sleepWindowCalc.start && sleepWindowCalc.end) {
-                    return ts >= sleepWindowCalc.start && ts <= sleepWindowCalc.end;
-                }
-                var hr = new Date(ts).getHours();
-                return hr >= 22 || hr < 6;
-            }).length;
 
             // Schlaf-Fenster aus FP2-Bett-Events berechnen (dynamisch statt fixem 22-06)
             const sleepWindowCalc = (function() {
@@ -531,6 +519,18 @@ class CogniLiving extends utils.Adapter {
                 return { start: sleepStartTs, end: wakeTs };
             })();
 
+            // Vibration Bett: Erschuetterungen im Schlaf-Fenster (Fallback: 22-06)
+            const nightVibrationCount = todayEvents.filter(function(e) {
+                if (!e.isVibrationBed) return false;
+                var v = isActiveValue(e.value) || toPersonCount(e.value) > 0;
+                if (!v) return false;
+                var ts = e.timestamp||0;
+                if (sleepWindowCalc.start && sleepWindowCalc.end) {
+                    return ts >= sleepWindowCalc.start && ts <= sleepWindowCalc.end;
+                }
+                var hr = new Date(ts).getHours();
+                return hr >= 22 || hr < 6;
+            }).length;
             // Nykturie: Badezimmer-Sensor-Ereignisse – dynamisches Schlaf-Fenster (Fallback: 22-06)
             const _bathroomDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
             const _kitchenDevIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
