@@ -220,6 +220,7 @@ export default function HealthTab(props: any) {
                     if (d.roomHistory && d.roomHistory.history) setRoomHistory(d.roomHistory.history);
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
+                    (window as any)._auraSleepData = { sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null };
                     setGeminiNight(d.geminiNight || "Keine Daten");
                     setGeminiNightTs(d.geminiNightTs || null);
                     setGeminiDay(d.geminiDay || "Keine Daten");
@@ -1090,6 +1091,148 @@ export default function HealthTab(props: any) {
         );
     };
 
+
+    // ═══ OC-7: AURA SLEEP SCORE CARD ══════════════════════════════════════════════
+    const renderSleepScoreCard = () => {
+        const sd = (window as any)._auraSleepData;
+        const score: number | null = sd?.sleepScore ?? null;
+        const stages: {t: number, s: string}[] = sd?.sleepStages ?? [];
+        const garminScore: number | null = sd?.garminScore ?? null;
+        const garminDeepMin: number | null = sd?.garminDeepMin ?? null;
+        const garminLightMin: number | null = sd?.garminLightMin ?? null;
+        const garminRemMin: number | null = sd?.garminRemMin ?? null;
+        const swStart: number | null = sd?.sleepWindowStart ?? null;
+        const swEnd: number | null = sd?.sleepWindowEnd ?? null;
+
+        // Kein Vibrationssensor → Hinweis anzeigen
+        const hasVibSensor = stages.length > 0;
+
+        const stageColor: Record<string, string> = {
+            deep:  '#1565c0',
+            light: '#42a5f5',
+            rem:   '#ab47bc',
+            wake:  '#ef5350',
+        };
+        const stageLabel: Record<string, string> = {
+            deep: 'Tief', light: 'Leicht', rem: 'REM', wake: 'Wach'
+        };
+
+        const scoreColor = score === null ? '#888'
+            : score >= 80 ? '#00e676'
+            : score >= 60 ? '#ffab40'
+            : '#ff5252';
+
+        const fmtTime = (ms: number | null) => {
+            if (!ms) return '—';
+            const d = new Date(ms);
+            return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+        };
+
+        const totalSlots = stages.length;
+        const deepCount  = stages.filter(s => s.s === 'deep').length;
+        const lightCount = stages.filter(s => s.s === 'light').length;
+        const remCount   = stages.filter(s => s.s === 'rem').length;
+        const wakeCount  = stages.filter(s => s.s === 'wake').length;
+        const toH = (n: number) => { const m = n * 5; return (m >= 60 ? Math.floor(m/60) + 'h ' : '') + (m%60) + 'min'; };
+
+        return (
+            <TerminalBox title="SCHLAFANALYSE (OC-7)" themeType={themeType}
+                helpText="Geschätzte Schlafstadien aus Vibrationssensor (Bett). Kein Medizinprodukt — für klinische Diagnose Arzt hinzuziehen.">
+                {!hasVibSensor ? (
+                    <div style={{color:'#888', textAlign:'center', padding:'20px', fontSize:'0.8rem'}}>
+                        <div style={{fontSize:'1.5rem', marginBottom:'8px'}}>🛏</div>
+                        Kein Vibrationssensor konfiguriert.<br/>
+                        <span style={{opacity:0.7}}>Für Sleep Score: Vibrationssensor am Bett als „Bett-Sensor" einrichten.</span>
+                    </div>
+                ) : (
+                    <div>
+                        {/* Header: Zeiten + Score-Badge */}
+                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'10px'}}>
+                            <div>
+                                <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Einschlafen</div>
+                                <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>{fmtTime(swStart)}</div>
+                            </div>
+                            <div style={{textAlign:'center'}}>
+                                <div style={{
+                                    fontSize:'1.8rem', fontWeight:'bold', color: scoreColor,
+                                    border: `2px solid ${scoreColor}`, borderRadius:'8px',
+                                    padding:'4px 14px', lineHeight:'1.1'
+                                }}>{score ?? '—'}</div>
+                                <div style={{fontSize:'0.65rem', color:'#888', marginTop:'2px'}}>AURA Score</div>
+                                {garminScore !== null && (
+                                    <div style={{fontSize:'0.7rem', color:'#ab47bc', marginTop:'2px'}}>
+                                        Garmin: {garminScore} <span style={{color: isDark?'#666':'#aaa'}}>
+                                            ({garminScore - (score ?? 0) >= 0 ? '+' : ''}{garminScore - (score ?? 0)})
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{textAlign:'right'}}>
+                                <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Aufwachen</div>
+                                <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>{fmtTime(swEnd)}</div>
+                            </div>
+                        </div>
+
+                        {/* Schlafphasen-Zeitleiste */}
+                        <div style={{display:'flex', width:'100%', height:'24px', borderRadius:'4px', overflow:'hidden', marginBottom:'8px'}}>
+                            {stages.map((slot, i) => (
+                                <div key={i} style={{
+                                    flex: 1,
+                                    backgroundColor: stageColor[slot.s] || '#555',
+                                    minWidth: 0
+                                }} title={`${slot.t} Min: ${stageLabel[slot.s] || slot.s}`} />
+                            ))}
+                        </div>
+
+                        {/* Zeiten-Achse */}
+                        {swStart && swEnd && totalSlots > 0 && (
+                            <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.6rem', color:'#666', marginBottom:'10px'}}>
+                                <span>{fmtTime(swStart)}</span>
+                                <span>{fmtTime(swStart + (swEnd - swStart) * 0.25)}</span>
+                                <span>{fmtTime(swStart + (swEnd - swStart) * 0.5)}</span>
+                                <span>{fmtTime(swStart + (swEnd - swStart) * 0.75)}</span>
+                                <span>{fmtTime(swEnd)}</span>
+                            </div>
+                        )}
+
+                        {/* Legende + Zeiten */}
+                        <div style={{display:'flex', gap:'12px', flexWrap:'wrap', fontSize:'0.7rem', marginBottom:'8px'}}>
+                            {[['deep','Tief'],['light','Leicht'],['rem','REM (est.)'],['wake','Wach']].map(([k,l]) => (
+                                <span key={k}><span style={{color: stageColor[k]}}>■</span> {l}</span>
+                            ))}
+                        </div>
+
+                        {/* Stage-Dauer Zeile */}
+                        <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'4px', textAlign:'center', marginBottom:'10px'}}>
+                            {[['deep','Tief',deepCount,'#1565c0'],['light','Leicht',lightCount,'#42a5f5'],['rem','REM',remCount,'#ab47bc'],['wake','Wach',wakeCount,'#ef5350']].map(([k,l,n,c]) => (
+                                <div key={k as string} style={{borderRadius:'4px', padding:'4px', background: isDark?'#1a1a1a':'#f5f5f5'}}>
+                                    <div style={{color: c as string, fontWeight:'bold', fontSize:'0.8rem'}}>{toH(n as number)}</div>
+                                    <div style={{color:'#888', fontSize:'0.65rem'}}>{l as string}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Garmin-Vergleich wenn vorhanden */}
+                        {(garminDeepMin !== null || garminLightMin !== null || garminRemMin !== null) && (
+                            <div style={{borderTop:`1px dashed ${isDark?'#333':'#ddd'}`, paddingTop:'8px', fontSize:'0.7rem'}}>
+                                <div style={{color:'#888', marginBottom:'4px'}}>📡 Garmin-Referenz:</div>
+                                <div style={{display:'flex', gap:'16px'}}>
+                                    {garminDeepMin  !== null && <span><span style={{color:'#1565c0'}}>■</span> Tief: {garminDeepMin}min</span>}
+                                    {garminLightMin !== null && <span><span style={{color:'#42a5f5'}}>■</span> Leicht: {garminLightMin}min</span>}
+                                    {garminRemMin   !== null && <span><span style={{color:'#ab47bc'}}>■</span> REM: {garminRemMin}min</span>}
+                                </div>
+                            </div>
+                        )}
+
+                        <div style={{fontSize:'0.6rem', color: isDark?'#555':'#aaa', marginTop:'8px', borderTop:`1px dashed ${isDark?'#222':'#eee'}`, paddingTop:'6px'}}>
+                            ⓘ Geschätzte Schlafstadien (Vibrationssensor) · Kein Medizinprodukt
+                        </div>
+                    </div>
+                )}
+            </TerminalBox>
+        );
+    };
+
     const renderMobility = () => {
         if (!hasData || Object.keys(roomHistory).length === 0) {
             return (
@@ -1860,6 +2003,7 @@ export default function HealthTab(props: any) {
                 </div>
 
                 {renderTimelines()}
+                {renderSleepScoreCard()}
                 {renderMobility()}
 
                 <div style={{display:'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px'}}>

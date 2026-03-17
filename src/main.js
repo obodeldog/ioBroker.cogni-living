@@ -542,6 +542,128 @@ class CogniLiving extends utils.Adapter {
                 sleepWindowCalc.end = null;
             }
 
+            // ═══ OC-7: AURA SLEEP SCORE ═══════════════════════════════════════════════════
+            // Klassifikation in 5-Minuten-Slots anhand Vibrationssensor (Detection + Staerke)
+            // Stages: 'deep' | 'light' | 'rem' | 'wake'
+            // Kein Vibrationssensor → sleepScore = null, sleepStages = []
+            var sleepScore = null;
+            var sleepStages = [];
+            if (sleepWindowCalc.start && sleepWindowCalc.end) {
+                var SLOT_MS = 5 * 60 * 1000;
+                var swStart = sleepWindowCalc.start;
+                var swEnd   = sleepWindowCalc.end;
+                var slotCount = Math.ceil((swEnd - swStart) / SLOT_MS);
+
+                // Vibrations-Events im Schlaffenster
+                var vibDetInWindow = todayEvents.filter(function(e) {
+                    return e.isVibrationBed && (e.timestamp||0) >= swStart && (e.timestamp||0) <= swEnd
+                        && (isActiveValue(e.value) || toPersonCount(e.value) > 0);
+                });
+                var vibStrInWindow = todayEvents.filter(function(e) {
+                    return e.isVibrationStrength && (e.timestamp||0) >= swStart && (e.timestamp||0) <= swEnd;
+                });
+
+                var deepSec = 0, lightSec = 0, remSec = 0, wakeSec = 0;
+                var consecutiveQuiet = 0; // Zaehle ruhige Slots in Folge
+
+                for (var _sl = 0; _sl < slotCount; _sl++) {
+                    var slotS = swStart + _sl * SLOT_MS;
+                    var slotE = slotS + SLOT_MS;
+
+                    // Events in diesem Slot
+                    var slotDet = vibDetInWindow.filter(function(e) { return (e.timestamp||0) >= slotS && (e.timestamp||0) < slotE; }).length;
+                    var slotStrArr = vibStrInWindow.filter(function(e) { return (e.timestamp||0) >= slotS && (e.timestamp||0) < slotE; })
+                        .map(function(e) { return typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0; });
+                    var slotStrMax = slotStrArr.length > 0 ? Math.max.apply(null, slotStrArr) : 0;
+                    var hoursIn = (slotS - swStart) / 3600000; // Stunden seit Einschlafen
+
+                    var stage;
+                    if (slotDet === 0) {
+                        consecutiveQuiet++;
+                        // >= 6 ruhige Slots in Folge (30 Min) → Tiefschlaf
+                        stage = consecutiveQuiet >= 6 ? 'deep' : (consecutiveQuiet >= 2 ? 'deep' : 'light');
+                    } else if (slotDet >= 5 || slotStrMax > 28) {
+                        consecutiveQuiet = 0;
+                        stage = 'wake';
+                    } else if (slotDet >= 2 && hoursIn >= 2.5 && slotStrMax >= 12 && slotStrMax <= 28) {
+                        consecutiveQuiet = 0;
+                        stage = 'rem'; // REM: maessige Bewegung + mittlere Staerke nach 2.5h Schlaf
+                    } else {
+                        consecutiveQuiet = 0;
+                        stage = 'light';
+                    }
+
+                    sleepStages.push({ t: _sl * 5, s: stage }); // t = Minuten seit Einschlafen
+                    if (stage === 'deep')  deepSec  += 300;
+                    else if (stage === 'light') lightSec += 300;
+                    else if (stage === 'rem')   remSec   += 300;
+                    else                         wakeSec  += 300;
+                }
+
+                // Score berechnen (0-100)
+                var totalSecSleep = deepSec + lightSec + remSec + wakeSec;
+                if (totalSecSleep > 0) {
+                    var dp = deepSec / totalSecSleep;
+                    var rp = remSec  / totalSecSleep;
+                    var lp = lightSec / totalSecSleep;
+                    var wp = wakeSec  / totalSecSleep;
+                    var rawScore = dp * 200 + rp * 150 + lp * 80 - wp * 250;
+                    rawScore = Math.max(0, Math.min(100, rawScore));
+                    // Bonus: Schlafdauer 7-9h
+                    var durH = (swEnd - swStart) / 3600000;
+                    if (durH >= 7 && durH <= 9) rawScore = Math.min(100, rawScore + 5);
+                    sleepScore = Math.round(rawScore);
+                    this.log.debug('[SleepScore] Score=' + sleepScore + ' deep=' + Math.round(dp*100) + '% rem=' + Math.round(rp*100) + '% light=' + Math.round(lp*100) + '% wake=' + Math.round(wp*100) + '%');
+                }
+            }
+
+            // ═══ Garmin-Validierung (optional) ════════════════════════════════════════════
+            // Liest den Garmin-Sleep-Score wenn konfiguriert — graceful fallback
+            var garminScore = null;
+            var garminDeepSec = null, garminLightSec = null, garminRemSec = null;
+            var garminStateId = (this.config.garminSleepScoreStateId || '').trim()
+                || 'garmin.0.dailysleep.dailySleepDTO.sleepScores.overall.value';
+            try {
+                var gScoreState = await this.getForeignStateAsync(garminStateId);
+                if (gScoreState && gScoreState.val != null) {
+                    garminScore = Number(gScoreState.val) || null;
+                    this.log.debug('[Garmin] Sleep Score gelesen: ' + garminScore);
+                }
+            } catch(e) { /* Garmin-Adapter nicht vorhanden */ }
+
+            // Optional: Schlafdauer-Felder von Garmin lesen
+            var garminDeepId  = (this.config.garminDeepSleepStateId  || '').trim() || 'garmin.0.dailysleep.dailySleepDTO.deepSleepSeconds';
+            var garminLightId = (this.config.garminLightSleepStateId || '').trim() || 'garmin.0.dailysleep.dailySleepDTO.lightSleepSeconds';
+            var garminRemId   = (this.config.garminRemSleepStateId   || '').trim() || 'garmin.0.dailysleep.dailySleepDTO.remSleepSeconds';
+            try {
+                var gd = await this.getForeignStateAsync(garminDeepId);
+                var gl = await this.getForeignStateAsync(garminLightId);
+                var gr = await this.getForeignStateAsync(garminRemId);
+                if (gd && gd.val != null) garminDeepSec  = Number(gd.val) || null;
+                if (gl && gl.val != null) garminLightSec = Number(gl.val) || null;
+                if (gr && gr.val != null) garminRemSec   = Number(gr.val) || null;
+            } catch(e) {}
+
+            // Sleep Validation State speichern (fuer SQL-Logging)
+            if (sleepScore !== null || garminScore !== null) {
+                var validationObj = {
+                    date: dateStr,
+                    auraScore: sleepScore,
+                    garminScore: garminScore,
+                    delta: (sleepScore !== null && garminScore !== null) ? garminScore - sleepScore : null,
+                    garminDeepMin:  garminDeepSec  ? Math.round(garminDeepSec  / 60) : null,
+                    garminLightMin: garminLightSec ? Math.round(garminLightSec / 60) : null,
+                    garminRemMin:   garminRemSec   ? Math.round(garminRemSec   / 60) : null,
+                    timestamp: Date.now()
+                };
+                try {
+                    await this.setObjectNotExistsAsync('analysis.health.sleepValidation', {
+                        type: 'state', common: { name: 'Sleep Score Validation (AURA vs Garmin)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {}
+                    });
+                    await this.setStateAsync('analysis.health.sleepValidation', { val: JSON.stringify(validationObj), ack: true });
+                } catch(e) {}
+            }
+
             // Vibration Bett: Erschuetterungen im Schlaf-Fenster (Fallback: 22-06)
             const nightVibrationCount = todayEvents.filter(function(e) {
                 if (!e.isVibrationBed) return false;
@@ -741,7 +863,13 @@ class CogniLiving extends utils.Adapter {
                 nightVibrationCount: nightVibrationCount,
                 nightVibrationStrengthAvg: nightVibrationStrengthAvg,
                 nightVibrationStrengthMax: nightVibrationStrengthMax,
-                personData: personData
+                personData: personData,
+                sleepScore: sleepScore,
+                sleepStages: sleepStages,
+                garminScore: garminScore,
+                garminDeepMin: garminDeepSec ? Math.round(garminDeepSec/60) : null,
+                garminLightMin: garminLightSec ? Math.round(garminLightSec/60) : null,
+                garminRemMin: garminRemSec ? Math.round(garminRemSec/60) : null
             };
 
             const dataDir = utils.getAbsoluteDefaultDataDir();
