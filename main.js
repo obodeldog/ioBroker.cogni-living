@@ -1361,6 +1361,61 @@ class CogniLiving extends utils.Adapter {
             if (dev.type === 'temperature' || dev.type === 'thermostat') {
                 if (this.activeModules.energy) automation.cleanupGhostInterventions(this);
             }
+            // Raeumliche Unmoeglichkeits-Heuristik
+            if (dev.location && recorder.isRelevantActivity(dev.type, state.val)) {
+                this._checkSpatialImpossibility(id, dev.location);
+            }
+        }
+    }
+
+    _checkSpatialImpossibility(triggerId, triggerLocation) {
+        if (!this._cachedTopoMatrix) {
+            this.getStateAsync('analysis.topology.structure').then((s) => {
+                if (s && s.val) { try { this._cachedTopoMatrix = JSON.parse(s.val); } catch(e) {} }
+            }).catch(function(){});
+            return;
+        }
+        var topo = this._cachedTopoMatrix;
+        if (!topo || !topo.rooms || !topo.matrix) return;
+        var WINDOW_MS = 8000;
+        var now = Date.now();
+        var triggerRoomIdx = topo.rooms.indexOf(triggerLocation);
+        if (triggerRoomIdx < 0) return;
+        var _self = this;
+        var devicesById = {};
+        (this.config.devices || []).forEach(function(d) { if (d.id) devicesById[d.id] = d; });
+        var multiPersonDetected = false;
+        Object.keys(this.sensorLastSeen).forEach(function(otherId) {
+            if (otherId === triggerId) return;
+            var lastSeenTs = _self.sensorLastSeen[otherId];
+            if (!lastSeenTs || (now - lastSeenTs) > WINDOW_MS) return;
+            var otherDev = devicesById[otherId];
+            if (!otherDev || !otherDev.location || otherDev.location === triggerLocation) return;
+            var otherRoomIdx = topo.rooms.indexOf(otherDev.location);
+            if (otherRoomIdx < 0) return;
+            var isAdjacent = topo.matrix[triggerRoomIdx] && topo.matrix[triggerRoomIdx][otherRoomIdx] > 0;
+            if (!isAdjacent) {
+                multiPersonDetected = true;
+                _self.log.info('[PersonCount] Raeumliche Unmoeglichkeit: ' + triggerLocation + ' + ' + otherDev.location + ' -> mind. 2 Personen');
+            }
+        });
+        if (multiPersonDetected) {
+            var prevCount = this._livePersonCount || 1;
+            if (prevCount < 2) {
+                this._livePersonCount = 2;
+                this.setStateAsync('system.currentPersonCount', { val: 2, ack: true }).catch(function(){});
+                this.setStateAsync('system.householdType', { val: 'multi', ack: true }).catch(function(){});
+            }
+            if (this._multiPersonResetTimer) clearTimeout(this._multiPersonResetTimer);
+            var _cfg = this.config.householdSize || 'single';
+            var _baseCount = _cfg === 'single' ? 1 : _cfg === 'couple' ? 2 : 3;
+            var _baseHT = _baseCount >= 2 ? 'multi' : 'single';
+            this._multiPersonResetTimer = setTimeout(function() {
+                _self._livePersonCount = _baseCount;
+                _self.setStateAsync('system.currentPersonCount', { val: _baseCount, ack: true }).catch(function(){});
+                _self.setStateAsync('system.householdType', { val: _baseHT, ack: true }).catch(function(){});
+                _self.log.info('[PersonCount] Reset auf Config-Baseline: ' + _cfg);
+            }, 15 * 60 * 1000);
         }
     }
 
