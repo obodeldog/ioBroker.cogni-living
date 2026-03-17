@@ -36,7 +36,7 @@ interface ThermostatDiagItem { room: string; sensorId: string; setpointId: strin
 
 interface SettingsState {
     devices: DeviceConfig[]; presenceDevices: string[]; outdoorSensorId: string; geminiApiKey: string; analysisInterval: number; minDaysForBaseline: number;
-    aiPersona: string; livingContext: string; licenseKey: string; ltmStbWindowDays: number; ltmLtbWindowDays: number; ltmDriftCheckIntervalHours: number;
+    householdSize: string; aiPersona: string; livingContext: string; licenseKey: string; ltmStbWindowDays: number; ltmLtbWindowDays: number; ltmDriftCheckIntervalHours: number;
     inactivityMonitoringEnabled: boolean; inactivityThresholdHours: number; notifyTelegramEnabled: boolean; notifyTelegramInstance: string; notifyTelegramRecipient: string;
     notifyPushoverEnabled: boolean; notifyPushoverInstance: string; notifyPushoverRecipient: string; notifyEmailEnabled: boolean; notifyEmailInstance: string; notifyEmailRecipient: string;
     notifyWhatsappEnabled: boolean; notifyWhatsappInstance: string; notifyWhatsappRecipient: string; notifySignalEnabled: boolean; notifySignalInstance: string; notifySignalRecipient: string;
@@ -76,7 +76,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         this.state = {
             sensorProblems: new Set<string>(),
             devices: native.devices || [], presenceDevices: native.presenceDevices || [], outdoorSensorId: native.outdoorSensorId || '', geminiApiKey: native.geminiApiKey || '',
-            analysisInterval: native.analysisInterval || 15, minDaysForBaseline: native.minDaysForBaseline || 7, aiPersona: native.aiPersona || 'generic', livingContext: native.livingContext || '',
+            analysisInterval: native.analysisInterval || 15, minDaysForBaseline: native.minDaysForBaseline || 7, householdSize: native.householdSize || 'single', aiPersona: native.aiPersona || 'generic', livingContext: native.livingContext || '',
             licenseKey: native.licenseKey || '', ltmStbWindowDays: native.ltmStbWindowDays || 14, ltmLtbWindowDays: native.ltmLtbWindowDays || 60, ltmDriftCheckIntervalHours: native.ltmDriftCheckIntervalHours || 24,
             inactivityMonitoringEnabled: native.inactivityMonitoringEnabled || false, inactivityThresholdHours: native.inactivityThresholdHours || 12, notifyTelegramEnabled: native.notifyTelegramEnabled || false,
             notifyTelegramInstance: native.notifyTelegramInstance || '', notifyTelegramRecipient: native.notifyTelegramRecipient || '', notifyPushoverEnabled: native.notifyPushoverEnabled || false,
@@ -437,6 +437,26 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         return (
             <Grid container spacing={3}>
                 <Grid item xs={12}><Alert severity="info">Konfigurieren Sie hier Wetter & Kontext für alle Säulen.</Alert></Grid>
+
+                <Grid item xs={12} md={6}>
+                    <Tooltip title="Wie viele Personen leben dauerhaft im Haushalt? Beeinflusst Gesundheitsalgorithmen und Krankheitserkennung." arrow>
+                        <FormControl fullWidth variant="outlined">
+                            <InputLabel>Haushaltsgröße (Personenzählung)</InputLabel>
+                            <Select
+                                value={this.state.householdSize}
+                                label="Haushaltsgröße (Personenzählung)"
+                                onChange={e => this.updateNativeValue('householdSize', e.target.value)}
+                            >
+                                <MenuItem value="single">Alleine lebend (1 Person)</MenuItem>
+                                <MenuItem value="couple">Zu zweit (2 Personen)</MenuItem>
+                                <MenuItem value="family">Familie / WG (3+ Personen)</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Tooltip>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                        Wird als Baseline genutzt wenn kein Personenzähl-Sensor vorhanden. Beeinflusst ob Nykturie, Demenz und Depression zuverlässig erkannt werden können.
+                    </Typography>
+                </Grid>
 
                 <Grid item xs={12}>
                     <Tooltip title="Beschreiben Sie Ihre Wohnsituation für die KI (z.B. '4 Personen, Homeoffice, Hund')." {...tooltipProps}>

@@ -174,6 +174,15 @@ class CogniLiving extends utils.Adapter {
         // Startup-Save: heute-Datei nach Replay schreiben damit Charts sofort Balken zeigen
         setTimeout(() => this.saveDailyHistory().catch(e => {}), 90000);
 
+        // householdType-Baseline aus Config setzen (gilt solange kein FP2-Sensor live ueberschreibt)
+        var _hsMap = { single: 'single', couple: 'multi', family: 'multi' };
+        var _hsCfg = this.config.householdSize || 'single';
+        var _hsBaseline = _hsMap[_hsCfg] || 'single';
+        var _hsCount = _hsCfg === 'single' ? 1 : _hsCfg === 'couple' ? 2 : 3;
+        this.setStateAsync('system.householdType', { val: _hsBaseline, ack: true }).catch(function(){});
+        this.setStateAsync('system.currentPersonCount', { val: _hsCount, ack: true }).catch(function(){});
+        this.log.info('Haushaltsgroesse (Config-Baseline): ' + _hsCfg + ' -> householdType=' + _hsBaseline + ', count=' + _hsCount);
+
         // Sensor-LastSeen aus eventHistory initialisieren (auch nach Adapter-Neustart)
         if (this.eventHistory && this.eventHistory.length > 0) {
             this.eventHistory.forEach(function(e) { if (e.id && e.timestamp) { var cur = this.sensorLastSeen[e.id]; if (!cur || e.timestamp > cur) this.sensorLastSeen[e.id] = e.timestamp; } }.bind(this));

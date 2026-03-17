@@ -18,6 +18,7 @@ const schedulers = require('./lib/scheduler');
 const topology = require('./lib/topology');
 const setup = require('./lib/setup');
 const recorder = require('./lib/recorder');
+const { isActiveValue, toPersonCount } = recorder;
 const pythonBridge = require('./lib/python_bridge');
 const aiAgent = require('./lib/ai_agent');
 const deadMan = require('./lib/dead_man');
@@ -160,7 +161,7 @@ class CogniLiving extends utils.Adapter {
             this.subscribeForeignStates(this.config.infrasoundSensorId);
         }
         const devices = this.config.devices; if (devices) { for (const d of devices) { await this.subscribeForeignStatesAsync(d.id); } }
-        if (devices) { for (const d of devices) { if ((d.type === 'presence_radar') && d.id) { var _vpId = d.id.replace('.occupancy-detected', '.value'); try { await this.subscribeForeignStatesAsync(_vpId); } catch(e) {} } } }
+        // presence_radar_count: ID zeigt direkt auf den Personenzahl-State (z.B. alias oder .value) – kein ID-Hacking nötig
         const devs = this.config.presenceDevices; if (devs) { for (const id of devs) { await this.subscribeForeignStatesAsync(id); } }
 
         const schedule = require('node-schedule');
@@ -170,6 +171,17 @@ class CogniLiving extends utils.Adapter {
         });
 
         setTimeout(() => this.replayTodayEvents(), 5000);
+        // Startup-Save: heute-Datei nach Replay schreiben damit Charts sofort Balken zeigen
+        setTimeout(() => this.saveDailyHistory().catch(e => {}), 90000);
+
+        // householdType-Baseline aus Config setzen (gilt solange kein FP2-Sensor live ueberschreibt)
+        var _hsMap = { single: 'single', couple: 'multi', family: 'multi' };
+        var _hsCfg = this.config.householdSize || 'single';
+        var _hsBaseline = _hsMap[_hsCfg] || 'single';
+        var _hsCount = _hsCfg === 'single' ? 1 : _hsCfg === 'couple' ? 2 : 3;
+        this.setStateAsync('system.householdType', { val: _hsBaseline, ack: true }).catch(function(){});
+        this.setStateAsync('system.currentPersonCount', { val: _hsCount, ack: true }).catch(function(){});
+        this.log.info('Haushaltsgroesse (Config-Baseline): ' + _hsCfg + ' -> householdType=' + _hsBaseline + ', count=' + _hsCount);
 
         // Sensor-LastSeen aus eventHistory initialisieren (auch nach Adapter-Neustart)
         if (this.eventHistory && this.eventHistory.length > 0) {
@@ -178,6 +190,9 @@ class CogniLiving extends utils.Adapter {
         // Stündlicher Sensor-Ausfall-Check
         if (this.sensorCheckInterval) clearInterval(this.sensorCheckInterval);
         this.sensorCheckInterval = setInterval(() => { this.checkSensorHealth(); }, 60 * 60 * 1000);
+        // Stündlicher History-Save: heute-Datei aktuell halten damit Chart heute-Balken zeigt
+        if (this.hourlySaveInterval) clearInterval(this.hourlySaveInterval);
+        this.hourlySaveInterval = setInterval(() => { this.saveDailyHistory().catch(e => {}); }, 60 * 60 * 1000);
         setTimeout(() => this.checkSensorHealth(), 5 * 60 * 1000); // auch 5 min nach Start
 
         if (this.roomIntegratorTimer) clearInterval(this.roomIntegratorTimer);
@@ -306,6 +321,7 @@ class CogniLiving extends utils.Adapter {
             if (this.presenceCheckTimer) clearInterval(this.presenceCheckTimer);
             if (this.roomIntegratorTimer) clearInterval(this.roomIntegratorTimer);
             if (this.sensorCheckInterval) clearInterval(this.sensorCheckInterval);
+            if (this.hourlySaveInterval) clearInterval(this.hourlySaveInterval);
             recorder.abortExitTimer(this);
             pythonBridge.stopService(this);
             
@@ -463,25 +479,13 @@ class CogniLiving extends utils.Adapter {
                 var bedEvts = todayEvents.filter(function(e) { return e.isFP2Bed; })
                     .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
                 bedEvts.forEach(function(e) {
-                    var v = e.value === true || e.value === 1 || e.value === 'true';
+                    var v = isActiveValue(e.value) || toPersonCount(e.value) > 0;
                     if (v && !presStart) { presStart = e.timestamp||0; }
                     else if (!v && presStart) { total += ((e.timestamp||0) - presStart) / 60000; presStart = null; }
                 });
                 if (presStart) total += (Date.now() - presStart) / 60000;
                 return Math.round(total);
             })();
-            // Vibration Bett: Erschuetterungen im Schlaf-Fenster (Fallback: 22-06)
-            const nightVibrationCount = todayEvents.filter(function(e) {
-                if (!e.isVibrationBed) return false;
-                var v = e.value === true || e.value === 1 || e.value === 'true';
-                if (!v) return false;
-                var ts = e.timestamp||0;
-                if (sleepWindowCalc.start && sleepWindowCalc.end) {
-                    return ts >= sleepWindowCalc.start && ts <= sleepWindowCalc.end;
-                }
-                var hr = new Date(ts).getHours();
-                return hr >= 22 || hr < 6;
-            }).length;
 
             // Schlaf-Fenster aus FP2-Bett-Events berechnen (dynamisch statt fixem 22-06)
             const sleepWindowCalc = (function() {
@@ -493,7 +497,7 @@ class CogniLiving extends utils.Adapter {
                 var presStart = null;
                 for (var _si = 0; _si < bedEvts.length; _si++) {
                     var _se = bedEvts[_si];
-                    var _sv = _se.value === true || _se.value === 1 || _se.value === 'true';
+                    var _sv = isActiveValue(_se.value) || toPersonCount(_se.value) > 0;
                     var _shr = new Date(_se.timestamp||0).getHours();
                     if (_sv && !presStart && (_shr >= 18 || _shr < 3)) { presStart = _se.timestamp||0; }
                     else if (!_sv && presStart) {
@@ -510,7 +514,7 @@ class CogniLiving extends utils.Adapter {
                 for (var _wi = 0; _wi < bedEvts.length; _wi++) {
                     var _we = bedEvts[_wi];
                     if ((_we.timestamp||0) < sleepStartTs) continue; // vor Schlafbeginn ignorieren
-                    var _wv = _we.value === true || _we.value === 1 || _we.value === 'true';
+                    var _wv = isActiveValue(_we.value) || toPersonCount(_we.value) > 0;
                     var _whr = new Date(_we.timestamp||0).getHours();
                     if (!_wv && (_whr >= 4 || _whr < 12)) {
                         if (!emptyStart) emptyStart = _we.timestamp||0;
@@ -523,6 +527,34 @@ class CogniLiving extends utils.Adapter {
                 if (emptyStart) { var _wdur2 = (Date.now() - emptyStart) / 60000; if (_wdur2 >= 15) wakeTs = Date.now(); }
                 return { start: sleepStartTs, end: wakeTs };
             })();
+
+            // Vibration Bett: Erschuetterungen im Schlaf-Fenster (Fallback: 22-06)
+            const nightVibrationCount = todayEvents.filter(function(e) {
+                if (!e.isVibrationBed) return false;
+                var v = isActiveValue(e.value) || toPersonCount(e.value) > 0;
+                if (!v) return false;
+                var ts = e.timestamp||0;
+                if (sleepWindowCalc.start && sleepWindowCalc.end) {
+                    return ts >= sleepWindowCalc.start && ts <= sleepWindowCalc.end;
+                }
+                var hr = new Date(ts).getHours();
+                return hr >= 22 || hr < 6;
+            }).length;
+            // Vibration Staerke: Avg und Max im Schlaf-Fenster (fuer Parkinson/Epilepsie)
+            var _vibStrSum = 0; var _vibStrCount = 0; var _vibStrMax = 0;
+            todayEvents.forEach(function(e) {
+                if (!e.isVibrationStrength) return;
+                var ts = e.timestamp || 0;
+                var inWin = (sleepWindowCalc.start && sleepWindowCalc.end)
+                    ? (ts >= sleepWindowCalc.start && ts <= sleepWindowCalc.end)
+                    : (new Date(ts).getHours() >= 22 || new Date(ts).getHours() < 6);
+                if (!inWin) return;
+                var s = typeof e.value === 'number' ? e.value : parseFloat(e.value);
+                if (isNaN(s) || s <= 0) return;
+                _vibStrSum += s; _vibStrCount++; if (s > _vibStrMax) _vibStrMax = s;
+            });
+            const nightVibrationStrengthAvg = _vibStrCount > 0 ? Math.round(_vibStrSum / _vibStrCount) : null;
+            const nightVibrationStrengthMax = _vibStrCount > 0 ? _vibStrMax : null;
 
             // Nykturie: Badezimmer-Sensor-Ereignisse – dynamisches Schlaf-Fenster (Fallback: 22-06)
             const _bathroomDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
@@ -693,6 +725,8 @@ class CogniLiving extends utils.Adapter {
                 maxPersonsDetected: maxPersonsDetected,
                 bedPresenceMinutes: bedPresenceMinutes,
                 nightVibrationCount: nightVibrationCount,
+                nightVibrationStrengthAvg: nightVibrationStrengthAvg,
+                nightVibrationStrengthMax: nightVibrationStrengthMax,
                 personData: personData
             };
 
@@ -1272,28 +1306,23 @@ class CogniLiving extends utils.Adapter {
                         const s = await this.getStateAsync('LTM.rawEventLog');
                         if(s && s.val) {
                             const deviceMap = {};
-                            // FP2 value-state tracking (person count + Zwei-Ebenen-Belegungslogik)
-            if (id.endsWith('.value')) {
-                var _fpBase = id.replace('.value', '.occupancy-detected');
-                var _fpConf = (this.config.devices||[]).find(function(d){ return d.id === _fpBase; });
-                if (_fpConf && _fpConf.type === 'presence_radar') {
-                    var _personCount = state ? Number(state.val) : 0;
-                    var _evIdx = this.eventHistory.findIndex(function(e){ return e.id === _fpBase && !e._hasPCount; });
-                    if (_evIdx > -1) { this.eventHistory[_evIdx].personCount = _personCount; this.eventHistory[_evIdx]._hasPCount = true; }
-                    // Zwei-Ebenen-Belegungslogik:
-                    // Wohnzimmer-FP2 (living) => bestimmt Haushaltstyp in Echtzeit
-                    var _isLiving = _fpConf.sensorFunction === 'living' || _fpConf.isFP2Living;
-                    if (_isLiving) {
-                        this._livePersonCount = _personCount;
-                        // Multi-Person wenn >= 2 Personen gleichzeitig im Wohnbereich erkannt
-                        var _liveHT = _personCount >= 2 ? 'multi' : 'single';
-                        this.setStateAsync('system.currentPersonCount', { val: _personCount, ack: true }).catch(function(){});
-                        this.setStateAsync('system.householdType', { val: _liveHT, ack: true }).catch(function(){});
-                    }
-                    // Schlafzimmer-FP2 (bed) => Bettbelegung-Cache fuer Schlafanalyse
-                    var _isBed = _fpConf.sensorFunction === 'bed' || _fpConf.isFP2Bed;
-                    if (_isBed) { this._liveBedPersonCount = _personCount; }
+                            // presence_radar_count: Personenzahl-Sensor direkt aus Config (kein ID-Hacking)
+            var _fpConf = (this.config.devices||[]).find(function(d){ return d.id === id && d.type === 'presence_radar_count'; });
+            if (_fpConf) {
+                var _personCount = toPersonCount(state ? state.val : 0);
+                // Event in History mit personCount anreichern
+                var _evIdx = this.eventHistory.findIndex(function(e){ return e.id === id; });
+                if (_evIdx > -1) { this.eventHistory[_evIdx].personCount = _personCount; }
+                // Zwei-Ebenen-Belegungslogik:
+                var _isLiving = _fpConf.sensorFunction === 'living' || _fpConf.isFP2Living;
+                if (_isLiving) {
+                    this._livePersonCount = _personCount;
+                    var _liveHT = _personCount >= 2 ? 'multi' : 'single';
+                    this.setStateAsync('system.currentPersonCount', { val: _personCount, ack: true }).catch(function(){});
+                    this.setStateAsync('system.householdType', { val: _liveHT, ack: true }).catch(function(){});
                 }
+                var _isBed = _fpConf.sensorFunction === 'bed' || _fpConf.isFP2Bed;
+                if (_isBed) { this._liveBedPersonCount = _personCount; }
             }
                         if (this.config.devices) this.config.devices.forEach(d => { if (d.id && d.type) deviceMap[d.id] = d.type; });
                             pythonBridge.send(this, 'TRAIN_COMFORT', { events: JSON.parse(s.val), deviceMap: deviceMap });
@@ -1321,10 +1350,10 @@ class CogniLiving extends utils.Adapter {
             if (evt) {
                 this.setState('analysis.visualization.pulse', { val: Date.now(), ack: true });
             }
-            if (evt && evt.type === 'motion' && evt.location && this.isProVersion) {
+            if (evt && (evt.type === 'motion' || evt.type === 'presence_radar_bool') && evt.location && this.isProVersion) {
                 deadMan.updateLocation(this, evt.location);
             }
-            if (state.val && (state.val === true || state.val === 1 || String(state.val).toLowerCase() === 'open')) {
+            if (isActiveValue(state.val)) {
                 if (dev.type && (dev.type.includes('window') || dev.type.includes('door'))) {
                     this.analyzeWindowOpening(dev);
                 }
