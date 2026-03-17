@@ -20,6 +20,10 @@ import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import PersonIcon from '@mui/icons-material/Person';
+import GroupsIcon from '@mui/icons-material/Groups';
+import HouseIcon from '@mui/icons-material/House';
 
 // IMPORT DER BESTEHENDEN SETTINGS-KOMPONENTE (WICHTIG FÜR DIE EISERNE REGEL)
 import Settings from '../Settings';
@@ -30,6 +34,24 @@ export default function SystemTab(props: any) {
     const { socket, adapterName, instance, themeType, native } = props;
     const namespace = `${adapterName}.${instance}`;
     const isDark = themeType === 'dark';
+
+    // --- STATE LIVE-SYSTEMSTATUS ---
+    const [livePersonCount, setLivePersonCount] = useState<number | null>(null);
+    const [liveHouseholdType, setLiveHouseholdType] = useState<string | null>(null);
+
+    useEffect(() => {
+        const loadLiveStatus = () => {
+            socket.getState(namespace + '.system.currentPersonCount').then((s: any) => {
+                if (s && s.val !== undefined && s.val !== null) setLivePersonCount(Number(s.val));
+            }).catch(() => {});
+            socket.getState(namespace + '.system.householdType').then((s: any) => {
+                if (s && s.val) setLiveHouseholdType(String(s.val));
+            }).catch(() => {});
+        };
+        loadLiveStatus();
+        const lsTimer = setInterval(loadLiveStatus, 30 * 1000);
+        return () => clearInterval(lsTimer);
+    }, [socket, namespace]);
 
     // --- STATE SENSOR-GESUNDHEIT ---
     const [sensorStatus, setSensorStatus] = useState<{ timestamp: number; offlineCount: number; sensors: { id: string; name: string; location: string; sinceH: number; status: string }[] } | null>(null);
@@ -139,6 +161,71 @@ export default function SystemTab(props: any) {
                     <Typography variant="body1" color="text.secondary">Sensoren, Lizenzen & Schnittstellen</Typography>
                 </Box>
             </Box>
+
+            {/* --- LIVE SYSTEMSTATUS (Personenzählung & Haushaltstyp) --- */}
+            <Paper elevation={2} sx={{
+                mb: 3, p: 2.5, borderRadius: 2,
+                border: '1px solid',
+                borderColor: isDark ? '#2a3a4a' : '#bbdefb',
+                backgroundColor: isDark ? '#0d2137' : '#e3f2fd',
+            }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+                    <HouseIcon sx={{ color: '#42a5f5', fontSize: 22 }} />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: isDark ? '#90caf9' : '#1565c0' }}>
+                        Systemstatus — Live
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                        wird alle 30s aktualisiert
+                    </Typography>
+                </Stack>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    {/* Personenzahl */}
+                    <Paper elevation={0} sx={{ flex: 1, p: 1.5, borderRadius: 1.5, backgroundColor: isDark ? '#0a1929' : '#ffffff', border: '1px solid', borderColor: isDark ? '#1e4976' : '#90caf9' }}>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                            {livePersonCount !== null && livePersonCount >= 2
+                                ? <GroupsIcon sx={{ color: '#ff9800', fontSize: 28 }} />
+                                : <PersonIcon sx={{ color: '#4caf50', fontSize: 28 }} />
+                            }
+                            <Box>
+                                <Typography variant="caption" color="text.secondary">Personen im Haus (geschätzt)</Typography>
+                                <Typography variant="h5" sx={{ fontWeight: 'bold', lineHeight: 1.1 }}>
+                                    {livePersonCount !== null ? livePersonCount : '—'}
+                                </Typography>
+                            </Box>
+                        </Stack>
+                    </Paper>
+                    {/* Haushaltstyp */}
+                    <Paper elevation={0} sx={{ flex: 1, p: 1.5, borderRadius: 1.5, backgroundColor: isDark ? '#0a1929' : '#ffffff', border: '1px solid', borderColor: isDark ? '#1e4976' : '#90caf9' }}>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                            <PeopleAltIcon sx={{ color: '#42a5f5', fontSize: 28 }} />
+                            <Box>
+                                <Typography variant="caption" color="text.secondary">Haushaltstyp</Typography>
+                                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                    {liveHouseholdType === 'multi'
+                                        ? '👥 Mehrpersonenhaushalt'
+                                        : liveHouseholdType === 'single'
+                                        ? '🧍 Einpersonenhaushalt'
+                                        : '—'
+                                    }
+                                </Typography>
+                            </Box>
+                        </Stack>
+                    </Paper>
+                    {/* Erkennungsquelle */}
+                    <Paper elevation={0} sx={{ flex: 1.5, p: 1.5, borderRadius: 1.5, backgroundColor: isDark ? '#0a1929' : '#ffffff', border: '1px solid', borderColor: isDark ? '#1e4976' : '#90caf9' }}>
+                        <Typography variant="caption" color="text.secondary">Erkennungsquelle</Typography>
+                        <Typography variant="body2" sx={{ mt: 0.3 }}>
+                            {livePersonCount !== null && livePersonCount >= 2
+                                ? '🔍 Räumliche Heuristik aktiv — mind. 2 Personen erkannt'
+                                : '⚙️ Config-Baseline (Haushaltsgröße-Einstellung)'
+                            }
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                            Quelle wechselt automatisch wenn Sensoren 2 Personen erkennen.
+                        </Typography>
+                    </Paper>
+                </Stack>
+            </Paper>
 
             {/* --- SENSOR-GESUNDHEIT SAMMELMELDUNG --- */}
             {(() => {
