@@ -1104,8 +1104,9 @@ export default function HealthTab(props: any) {
         const swStart: number | null = sd?.sleepWindowStart ?? null;
         const swEnd: number | null = sd?.sleepWindowEnd ?? null;
 
-        // Kein Vibrationssensor → Hinweis anzeigen
+        // Drei Zustände: Daten vorhanden | Schlaffenster erkannt aber kein Vib-Sensor | Noch keine Nacht
         const hasVibSensor = stages.length > 0;
+        const hasSleepWindow = swStart !== null;  // Schlaffenster erkannt (FP2), aber Vib-Sensor fehlt ggf.
 
         const stageColor: Record<string, string> = {
             deep:  '#1565c0',
@@ -1140,9 +1141,14 @@ export default function HealthTab(props: any) {
                 helpText="Geschätzte Schlafstadien aus Vibrationssensor (Bett). Kein Medizinprodukt — für klinische Diagnose Arzt hinzuziehen.">
                 {!hasVibSensor ? (
                     <div style={{color:'#888', textAlign:'center', padding:'20px', fontSize:'0.8rem'}}>
-                        <div style={{fontSize:'1.5rem', marginBottom:'8px'}}>🛏</div>
-                        Kein Vibrationssensor konfiguriert.<br/>
-                        <span style={{opacity:0.7}}>Für Sleep Score: Vibrationssensor am Bett als „Bett-Sensor" einrichten.</span>
+                        <div style={{fontSize:'1.5rem', marginBottom:'8px'}}>&#128716;</div>
+                        {hasSleepWindow ? (
+                            <><strong style={{color: isDark?'#ccc':'#555'}}>Kein Vibrationssensor gefunden.</strong><br/>
+                            <span style={{opacity:0.7}}>Sensor am Bett konfigurieren (Typ: Vibration, Funktion: Bett-Sensor).</span></>
+                        ) : (
+                            <><strong style={{color: isDark?'#ccc':'#555'}}>Heute Nacht werden die ersten Daten gesammelt.</strong><br/>
+                            <span style={{opacity:0.7}}>Der Sleep Score erscheint morgen früh nach der ersten analysierten Nacht.</span></>
+                        )}
                     </div>
                 ) : (
                     <div>

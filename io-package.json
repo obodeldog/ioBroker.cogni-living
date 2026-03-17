@@ -1,7 +1,7 @@
 ﻿{
   "common": {
     "name": "cogni-living",
-    "version": "0.33.29",
+    "version": "0.33.30",
     "news": {
       "0.31.6": "NEU: Tageszeit-Normalisierung im Aktivitaets-Balkendiagramm (Ansatz B) - heutiger Balken vergleicht nur Events bis zur aktuellen Uhrzeit mit Vortagen; visuelles Kennzeichen (tÃƒÂ¼rkiser Rand)",
       "0.31.5": "FIX: Fresh Air Stosslueftungs-Erkennung live (processEvents) und Wochenansicht korrekt; freshAirLong Pairing-Logik eingefuegt",
@@ -327,5 +327,6 @@
   "objects": [],
   "instanceObjects": []
 }
+
 
 
