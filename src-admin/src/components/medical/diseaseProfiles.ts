@@ -1,5 +1,5 @@
-/**
- * AURA — Medizinische Krankheitsprofile
+ï»¿/**
+ * AURA ï¿½ Medizinische Krankheitsprofile
  * Definiert Sensor-Anforderungen und Validierungslogik fuer jedes Krankheitsbild.
  */
 
@@ -14,6 +14,11 @@ export interface DeviceConfig {
     isHallway?: boolean;
     isNightSensor?: boolean;
     isBathroomSensor?: boolean;
+    isKitchenSensor?: boolean;
+    isFP2Bed?: boolean;
+    isFP2Living?: boolean;
+    isVibrationBed?: boolean;
+    sensorFunction?: string;
 }
 
 export interface SensorRequirement {
@@ -62,27 +67,48 @@ function hasMotionSensors(devices: DeviceConfig[], minCount = 1): boolean {
 function hasDoorSensors(devices: DeviceConfig[], minCount = 1): boolean {
     return devices.filter(d => DOOR_TYPES.some(k => (d.type || '').toLowerCase().includes(k))).length >= minCount;
 }
+// sensorFunction-Shortcut: wie getEffectiveSF in SensorList (inkl. Legacy-Flags)
+function sf(d: DeviceConfig): string {
+    if (d.sensorFunction) return (d.sensorFunction as string).toLowerCase();
+    if (d.isKitchenSensor)  return 'kitchen';
+    if (d.isBathroomSensor) return 'bathroom';
+    if (d.isHallway)        return 'hallway';
+    if (d.isNightSensor)    return 'bed';
+    return '';
+}
+// Umlaut-Normalisierung fuer location-Vergleiche
+function normLoc(s: string): string {
+    return s.toLowerCase().replace(/Ã¼/g, 'ue').replace(/Ã¤/g, 'ae').replace(/Ã¶/g, 'oe').replace(/ÃŸ/g, 'ss');
+}
+function hasFP2(devices: DeviceConfig[]): boolean {
+    return devices.some(d => (d.type || '').toLowerCase().includes('presence_radar'));
+}
+function hasVibrationSensor(devices: DeviceConfig[]): boolean {
+    return devices.some(d => (d.type || '').toLowerCase().includes('vibration') && sf(d) === 'bed');
+}
+
 function hasHallwaySensor(devices: DeviceConfig[]): boolean {
-    return devices.some(d => d.isHallway === true);
+    return devices.some(d => d.isHallway === true || sf(d) === 'hallway');
 }
 function hasExitSensor(devices: DeviceConfig[]): boolean {
     return devices.some(d => d.isExit === true);
 }
 function hasNightSensor(devices: DeviceConfig[]): boolean {
-    if (devices.some(d => (d as any).isNightSensor === true)) return true;
-    const kw = ['schlaf', 'bedroom', 'nacht', 'night', 'kind'];
-    return devices.some(d => kw.some(k => (d.location || '').toLowerCase().includes(k)));
+    if (devices.some(d => d.isNightSensor === true || sf(d) === 'bed')) return true;
+    const kw = ['schlaf', 'bedroom', 'nacht', 'night', 'kinderzimmer'];
+    return devices.some(d => kw.some(k => normLoc(d.location || '').includes(k)));
 }
 function hasBathroomSensor(devices: DeviceConfig[]): boolean {
-    if (devices.some(d => (d as any).isBathroomSensor === true)) return true;
+    if (devices.some(d => d.isBathroomSensor === true || sf(d) === 'bathroom')) return true;
     const kw = ['bad', 'wc', 'toilet', 'bath', 'dusche', 'shower'];
-    return devices.some(d => kw.some(k => (d.location || '').toLowerCase().includes(k)));
+    return devices.some(d => kw.some(k => normLoc(d.location || '').includes(k)));
 }
 function hasKitchenSensor(devices: DeviceConfig[]): boolean {
+    if (devices.some(d => sf(d) === 'kitchen')) return true;
     const kw = ['kueche', 'kuech', 'kitchen', 'koch'];
     return devices.some(d =>
         MOTION_TYPES.some(t => (d.type || '').toLowerCase().includes(t)) &&
-        kw.some(k => (d.location || '').toLowerCase().includes(k))
+        kw.some(k => normLoc(d.location || '').includes(k))
     );
 }
 
@@ -101,7 +127,7 @@ export const DISEASE_PROFILES: DiseaseProfile[] = [
         ],
         optionalSensors: [
             { key: 'nightSensor', label: 'Schlafzimmer-Sensor', description: 'Naechtliche Stuerze erkennen', optional: true, check: hasNightSensor, missingHint: 'Sensor im Schlafzimmer als Nacht-Sensor markieren.' },
-            { key: 'fp2', label: 'Aqara FP2 (Sturzerkennung)', description: 'Dedizierte Sturzerkennung via mmWave-Radar', optional: true, check: () => false, missingHint: 'Aqara FP2 an der Decke \u2014 direkte Sturzerkennung. ~70\u20ac.' }
+            { key: 'fp2', label: 'Aqara FP2 (Sturzerkennung)', description: 'Dedizierte Sturzerkennung via mmWave-Radar', optional: true, check: hasFP2, missingHint: 'Aqara FP2 an der Decke \u2014 direkte Sturzerkennung. ~70\u20ac.' }
         ]
     },
     {
@@ -119,7 +145,7 @@ export const DISEASE_PROFILES: DiseaseProfile[] = [
         ],
         optionalSensors: [
             { key: 'kitchen', label: 'Kuechen-Sensor', description: 'Vergessene Mahlzeiten erkennen', optional: true, check: hasKitchenSensor, missingHint: 'Bewegungsmelder in der Kueche.' },
-            { key: 'fp2multi', label: 'Aqara FP2 (Multi-Person)', description: 'Fuer Mehrpersonenhaushalt: trennt Patient von Begleitperson', optional: true, check: () => false, missingHint: 'Aqara FP2 ermoeglicht Multi-Person-Tracking. ~70\u20ac/Raum.' }
+            { key: 'fp2multi', label: 'Aqara FP2 (Multi-Person)', description: 'Fuer Mehrpersonenhaushalt: trennt Patient von Begleitperson', optional: true, check: hasFP2, missingHint: 'Aqara FP2 ermoeglicht Multi-Person-Tracking. ~70\u20ac/Raum.' }
         ]
     },
     {
@@ -169,7 +195,7 @@ export const DISEASE_PROFILES: DiseaseProfile[] = [
         ]
     },
     {
-        id: 'sleepDisorder', label: 'Schlafstörungen', shortLabel: 'Schlaf', color: '#3f51b5',
+        id: 'sleepDisorder', label: 'Schlafstï¿½rungen', shortLabel: 'Schlaf', color: '#3f51b5',
         targetGroup: 'all', marketScore1P: 78, marketScoreMP: 59, multiPersonFeasibility: 'partial',
         description: 'Analysiert Einschlaflatenz, Schlaf-Fragmentierung, fruehes Erwachen und zirkadiane Verschiebungen.',
         clinicalBasis: 'Insomnie betrifft 10-15% der Bevoelkerung chronisch. Passives Monitoring ermoeglicht objektive Schlafanalyse (Bianchi et al., J Clin Sleep Med 2020).',
@@ -180,7 +206,7 @@ export const DISEASE_PROFILES: DiseaseProfile[] = [
         ],
         optionalSensors: [
             { key: 'bathroom', label: 'Bad-Sensor (WASO)', description: 'Naechtliche Unterbrechungen durch Toilettenbesuche', optional: true, check: hasBathroomSensor, missingHint: 'Bad-Sensor fuer Wake-After-Sleep-Onset-Erkennung.' },
-            { key: 'fp2sleep', label: 'Aqara FP2 (Schlaf-Monitoring)', description: 'Dediziertes Schlaf-Monitoring via mmWave', optional: true, check: () => false, missingHint: 'Aqara FP2 im Schlafzimmer fuer praezises Schlaf-Staging. ~70\u20ac.' }
+            { key: 'fp2sleep', label: 'Aqara FP2 (Schlaf-Monitoring)', description: 'Dediziertes Schlaf-Monitoring via mmWave', optional: true, check: hasFP2, missingHint: 'Aqara FP2 im Schlafzimmer fuer praezises Schlaf-Staging. ~70\u20ac.' }
         ]
     },
     {
@@ -206,7 +232,7 @@ export const DISEASE_PROFILES: DiseaseProfile[] = [
         relevantMetrics: ['gaitSpeed', 'nightRestlessness', 'hygieneFrequency'],
         needsFP2: false,
         requiredSensors: [
-            { key: 'hallway', label: 'Flur-Sensor (isHallway) — ZWINGEND', description: 'Ganggeschwindigkeit ist Kern-Biomarker', optional: false, check: hasHallwaySensor, missingHint: 'Ohne Flur-Sensor ist Parkinson-Monitoring nicht sinnvoll.' }
+            { key: 'hallway', label: 'Flur-Sensor (isHallway) ï¿½ ZWINGEND', description: 'Ganggeschwindigkeit ist Kern-Biomarker', optional: false, check: hasHallwaySensor, missingHint: 'Ohne Flur-Sensor ist Parkinson-Monitoring nicht sinnvoll.' }
         ],
         optionalSensors: [
             { key: 'nightSensor', label: 'Schlafzimmer-Sensor (REM)', description: 'REM-Schlaf-Verhaltenstoerung ist Parkinson-Fruehzeichen', optional: true, check: hasNightSensor, missingHint: 'Schlafzimmer-Sensor fuer REM-Schlaf-Anomalie-Erkennung.' },
@@ -236,7 +262,7 @@ export const DISEASE_PROFILES: DiseaseProfile[] = [
         relevantMetrics: ['activityLevel', 'roomMobility'],
         needsFP2: false,
         requiredSensors: [
-            { key: 'exit', label: 'Ausgangstuer-Kontakt (isExit) — ZWINGEND', description: 'Exit-Frequenz-Trend ist Kern-Indikator', optional: false, check: hasExitSensor, missingHint: 'Kontaktsensor an der Haustuer als "Ausgang" markieren.' }
+            { key: 'exit', label: 'Ausgangstuer-Kontakt (isExit) ï¿½ ZWINGEND', description: 'Exit-Frequenz-Trend ist Kern-Indikator', optional: false, check: hasExitSensor, missingHint: 'Kontaktsensor an der Haustuer als "Ausgang" markieren.' }
         ],
         optionalSensors: [
             { key: 'motion2', label: 'Bewegungsmelder (mind. 2)', description: 'Monotoner Tagesablauf durch zu geringe Variabilitaet', optional: true, check: (d) => hasMotionSensors(d, 2), missingHint: 'Mehrere Bewegungsmelder fuer Raum-Mobilitaets-Analyse.' }
@@ -253,8 +279,8 @@ export const DISEASE_PROFILES: DiseaseProfile[] = [
             { key: 'nightSensor', label: 'Sensor im Kinderzimmer (isNightSensor)', description: 'Naechtliche Bewegungsauffaelligkeiten im Schlafbereich', optional: false, check: hasNightSensor, missingHint: 'Sensor im Kinderzimmer als Nacht-Sensor markieren.' }
         ],
         optionalSensors: [
-            { key: 'fp2ceiling', label: 'Aqara FP2 (Decke, Kinderzimmer)', description: 'mmWave-Radar erkennt rhythmische Koerperbewegungen', optional: true, check: () => false, missingHint: 'Aqara FP2 an der Decke im Kinderzimmer. ~70\u20ac.' },
-            { key: 'vibration', label: 'Vibrationssensor am Bett', description: 'Aqara Vibration Sensor fuer rhythmische Bett-Vibrationen', optional: true, check: () => false, missingHint: 'Aqara Smart Vibration Sensor am Bettgestell. ~12\u20ac.' }
+            { key: 'fp2ceiling', label: 'Aqara FP2 (Decke, Kinderzimmer)', description: 'mmWave-Radar erkennt rhythmische Koerperbewegungen', optional: true, check: hasFP2, missingHint: 'Aqara FP2 an der Decke im Kinderzimmer. ~70\u20ac.' },
+            { key: 'vibration', label: 'Vibrationssensor am Bett', description: 'Aqara Vibration Sensor fuer rhythmische Bett-Vibrationen', optional: true, check: hasVibrationSensor, missingHint: 'Aqara Smart Vibration Sensor am Bettgestell. ~12\u20ac.' }
         ]
     },
     {
@@ -269,7 +295,7 @@ export const DISEASE_PROFILES: DiseaseProfile[] = [
         ],
         optionalSensors: [
             { key: 'kitchen', label: 'Kuechen-Sensor (Hypoglykamie)', description: 'Naechtliche Kuechen-Besuche = Heisshunger durch Hypoglykamie', optional: true, check: hasKitchenSensor, missingHint: 'Bewegungsmelder in der Kueche.' },
-            { key: 'fp2bed', label: 'Aqara FP2 (Kinderzimmer, Decke)', description: 'Erkennt Zittern und Bewusstlosigkeit', optional: true, check: () => false, missingHint: 'Aqara FP2 an der Decke. ~70\u20ac.' }
+            { key: 'fp2bed', label: 'Aqara FP2 (Kinderzimmer, Decke)', description: 'Erkennt Zittern und Bewusstlosigkeit', optional: true, check: hasFP2, missingHint: 'Aqara FP2 an der Decke. ~70\u20ac.' }
         ]
     },
     {
@@ -288,7 +314,7 @@ export const DISEASE_PROFILES: DiseaseProfile[] = [
         ]
     },
     {
-        id: 'bipolar', label: 'Bipolare Störung', shortLabel: 'Bipolar', color: '#673ab7',
+        id: 'bipolar', label: 'Bipolare Stï¿½rung', shortLabel: 'Bipolar', color: '#673ab7',
         targetGroup: 'adult', marketScore1P: 58, marketScoreMP: 29, multiPersonFeasibility: 'difficult',
         description: 'Erkennt Phasenuebergaenge: Manie (wenig Schlaf, Hyperaktivitaet) und Depression. Fruehwarnung 3-7 Tage vor Eskalation.',
         clinicalBasis: 'Schlaf-Dysregulation ist erster Hinweis auf beginnende Manie (Harvey et al., Annu Rev Clin Psychol 2011).',

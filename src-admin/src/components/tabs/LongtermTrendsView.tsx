@@ -10,7 +10,6 @@ import {
     ReferenceLine, ReferenceArea, Legend
 } from 'recharts';
 
-// Version: 0.30.46 (Garmin-Style Longterm Trends)
 
 interface LongtermTrendsViewProps {
     socket: any;
@@ -34,6 +33,8 @@ interface DailyDataPoint {
     personData?: Record<string, { nightActivityCount: number; wakeTimeMin: number | null; sleepOnsetMin: number | null; nocturiaAttr: number }>;
     sleepWindowStart?: number | null;   // ms-Timestamp Schlafbeginn
     sleepWindowEnd?: number | null;     // ms-Timestamp Aufwachen
+    nightVibrationStrengthAvg?: number | null;
+    nightVibrationStrengthMax?: number | null;
     isPartialDay?: boolean;
 }
 
@@ -83,39 +84,35 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
         setLoading(true);
         setError('');
 
-        console.log('[LongtermTrends] 🚀 Start loading data for:', timeRange);
 
         try {
             const weeks = timeRange === 'week' ? 1 : (timeRange === '4weeks' ? 4 : 26);
             const days = weeks * 7;
 
-            console.log(`[LongtermTrends] 📅 Requesting ${days} days of history...`);
 
             // SCHRITT 1: History-Files laden (alle verfügbaren Tage)
             let dailyData: DailyDataPoint[] = [];
             const today = new Date();
             // Tageszeit-Normalisierung: nur Events bis zur aktuellen Uhrzeit vergleichen
             const currentSlot = Math.floor((today.getHours() * 60 + today.getMinutes()) / 30);
-            const todayDateStr = today.toISOString().split('T')[0];
+            const todayDateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0'); // LOKAL, nicht UTC
 
             for (let i = 0; i < days; i++) {
                 const d = new Date(today);
                 d.setDate(d.getDate() - i);
-                const dateStr = d.toISOString().split('T')[0];
+                const dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); // LOKAL, nicht UTC
 
                 try {
                     // Nutze native Promise von socket.sendTo (wie HealthTab)
                     const response: any = await Promise.race([
                         socket.sendTo(`${adapterName}.${instance}`, 'getHistoryData', { date: dateStr, _t: Date.now() }),
                         new Promise((_, reject) => setTimeout(() => {
-                            console.log(`[LongtermTrends] ⏱️ Timeout for ${dateStr}`);
                             reject(new Error('Timeout'));
                         }, 5000)) // 5 Sekunden Timeout
                     ]);
 
                     if (response.success && response.data) {
                         const histData = response.data;
-                        console.log(`[LongtermTrends] ✅ Got data for ${dateStr}`);
                         
                         // Extrahiere Metriken aus History-File
                         const eventHistory = histData.eventHistory || [];
@@ -123,7 +120,6 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         const todayVector = histData.todayVector || [];
                         
                         // 🔍 DEBUG: Zeige RAW-Daten
-                        console.log(`[LongtermTrends] 📈 ${dateStr}: events=${eventHistory.length}, rooms=${Object.keys(roomHistoryData).length}, vector=${todayVector.length}`);
                         
                         // ============================================================
                         // AKTIVITÄT: Roher Event-Total aus todayVector (wird später
@@ -203,7 +199,6 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             : 0;
 
                         // 🔍 DEBUG: Zeige berechnete Metriken
-                        console.log(`[LongtermTrends] ✅ ${dateStr}: activity=${activityPercent}%, night=${nightEvents}, rooms=${uniqueRooms}, bathroom=${bathroomVisits}, windows=${windowOpenings}, gait=${gaitSpeed.toFixed(1)}`);
 
                         // FP2 + Vibration Schlaf-Metriken (seit v0.33.3, null fuer alte Files)
                         const bedPresenceMinutes = histData.bedPresenceMinutes !== undefined ? Number(histData.bedPresenceMinutes) : null;
@@ -213,6 +208,8 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         // Dynamisches Schlaffenster (seit v0.33.6, null = kein FP2 oder Fixfenster)
                         const sleepWindowStart = histData.sleepWindowStart || null;
                         const sleepWindowEnd   = histData.sleepWindowEnd   || null;
+                        const nightVibrationStrengthAvg = histData.nightVibrationStrengthAvg !== undefined ? Number(histData.nightVibrationStrengthAvg) : null;
+                        const nightVibrationStrengthMax = histData.nightVibrationStrengthMax !== undefined ? Number(histData.nightVibrationStrengthMax) : null;
 
                         // Raum-Aktivitaet fuer Tooltip (Minuten pro Raum)
                         const roomActivity: {[key: string]: number} = histData.todayRoomMinutes || {};
@@ -245,6 +242,8 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             nocturiaCount,
                             sleepWindowStart,
                             sleepWindowEnd,
+                            nightVibrationStrengthAvg,
+                            nightVibrationStrengthMax,
                             personData: histData.personData || undefined,
                             roomActivity,
                             windowsByRoom,
@@ -252,11 +251,9 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             isPartialDay: dateStr === todayDateStr
                         });
                     } else {
-                        console.log(`[LongtermTrends] ❌ No data for ${dateStr}`);
                     }
                 } catch (err) {
                     // History-File nicht vorhanden oder Timeout, überspringen
-                    console.log(`[LongtermTrends] ⚠️ Skip ${dateStr}:`, err);
                 }
             }
 
@@ -278,15 +275,11 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                     : 0
             }));
             
-            console.log(`[LongtermTrends] 📐 Normalisierung: Median=${personalMedian} Events → 100%. Bereich: ${Math.min(...dailyData.map(d=>d.activityPercent))}%–${Math.max(...dailyData.map(d=>d.activityPercent))}%`);
-            console.log(`[LongtermTrends] 📊 Collected ${dailyData.length} days of data`);
             
             // 🔍 DEBUG: Zeige aggregierte Daten
             if (dailyData.length > 0) {
-                console.log('[LongtermTrends] 🔍 Sample data (first 3 days):', dailyData.slice(0, 3));
                 const avgActivity = dailyData.reduce((sum, d) => sum + d.activityPercent, 0) / dailyData.length;
                 const avgNight = dailyData.reduce((sum, d) => sum + d.nightEvents, 0) / dailyData.length;
-                console.log(`[LongtermTrends] 📊 Averages: Activity=${avgActivity.toFixed(1)}%, Night Events=${avgNight.toFixed(1)}`);
             }
 
             // Roh-Daten für Tooltip-Detailansicht speichern
@@ -301,7 +294,6 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
             }
 
             // SCHRITT 2: Backend aufrufen für Trend-Berechnung
-            console.log('[LongtermTrends] 🧠 Calling Python Backend...');
             const backendResponse: any = await Promise.race([
                 socket.sendTo(`${adapterName}.${instance}`, 'pythonBridge', {
                     command: 'ANALYZE_LONGTERM_TRENDS',
@@ -314,10 +306,8 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                 }, 30000)) // 30 Sekunden für Backend (war 15s)
             ]);
             
-            console.log('[LongtermTrends] 🧠 Backend Response:', backendResponse);
 
             if (backendResponse && backendResponse.type !== 'ERROR') {
-                console.log('[LongtermTrends] ✅ Success! Setting trends data...');
                 setTrendsData(backendResponse.payload || backendResponse);
             } else {
                 const errMsg = 'Backend-Fehler: ' + (backendResponse.payload || 'Unbekannt');
@@ -330,7 +320,6 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
             console.error('[LongtermTrends] 💥 Exception:', err);
             setError(errMsg);
         } finally {
-            console.log('[LongtermTrends] 🏁 Loading finished');
             setLoading(false);
         }
     };
@@ -346,7 +335,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
             for (let i = 0; i < MAX_DRIFT_DAYS; i++) {
                 const d = new Date(today);
                 d.setDate(d.getDate() - i);
-                const dateStr = d.toISOString().split('T')[0];
+                const dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); // LOKAL, nicht UTC
                 try {
                     const response: any = await Promise.race([
                         socket.sendTo(`${adapterName}.${instance}`, 'getHistoryData', { date: dateStr, _t: Date.now() }),
@@ -359,7 +348,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         const gs = (response.data.gaitSpeed && response.data.gaitSpeed > 0 && response.data.gaitSpeed < 60) ? Number(response.data.gaitSpeed) : 0;
                         const nightMot = response.data.nightMotionCount !== undefined ? Number(response.data.nightMotionCount)
                             : Array.isArray(response.data.eventHistory)
-                                ? response.data.eventHistory.filter((e: any) => { const h = new Date(e.timestamp || e.ts || 0).getHours(); return h >= 22 || h < 6; }).length
+                                ? response.data.eventHistory.filter((e: any) => { const h = new Date(e.timestamp || e.ts || 0).getHours(); return h >= 22 || h < 8; }).length
                                 : 0;
                         const roomsData = response.data.todayRoomMinutes || {};
                         const uniqueRm = Object.keys(roomsData).filter(k => (roomsData[k] || 0) > 2).length;
@@ -501,7 +490,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
 
     // Bereite Haupt-Graph-Daten vor
     const nowForChart = new Date();
-    const todayMD = nowForChart.toISOString().split('T')[0].substring(5);
+    const todayMD = (nowForChart.getFullYear() + '-' + String(nowForChart.getMonth()+1).padStart(2,'0') + '-' + String(nowForChart.getDate()).padStart(2,'0')).substring(5); // LOKAL, nicht UTC
     const hh = nowForChart.getHours().toString().padStart(2,'0');
     const mm = nowForChart.getMinutes().toString().padStart(2,'0');
     const compTimeStr = hh + ':' + mm;
@@ -890,8 +879,6 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             )}
                         </Paper>
                     </Grid>
-
-                    <Grid item xs={12} style={{ display: 'none' }}>{/* keeps grid structure */}</Grid>
                     </Box>
 
                     {/* ═══ HYGIENE & LÜFTUNG Gruppe ═══ */}
@@ -980,6 +967,8 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         // Pruefe ob Schlaf-Daten vorhanden sind (erst ab v0.33.3)
                         const hasBedData = dailyDataRaw.some((d: any) => d.bedPresenceMinutes != null);
                         const hasVibData = dailyDataRaw.some((d: any) => d.nightVibrationCount != null);
+                        const hasVibStrData = dailyDataRaw.some((d: any) => d.nightVibrationStrengthAvg != null);
+                        const hasSleepWindow = dailyDataRaw.some((d: any) => d.sleepWindowStart != null);
                         const hasPersonData = dailyDataRaw.some((d: any) => d.maxPersonsDetected != null);
                         const hasNocturiaData = dailyDataRaw.some((d: any) => d.nocturiaCount != null);
                         if (!hasBedData && !hasVibData && !hasPersonData) return null;
@@ -1285,6 +1274,150 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                         );
                                     })()}
 
+
+                                    {/* VIBRATIONS-INTENSITÄT */}
+                                    {hasVibStrData && (() => {
+                                        const sorted = [...dailyDataRaw].sort((a: any, b: any) => a.date.localeCompare(b.date));
+                                        const data = sorted.map((d: any, i: number) => {
+                                            const vals = sorted.slice(Math.max(0, i-6), i+1)
+                                                .filter((x: any) => x.nightVibrationStrengthAvg != null)
+                                                .map((x: any) => Number(x.nightVibrationStrengthAvg));
+                                            const avg = vals.length > 0 ? Math.round(vals.reduce((a: number,b: number) => a+b,0) / vals.length) : null;
+                                            return {
+                                                date: d.date ? d.date.substring(5) : '',
+                                                avg: d.nightVibrationStrengthAvg != null ? Number(d.nightVibrationStrengthAvg) : null,
+                                                max: d.nightVibrationStrengthMax != null ? Number(d.nightVibrationStrengthMax) : null,
+                                                movingAvg: avg,
+                                            };
+                                        }).filter((d: any) => d.date);
+                                        const avgVals = data.filter((d: any) => d.avg != null).map((d: any) => d.avg as number);
+                                        const meanAvg = avgVals.length > 0 ? Math.round(avgVals.reduce((a: number,b: number) => a+b,0) / avgVals.length) : 0;
+                                        return (
+                                            <Grid item xs={12} md={6} lg={4}>
+                                                <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#e65100' }}>
+                                                            VIBRATIONS-INTENSITÄT
+                                                        </Typography>
+                                                        <ChartHelp text={"Durchschnittliche und maximale Vibrationsstärke im Schlaffenster. Hohe Werte (>80) können auf Parkinson-Tremor, Epilepsie oder intensive Schlafbewegungen hinweisen. Niedriger Count + hohe Stärke = medizinisch relevant."} />
+                                                    </Box>
+                                                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
+                                                        Ø {meanAvg} · Skala 0–255 · Schlaffenster
+                                                    </Typography>
+                                                    <ResponsiveContainer width="100%" height={150}>
+                                                        <ComposedChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                            <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                interval={Math.floor(data.length / 6)} />
+                                                            <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} domain={[0, 255]} />
+                                                            <Tooltip
+                                                                formatter={(v: any, name: string) => [
+                                                                    v,
+                                                                    name === 'avg' ? 'Ø Stärke' : name === 'max' ? 'Max Stärke' : 'Ø 7 Tage'
+                                                                ]}
+                                                                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}` }}
+                                                            />
+                                                            <ReferenceArea y1={0}   y2={30}  fill="rgba(40,167,69,0.08)" />
+                                                            <ReferenceArea y1={30}  y2={80}  fill="rgba(253,126,20,0.08)" />
+                                                            <ReferenceArea y1={80}  y2={255} fill="rgba(220,53,69,0.12)" />
+                                                            <Bar dataKey="avg" name="avg" radius={[2,2,0,0]}>
+                                                                {data.map((entry: any, i: number) => {
+                                                                    const v = entry.avg;
+                                                                    const col = v == null ? '#555' : v > 80 ? '#dc3545' : v > 30 ? '#fd7e14' : '#28a745';
+                                                                    return <Cell key={i} fill={col} opacity={0.8} />;
+                                                                })}
+                                                            </Bar>
+                                                            <Line type="monotone" dataKey="movingAvg" stroke="#e65100" strokeWidth={1.5}
+                                                                dot={false} name="movingAvg" connectNulls />
+                                                        </ComposedChart>
+                                                    </ResponsiveContainer>
+                                                    <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                                                        <span style={{color:'#28a745'}}>■ &lt;30 (normal)</span>
+                                                        <span style={{color:'#fd7e14'}}>■ 30–80 (erhöht)</span>
+                                                        <span style={{color:'#dc3545'}}>■ &gt;80 (auffällig)</span>
+                                                    </Box>
+                                                </Paper>
+                                            </Grid>
+                                        );
+                                    })()}
+
+                                    {/* SCHLAFZEIT (Sleep Consistency) — immer sichtbar, zeigt Leer-Zustand wenn keine FP2-Daten */}
+                                    {(() => {
+                                        const sorted = [...dailyDataRaw].sort((a: any, b: any) => a.date.localeCompare(b.date));
+                                        const toMinsFrom18 = (ts: any) => {
+                                            if (!ts) return null;
+                                            const d = new Date(Number(ts));
+                                            const totalMins = d.getHours() * 60 + d.getMinutes();
+                                            return totalMins < 1080 ? totalMins + 1440 : totalMins;
+                                        };
+                                        const fmtMins = (m: number) => {
+                                            const norm = m >= 1440 ? m - 1440 : m;
+                                            return Math.floor(norm/60).toString().padStart(2,'0') + ':' + (norm%60).toString().padStart(2,'0');
+                                        };
+                                        const data = sorted
+                                            .filter((d: any) => d.sleepWindowStart || d.sleepWindowEnd)
+                                            .map((d: any) => ({
+                                                date: d.date ? d.date.substring(5) : '',
+                                                sleepStart: toMinsFrom18(d.sleepWindowStart),
+                                                wakeTime: toMinsFrom18(d.sleepWindowEnd),
+                                            }));
+                                        const yMin = 1080;
+                                        const yMax = 2040;
+                                        const ticks = [1080, 1200, 1320, 1440, 1560, 1680, 1800, 1920, 2040];
+                                        return (
+                                            <Grid item xs={12} md={6} lg={4}>
+                                                <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#5c6bc0' }}>
+                                                            SCHLAFZEIT
+                                                        </Typography>
+                                                        <ChartHelp text={"Zeigt Einschlaf- und Aufwachzeit pro Nacht (FP2-Bett). Konsistente Schlafzeiten fördern Gesundheit. Verschobene Zeiten können auf Depression, Demenz oder Schlafstörungen hinweisen."} />
+                                                    </Box>
+                                                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
+                                                        Einschlaf- & Aufwachzeit · FP2-Bett
+                                                    </Typography>
+                                                    {data.length >= 1 ? (
+                                                        <>
+                                                            <ResponsiveContainer width="100%" height={150}>
+                                                                <LineChart data={data} margin={{ top: 5, right: 5, left: 10, bottom: 5 }}>
+                                                                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                                    <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                        interval={Math.floor(data.length / 6)} />
+                                                                    <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                        domain={[yMin, yMax]} ticks={ticks}
+                                                                        tickFormatter={(v: number) => fmtMins(v)} />
+                                                                    <Tooltip
+                                                                        formatter={(v: any, name: string) => [
+                                                                            fmtMins(v),
+                                                                            name === 'sleepStart' ? 'Einschlafen' : 'Aufwachen'
+                                                                        ]}
+                                                                        contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}` }}
+                                                                    />
+                                                                    <Line type="monotone" dataKey="sleepStart" stroke="#5c6bc0" strokeWidth={2}
+                                                                        dot={{ r: 3, fill: '#5c6bc0' }} name="sleepStart" connectNulls />
+                                                                    <Line type="monotone" dataKey="wakeTime" stroke="#80cbc4" strokeWidth={2}
+                                                                        dot={{ r: 3, fill: '#80cbc4' }} name="wakeTime" connectNulls />
+                                                                </LineChart>
+                                                            </ResponsiveContainer>
+                                                            <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1.5 }}>
+                                                                <span style={{color:'#5c6bc0'}}>■ Einschlafen</span>
+                                                                <span style={{color:'#80cbc4'}}>■ Aufwachen</span>
+                                                            </Box>
+                                                        </>
+                                                    ) : (
+                                                        <Box sx={{ height: 150, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
+                                                            <Typography variant="caption" sx={{ textAlign: 'center', fontStyle: 'italic' }}>
+                                                                Noch keine Daten
+                                                            </Typography>
+                                                            <Typography variant="caption" sx={{ textAlign: 'center', fontSize: '0.6rem', mt: 0.5, color: 'text.disabled' }}>
+                                                                Benötigt FP2-Sensor (Funktion: Bett) · ab nächster Nacht
+                                                            </Typography>
+                                                        </Box>
+                                                    )}
+                                                </Paper>
+                                            </Grid>
+                                        );
+                                    })()}
                                 </Grid>
 
                                 {/* Hinweis wenn noch keine Daten */}
@@ -1332,7 +1465,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                         <BarChart data={pts} margin={{ top: 4, right: 4, left: -25, bottom: 0 }}>
                                                             <XAxis dataKey="date" hide />
                                                             <YAxis tick={{ fontSize: 9 }} />
-                                                            <RechartsTooltip formatter={(v: any) => [v + " Ereignisse", "Nacht-Aktivität"]} labelFormatter={(l: any) => l} />
+                                                            <Tooltip formatter={(v: any) => [v + " Ereignisse", "Nacht-Aktivität"]} labelFormatter={(l: any) => l} />
                                                             <Bar dataKey="nightActivity" fill="#00897b" radius={[2,2,0,0]} maxBarSize={16} />
                                                         </BarChart>
                                                     </ResponsiveContainer>
@@ -1343,7 +1476,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                         <LineChart data={pts} margin={{ top: 4, right: 4, left: -25, bottom: 0 }}>
                                                             <XAxis dataKey="date" hide />
                                                             <YAxis tick={{ fontSize: 9 }} domain={[270, 600]} tickFormatter={(v: number) => Math.floor(v/60)+":"+String(v%60).padStart(2,"0")} />
-                                                            <RechartsTooltip formatter={(v: any) => { const h=Math.floor(v/60); const mn=v%60; return [h+":"+String(mn).padStart(2,"0")+" Uhr","Aufwachzeit"]; }} labelFormatter={(l: any) => l} />
+                                                            <Tooltip formatter={(v: any) => { const h=Math.floor(v/60); const mn=v%60; return [h+":"+String(mn).padStart(2,"0")+" Uhr","Aufwachzeit"]; }} labelFormatter={(l: any) => l} />
                                                             <Line type="monotone" dataKey="wakeTimeMin" stroke="#4db6ac" dot={{ r: 2 }} strokeWidth={2} connectNulls />
                                                         </LineChart>
                                                     </ResponsiveContainer>
@@ -1354,7 +1487,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                         <BarChart data={pts} margin={{ top: 4, right: 4, left: -25, bottom: 0 }}>
                                                             <XAxis dataKey="date" hide />
                                                             <YAxis tick={{ fontSize: 9 }} />
-                                                            <RechartsTooltip formatter={(v: any) => [v + "x", "Nykturie"]} labelFormatter={(l: any) => l} />
+                                                            <Tooltip formatter={(v: any) => [v + "x", "Nykturie"]} labelFormatter={(l: any) => l} />
                                                             <ReferenceLine y={2} stroke="#ef5350" strokeDasharray="3 3" />
                                                             <Bar dataKey="nocturia" fill="#80cbc4" radius={[2,2,0,0]} maxBarSize={16} />
                                                         </BarChart>
