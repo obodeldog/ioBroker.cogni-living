@@ -36,6 +36,9 @@ interface DailyDataPoint {
     nightVibrationStrengthAvg?: number | null;
     nightVibrationStrengthMax?: number | null;
     isPartialDay?: boolean;
+    todayVector?: number[];
+    roomActivity?: Record<string, number>;
+    windowsByRoom?: Record<string, number>;
 }
 
 function ChartHelp({ text }: { text: string }) {
@@ -332,6 +335,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
             let driftDailyData: DailyDataPoint[] = [];
             const today = new Date();
             let consecutiveMissing = 0;
+            let driftEarlyBreak = false;
             for (let i = 0; i < MAX_DRIFT_DAYS; i++) {
                 const d = new Date(today);
                 d.setDate(d.getDate() - i);
@@ -355,10 +359,11 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         driftDailyData.push({ date: dateStr, activityPercent: totalEvents, gaitSpeed: gs, nightEvents: nightMot, uniqueRooms: uniqueRm, bathroomVisits: 0, windowOpenings: 0 });
                     } else {
                         consecutiveMissing++;
-                        if (consecutiveMissing >= 14 && i > 21) break;
+                        if (consecutiveMissing >= 14 && i > 21) { driftEarlyBreak = true; break; }
                     }
                 } catch { consecutiveMissing++; }
             }
+            const driftWarning = driftEarlyBreak ? `Daten ab ${driftDailyData[0]?.date ?? "?"} (14+ fehlende Tage übersprungen)` : null;
             if (driftDailyData.length < 10) { setDriftData({ error: `Zu wenig Daten (${driftDailyData.length} Tage, min. 10)` }); return; }
             const rawTotals = driftDailyData.map(d => d.activityPercent).filter(v => v > 0);
             const sortedTotals = [...rawTotals].sort((a, b) => a - b);
@@ -373,7 +378,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Drift Timeout')), 30000))
             ]);
             if (resp && resp.type !== 'ERROR') {
-                setDriftData(resp.payload || resp);
+                setDriftData({ ...(resp.payload || resp), driftWarning });
             } else {
                 setDriftData({ error: 'Drift-Backend-Fehler: ' + (resp?.payload || 'Unbekannt') });
             }
@@ -867,6 +872,11 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                         Gelbe Linie = 50 % (Beobachten) · Rote Linie = 100 % (Alarm)
                                         {(driftData as any).activity?.calibration_days ? ` | Erste ${(driftData as any).activity.calibration_days} Tage = Kalibrierung.` : ''}
                                     </Typography>
+                                {driftData?.driftWarning && (
+                                    <Typography variant="caption" sx={{ color: 'warning.main', display: 'block', mt: 0.5, fontSize: '0.65rem' }}>
+                                        &#9888; {driftData.driftWarning}
+                                    </Typography>
+                                )}
                                 </>
                             ) : driftData?.error ? (
                                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.65rem' }}>
@@ -1200,7 +1210,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                             if (windowEntries.length === 0) return '22:00–06:00 (Fixfenster)';
                                             const startMins = windowEntries.map((d: any) => {
                                                 const dt = new Date(Number(d.sleepWindowStart));
-                                                return (dt.getHours() * 60 + dt.getMinutes() + (dt.getHours() < 12 ? 1440 : 0)) % 1440;
+                                                return dt.getHours() * 60 + dt.getMinutes() + (dt.getHours() < 12 ? 1440 : 0);
                                             });
                                             const endMins = windowEntries.map((d: any) => {
                                                 const dt = new Date(Number(d.sleepWindowEnd));
@@ -1475,7 +1485,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                     <ResponsiveContainer width="100%" height={80}>
                                                         <LineChart data={pts} margin={{ top: 4, right: 4, left: -25, bottom: 0 }}>
                                                             <XAxis dataKey="date" hide />
-                                                            <YAxis tick={{ fontSize: 9 }} domain={[270, 600]} tickFormatter={(v: number) => Math.floor(v/60)+":"+String(v%60).padStart(2,"0")} />
+                                                            <YAxis tick={{ fontSize: 9 }} domain={[180, 660]} tickFormatter={(v: number) => Math.floor(v/60)+":"+String(v%60).padStart(2,"0")} />
                                                             <Tooltip formatter={(v: any) => { const h=Math.floor(v/60); const mn=v%60; return [h+":"+String(mn).padStart(2,"0")+" Uhr","Aufwachzeit"]; }} labelFormatter={(l: any) => l} />
                                                             <Line type="monotone" dataKey="wakeTimeMin" stroke="#4db6ac" dot={{ r: 2 }} strokeWidth={2} connectNulls />
                                                         </LineChart>

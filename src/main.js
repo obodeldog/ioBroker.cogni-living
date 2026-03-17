@@ -271,8 +271,8 @@ class CogniLiving extends utils.Adapter {
         var devices = this.config.devices || [];
         // Schwellwerte pro Typ – Tür/Fenster 7 Tage (wochenlang geschlossen ist normal)
         var thresholds = { motion: 24*3600000, presence_radar: 24*3600000, vibration: 24*3600000,
-            door: 7*24*3600000, temperature: 2*3600000, light: 8*3600000, dimmer: 8*3600000, moisture: 8*3600000 };
-        var defaultThreshold = 8 * 3600000;
+            door: 7*24*3600000, temperature: 6*3600000, light: 8*3600000, dimmer: 8*3600000, moisture: 8*3600000 };
+        var defaultThreshold = 24 * 3600000;
         var ALERT_COOLDOWN = 24 * 3600000; // max. 1 Pushover pro Sensor pro Tag
         // KNX/Loxone/BACnet: kabelgebunden, kein Heartbeat – Timeout-Check überspringen
         var WIRED_PREFIXES = ['knx.', 'loxone.', 'bacnet.', 'modbus.'];
@@ -308,6 +308,7 @@ class CogniLiving extends utils.Adapter {
         try {
             await this.setStateAsync('system.sensorStatus', { val: JSON.stringify({ timestamp: now, sensors: statusList, offlineCount: offlineCount }), ack: true });
         } catch(e) {}
+        // OC-5: Pushover-Alarme waehrend der Nachtruhe unterdruecken (Sensor schlaeimft normal)         var _nowH = new Date(now).getHours();         var _isSleepTime = _nowH >= 22 || _nowH < 8;         if (_isSleepTime) alerts = []; // Status-LED bleibt rot, aber kein Push-Spam         
         if (alerts.length > 0) {
             var msg = '⚠️ Sensor-Ausfall:\n' + alerts.join('\n');
             this.log.warn('[SENSOR-CHECK] ' + alerts.join(', '));
