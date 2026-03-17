@@ -215,7 +215,7 @@ class CogniLiving extends utils.Adapter {
         if (this.activeModules.energy) {
             this.analysisTimer = setInterval(() => {
                 this.triggerEnergyPrediction();
-            }, 15 * 60 * 1000); // 15 Minuten
+            }, 60 * 60 * 1000); // 1 Stunde // 15 Minuten
             // Initialer Run nach 10 Sekunden
             setTimeout(() => this.triggerEnergyPrediction(), 10000);
         }
@@ -398,7 +398,8 @@ class CogniLiving extends utils.Adapter {
             this._lastSeqState = (_sq && _sq.val) ? _sq.val : null;
         } catch(e) { this._lastSeqState = null; }
         if (!this.activeModules.health) return;
-        const dateStr = new Date().toISOString().split('T')[0];
+        const _now = new Date();
+        const dateStr = _now.getFullYear() + '-' + String(_now.getMonth()+1).padStart(2,'0') + '-' + String(_now.getDate()).padStart(2,'0'); // LOKAL, nicht UTC!
         this.log.debug(`ðŸ’¾ Saving Daily History for ${dateStr}...`);
 
         try {
@@ -1417,7 +1418,7 @@ class CogniLiving extends utils.Adapter {
                 _self.setStateAsync('system.currentPersonCount', { val: _baseCount, ack: true }).catch(function(){});
                 _self.setStateAsync('system.householdType', { val: _baseHT, ack: true }).catch(function(){});
                 _self.log.info('[PersonCount] Reset auf Config-Baseline: ' + _cfg);
-            }, 15 * 60 * 1000);
+            }, 60 * 60 * 1000); // 1 Stunde
         }
     }
 
