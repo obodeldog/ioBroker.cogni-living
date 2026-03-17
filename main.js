@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 'use strict';
 
 /*
@@ -530,6 +530,16 @@ class CogniLiving extends utils.Adapter {
                 if (emptyStart) { var _wdur2 = (Date.now() - emptyStart) / 60000; if (_wdur2 >= 15) wakeTs = Date.now(); }
                 return { start: sleepStartTs, end: wakeTs };
             })();
+
+            // OC-4 Guard: Schlaffenster nur speichern wenn genuegend Bettzeit-Daten vorhanden.
+            // Bei Adapter-Neustart mitten in der Nacht ist eventHistory duenn -> sleepWindowCalc
+            // wuerde Restart-Zeit als Einschlafzeit speichern (Brainstorming OC-4).
+            // Schwelle: < 180 Min Bettzeit = unvollstaendige Nacht-Daten.
+            if (bedPresenceMinutes < 180 && sleepWindowCalc.start !== null) {
+                this.log.debug(`[History] OC-4 Guard: bedPresenceMinutes=${bedPresenceMinutes}min < 180, sleepWindow verworfen`);
+                sleepWindowCalc.start = null;
+                sleepWindowCalc.end = null;
+            }
 
             // Vibration Bett: Erschuetterungen im Schlaf-Fenster (Fallback: 22-06)
             const nightVibrationCount = todayEvents.filter(function(e) {

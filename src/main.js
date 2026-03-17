@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 'use strict';
 
 /*
@@ -131,6 +131,8 @@ class CogniLiving extends utils.Adapter {
         // Phase 3: Proaktives Screening State
         await this.setObjectNotExistsAsync('analysis.health.screening.hints', { type: 'state', common: { name: 'Proactive Screening Hints (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorStatus', { type: 'state', common: { name: 'Sensor Health Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
+        await this.setObjectNotExistsAsync('system.currentPersonCount', { type: 'state', common: { name: 'Aktuelle Personenanzahl im Haus', type: 'number', role: 'value', unit: 'Personen', read: true, write: false, def: 1, desc: 'Geschaetzte Personenanzahl (Config-Baseline + raeumliche Heuristik + FP2)' }, native: {} });
+        await this.setObjectNotExistsAsync('system.householdType', { type: 'state', common: { name: 'Haushaltstyp', type: 'string', role: 'text', states: { single: 'Einpersonenhaushalt', multi: 'Mehrpersonenhaushalt' }, read: true, write: false, def: 'single' }, native: {} });
         await this.setObjectNotExistsAsync('system.personData', { type: 'state', common: { name: 'Per-Person Night Metrics (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('analysis.energy.warmupTimes', { type: 'state', common: { name: 'Warm-Up Time', type: 'string', role: 'json', read: true, write: false }, native: {} });
 
@@ -213,7 +215,7 @@ class CogniLiving extends utils.Adapter {
         if (this.activeModules.energy) {
             this.analysisTimer = setInterval(() => {
                 this.triggerEnergyPrediction();
-            }, 15 * 60 * 1000); // 15 Minuten
+            }, 60 * 60 * 1000); // 1 Stunde // 15 Minuten
             // Initialer Run nach 10 Sekunden
             setTimeout(() => this.triggerEnergyPrediction(), 10000);
         }
@@ -396,7 +398,8 @@ class CogniLiving extends utils.Adapter {
             this._lastSeqState = (_sq && _sq.val) ? _sq.val : null;
         } catch(e) { this._lastSeqState = null; }
         if (!this.activeModules.health) return;
-        const dateStr = new Date().toISOString().split('T')[0];
+        const _now = new Date();
+        const dateStr = _now.getFullYear() + '-' + String(_now.getMonth()+1).padStart(2,'0') + '-' + String(_now.getDate()).padStart(2,'0'); // LOKAL, nicht UTC!
         this.log.debug(`ðŸ’¾ Saving Daily History for ${dateStr}...`);
 
         try {
@@ -527,6 +530,16 @@ class CogniLiving extends utils.Adapter {
                 if (emptyStart) { var _wdur2 = (Date.now() - emptyStart) / 60000; if (_wdur2 >= 15) wakeTs = Date.now(); }
                 return { start: sleepStartTs, end: wakeTs };
             })();
+
+            // OC-4 Guard: Schlaffenster nur speichern wenn genuegend Bettzeit-Daten vorhanden.
+            // Bei Adapter-Neustart mitten in der Nacht ist eventHistory duenn -> sleepWindowCalc
+            // wuerde Restart-Zeit als Einschlafzeit speichern (Brainstorming OC-4).
+            // Schwelle: < 180 Min Bettzeit = unvollstaendige Nacht-Daten.
+            if (bedPresenceMinutes < 180 && sleepWindowCalc.start !== null) {
+                this.log.debug(`[History] OC-4 Guard: bedPresenceMinutes=${bedPresenceMinutes}min < 180, sleepWindow verworfen`);
+                sleepWindowCalc.start = null;
+                sleepWindowCalc.end = null;
+            }
 
             // Vibration Bett: Erschuetterungen im Schlaf-Fenster (Fallback: 22-06)
             const nightVibrationCount = todayEvents.filter(function(e) {
@@ -1361,6 +1374,61 @@ class CogniLiving extends utils.Adapter {
             if (dev.type === 'temperature' || dev.type === 'thermostat') {
                 if (this.activeModules.energy) automation.cleanupGhostInterventions(this);
             }
+            // Raeumliche Unmoeglichkeits-Heuristik
+            if (dev.location && recorder.isRelevantActivity(dev.type, state.val)) {
+                this._checkSpatialImpossibility(id, dev.location);
+            }
+        }
+    }
+
+    _checkSpatialImpossibility(triggerId, triggerLocation) {
+        if (!this._cachedTopoMatrix) {
+            this.getStateAsync('analysis.topology.structure').then((s) => {
+                if (s && s.val) { try { this._cachedTopoMatrix = JSON.parse(s.val); } catch(e) {} }
+            }).catch(function(){});
+            return;
+        }
+        var topo = this._cachedTopoMatrix;
+        if (!topo || !topo.rooms || !topo.matrix) return;
+        var WINDOW_MS = 8000;
+        var now = Date.now();
+        var triggerRoomIdx = topo.rooms.indexOf(triggerLocation);
+        if (triggerRoomIdx < 0) return;
+        var _self = this;
+        var devicesById = {};
+        (this.config.devices || []).forEach(function(d) { if (d.id) devicesById[d.id] = d; });
+        var multiPersonDetected = false;
+        Object.keys(this.sensorLastSeen).forEach(function(otherId) {
+            if (otherId === triggerId) return;
+            var lastSeenTs = _self.sensorLastSeen[otherId];
+            if (!lastSeenTs || (now - lastSeenTs) > WINDOW_MS) return;
+            var otherDev = devicesById[otherId];
+            if (!otherDev || !otherDev.location || otherDev.location === triggerLocation) return;
+            var otherRoomIdx = topo.rooms.indexOf(otherDev.location);
+            if (otherRoomIdx < 0) return;
+            var isAdjacent = topo.matrix[triggerRoomIdx] && topo.matrix[triggerRoomIdx][otherRoomIdx] > 0;
+            if (!isAdjacent) {
+                multiPersonDetected = true;
+                _self.log.info('[PersonCount] Raeumliche Unmoeglichkeit: ' + triggerLocation + ' + ' + otherDev.location + ' -> mind. 2 Personen');
+            }
+        });
+        if (multiPersonDetected) {
+            var prevCount = this._livePersonCount || 1;
+            if (prevCount < 2) {
+                this._livePersonCount = 2;
+                this.setStateAsync('system.currentPersonCount', { val: 2, ack: true }).catch(function(){});
+                this.setStateAsync('system.householdType', { val: 'multi', ack: true }).catch(function(){});
+            }
+            if (this._multiPersonResetTimer) clearTimeout(this._multiPersonResetTimer);
+            var _cfg = this.config.householdSize || 'single';
+            var _baseCount = _cfg === 'single' ? 1 : _cfg === 'couple' ? 2 : 3;
+            var _baseHT = _baseCount >= 2 ? 'multi' : 'single';
+            this._multiPersonResetTimer = setTimeout(function() {
+                _self._livePersonCount = _baseCount;
+                _self.setStateAsync('system.currentPersonCount', { val: _baseCount, ack: true }).catch(function(){});
+                _self.setStateAsync('system.householdType', { val: _baseHT, ack: true }).catch(function(){});
+                _self.log.info('[PersonCount] Reset auf Config-Baseline: ' + _cfg);
+            }, 60 * 60 * 1000); // 1 Stunde
         }
     }
 
