@@ -2,7 +2,7 @@
 'use strict';
 
 /*
- * cogni-living Adapter für ioBroker
+ * cogni-living Adapter f?r ioBroker
  * Version: 0.30.38 (Fix: Scheduler Init & Robust Calendar Search)
  */
 
@@ -144,7 +144,7 @@ class CogniLiving extends utils.Adapter {
                     const r = await this.getStateAsync('LTM.rawEventLog');
                     if(r && r.val) this.rawEventLog = JSON.parse(r.val);
                 }
-                this.log.info(`📦 Restored ${this.eventHistory.length} events from standard storage.`);
+                this.log.info(`?? Restored ${this.eventHistory.length} events from standard storage.`);
             }
         } catch(e){ this.eventHistory = []; }
 
@@ -163,7 +163,6 @@ class CogniLiving extends utils.Adapter {
             this.subscribeForeignStates(this.config.infrasoundSensorId);
         }
         const devices = this.config.devices; if (devices) { for (const d of devices) { await this.subscribeForeignStatesAsync(d.id); } }
-        // presence_radar_count: ID zeigt direkt auf den Personenzahl-State (z.B. alias oder .value) � kein ID-Hacking n�tig
         const devs = this.config.presenceDevices; if (devs) { for (const id of devs) { await this.subscribeForeignStatesAsync(id); } }
 
         // Option B: sensorLastValues mit echten aktuellen States initialisieren (Duplikat-Filter nach Neustart)
@@ -208,10 +207,10 @@ class CogniLiving extends utils.Adapter {
         if (this.eventHistory && this.eventHistory.length > 0) {
             this.eventHistory.forEach(function(e) { if (e.id && e.timestamp) { var cur = this.sensorLastSeen[e.id]; if (!cur || e.timestamp > cur) this.sensorLastSeen[e.id] = e.timestamp; } }.bind(this));
         }
-        // St�ndlicher Sensor-Ausfall-Check
+        // St?ndlicher Sensor-Ausfall-Check
         if (this.sensorCheckInterval) clearInterval(this.sensorCheckInterval);
         this.sensorCheckInterval = setInterval(() => { this.checkSensorHealth(); }, 60 * 60 * 1000);
-        // St�ndlicher History-Save: heute-Datei aktuell halten damit Chart heute-Balken zeigt
+        // St?ndlicher History-Save: heute-Datei aktuell halten damit Chart heute-Balken zeigt
         if (this.hourlySaveInterval) clearInterval(this.hourlySaveInterval);
         this.hourlySaveInterval = setInterval(() => { this.saveDailyHistory().catch(e => {}); }, 60 * 60 * 1000);
         setTimeout(() => this.checkSensorHealth(), 5 * 60 * 1000); // auch 5 min nach Start
@@ -239,7 +238,7 @@ class CogniLiving extends utils.Adapter {
             setTimeout(() => this.triggerEnergyPrediction(), 10000);
         }
 
-        // Calendar Check Timer (alle 2 Minuten) - KRITISCH für rechtzeitiges Heizen!
+        // Calendar Check Timer (alle 2 Minuten) - KRITISCH f?r rechtzeitiges Heizen!
         if (this.calendarCheckTimer) clearInterval(this.calendarCheckTimer);
         if (this.config.useCalendar && this.activeModules.energy) {
             this.calendarCheckTimer = setInterval(() => {
@@ -276,7 +275,7 @@ class CogniLiving extends utils.Adapter {
                 const port = this.config.pwaPort || 8095;
                 const tunnelUrl = await cloudflareTunnel.start(this, port);
                 if (tunnelUrl) {
-                    this.log.info(`[PWA] 🌍 Cloudflare URL: ${tunnelUrl}/?token=${this.config.familyShareToken || ''}`);
+                    this.log.info(`[PWA] ?? Cloudflare URL: ${tunnelUrl}/?token=${this.config.familyShareToken || ''}`);
                 }
             }
         } catch(e) {
@@ -288,12 +287,12 @@ class CogniLiving extends utils.Adapter {
         var _self = this;
         var now = Date.now();
         var devices = this.config.devices || [];
-        // Schwellwerte pro Typ � T�r/Fenster 7 Tage (wochenlang geschlossen ist normal)
+        // Schwellwerte pro Typ ? T?r/Fenster 7 Tage (wochenlang geschlossen ist normal)
         var thresholds = { motion: 24*3600000, presence_radar: 24*3600000, vibration: 24*3600000,
             door: 7*24*3600000, temperature: 6*3600000, light: 8*3600000, dimmer: 8*3600000, moisture: 8*3600000 };
         var defaultThreshold = 24 * 3600000;
         var ALERT_COOLDOWN = 24 * 3600000; // max. 1 Pushover pro Sensor pro Tag
-        // KNX/Loxone/BACnet: kabelgebunden, kein Heartbeat � Timeout-Check �berspringen
+        // KNX/Loxone/BACnet: kabelgebunden, kein Heartbeat ? Timeout-Check ?berspringen
         var WIRED_PREFIXES = ['knx.', 'loxone.', 'bacnet.', 'modbus.'];
         var alerts = [];
         var statusList = [];
@@ -357,11 +356,11 @@ class CogniLiving extends utils.Adapter {
 
     async replayTodayEvents() {
         if (!this.eventHistory || this.eventHistory.length === 0) {
-            this.log.warn("⚠ Replay skipped: No events in memory.");
+            this.log.warn("? Replay skipped: No events in memory.");
             return;
         }
 
-        this.log.info(`↺ Replaying ${this.eventHistory.length} events from today...`);
+        this.log.info(`? Replaying ${this.eventHistory.length} events from today...`);
         const startOfDay = new Date().setHours(0,0,0,0);
 
         const histId = 'analysis.activity.roomHistory';
@@ -412,11 +411,11 @@ class CogniLiving extends utils.Adapter {
         await this.setStateAsync(vectorId, { val: JSON.stringify(todayBuckets), ack: true });
         await this.setStateAsync(detailsId, { val: JSON.stringify(todayDetails), ack: true });
 
-        this.log.info("✅ Dashboard Data (Rooms & Timeline & Details) restored.");
+        this.log.info("? Dashboard Data (Rooms & Timeline & Details) restored.");
     }
 
     async saveDailyHistory() {
-        // Sequenzen für Gait-Speed-Berechnung vorladen
+        // Sequenzen f?r Gait-Speed-Berechnung vorladen
         try {
             const _sq = await this.getStateAsync('LTM.trainingData.sequences');
             this._lastSeqState = (_sq && _sq.val) ? _sq.val : null;
@@ -424,7 +423,7 @@ class CogniLiving extends utils.Adapter {
         if (!this.activeModules.health) return;
         const _now = new Date();
         const dateStr = _now.getFullYear() + '-' + String(_now.getMonth()+1).padStart(2,'0') + '-' + String(_now.getDate()).padStart(2,'0'); // LOKAL, nicht UTC!
-        this.log.debug(`💾 Saving Daily History for ${dateStr}...`);
+        this.log.debug(`?? Saving Daily History for ${dateStr}...`);
 
         try {
             const [
@@ -439,8 +438,8 @@ class CogniLiving extends utils.Adapter {
             ]);
 
             const startOfDayTimestamp = new Date().setHours(0,0,0,0);
-            // Fenster/Tür-Öffnungen: alle Sensoren mit fenster/haustür/terrasse/balkon/window im Namen
-            // Frischluft: Verwende Sensor-Typ "door" aus dem Typ-System (Sensorliste: Tür/Fenster)
+            // Fenster/T?r-?ffnungen: alle Sensoren mit fenster/haust?r/terrasse/balkon/window im Namen
+            // Frischluft: Verwende Sensor-Typ "door" aus dem Typ-System (Sensorliste: T?r/Fenster)
             // Identisch zum Architektur-Prinzip: e.type === "door" statt Keyword-Matching
             const freshAirCount = this.eventHistory.filter(e => {
                 const ts = e.timestamp || e.ts || 0;
@@ -449,7 +448,7 @@ class CogniLiving extends utils.Adapter {
                 const isOpen = e.value === true || e.value === 1 || e.value === 'true' || e.value === 'open';
                 return isDoorSensor && isOpen;
             }).length;
-            // 5-Min-Stoßlüftungen: OPEN/CLOSE-Paare >= 5 Min
+            // 5-Min-Sto?l?ftungen: OPEN/CLOSE-Paare >= 5 Min
             const FRESH_AIR_MIN_MS = 5 * 60 * 1000;
             const doorEventsToday = this.eventHistory
                 .filter(e => { const ts = e.timestamp || e.ts || 0; return ts >= startOfDayTimestamp && e.type === 'door'; })
@@ -489,7 +488,7 @@ class CogniLiving extends utils.Adapter {
                     }
                 }
             }
-            // roomStats-State aktuell halten (gleiche Datenquelle für Admin + PWA)
+            // roomStats-State aktuell halten (gleiche Datenquelle f?r Admin + PWA)
             try {
                 let existingStats = { today: {}, yesterday: {}, date: '' };
                 const rsState = await this.getStateAsync('analysis.activity.roomStats');
@@ -499,16 +498,10 @@ class CogniLiving extends utils.Adapter {
                 await this.setStateAsync('analysis.activity.roomStats', { val: JSON.stringify(existingStats), ack: true });
             } catch(e) {}
 
-            // FP2 Personenzaehlung: max. Personen die heute gleichzeitig erkannt wurden
-            const maxPersonsDetected = (function() {
-                var max = 0;
-                todayEvents.forEach(function(e) {
-                    if ((e.isFP2Bed || e.isFP2Living) && typeof e.personCount === 'number') {
-                        if (e.personCount > max) max = e.personCount;
-                    }
-                });
-                return max;
-            })();
+            // R?umliche Heuristik: max. Personen die heute gleichzeitig erkannt wurden
+            var _cfgSize = this.config.householdSize || 'single';
+            var _cfgBaseline = _cfgSize === 'single' ? 1 : _cfgSize === 'couple' ? 2 : 3;
+            const maxPersonsDetected = this._maxPersonsToday || _cfgBaseline;
             // FP2 Bett-Praesenz: Minuten die Bett-Zone heute belegt war (inkl. Vorabend ab 18:00)
             const bedPresenceMinutes = (function() {
                 var presStart = null; var total = 0;
@@ -650,7 +643,7 @@ class CogniLiving extends utils.Adapter {
             }
 
             // --- Garmin-Validierung (optional) --------------------------------------------
-            // Liest den Garmin-Sleep-Score wenn konfiguriert � graceful fallback
+            // Liest den Garmin-Sleep-Score wenn konfiguriert ? graceful fallback
             var garminScore = null;
             var garminDeepSec = null, garminLightSec = null, garminRemSec = null;
             var garminStateId = (this.config.garminSleepScoreStateId || '').trim()
@@ -724,7 +717,7 @@ class CogniLiving extends utils.Adapter {
             const nightVibrationStrengthAvg = _vibStrCount > 0 ? Math.round(_vibStrSum / _vibStrCount) : null;
             const nightVibrationStrengthMax = _vibStrCount > 0 ? _vibStrMax : null;
 
-            // Nykturie: Badezimmer-Sensor-Ereignisse � dynamisches Schlaf-Fenster (Fallback: 22-06)
+            // Nykturie: Badezimmer-Sensor-Ereignisse ? dynamisches Schlaf-Fenster (Fallback: 22-06)
             const _bathroomDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
             const _kitchenDevIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
             const nocturiaCount = (function() {
@@ -831,7 +824,7 @@ class CogniLiving extends utils.Adapter {
                 anomalyScore: anomalyScore?.val !== undefined && anomalyScore?.val !== null
                     ? Number(anomalyScore.val) : null,
                 todayVector: (() => {
-                    // Primär: aus analysis.health.todayVector State (rawEventLog-basiert)
+                    // Prim?r: aus analysis.health.todayVector State (rawEventLog-basiert)
                     // Fallback: direkt aus eventHistory des heutigen Tages berechnen
                     let vec = todayVector?.val ? JSON.parse(todayVector.val) : null;
                     const vecIsEmpty = !vec || vec.every(v => v === 0);
@@ -910,9 +903,9 @@ class CogniLiving extends utils.Adapter {
 
             const filePath = path.join(historyDir, `${dateStr}.json`);
             fs.writeFileSync(filePath, JSON.stringify(snapshot));
-            this.log.info(`✅ History saved: ${filePath}`);
+            this.log.info(`? History saved: ${filePath}`);
 
-            // Nächtliche Drift-Prüfung (nach dem Speichern)
+            // N?chtliche Drift-Pr?fung (nach dem Speichern)
             this._checkDriftAlarm(historyDir).catch(e => this.log.warn(`[Drift] Alarm-Check Fehler: ${e.message}`));
 
         } catch(e) { this.log.error(`History Save Error: ${e.message}`); }
@@ -923,7 +916,7 @@ class CogniLiving extends utils.Adapter {
         const COOLDOWN_DAYS = 14;
         const MIN_DAYS      = 10;
 
-        // Cooldown prüfen
+        // Cooldown pr?fen
         try {
             const lastAlarm = await this.getStateAsync('analysis.drift.lastAlarmDate').catch(() => null);
             if (lastAlarm && lastAlarm.val) {
@@ -964,7 +957,7 @@ class CogniLiving extends utils.Adapter {
         const mAct = median(actVals)||1;
         const actNorm = days.map(d => d.act>0 ? Math.min(200, Math.round((d.act/mAct)*100)) : 0);
 
-        // Page-Hinkley (einfach, JS-intern, keine Python nötig)
+        // Page-Hinkley (einfach, JS-intern, keine Python n?tig)
         const ph = (vals, direction='up', k=0.5) => {
             const cal = Math.min(14, Math.max(7, Math.floor(vals.length/2)));
             const calVals = vals.slice(0, cal).filter(v=>v>0);
@@ -987,20 +980,20 @@ class CogniLiving extends utils.Adapter {
         const gaitR  = ph(days.map(d=>d.gs).filter(v=>v>0), 'up');
         const nightR = ph(days.map(d=>d.nt), 'up');
 
-        this.log.debug(`[Drift] Scores — Aktivität: ${actR.score}/${actR.threshold} | Gait: ${gaitR.score}/${gaitR.threshold} | Nacht: ${nightR.score}/${nightR.threshold}`);
+        this.log.debug(`[Drift] Scores ? Aktivit?t: ${actR.score}/${actR.threshold} | Gait: ${gaitR.score}/${gaitR.threshold} | Nacht: ${nightR.score}/${nightR.threshold}`);
 
-        // Pushover nur wenn mindestens eine Metrik Alarm schlägt
+        // Pushover nur wenn mindestens eine Metrik Alarm schl?gt
         const alarms = [];
-        if (actR.alarm)   alarms.push(`🏃 Aktivität sinkt (Score ${actR.score}/${actR.threshold})`);
-        if (gaitR.alarm)  alarms.push(`🚶 Ganggeschwindigkeit steigt (Score ${gaitR.score}/${gaitR.threshold})`);
-        if (nightR.alarm) alarms.push(`😴 Nacht-Unruhe nimmt zu (Score ${nightR.score}/${nightR.threshold})`);
+        if (actR.alarm)   alarms.push(`?? Aktivit?t sinkt (Score ${actR.score}/${actR.threshold})`);
+        if (gaitR.alarm)  alarms.push(`?? Ganggeschwindigkeit steigt (Score ${gaitR.score}/${gaitR.threshold})`);
+        if (nightR.alarm) alarms.push(`?? Nacht-Unruhe nimmt zu (Score ${nightR.score}/${nightR.threshold})`);
 
         if (alarms.length > 0) {
-            const msg = `⚠️ DRIFT ERKANNT (${days.length} Tage Datenbasis)\n\n${alarms.join('\n')}\n\nBitte Admin-UI → Drift-Monitor für Details öffnen.`;
-            setup.sendNotification(this, msg, true, false, '⚠️ NUUKANNI: Verhaltens-Drift');
+            const msg = `?? DRIFT ERKANNT (${days.length} Tage Datenbasis)\n\n${alarms.join('\n')}\n\nBitte Admin-UI ? Drift-Monitor f?r Details ?ffnen.`;
+            setup.sendNotification(this, msg, true, false, '?? NUUKANNI: Verhaltens-Drift');
             await this.setObjectNotExistsAsync('analysis.drift.lastAlarmDate', { type: 'state', common: { name: 'Letzter Drift-Alarm', type: 'string', role: 'text', read: true, write: false, def: '' }, native: {} });
             await this.setStateAsync('analysis.drift.lastAlarmDate', { val: new Date().toISOString(), ack: true });
-            this.log.warn(`[Drift] ⚠️ Alarm ausgelöst: ${alarms.join(' | ')}`);
+            this.log.warn(`[Drift] ?? Alarm ausgel?st: ${alarms.join(' | ')}`);
         }
     }
 
@@ -1232,7 +1225,7 @@ class CogniLiving extends utils.Adapter {
                         // Speichere aktualisierte Matrix
                         await this.setStateAsync('analysis.topology.structure', { val: JSON.stringify(topo), ack: true });
                         
-                        this.log.debug(`🕸️ Topology Matrix manually updated by user.`);
+                        this.log.debug(`??? Topology Matrix manually updated by user.`);
                         this.sendTo(obj.from, obj.command, { success: true }, obj.callback);
                     } else {
                         throw new Error('No topology data found');
@@ -1262,7 +1255,7 @@ class CogniLiving extends utils.Adapter {
             else if (obj.command === 'testApiKey') {
                 try {
                     const testKey = obj.message ? obj.message.apiKey : '';
-                    if (!testKey) throw new Error("Kein API Key übergeben.");
+                    if (!testKey) throw new Error("Kein API Key ?bergeben.");
 
                     const testAI = new GoogleGenerativeAI(testKey);
                     const model = testAI.getGenerativeModel({ model: GEMINI_MODEL });
@@ -1283,7 +1276,7 @@ class CogniLiving extends utils.Adapter {
 
                     this.sendTo(obj.from, obj.command, {
                         success: true,
-                        weather: `Sonne: ${isSunny}, Temp: ${this.sensorLastValues[this.config.outdoorSensorId] || '?'}°C`,
+                        weather: `Sonne: ${isSunny}, Temp: ${this.sensorLastValues[this.config.outdoorSensorId] || '?'}?C`,
                         calendar: `${calCount} Kalender-Adapter gefunden.`
                     }, obj.callback);
                 } catch(e) {
@@ -1295,7 +1288,7 @@ class CogniLiving extends utils.Adapter {
 
     runPythonHealthCheck() {
         if (!this.activeModules.health) return;
-        this.log.debug('🐍 Triggering Python Health Check (Activity Trend)...');
+        this.log.debug('?? Triggering Python Health Check (Activity Trend)...');
         try {
             const rawEvents = this.rawEventLog || [];
             pythonBridge.send(this, 'CALCULATE_HEALTH_TREND', { events: rawEvents });
@@ -1337,7 +1330,7 @@ class CogniLiving extends utils.Adapter {
         if (id.endsWith('analysis.energy.warmupTimes') && state.ack && this.activeModules.energy) automation.checkCalendarTriggers(this);
 
         if (!state.ack) {
-            // WICHTIG: Spezifische Trigger VOR dem generischen 'analysis.trigger' prüfen,
+            // WICHTIG: Spezifische Trigger VOR dem generischen 'analysis.trigger' pr?fen,
             // da 'analysis.triggerBriefing' sonst von der generischen Bedingung abgefangen wird.
             if (id.includes('triggerBriefing') && state.val && !id.includes('Weekly')) { this.setState(id, { val: false, ack: true }); aiAgent.sendMorningBriefing(this); return; }
             if (id.includes('triggerWeeklyBriefing') && state.val) { this.setState(id, { val: false, ack: true }); aiAgent.sendWeeklyBriefing(this); return; }
@@ -1349,7 +1342,7 @@ class CogniLiving extends utils.Adapter {
             if (id.includes('analysis.training.triggerHealth') && state.val) {
                 this.setState(id, { val: false, ack: true });
                 try {
-                    // Health Reports sind für alle verfügbar (nicht nur Pro!)
+                    // Health Reports sind f?r alle verf?gbar (nicht nur Pro!)
                     aiAgent.generateHealthReport(this, 'NIGHT');
                     setTimeout(() => aiAgent.generateHealthReport(this, 'DAY'), 12000);
                     
@@ -1456,7 +1449,7 @@ class CogniLiving extends utils.Adapter {
                     } catch(dsErr) { this.log.warn('[DiseaseScore] Fehler: ' + dsErr.message); }
 
                     // History-Snapshot nach Analyse aktualisieren (damit PWA/Charts frische Daten sehen)
-                    // Nach ~30s (NIGHT 0s + DAY 12s + Gemini ~10s + Puffer) ist alles fertig → PWA-Polling informieren
+                    // Nach ~30s (NIGHT 0s + DAY 12s + Gemini ~10s + Puffer) ist alles fertig ? PWA-Polling informieren
                     setTimeout(() => {
                         this.saveDailyHistory().catch(e => {});
                         pwaServer.markAnalysisDone();
@@ -1480,24 +1473,6 @@ class CogniLiving extends utils.Adapter {
                         const s = await this.getStateAsync('LTM.rawEventLog');
                         if(s && s.val) {
                             const deviceMap = {};
-                            // presence_radar_count: Personenzahl-Sensor direkt aus Config (kein ID-Hacking)
-            var _fpConf = (this.config.devices||[]).find(function(d){ return d.id === id && d.type === 'presence_radar_count'; });
-            if (_fpConf) {
-                var _personCount = toPersonCount(state ? state.val : 0);
-                // Event in History mit personCount anreichern
-                var _evIdx = this.eventHistory.findIndex(function(e){ return e.id === id; });
-                if (_evIdx > -1) { this.eventHistory[_evIdx].personCount = _personCount; }
-                // Zwei-Ebenen-Belegungslogik:
-                var _isLiving = _fpConf.sensorFunction === 'living' || _fpConf.isFP2Living;
-                if (_isLiving) {
-                    this._livePersonCount = _personCount;
-                    var _liveHT = _personCount >= 2 ? 'multi' : 'single';
-                    this.setStateAsync('system.currentPersonCount', { val: _personCount, ack: true }).catch(function(){});
-                    this.setStateAsync('system.householdType', { val: _liveHT, ack: true }).catch(function(){});
-                }
-                var _isBed = _fpConf.sensorFunction === 'bed' || _fpConf.isFP2Bed;
-                if (_isBed) { this._liveBedPersonCount = _personCount; }
-            }
                         if (this.config.devices) this.config.devices.forEach(d => { if (d.id && d.type) deviceMap[d.id] = d.type; });
                             pythonBridge.send(this, 'TRAIN_COMFORT', { events: JSON.parse(s.val), deviceMap: deviceMap });
                         }
@@ -1535,14 +1510,44 @@ class CogniLiving extends utils.Adapter {
             if (dev.type === 'temperature' || dev.type === 'thermostat') {
                 if (this.activeModules.energy) automation.cleanupGhostInterventions(this);
             }
-            // Raeumliche Unmoeglichkeits-Heuristik
+            // Raeumliche Unmoeglichkeits-Heuristik (nur steigende Flanken)
             if (dev.location && recorder.isRelevantActivity(dev.type, state.val)) {
+                if (!this.sensorLastActive) this.sensorLastActive = {};
+                this.sensorLastActive[id] = Date.now();
                 this._checkSpatialImpossibility(id, dev.location);
             }
         }
     }
 
+    // BFS: k?rzester Pfad in Hops zwischen zwei R?umen (?ber Topologie-Matrix)
+    _roomHopDistance(roomA, roomB) {
+        if (roomA === roomB) return 0;
+        var topo = this._cachedTopoMatrix;
+        if (!topo || !topo.rooms || !topo.matrix) return -1;
+        var rooms = topo.rooms;
+        var matrix = topo.matrix;
+        var idxA = rooms.indexOf(roomA);
+        var idxB = rooms.indexOf(roomB);
+        if (idxA < 0 || idxB < 0) return -1;
+        var visited = {};
+        visited[idxA] = true;
+        var queue = [[idxA, 0]];
+        while (queue.length > 0) {
+            var item = queue.shift();
+            var curr = item[0]; var dist = item[1];
+            for (var i = 0; i < rooms.length; i++) {
+                if (!visited[i] && matrix[curr] && matrix[curr][i] > 0) {
+                    if (i === idxB) return dist + 1;
+                    visited[i] = true;
+                    queue.push([i, dist + 1]);
+                }
+            }
+        }
+        return -1; // keine Verbindung gefunden
+    }
+
     _checkSpatialImpossibility(triggerId, triggerLocation) {
+        // Topologie asynchron laden beim ersten Aufruf
         if (!this._cachedTopoMatrix) {
             this.getStateAsync('analysis.topology.structure').then((s) => {
                 if (s && s.val) { try { this._cachedTopoMatrix = JSON.parse(s.val); } catch(e) {} }
@@ -1551,32 +1556,36 @@ class CogniLiving extends utils.Adapter {
         }
         var topo = this._cachedTopoMatrix;
         if (!topo || !topo.rooms || !topo.matrix) return;
-        var WINDOW_MS = 8000;
+
+        // Festes 5s-Fenster auf steigende Flanken (sensorLastActive) ? kein fallendes Flanken-Problem
+        var ACTIVE_WINDOW_MS = 5000;
+        // Mindestens 2 Hops: in 5s physikalisch unm?glich f?r eine Person
+        var MIN_HOPS = 2;
         var now = Date.now();
-        var triggerRoomIdx = topo.rooms.indexOf(triggerLocation);
-        if (triggerRoomIdx < 0) return;
         var _self = this;
         var devicesById = {};
         (this.config.devices || []).forEach(function(d) { if (d.id) devicesById[d.id] = d; });
+
         var multiPersonDetected = false;
-        Object.keys(this.sensorLastSeen).forEach(function(otherId) {
+        Object.keys(this.sensorLastActive || {}).forEach(function(otherId) {
             if (otherId === triggerId) return;
-            var lastSeenTs = _self.sensorLastSeen[otherId];
-            if (!lastSeenTs || (now - lastSeenTs) > WINDOW_MS) return;
+            var lastActiveTs = _self.sensorLastActive[otherId];
+            if (!lastActiveTs || (now - lastActiveTs) > ACTIVE_WINDOW_MS) return;
             var otherDev = devicesById[otherId];
             if (!otherDev || !otherDev.location || otherDev.location === triggerLocation) return;
-            var otherRoomIdx = topo.rooms.indexOf(otherDev.location);
-            if (otherRoomIdx < 0) return;
-            var isAdjacent = topo.matrix[triggerRoomIdx] && topo.matrix[triggerRoomIdx][otherRoomIdx] > 0;
-            if (!isAdjacent) {
+            var hopDist = _self._roomHopDistance(triggerLocation, otherDev.location);
+            if (hopDist >= MIN_HOPS) {
                 multiPersonDetected = true;
-                _self.log.info('[PersonCount] Raeumliche Unmoeglichkeit: ' + triggerLocation + ' + ' + otherDev.location + ' -> mind. 2 Personen');
+                _self.log.info('[PersonCount] R?uml. Unm?glichkeit: ' + triggerLocation + ' <-> ' + otherDev.location +
+                    ' (' + hopDist + ' Hops, ' + Math.round(now - lastActiveTs) + 'ms) -> mind. 2 Personen');
             }
         });
+
         if (multiPersonDetected) {
             var prevCount = this._livePersonCount || 1;
             if (prevCount < 2) {
                 this._livePersonCount = 2;
+                if (!this._maxPersonsToday || this._maxPersonsToday < 2) this._maxPersonsToday = 2;
                 this.setStateAsync('system.currentPersonCount', { val: 2, ack: true }).catch(function(){});
                 this.setStateAsync('system.householdType', { val: 'multi', ack: true }).catch(function(){});
             }
@@ -1623,13 +1632,13 @@ class CogniLiving extends utils.Adapter {
                 // Versuche verschiedene States zu finden: isOnline, last_seen, uptime, etc.
                 let isOnline = false;
                 
-                // 1. Prüfe isOnline State
+                // 1. Pr?fe isOnline State
                 try {
                     const onlineState = await this.getForeignStateAsync(`${deviceId}.isOnline`);
                     if (onlineState && onlineState.val === true) isOnline = true;
                 } catch(e) {}
 
-                // 2. Prüfe last_seen Timestamp (falls vorhanden)
+                // 2. Pr?fe last_seen Timestamp (falls vorhanden)
                 if (!isOnline) {
                     try {
                         const lastSeenState = await this.getForeignStateAsync(`${deviceId}.last_seen`);
@@ -1640,7 +1649,7 @@ class CogniLiving extends utils.Adapter {
                     } catch(e) {}
                 }
 
-                // 3. Prüfe uptime (falls vorhanden)
+                // 3. Pr?fe uptime (falls vorhanden)
                 if (!isOnline) {
                     try {
                         const uptimeState = await this.getForeignStateAsync(`${deviceId}.uptime`);
@@ -1648,12 +1657,12 @@ class CogniLiving extends utils.Adapter {
                     } catch(e) {}
                 }
 
-                // 4. Fallback: Prüfe State selbst (manche Adapter haben nur den Hauptstate)
+                // 4. Fallback: Pr?fe State selbst (manche Adapter haben nur den Hauptstate)
                 if (!isOnline) {
                     try {
                         const mainState = await this.getForeignStateAsync(deviceId);
                         if (mainState) {
-                            // Prüfe Timestamp des States
+                            // Pr?fe Timestamp des States
                             const diffMs = now - (mainState.ts || 0);
                             if (diffMs < TIMEOUT_MS && (mainState.val === true || mainState.val === 'online' || mainState.val === 1)) {
                                 isOnline = true;
@@ -1681,7 +1690,7 @@ class CogniLiving extends utils.Adapter {
     }
     async runAutopilot() { await aiAgent.runGeminiAnalysis(this); if(this.activeModules.health) { this.updateHealthVector(); this.triggerGaitAnalysis(); } if(this.activeModules.energy) this.triggerEnergyPrediction(); }
     async checkSolarCondition() {
-        // Prüft verschiedene Wetter-Adapter auf sonniges Wetter
+        // Pr?ft verschiedene Wetter-Adapter auf sonniges Wetter
         const weatherAdapters = ['weatherunderground.0', 'accuweather.0', 'daswetter.0'];
         const weatherPaths = ['forecast.current.weather', 'Current.WeatherText', 'NextHours.Location_1.Day_1.current.symbol_desc'];
         
@@ -1692,11 +1701,11 @@ class CogniLiving extends utils.Adapter {
                     const state = await this.getForeignStateAsync(stateId);
                     if (state && state.val) {
                         const text = String(state.val).toLowerCase();
-                        // Prüfe auf sonnige Keywords (DE + EN)
+                        // Pr?fe auf sonnige Keywords (DE + EN)
                         if (text.includes('sunny') || text.includes('heiter') || 
                             text.includes('klar') || text.includes('sonn') || 
                             text.includes('clear')) {
-                            this.log.debug(`☀️ Solar Condition: SUNNY detected via ${stateId}`);
+                            this.log.debug(`?? Solar Condition: SUNNY detected via ${stateId}`);
                             return true;
                         }
                     }
@@ -1719,10 +1728,10 @@ class CogniLiving extends utils.Adapter {
                     const sequences = JSON.parse(state.val);
                     if (!sequences || sequences.length === 0) return;
                     
-                    // Sende Sequenzen an Python für Ganganalyse
+                    // Sende Sequenzen an Python f?r Ganganalyse
                     pythonBridge.send(this, 'ANALYZE_GAIT', { sequences });
                     
-                    this.log.debug(`🚶 Gait Analysis triggered with ${sequences.length} sequences`);
+                    this.log.debug(`?? Gait Analysis triggered with ${sequences.length} sequences`);
                 } catch(e) {
                     this.log.warn(`triggerGaitAnalysis parse error: ${e.message}`);
                 }
@@ -1751,7 +1760,7 @@ class CogniLiving extends utils.Adapter {
                 }
             }
 
-            // Außentemperatur (falls vorhanden)
+            // Au?entemperatur (falls vorhanden)
             let t_out = 10.0;
             if (this.config.weatherTempId) {
                 try {
@@ -1777,20 +1786,20 @@ class CogniLiving extends utils.Adapter {
                 warmup_targets
             });
             
-            this.log.info(`🔮 Energy Prediction triggered (${Object.keys(current_temps).length} rooms)`);
+            this.log.info(`?? Energy Prediction triggered (${Object.keys(current_temps).length} rooms)`);
         } catch(e) {
             this.log.warn(`triggerEnergyPrediction Error: ${e.message}`);
         }
     }
     updateHealthVector() {
-        // Berechnet den 48-Slot Activity Vector für heute (00:00-23:59, 30-Min-Slots)
+        // Berechnet den 48-Slot Activity Vector f?r heute (00:00-23:59, 30-Min-Slots)
         if (!this.rawEventLog || this.rawEventLog.length === 0) return;
 
         const todayVector = new Array(48).fill(0);
         const todayDetails = Array.from({ length: 48 }, () => []);
         const todayStart = new Date().setHours(0, 0, 0, 0);
 
-        // Zähle Events pro 30-Min-Slot
+        // Z?hle Events pro 30-Min-Slot
         this.rawEventLog.forEach(entry => {
             const eventTime = new Date(entry.timestamp);
             if (eventTime.getTime() >= todayStart) {
@@ -1821,12 +1830,12 @@ class CogniLiving extends utils.Adapter {
         });
     }
     async handleInfrasound(value) {
-        // Verarbeitet Infraschall-Sensor-Daten für Anomalie-Erkennung
+        // Verarbeitet Infraschall-Sensor-Daten f?r Anomalie-Erkennung
         if (!this.config.infrasoundEnabled || typeof value !== 'number') return;
         
         const threshold = this.config.infrasoundThreshold || 0.04;
         
-        // Füge Wert zum Buffer hinzu (für Korrelation mit Events)
+        // F?ge Wert zum Buffer hinzu (f?r Korrelation mit Events)
         this.pressureBuffer.push({
             timestamp: Date.now(),
             value: value
@@ -1837,15 +1846,15 @@ class CogniLiving extends utils.Adapter {
             this.pressureBuffer.shift();
         }
         
-        // Prüfe auf Schwellwert-Überschreitung (potenzielle Anomalie)
+        // Pr?fe auf Schwellwert-?berschreitung (potenzielle Anomalie)
         if (value > threshold && !this.infrasoundLocked) {
             this.infrasoundLocked = true;
-            this.log.warn(`🔊 Infraschall-Alarm: ${value.toFixed(4)} > ${threshold} (Threshold)`);
+            this.log.warn(`?? Infraschall-Alarm: ${value.toFixed(4)} > ${threshold} (Threshold)`);
             
             // Trigger Korrelation mit letzten Events
             await this.triggerInfrasoundCorrelation(value, 'threshold_exceeded');
             
-            // Lock für 5 Minuten (Spam-Schutz)
+            // Lock f?r 5 Minuten (Spam-Schutz)
             setTimeout(() => {
                 this.infrasoundLocked = false;
             }, 5 * 60 * 1000);
@@ -1854,20 +1863,20 @@ class CogniLiving extends utils.Adapter {
     async triggerInfrasoundCorrelation(pressure, eventType) {
         // Korreliert Infraschall-Anomalie mit letzten Events (forensische Analyse)
         if (!this.isPresent) {
-            // Nur wenn niemand zuhause ist → potenzielle Sicherheits-Anomalie!
+            // Nur wenn niemand zuhause ist ? potenzielle Sicherheits-Anomalie!
             const recentEvents = this.eventHistory.slice(0, 10);
             const eventLog = recentEvents.map(e => 
                 `${new Date(e.timestamp).toLocaleTimeString('de-DE')} - ${e.location || 'Unknown'}: ${e.name}`
             ).join('\n');
             
-            this.log.warn(`🔊 FORENSIC: Infraschall bei Abwesenheit! Pressure: ${pressure.toFixed(4)}, Events:\n${eventLog}`);
+            this.log.warn(`?? FORENSIC: Infraschall bei Abwesenheit! Pressure: ${pressure.toFixed(4)}, Events:\n${eventLog}`);
             
             // Optional: Sende Benachrichtigung (nur bei Abwesenheit!)
             if (this.config.infrasoundArmingId) {
                 try {
                     const armState = await this.getForeignStateAsync(this.config.infrasoundArmingId);
                     if (armState && armState.val === true) {
-                        // System ist "scharf" → Alarm!
+                        // System ist "scharf" ? Alarm!
                         await this.setStateAsync('analysis.safety.infrasoundAlert', {
                             val: JSON.stringify({
                                 timestamp: Date.now(),
@@ -1878,17 +1887,17 @@ class CogniLiving extends utils.Adapter {
                             ack: true
                         });
                         
-                        this.log.error(`🚨 INFRASCHALL-ALARM: Anomalie bei Abwesenheit (scharf)!`);
+                        this.log.error(`?? INFRASCHALL-ALARM: Anomalie bei Abwesenheit (scharf)!`);
                     }
                 } catch(e) {}
             }
         } else {
             // Bei Anwesenheit nur Debug-Log
-            this.log.debug(`🔊 Infraschall: ${pressure.toFixed(4)} (Bewohner anwesend - normal)`);
+            this.log.debug(`?? Infraschall: ${pressure.toFixed(4)} (Bewohner anwesend - normal)`);
         }
     }
     async analyzeWindowOpening(device) {
-        // Analysiert Fenster-/Türöffnungen für Lüftungsempfehlungen
+        // Analysiert Fenster-/T?r?ffnungen f?r L?ftungsempfehlungen
         if (!device || !device.location) return;
 
         try {
@@ -1904,7 +1913,7 @@ class CogniLiving extends utils.Adapter {
             
             const roomTemp = tempState.val;
             
-            // Hole Außentemperatur
+            // Hole Au?entemperatur
             let outsideTemp = null;
             if (this.config.weatherTempId) {
                 const outState = await this.getForeignStateAsync(this.config.weatherTempId);
@@ -1913,21 +1922,21 @@ class CogniLiving extends utils.Adapter {
                 }
             }
             
-            // Einfache Lüftungslogik: Wenn Außentemperatur verfügbar
+            // Einfache L?ftungslogik: Wenn Au?entemperatur verf?gbar
             if (outsideTemp !== null) {
                 const tempDiff = Math.abs(roomTemp - outsideTemp);
                 
-                // Empfehlung: Lüften wenn Temperatur-Differenz > 3°C
+                // Empfehlung: L?ften wenn Temperatur-Differenz > 3?C
                 if (tempDiff > 3.0) {
-                    this.log.debug(`💨 Lüftung in ${device.location}: Temp-Differenz ${tempDiff.toFixed(1)}°C (Innen: ${roomTemp}°C, Außen: ${outsideTemp}°C)`);
+                    this.log.debug(`?? L?ftung in ${device.location}: Temp-Differenz ${tempDiff.toFixed(1)}?C (Innen: ${roomTemp}?C, Au?en: ${outsideTemp}?C)`);
                     
-                    // Optional: State setzen für Benachrichtigungen
+                    // Optional: State setzen f?r Benachrichtigungen
                     await this.setStateAsync('analysis.ventilation.lastWindow', {
                         val: JSON.stringify({
                             room: device.location,
                             timestamp: Date.now(),
                             tempDiff: tempDiff.toFixed(1),
-                            recommendation: tempDiff > 5 ? 'Gute Lüftungsmöglichkeit!' : 'Lüften empfohlen'
+                            recommendation: tempDiff > 5 ? 'Gute L?ftungsm?glichkeit!' : 'L?ften empfohlen'
                         }),
                         ack: true
                     });
@@ -1938,7 +1947,7 @@ class CogniLiving extends utils.Adapter {
         }
     }
     async appendToLog(entry) {
-        // Fügt einen Eintrag zum Event-Log hinzu (für manuelle Events oder externe Systeme)
+        // F?gt einen Eintrag zum Event-Log hinzu (f?r manuelle Events oder externe Systeme)
         if (!entry || typeof entry !== 'object') return;
         
         const logEntry = {
@@ -1959,7 +1968,7 @@ class CogniLiving extends utils.Adapter {
             ack: true 
         });
         
-        this.log.debug(`📝 Manual event logged: ${logEntry.name} (${logEntry.location})`);
+        this.log.debug(`?? Manual event logged: ${logEntry.name} (${logEntry.location})`);
     }
     sendNotification(message) { /* ... */ }
 }

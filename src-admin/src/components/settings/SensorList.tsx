@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
     Box, TableContainer, Paper, Table, TableHead, TableRow, TableCell, Tooltip, TableBody,
     TextField, IconButton, Autocomplete, FormControl, Select, MenuItem, Checkbox, Button, Chip
@@ -23,10 +23,9 @@ const SENSOR_TYPES = [
     { id: "blind",                label: "Rollladen" },
     { id: "lock",                 label: "Schloss" },
     { id: "custom",               label: "Sonstiges" },
-    { id: "presence_radar_bool",  label: "Praesenz-Radar � Anwesenheit (boolean)" },
-    { id: "presence_radar_count", label: "Praesenz-Radar � Personenanzahl (Zahl)" },
-    { id: "vibration_trigger",    label: "Vibration � Erkannt (boolean)" },
-    { id: "vibration_strength",   label: "Vibration � Staerke (Zahl)" },
+    { id: "presence_radar_bool",  label: "Praesenz-Radar (Anwesenheit)" },
+    { id: "vibration_trigger",    label: "Vibration (Erkannt)" },
+    { id: "vibration_strength",   label: "Vibration (Staerke)" },
     { id: "moisture",             label: "Feuchtigkeit/Wasser" },
 ];
 
@@ -36,7 +35,7 @@ const SENSOR_FUNCTIONS = [
     { id: "bathroom", label: "Bad / WC",               color: "#00acc1",  description: "Nykturie-Zaehlung (naechtl. Toilettenbesuche)" },
     { id: "kitchen",  label: "Kueche / Essbereich",    color: "#66bb6a",  description: "Essrhythmus-Analyse (Diabetes T2, Depression)" },
     { id: "bed",      label: "Bett / Schlafzimmer",    color: "#7b1fa2",  description: "Schlafanalyse, Bett-Belegung, Tremor-Erkennung" },
-    { id: "living",   label: "Wohnzimmer / Hauptraum", color: "#1976d2",  description: "Personenzaehlung (FP2), Sozialisierungs-Analyse" },
+    { id: "living",   label: "Wohnzimmer / Hauptraum", color: "#1976d2",  description: "Sozialisierungs-Analyse" },
 ];
 
 function getFunctionsForType(type) {
@@ -46,8 +45,6 @@ function getFunctionsForType(type) {
         return SENSOR_FUNCTIONS.filter(f => ["", "bed", "bathroom"].includes(f.id));
     if (type === "temperature")
         return SENSOR_FUNCTIONS.filter(f => f.id === "");
-    if (type === "presence_radar_count")
-        return SENSOR_FUNCTIONS.filter(f => ["", "bed", "living"].includes(f.id));
     // motion, door, custom, presence_radar_bool: alle Raumfunktionen erlaubt
     return SENSOR_FUNCTIONS;
 }
