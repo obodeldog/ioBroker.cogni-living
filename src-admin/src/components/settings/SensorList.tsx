@@ -1,4 +1,4 @@
-ï»¿import React from "react";
+import React from "react";
 import {
     Box, TableContainer, Paper, Table, TableHead, TableRow, TableCell, Tooltip, TableBody,
     TextField, IconButton, Autocomplete, FormControl, Select, MenuItem, Checkbox, Button, Chip
@@ -10,22 +10,25 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import RepeatIcon from "@mui/icons-material/Repeat";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import BlockIcon from "@mui/icons-material/Block";
 import { I18n } from "@iobroker/adapter-react-v5";
 import { createFilterOptions } from "@mui/material/Autocomplete";
 
 const SENSOR_TYPES = [
-    { id: "motion",         label: "Bewegung" },
-    { id: "door",           label: "Tuer/Fenster" },
-    { id: "fire",           label: "Rauch" },
-    { id: "temperature",    label: "Temperatur" },
-    { id: "light",          label: "Licht" },
-    { id: "dimmer",         label: "Dimmer" },
-    { id: "blind",          label: "Rollladen" },
-    { id: "lock",           label: "Schloss" },
-    { id: "custom",         label: "Sonstiges" },
-    { id: "presence_radar", label: "Praesenz-Radar (FP2)" },
-    { id: "vibration",      label: "Vibration" },
-    { id: "moisture",       label: "Feuchtigkeit/Wasser" },
+    { id: "motion",               label: "Bewegung" },
+    { id: "door",                 label: "Tuer/Fenster" },
+    { id: "fire",                 label: "Rauch" },
+    { id: "temperature",          label: "Temperatur" },
+    { id: "light",                label: "Licht" },
+    { id: "dimmer",               label: "Dimmer" },
+    { id: "blind",                label: "Rollladen" },
+    { id: "lock",                 label: "Schloss" },
+    { id: "custom",               label: "Sonstiges" },
+    { id: "presence_radar_bool",  label: "Praesenz-Radar · Anwesenheit (boolean)" },
+    { id: "presence_radar_count", label: "Praesenz-Radar · Personenanzahl (Zahl)" },
+    { id: "vibration_trigger",    label: "Vibration · Erkannt (boolean)" },
+    { id: "vibration_strength",   label: "Vibration · Staerke (Zahl)" },
+    { id: "moisture",             label: "Feuchtigkeit/Wasser" },
 ];
 
 const SENSOR_FUNCTIONS = [
@@ -38,10 +41,15 @@ const SENSOR_FUNCTIONS = [
 ];
 
 function getFunctionsForType(type) {
-    if (type === "vibration")   return SENSOR_FUNCTIONS.filter(f => ["", "bed"].includes(f.id));
-    if (type === "moisture")    return SENSOR_FUNCTIONS.filter(f => ["", "bed", "bathroom"].includes(f.id));
-    if (type === "temperature") return SENSOR_FUNCTIONS.filter(f => f.id === "");
-    // motion, door, custom, presence_radar: alle Raumfunktionen erlaubt
+    if (type === "vibration_trigger" || type === "vibration_strength")
+        return SENSOR_FUNCTIONS.filter(f => ["", "bed"].includes(f.id));
+    if (type === "moisture")
+        return SENSOR_FUNCTIONS.filter(f => ["", "bed", "bathroom"].includes(f.id));
+    if (type === "temperature")
+        return SENSOR_FUNCTIONS.filter(f => f.id === "");
+    if (type === "presence_radar_count")
+        return SENSOR_FUNCTIONS.filter(f => ["", "bed", "living"].includes(f.id));
+    // motion, door, custom, presence_radar_bool: alle Raumfunktionen erlaubt
     return SENSOR_FUNCTIONS;
 }
 
@@ -85,12 +93,12 @@ export default function SensorList(props) {
                 <Table stickyHeader size="small" sx={{ width: "100%", tableLayout: "fixed" }}>
                     <TableHead>
                         <TableRow>
-                            <TableCell sx={{ width: "20%", bgcolor: stickyBg, fontSize: fs, fontWeight: 600 }}>
+                            <TableCell sx={{ width: "17%", bgcolor: stickyBg, fontSize: fs, fontWeight: 600 }}>
                                 <Tooltip title="Vollstaendiger ioBroker Objekt-Pfad">
                                     <span style={{ cursor: "help", textDecoration: "underline dotted" }}>Sensor-ID (ioBroker Pfad)</span>
                                 </Tooltip>
                             </TableCell>
-                            <TableCell sx={{ width: "13%", bgcolor: stickyBg, fontSize: fs, fontWeight: 600 }}>
+                            <TableCell sx={{ width: "11%", bgcolor: stickyBg, fontSize: fs, fontWeight: 600 }}>
                                 <Tooltip title="Anzeigename des Sensors">
                                     <span style={{ cursor: "help", textDecoration: "underline dotted" }}>Bezeichnung</span>
                                 </Tooltip>
@@ -128,6 +136,9 @@ export default function SensorList(props) {
                             <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3 }}>
                                 <Tooltip title="Nacht-Sensor: Tagesbeginn ignoriert diesen Raum"><NightsStayIcon sx={{ fontSize: 17, opacity: 0.55 }} /></Tooltip>
                             </TableCell>
+                            <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3 }}>
+                                <Tooltip title="Aus Health-Timeline ausschliessen (Sensor wird weiter aufgezeichnet, aber nicht in Schlafradar/Neuro-Timeline angezeigt)"><BlockIcon sx={{ fontSize: 17, opacity: 0.55 }} /></Tooltip>
+                            </TableCell>
                             <TableCell sx={{ width: "4%", bgcolor: stickyBg }} />
                         </TableRow>
                     </TableHead>
@@ -147,7 +158,7 @@ export default function SensorList(props) {
                                     <TableCell sx={{ overflow: "hidden" }}>
                                         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                                             {sensorProblems && sensorProblems.has && sensorProblems.has(device.id) && (
-                                                <Tooltip title={"Sensor nicht erreichbar â€“ zuletzt aktiv vor mehr als Schwellwert"}>
+                                                <Tooltip title={"Sensor nicht erreichbar – zuletzt aktiv vor mehr als Schwellwert"}>
                                                     <WarningAmberIcon sx={{ color: "#ff9800", fontSize: 16, flexShrink: 0 }} />
                                                 </Tooltip>
                                             )}
@@ -267,7 +278,7 @@ export default function SensorList(props) {
                                             size="small"
                                             value={device.personTag || ""}
                                             placeholder="Person..."
-                                            title="Personenname fÃ¼r individuelle Nacht-Analyse (z.B. Rob)"
+                                            title="Personenname für individuelle Nacht-Analyse (z.B. Rob)"
                                             sx={{ width: "100%", "& input": { fontSize: "0.7rem", p: "3px 6px" } }}
                                             onChange={e => props.onDeviceChange(index, "personTag", e.target.value)}
                                         />
@@ -355,9 +366,9 @@ export default function SensorList(props) {
                 {SENSOR_FUNCTIONS.filter(f => f.id).map(f => {
                     const isActive = activeFunctions.has(f.id);
                     return (
-                        <Tooltip key={f.id} title={`${f.description}${isActive ? " â€” konfiguriert" : " â€” noch kein Sensor zugewiesen"}`} placement="top">
+                        <Tooltip key={f.id} title={`${f.description}${isActive ? " — konfiguriert" : " — noch kein Sensor zugewiesen"}`} placement="top">
                             <Chip
-                                label={`${isActive ? "âœ“ " : ""}${f.label}`}
+                                label={`${isActive ? "? " : ""}${f.label}`}
                                 size="small"
                                 sx={{
                                     fontSize: "0.63rem",
@@ -376,7 +387,7 @@ export default function SensorList(props) {
             </Box>
             {/* Hinweiszeile */}
             <Box sx={{ mb: 0.5, fontSize: "0.62rem", color: "text.disabled", fontStyle: "italic" }}>
-                âœ“ Farbe + dicker Rahmen = mindestens 1 Sensor mit dieser Funktion aktiv â€” gestrichelt = noch kein Sensor zugewiesen â€” Tooltip zeigt Details
+                ? Farbe + dicker Rahmen = mindestens 1 Sensor mit dieser Funktion aktiv — gestrichelt = noch kein Sensor zugewiesen — Tooltip zeigt Details
             </Box>
 
             <Box sx={{ display: "flex", gap: 2, mt: 1.5, justifyContent: "space-between", alignItems: "center" }}>

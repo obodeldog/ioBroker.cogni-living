@@ -354,8 +354,12 @@ class CogniLiving extends utils.Adapter {
         let todayBuckets = new Array(48).fill(0);
         let todayDetails = Array.from({ length: 48 }, () => []);
 
+        // Sensoren die explizit aus der Health-Timeline ausgeschlossen sind (aktuelle Konfiguration)
+        const _excludedFromActivity = new Set((this.config.devices || []).filter(d => d.excludeFromActivity).map(d => d.id));
+
         this.eventHistory.forEach(evt => {
             if (evt.timestamp >= startOfDay) {
+                if (evt.excludeFromActivity || _excludedFromActivity.has(evt.id)) return;
                 if (recorder.isRelevantActivity(evt.type, evt.value)) {
                     const date = new Date(evt.timestamp);
                     const bucketIndex = (date.getHours() * 2) + (date.getMinutes() >= 30 ? 1 : 0);
