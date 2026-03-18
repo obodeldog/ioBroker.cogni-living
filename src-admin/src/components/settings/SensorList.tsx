@@ -8,7 +8,6 @@ import WbSunnyIcon from "@mui/icons-material/WbSunny";
 import NightsStayIcon from "@mui/icons-material/NightsStay";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
-import RepeatIcon from "@mui/icons-material/Repeat";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import BlockIcon from "@mui/icons-material/Block";
 import { I18n } from "@iobroker/adapter-react-v5";
@@ -24,10 +23,10 @@ const SENSOR_TYPES = [
     { id: "blind",                label: "Rollladen" },
     { id: "lock",                 label: "Schloss" },
     { id: "custom",               label: "Sonstiges" },
-    { id: "presence_radar_bool",  label: "Praesenz-Radar · Anwesenheit (boolean)" },
-    { id: "presence_radar_count", label: "Praesenz-Radar · Personenanzahl (Zahl)" },
-    { id: "vibration_trigger",    label: "Vibration · Erkannt (boolean)" },
-    { id: "vibration_strength",   label: "Vibration · Staerke (Zahl)" },
+    { id: "presence_radar_bool",  label: "Praesenz-Radar ï¿½ Anwesenheit (boolean)" },
+    { id: "presence_radar_count", label: "Praesenz-Radar ï¿½ Personenanzahl (Zahl)" },
+    { id: "vibration_trigger",    label: "Vibration ï¿½ Erkannt (boolean)" },
+    { id: "vibration_strength",   label: "Vibration ï¿½ Staerke (Zahl)" },
     { id: "moisture",             label: "Feuchtigkeit/Wasser" },
 ];
 
@@ -131,12 +130,9 @@ export default function SensorList(props) {
                                 <Tooltip title="Ausgangs-Sensor (fuer Weggeh-Erkennung)"><ExitToAppIcon sx={{ fontSize: 17, opacity: 0.55 }} /></Tooltip>
                             </TableCell>
                             <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3 }}>
-                                <Tooltip title="Duplikate aufzeichnen (gleichen Wert mehrfach loggen)"><RepeatIcon sx={{ fontSize: 17, opacity: 0.55 }} /></Tooltip>
-                            </TableCell>
-                            <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3 }}>
                                 <Tooltip title="Nacht-Sensor: Tagesbeginn ignoriert diesen Raum"><NightsStayIcon sx={{ fontSize: 17, opacity: 0.55 }} /></Tooltip>
                             </TableCell>
-                            <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3, borderLeft: "2px solid rgba(128,128,128,0.25)" }}>
+                            <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3, borderLeft: "3px solid rgba(100,100,100,0.55)" }}>
                                 <Tooltip title="Aus Health-Timeline ausschliessen (Sensor wird weiter aufgezeichnet, aber nicht in Schlafradar/Neuro-Timeline angezeigt)"><BlockIcon sx={{ fontSize: 17, opacity: 0.55 }} /></Tooltip>
                             </TableCell>
                             <TableCell sx={{ width: "4%", bgcolor: stickyBg }} />
@@ -158,7 +154,7 @@ export default function SensorList(props) {
                                     <TableCell sx={{ overflow: "hidden" }}>
                                         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                                             {sensorProblems && sensorProblems.has && sensorProblems.has(device.id) && (
-                                                <Tooltip title={"Sensor nicht erreichbar – zuletzt aktiv vor mehr als Schwellwert"}>
+                                                <Tooltip title={"Sensor nicht erreichbar ï¿½ zuletzt aktiv vor mehr als Schwellwert"}>
                                                     <WarningAmberIcon sx={{ color: "#ff9800", fontSize: 16, flexShrink: 0 }} />
                                                 </Tooltip>
                                             )}
@@ -278,7 +274,7 @@ export default function SensorList(props) {
                                             size="small"
                                             value={device.personTag || ""}
                                             placeholder="Person..."
-                                            title="Personenname für individuelle Nacht-Analyse (z.B. Rob)"
+                                            title="Personenname fï¿½r individuelle Nacht-Analyse (z.B. Rob)"
                                             sx={{ width: "100%", "& input": { fontSize: "0.7rem", p: "3px 6px" } }}
                                             onChange={e => props.onDeviceChange(index, "personTag", e.target.value)}
                                         />
@@ -312,19 +308,6 @@ export default function SensorList(props) {
                                         </Tooltip>
                                     </TableCell>
 
-                                    {/* Duplikate */}
-                                    <TableCell align="center" sx={{ px: 0.3 }}>
-                                        <Tooltip title="Duplikate aufzeichnen">
-                                            <Checkbox
-                                                checked={device.logDuplicates || false}
-                                                onChange={e => props.onDeviceChange(index, "logDuplicates", e.target.checked)}
-                                                size="small" sx={{ p: 0.4 }}
-                                                icon={<RepeatIcon sx={{ fontSize: 17, opacity: 0.2 }} />}
-                                                checkedIcon={<RepeatIcon sx={{ fontSize: 17, color: "#42a5f5" }} />}
-                                            />
-                                        </Tooltip>
-                                    </TableCell>
-
                                     {/* Nacht */}
                                     <TableCell align="center" sx={{ px: 0.3 }}>
                                         <Tooltip title="Nacht-Sensor: Raum wird bei Tagesbeginn ignoriert">
@@ -334,6 +317,19 @@ export default function SensorList(props) {
                                                 size="small" sx={{ p: 0.4 }}
                                                 icon={<NightsStayIcon sx={{ fontSize: 17, opacity: 0.2 }} />}
                                                 checkedIcon={<NightsStayIcon sx={{ fontSize: 17, color: "#5c6bc0" }} />}
+                                            />
+                                        </Tooltip>
+                                    </TableCell>
+
+                                    {/* Aus Timeline ausschliessen */}
+                                    <TableCell align="center" sx={{ px: 0.3, borderLeft: "3px solid rgba(100,100,100,0.4)" }}>
+                                        <Tooltip title="Aus Health-Timeline ausschliessen: Sensor wird aufgezeichnet, aber NICHT in Schlafradar/Neuro-Timeline dargestellt">
+                                            <Checkbox
+                                                checked={device.excludeFromActivity || false}
+                                                onChange={e => props.onDeviceChange(index, "excludeFromActivity", e.target.checked)}
+                                                size="small" sx={{ p: 0.4 }}
+                                                icon={<BlockIcon sx={{ fontSize: 17, opacity: 0.2 }} />}
+                                                checkedIcon={<BlockIcon sx={{ fontSize: 17, color: "#ef5350" }} />}
                                             />
                                         </Tooltip>
                                     </TableCell>
@@ -366,7 +362,7 @@ export default function SensorList(props) {
                 {SENSOR_FUNCTIONS.filter(f => f.id).map(f => {
                     const isActive = activeFunctions.has(f.id);
                     return (
-                        <Tooltip key={f.id} title={`${f.description}${isActive ? " — konfiguriert" : " — noch kein Sensor zugewiesen"}`} placement="top">
+                        <Tooltip key={f.id} title={`${f.description}${isActive ? " ï¿½ konfiguriert" : " ï¿½ noch kein Sensor zugewiesen"}`} placement="top">
                             <Chip
                                 label={`${isActive ? "? " : ""}${f.label}`}
                                 size="small"
@@ -387,7 +383,7 @@ export default function SensorList(props) {
             </Box>
             {/* Hinweiszeile */}
             <Box sx={{ mb: 0.5, fontSize: "0.62rem", color: "text.disabled", fontStyle: "italic" }}>
-                ? Farbe + dicker Rahmen = mindestens 1 Sensor mit dieser Funktion aktiv — gestrichelt = noch kein Sensor zugewiesen — Tooltip zeigt Details
+                ? Farbe + dicker Rahmen = mindestens 1 Sensor mit dieser Funktion aktiv ï¿½ gestrichelt = noch kein Sensor zugewiesen ï¿½ Tooltip zeigt Details
             </Box>
 
             <Box sx={{ display: "flex", gap: 2, mt: 1.5, justifyContent: "space-between", alignItems: "center" }}>
