@@ -166,6 +166,25 @@ class CogniLiving extends utils.Adapter {
         // presence_radar_count: ID zeigt direkt auf den Personenzahl-State (z.B. alias oder .value) – kein ID-Hacking nötig
         const devs = this.config.presenceDevices; if (devs) { for (const id of devs) { await this.subscribeForeignStatesAsync(id); } }
 
+        // Option B: sensorLastValues mit echten aktuellen States initialisieren (Duplikat-Filter nach Neustart)
+        // Verhindert dass Sensoren die sich waehrend Adapter-Downtime NICHT veraendert haben als 'neue Aktivitaet' zaehlen.
+        // Nur Sensoren ueberschreiben deren State aktuell in ioBroker vorliegt.
+        try {
+            const _allDevices = (this.config.devices || []);
+            for (const _dev of _allDevices) {
+                if (!_dev.id) continue;
+                try {
+                    const _currentState = await this.getForeignStateAsync(_dev.id);
+                    if (_currentState && _currentState.val !== undefined && _currentState.val !== null) {
+                        this.sensorLastValues[_dev.id] = _currentState.val;
+                    }
+                } catch (e) { /* Sensor nicht erreichbar, Initialwert aus History bleibt */ }
+            }
+            this.log.info(`Sensor baseline initialized for ${_allDevices.length} devices (duplicate filter ready).`);
+        } catch (e) {
+            this.log.warn('Sensor baseline init failed: ' + e.message);
+        }
+
         const schedule = require('node-schedule');
         if (this.historyJob) this.historyJob.cancel();
         this.historyJob = schedule.scheduleJob('59 23 * * *', () => {

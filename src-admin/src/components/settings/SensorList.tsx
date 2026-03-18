@@ -136,7 +136,7 @@ export default function SensorList(props) {
                             <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3 }}>
                                 <Tooltip title="Nacht-Sensor: Tagesbeginn ignoriert diesen Raum"><NightsStayIcon sx={{ fontSize: 17, opacity: 0.55 }} /></Tooltip>
                             </TableCell>
-                            <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3 }}>
+                            <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3, borderLeft: "2px solid rgba(128,128,128,0.25)" }}>
                                 <Tooltip title="Aus Health-Timeline ausschliessen (Sensor wird weiter aufgezeichnet, aber nicht in Schlafradar/Neuro-Timeline angezeigt)"><BlockIcon sx={{ fontSize: 17, opacity: 0.55 }} /></Tooltip>
                             </TableCell>
                             <TableCell sx={{ width: "4%", bgcolor: stickyBg }} />
