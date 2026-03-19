@@ -132,8 +132,8 @@ class CogniLiving extends utils.Adapter {
         await this.setObjectNotExistsAsync('analysis.health.screening.hints', { type: 'state', common: { name: 'Proactive Screening Hints (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorStatus', { type: 'state', common: { name: 'Sensor Health Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.currentPersonCount', { type: 'state', common: { name: 'Aktuelle Personenanzahl im Haus', type: 'number', role: 'value', unit: 'Personen', read: true, write: false, def: 1, desc: 'Geschaetzte Personenanzahl (Config-Baseline + raeumliche Heuristik + FP2)' }, native: {} });
-        await this.setObjectNotExistsAsync('system.personDetectionLog', { type: 'state', common: { name: 'PersonCount: Erkennungs-Log mind. 2 Personen (SQL)', type: 'string', role: 'json', read: true, write: false, def: '{}', desc: 'Wird geschrieben wenn rauemliche Heuristik >= 2 Hops ausloest. Enthalt beide Sensor-IDs, Raum, Hops, Zeitdelta.' }, native: {} });
-        await this.setObjectNotExistsAsync('system.personSensorLog', { type: 'state', common: { name: 'PersonCount: Bewegungssensor-Aktivitaet (SQL)', type: 'string', role: 'json', read: true, write: false, def: '{}', desc: 'Jede steigende Flanke eines Motion/Praesenz/Vibrations-Sensors. Nur person-relevante Typen (kein Temp, kein Heizung).' }, native: {} });
+        await this.setObjectNotExistsAsync('system.personCount.heuristicDetection', { type: 'state', common: { name: 'Personenerkennung: Heuristik-Ereignis (SQL) - mind. 2 Personen erkannt', type: 'string', role: 'json', read: true, write: false, def: '{}', desc: 'Wird bei jeder rauemlichen Unmoglichkeitserkennung (>= 2 Hops, <= 5s) geschrieben. Enthaelt: Sensor-IDs, Raeume, Hop-Abstand, Zeitdelta, Personenzahl vorher/nachher.' }, native: {} });
+        await this.setObjectNotExistsAsync('system.personCount.sensorActivity', { type: 'state', common: { name: 'Personenerkennung: Sensor-Aktivitaet (SQL) - Bewegung/Praesenz/Tuer-Fenster', type: 'string', role: 'json', read: true, write: false, def: '{}', desc: 'Jede steigende Flanke eines person-relevanten Sensors (isPersonPresenceActivity). Kein Licht, kein Temperatur.' }, native: {} });
         await this.setObjectNotExistsAsync('system.householdType', { type: 'state', common: { name: 'Haushaltstyp', type: 'string', role: 'text', states: { single: 'Einpersonenhaushalt', multi: 'Mehrpersonenhaushalt' }, read: true, write: false, def: 'single' }, native: {} });
         await this.setObjectNotExistsAsync('system.personData', { type: 'state', common: { name: 'Per-Person Night Metrics (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('analysis.energy.warmupTimes', { type: 'state', common: { name: 'Warm-Up Time', type: 'string', role: 'json', read: true, write: false }, native: {} });
@@ -1512,17 +1512,13 @@ class CogniLiving extends utils.Adapter {
             if (dev.type === 'temperature' || dev.type === 'thermostat') {
                 if (this.activeModules.energy) automation.cleanupGhostInterventions(this);
             }
-            // Raeumliche Unmoeglichkeits-Heuristik (nur steigende Flanken)
-            if (dev.location && recorder.isRelevantActivity(dev.type, state.val)) {
+            // Raeumliche Unmoeglichkeits-Heuristik: nur steigende Flanken person-relevanter Sensoren
+            // isPersonPresenceActivity = strikte Whitelist: Bewegung, Praesenz, Vibration, Tuer/Fenster
+            if (dev.location && recorder.isPersonPresenceActivity(dev.type, state.val)) {
                 if (!this.sensorLastActive) this.sensorLastActive = {};
                 this.sensorLastActive[id] = Date.now();
-                // personSensorLog: nur explizit person-relevante Typen (Motion/Praesenz/Vibration)
-                var _prType = dev.type ? dev.type.toLowerCase() : '';
-                var _prTypes = ['motion', 'presence_radar_bool', 'bewegung', 'praesenz', 'presence', 'occupancy', 'vibration_trigger', 'vibration_strength'];
-                if (_prTypes.some(function(k) { return _prType === k || _prType.indexOf(k) >= 0; })) {
-                    var _sLog = { ts: Date.now(), sensorId: id, sensorName: dev.name || id, room: dev.location, type: dev.type };
-                    this.setStateAsync('system.personSensorLog', { val: JSON.stringify(_sLog), ack: true }).catch(function(){});
-                }
+                var _sLog = { ts: Date.now(), sensorId: id, sensorName: dev.name || id, room: dev.location, type: dev.type };
+                this.setStateAsync('system.personCount.sensorActivity', { val: JSON.stringify(_sLog), ack: true }).catch(function(){});
                 this._checkSpatialImpossibility(id, dev.location);
             }
         }
@@ -1612,7 +1608,7 @@ class CogniLiving extends utils.Adapter {
             bestMatch.personCountBefore = prevCount;
             bestMatch.personCountAfter  = 2;
             // State schreiben -> SQL-Adapter loggt jeden Wert-Wechsel automatisch
-            this.setStateAsync('system.personDetectionLog', { val: JSON.stringify(bestMatch), ack: true }).catch(function(){});
+            this.setStateAsync('system.personCount.heuristicDetection', { val: JSON.stringify(bestMatch), ack: true }).catch(function(){});
 
             if (prevCount < 2) {
                 this._livePersonCount = 2;
