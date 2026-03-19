@@ -518,18 +518,13 @@ class CogniLiving extends utils.Adapter {
                 return Math.round(total);
             })();
 
-            // Schlaf-Fenster aus FP2-Bett-Events berechnen (dynamisch statt fixem 22-06)
+            // Schlaf-Fenster aus FP2-Bett-Events berechnen (dynamisch).
+            // Dieses Fenster treibt die SCHLAFZEIT-Kachel (Einschlaf-/Aufwachzeit).
+            // Ohne FP2-Bett: start=null -> Schlafzeit-Karte zeigt 'keine Daten' (gewuenscht).
             const sleepWindowCalc = (function() {
                 var bedEvts = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })
                     .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
-                // Kein FP2-Bett konfiguriert: festes Fenster 20:00 Vorabend bis 09:00 morgens
-                if (bedEvts.length === 0) {
-                    var _fixedStart = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr (18:00 + 2h)
-                    var _fixedEnd   = _fixedStart + 13 * 3600000;               // +13h = 09:00 naechster Morgen
-                    if (_fixedStart > Date.now()) return { start: null, end: null, isFixed: true }; // Noch nicht 20:00
-                    if (_fixedEnd > Date.now()) _fixedEnd = Date.now();          // Laufende Nacht: bis jetzt
-                    return { start: _fixedStart, end: _fixedEnd, isFixed: true };
-                }
+                if (bedEvts.length === 0) return { start: null, end: null };
                 // Schlafbeginn: letztes Mal dass Bett >= 10 Min belegt wurde zwischen 18:00-02:00
                 var sleepStartTs = null;
                 var presStart = null;
@@ -540,7 +535,7 @@ class CogniLiving extends utils.Adapter {
                     if (_sv && !presStart && (_shr >= 18 || _shr < 3)) { presStart = _se.timestamp||0; }
                     else if (!_sv && presStart) {
                         var _dur = ((_se.timestamp||0) - presStart) / 60000;
-                        if (_dur >= 10) sleepStartTs = presStart; // merke diesen (evtl. wird er spaeter ueberschrieben)
+                        if (_dur >= 10) sleepStartTs = presStart;
                         presStart = null;
                     }
                 }
@@ -551,7 +546,7 @@ class CogniLiving extends utils.Adapter {
                 var emptyStart = null;
                 for (var _wi = 0; _wi < bedEvts.length; _wi++) {
                     var _we = bedEvts[_wi];
-                    if ((_we.timestamp||0) < sleepStartTs) continue; // vor Schlafbeginn ignorieren
+                    if ((_we.timestamp||0) < sleepStartTs) continue;
                     var _wv = isActiveValue(_we.value) || toPersonCount(_we.value) > 0;
                     var _whr = new Date(_we.timestamp||0).getHours();
                     if (!_wv && (_whr >= 4 || _whr < 12)) {
@@ -563,31 +558,39 @@ class CogniLiving extends utils.Adapter {
                     }
                 }
                 if (emptyStart) { var _wdur2 = (Date.now() - emptyStart) / 60000; if (_wdur2 >= 15) wakeTs = Date.now(); }
-                return { start: sleepStartTs, end: wakeTs, isFixed: false };
+                return { start: sleepStartTs, end: wakeTs };
             })();
 
-            // OC-4 Guard: Schlaffenster nur speichern wenn genuegend Bettzeit-Daten vorhanden.
-            // Bei Adapter-Neustart mitten in der Nacht ist eventHistory duenn -> sleepWindowCalc
-            // wuerde Restart-Zeit als Einschlafzeit speichern (Brainstorming OC-4).
-            // Schwelle: < 180 Min Bettzeit = unvollstaendige Nacht-Daten.
-            if (bedPresenceMinutes < 180 && sleepWindowCalc.start !== null && !sleepWindowCalc.isFixed) {
+            // OC-4 Guard: Schlaffenster nur speichern wenn genuegend FP2-Bettzeit-Daten vorhanden.
+            // (Brainstorming OC-4: verhindert falsche Einschlafzeit nach Adapter-Neustart)
+            if (bedPresenceMinutes < 180 && sleepWindowCalc.start !== null) {
                 sleepWindowCalc.start = null;
-                this.log.debug('[History] OC-4 Guard: bedPresenceMinutes=' + bedPresenceMinutes + 'min < 180, dynamisches sleepWindow verworfen');
                 sleepWindowCalc.end = null;
+                this.log.debug('[History] OC-4 Guard: bedPresenceMinutes=' + bedPresenceMinutes + 'min < 180, FP2-sleepWindow verworfen');
             }
+
+            // Schlaffenster fuer OC-7 (Sleep Score): FP2 wenn vorhanden, sonst festes 20:00-09:00 Fenster.
+            // Betrifft NICHT sleepWindowStart/End im Snapshot -- die Schlafzeit-Kachel bleibt FP2-only.
+            var sleepWindowOC7 = sleepWindowCalc.start
+                ? sleepWindowCalc
+                : (function() {
+                    var _fs = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr
+                    var _fe = _fs + 13 * 3600000;                       // 09:00 naechster Morgen
+                    if (_fs > Date.now()) return { start: null, end: null };
+                    if (_fe > Date.now()) _fe = Date.now();
+                    return { start: _fs, end: _fe };
+                })();
 
             // --- OC-7: AURA SLEEP SCORE ---------------------------------------------------
             // Klassifikation in 5-Minuten-Slots anhand Vibrationssensor (Detection + Staerke)
             // Stages: 'deep' | 'light' | 'rem' | 'wake'
-            // Kein Vibrationssensor ? sleepScore = null, sleepStages = []
             var sleepScore = null;
             var sleepStages = [];
-            if (sleepWindowCalc.start && sleepWindowCalc.end) {
+            if (sleepWindowOC7.start && sleepWindowOC7.end) {
                 var SLOT_MS = 5 * 60 * 1000;
-                var swStart = sleepWindowCalc.start;
-                var swEnd   = sleepWindowCalc.end;
+                var swStart = sleepWindowOC7.start;
+                var swEnd   = sleepWindowOC7.end;
                 var slotCount = Math.ceil((swEnd - swStart) / SLOT_MS);
-
                 // Vibrations-Events im Schlaffenster (sleepSearchEvents: deckt auch Vorabend ab 18:00)
                 var vibDetInWindow = sleepSearchEvents.filter(function(e) {
                     return e.isVibrationBed && (e.timestamp||0) >= swStart && (e.timestamp||0) <= swEnd
