@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 'use strict';
 
 /*
@@ -132,6 +132,7 @@ class CogniLiving extends utils.Adapter {
         await this.setObjectNotExistsAsync('analysis.health.screening.hints', { type: 'state', common: { name: 'Proactive Screening Hints (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorStatus', { type: 'state', common: { name: 'Sensor Health Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.currentPersonCount', { type: 'state', common: { name: 'Aktuelle Personenanzahl im Haus', type: 'number', role: 'value', unit: 'Personen', read: true, write: false, def: 1, desc: 'Geschaetzte Personenanzahl (Config-Baseline + raeumliche Heuristik + FP2)' }, native: {} });
+        await this.setObjectNotExistsAsync('system.personCountLog', { type: 'state', common: { name: 'PersonCount Heuristik-Log (SQL-loggbar)', type: 'string', role: 'json', read: true, write: false, def: '{}', desc: 'Letzter Sensor-Ausloeser fuer 2-Personen-Erkennung. Jeden Eintrag per SQL-Adapter loggen.' }, native: {} });
         await this.setObjectNotExistsAsync('system.householdType', { type: 'state', common: { name: 'Haushaltstyp', type: 'string', role: 'text', states: { single: 'Einpersonenhaushalt', multi: 'Mehrpersonenhaushalt' }, read: true, write: false, def: 'single' }, native: {} });
         await this.setObjectNotExistsAsync('system.personData', { type: 'state', common: { name: 'Per-Person Night Metrics (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('analysis.energy.warmupTimes', { type: 'state', common: { name: 'Warm-Up Time', type: 'string', role: 'json', read: true, write: false }, native: {} });
@@ -1567,6 +1568,7 @@ class CogniLiving extends utils.Adapter {
         (this.config.devices || []).forEach(function(d) { if (d.id) devicesById[d.id] = d; });
 
         var multiPersonDetected = false;
+        var bestMatch = null; // bester Treffer fuer Log (meiste Hops)
         Object.keys(this.sensorLastActive || {}).forEach(function(otherId) {
             if (otherId === triggerId) return;
             var lastActiveTs = _self.sensorLastActive[otherId];
@@ -1576,13 +1578,34 @@ class CogniLiving extends utils.Adapter {
             var hopDist = _self._roomHopDistance(triggerLocation, otherDev.location);
             if (hopDist >= MIN_HOPS) {
                 multiPersonDetected = true;
-                _self.log.info('[PersonCount] R?uml. Unm?glichkeit: ' + triggerLocation + ' <-> ' + otherDev.location +
-                    ' (' + hopDist + ' Hops, ' + Math.round(now - lastActiveTs) + 'ms) -> mind. 2 Personen');
+                var deltaMs = Math.round(now - lastActiveTs);
+                _self.log.info('[PersonCount] Rauml. Unmoglichkeit: ' + triggerLocation + ' <-> ' + otherDev.location +
+                    ' (' + hopDist + ' Hops, ' + deltaMs + 'ms) -> mind. 2 Personen');
+                // Besten Treffer merken (meiste Hops = zuverlaessigste Erkennung)
+                if (!bestMatch || hopDist > bestMatch.hops) {
+                    var triggerDev = devicesById[triggerId];
+                    bestMatch = {
+                        ts:                now,
+                        triggerSensorId:   triggerId,
+                        triggerSensorName: triggerDev ? (triggerDev.name || triggerId) : triggerId,
+                        triggerRoom:       triggerLocation,
+                        otherSensorId:     otherId,
+                        otherSensorName:   otherDev.name || otherId,
+                        otherRoom:         otherDev.location,
+                        hops:              hopDist,
+                        deltaMs:           deltaMs
+                    };
+                }
             }
         });
 
-        if (multiPersonDetected) {
+        if (multiPersonDetected && bestMatch) {
             var prevCount = this._livePersonCount || 1;
+            bestMatch.personCountBefore = prevCount;
+            bestMatch.personCountAfter  = 2;
+            // State schreiben -> SQL-Adapter loggt jeden Wert-Wechsel automatisch
+            this.setStateAsync('system.personCountLog', { val: JSON.stringify(bestMatch), ack: true }).catch(function(){});
+
             if (prevCount < 2) {
                 this._livePersonCount = 2;
                 if (!this._maxPersonsToday || this._maxPersonsToday < 2) this._maxPersonsToday = 2;
