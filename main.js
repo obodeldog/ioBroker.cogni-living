@@ -522,7 +522,14 @@ class CogniLiving extends utils.Adapter {
             const sleepWindowCalc = (function() {
                 var bedEvts = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })
                     .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
-                if (bedEvts.length === 0) return { start: null, end: null };
+                // Kein FP2-Bett konfiguriert: festes Fenster 20:00 Vorabend bis 09:00 morgens
+                if (bedEvts.length === 0) {
+                    var _fixedStart = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr (18:00 + 2h)
+                    var _fixedEnd   = _fixedStart + 13 * 3600000;               // +13h = 09:00 naechster Morgen
+                    if (_fixedStart > Date.now()) return { start: null, end: null, isFixed: true }; // Noch nicht 20:00
+                    if (_fixedEnd > Date.now()) _fixedEnd = Date.now();          // Laufende Nacht: bis jetzt
+                    return { start: _fixedStart, end: _fixedEnd, isFixed: true };
+                }
                 // Schlafbeginn: letztes Mal dass Bett >= 10 Min belegt wurde zwischen 18:00-02:00
                 var sleepStartTs = null;
                 var presStart = null;
@@ -556,16 +563,16 @@ class CogniLiving extends utils.Adapter {
                     }
                 }
                 if (emptyStart) { var _wdur2 = (Date.now() - emptyStart) / 60000; if (_wdur2 >= 15) wakeTs = Date.now(); }
-                return { start: sleepStartTs, end: wakeTs };
+                return { start: sleepStartTs, end: wakeTs, isFixed: false };
             })();
 
             // OC-4 Guard: Schlaffenster nur speichern wenn genuegend Bettzeit-Daten vorhanden.
             // Bei Adapter-Neustart mitten in der Nacht ist eventHistory duenn -> sleepWindowCalc
             // wuerde Restart-Zeit als Einschlafzeit speichern (Brainstorming OC-4).
             // Schwelle: < 180 Min Bettzeit = unvollstaendige Nacht-Daten.
-            if (bedPresenceMinutes < 180 && sleepWindowCalc.start !== null) {
-                this.log.debug(`[History] OC-4 Guard: bedPresenceMinutes=${bedPresenceMinutes}min < 180, sleepWindow verworfen`);
+            if (bedPresenceMinutes < 180 && sleepWindowCalc.start !== null && !sleepWindowCalc.isFixed) {
                 sleepWindowCalc.start = null;
+                this.log.debug('[History] OC-4 Guard: bedPresenceMinutes=' + bedPresenceMinutes + 'min < 180, dynamisches sleepWindow verworfen');
                 sleepWindowCalc.end = null;
             }
 
