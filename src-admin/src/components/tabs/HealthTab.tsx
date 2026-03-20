@@ -1186,27 +1186,50 @@ export default function HealthTab(props: any) {
                             </div>
                         </div>
 
-                        {/* Schlafphasen-Zeitleiste */}
-                        <div style={{display:'flex', width:'100%', height:'24px', borderRadius:'4px', overflow:'hidden', marginBottom:'8px'}}>
-                            {stages.map((slot, i) => (
-                                <div key={i} style={{
-                                    flex: 1,
-                                    backgroundColor: stageColor[slot.s] || '#555',
-                                    minWidth: 0
-                                }} title={`${slot.t} Min: ${stageLabel[slot.s] || slot.s}`} />
-                            ))}
-                        </div>
-
-                        {/* Zeiten-Achse */}
-                        {swStart && swEnd && totalSlots > 0 && (
-                            <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.6rem', color:'#666', marginBottom:'10px'}}>
-                                <span>{fmtTime(swStart)}</span>
-                                <span>{fmtTime(swStart + (swEnd - swStart) * 0.25)}</span>
-                                <span>{fmtTime(swStart + (swEnd - swStart) * 0.5)}</span>
-                                <span>{fmtTime(swStart + (swEnd - swStart) * 0.75)}</span>
-                                <span>{fmtTime(swEnd)}</span>
+                        {/* Schlafphasen-Zeitbalken mit Zeitachse */}
+                        <div style={{marginBottom:'10px'}}>
+                            {/* Der Balken — jeder Block = 5 min → flex:1 ist zeitproportional */}
+                            <div style={{display:'flex', width:'100%', height:'28px', borderRadius:'4px', overflow:'hidden'}}>
+                                {stages.map((slot, i) => {
+                                    const absMs = swStart ? swStart + slot.t * 60000 : null;
+                                    const tipTime = absMs ? fmtTime(absMs) + ' — ' : '';
+                                    return (
+                                        <div key={i} style={{
+                                            flex: 1,
+                                            backgroundColor: stageColor[slot.s] || '#555',
+                                            minWidth: 0
+                                        }} title={tipTime + (stageLabel[slot.s] || slot.s)} />
+                                    );
+                                })}
                             </div>
-                        )}
+
+                            {/* Zeitachse: Start, volle Stunden, Ende */}
+                            {swStart && swEnd && (
+                                <div style={{position:'relative', height:'14px', marginTop:'3px'}}>
+                                    <span style={{position:'absolute', left:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa', transform:'translateX(0)'}}>{fmtTime(swStart)}</span>
+                                    {(() => {
+                                        const totalMs = swEnd - swStart;
+                                        const marks: React.ReactNode[] = [];
+                                        // Erste volle Stunde nach swStart
+                                        const first = new Date(swStart);
+                                        first.setMinutes(0, 0, 0);
+                                        first.setHours(first.getHours() + 1);
+                                        let t = first.getTime();
+                                        while (t < swEnd - 900000) { // mind. 15 min vor Ende
+                                            const pct = ((t - swStart) / totalMs) * 100;
+                                            marks.push(
+                                                <span key={t} style={{position:'absolute', left: pct + '%', fontSize:'0.55rem', color: isDark?'#555':'#bbb', transform:'translateX(-50%)'}}>
+                                                    {fmtTime(t)}
+                                                </span>
+                                            );
+                                            t += 3600000;
+                                        }
+                                        return marks;
+                                    })()}
+                                    <span style={{position:'absolute', right:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa', transform:'translateX(0)'}}>{fmtTime(swEnd)}</span>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Legende + Zeiten */}
                         <div style={{display:'flex', gap:'12px', flexWrap:'wrap', fontSize:'0.7rem', marginBottom:'8px'}}>

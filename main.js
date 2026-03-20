@@ -940,8 +940,8 @@ class CogniLiving extends utils.Adapter {
                 eventHistory: todayEvents,
                 nocturiaCount: nocturiaCount,
                 kitchenVisits: kitchenVisits,
-                sleepWindowStart: sleepWindowCalc.start,   // ms-Timestamp Schlafbeginn (null wenn kein FP2)
-                sleepWindowEnd:   sleepWindowCalc.end,     // ms-Timestamp Aufwachen (null wenn kein FP2)
+                sleepWindowStart: sleepWindowOC7.start,   // ms-Timestamp Schlafbeginn (OC7-Fenster inkl. Vib-Fallback)
+                sleepWindowEnd:   sleepWindowOC7.end,     // ms-Timestamp Aufwachen
                 maxPersonsDetected: maxPersonsDetected,
                 bedPresenceMinutes: bedPresenceMinutes,
                 nightVibrationCount: nightVibrationCount,
