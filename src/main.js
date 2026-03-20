@@ -491,6 +491,18 @@ class CogniLiving extends utils.Adapter {
             // WICHTIG: Nur Events von HEUTE speichern, nicht alle Events!
             const todayEvents = this.eventHistory.filter(e => e.timestamp >= startOfDayTimestamp);
 
+            // Sleep-Freeze: Snapshot lesen und prüfen ob Nacht bereits eingefroren (echte Nacht gesichert)
+            const _dataDir0 = utils.getAbsoluteDefaultDataDir();
+            const _filePath0 = path.join(_dataDir0, 'cogni-living', 'history', dateStr + '.json');
+            let _existingSnap = null;
+            try { if (fs.existsSync(_filePath0)) _existingSnap = JSON.parse(fs.readFileSync(_filePath0, 'utf8')); } catch(_fe) {}
+            // Eingefroren wenn: Aufwachzeit vorhanden + vor 14:00 Uhr (= echte Nacht) + mind. 3h Bettzeit
+            const _sleepFrozen = !!(_existingSnap &&
+                _existingSnap.sleepWindowStart &&
+                _existingSnap.sleepWindowEnd &&
+                (_existingSnap.bedPresenceMinutes || 0) >= 180 &&
+                new Date(_existingSnap.sleepWindowEnd).getHours() < 14);
+
             // Schlaf-relevante Events: ab 18:00 Uhr des Vortages (Nacht spannt 2 Kalendertage!).
             // Bsp: Einschlafen 23:00 Uhr = gestriger Tag => fehlt in todayEvents.
             // sleepSearchEvents deckt 18:00 gestern bis jetzt, damit sleepWindowCalc den
@@ -569,7 +581,7 @@ class CogniLiving extends utils.Adapter {
                     if ((_we.timestamp||0) < sleepStartTs) continue;
                     var _wv = isActiveValue(_we.value) || toPersonCount(_we.value) > 0;
                     var _whr = new Date(_we.timestamp||0).getHours();
-                    if (!_wv && (_whr >= 4 || _whr < 12)) {
+                    if (!_wv && (_whr >= 4 && _whr <= 14)) {
                         if (!emptyStart) emptyStart = _we.timestamp||0;
                     } else if (_wv && emptyStart) {
                         var _wdur = ((_we.timestamp||0) - emptyStart) / 60000;
@@ -606,7 +618,15 @@ class CogniLiving extends utils.Adapter {
             // Stages: 'deep' | 'light' | 'rem' | 'wake'
             var sleepScore = null;
             var sleepStages = [];
-            if (sleepWindowOC7.start && sleepWindowOC7.end) {
+            if (_sleepFrozen) {
+                // Eingeschlafene Nacht: Schlafdaten aus bestehendem Snapshot übernehmen (nicht überschreiben)
+                sleepWindowCalc.start = _existingSnap.sleepWindowStart;
+                sleepWindowCalc.end   = _existingSnap.sleepWindowEnd;
+                sleepWindowOC7 = { start: _existingSnap.sleepWindowStart, end: _existingSnap.sleepWindowEnd };
+                sleepStages = _existingSnap.sleepStages || [];
+                sleepScore  = _existingSnap.sleepScore  !== undefined ? _existingSnap.sleepScore : null;
+                this.log.info('[History] Sleep FROZEN: ' + new Date(_existingSnap.sleepWindowStart).toLocaleTimeString() + '-' + new Date(_existingSnap.sleepWindowEnd).toLocaleTimeString() + ' bedPresMin=' + _existingSnap.bedPresenceMinutes);
+            } else if (sleepWindowOC7.start && sleepWindowOC7.end) {
                 var SLOT_MS = 5 * 60 * 1000;
                 var swStart = sleepWindowOC7.start;
                 var swEnd   = sleepWindowOC7.end;
