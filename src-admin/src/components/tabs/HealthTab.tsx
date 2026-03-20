@@ -164,6 +164,7 @@ export default function HealthTab(props: any) {
     const [dmNapProb, setDmNapProb] = useState<number>(0);
     const [driftStatus, setDriftStatus] = useState<string>('Unknown');
     const [driftDetails, setDriftDetails] = useState<string>('');
+    const [auraSleepData, setAuraSleepData] = useState<any>(null);
 
     // MASTER-RAUMNAMEN aus System-Tab laden
     const loadMasterRooms = async () => {
@@ -220,7 +221,7 @@ export default function HealthTab(props: any) {
                     if (d.roomHistory && d.roomHistory.history) setRoomHistory(d.roomHistory.history);
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
-                    (window as any)._auraSleepData = { sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null };
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null });
                     setGeminiNight(d.geminiNight || "Keine Daten");
                     setGeminiNightTs(d.geminiNightTs || null);
                     setGeminiDay(d.geminiDay || "Keine Daten");
@@ -687,6 +688,16 @@ export default function HealthTab(props: any) {
                     }
                 }
             });
+
+        // OC-7: Lade Schlafdaten aus der History-Datei (auch für HEUTE im Live-Modus)
+        const todayStr = new Date().toISOString().split('T')[0];
+        socket.sendTo(adapterName + '.' + instance, 'getHistoryData', { date: todayStr, _t: Date.now() })
+            .then((histRes: any) => {
+                if (histRes && histRes.success && histRes.data) {
+                    const d = histRes.data;
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null });
+                }
+            });
     }, [namespace, socket, adapterName, instance, TRAINING_TARGET, isLive, viewDate]);
 
     // FIX: AUTO-START when component mounts or becomes Live
@@ -1090,7 +1101,7 @@ export default function HealthTab(props: any) {
 
     // ═══ OC-7: AURA SLEEP SCORE CARD ══════════════════════════════════════════════
     const renderSleepScoreCard = () => {
-        const sd = (window as any)._auraSleepData;
+        const sd = auraSleepData;
         const score: number | null = sd?.sleepScore ?? null;
         const stages: {t: number, s: string}[] = sd?.sleepStages ?? [];
         const garminScore: number | null = sd?.garminScore ?? null;

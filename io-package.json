@@ -1,8 +1,9 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.47",
+    "version": "0.33.48",
     "news": {
+      "0.33.48": "FIX: OC-7 Schlafanalyse-Kachel zeigt jetzt Daten im Live-Modus (HEUTE) - auraSleepData als React-State; fetchData laedt getHistoryData fuer heute",
       "0.33.47": "DEBUG: OC-7 Diagnose-State analysis.health.saveDailyDebug - zeigt Schlaf-Fenster, Stages-Anzahl und Vibrationsdaten bei jedem stündlichen Save",
       "0.33.46": "CLEAN: Alle Legacy-Typwerte entfernt (griff/schloss/tur/bewegung/praesenz/licht/schalter etc.); nur noch aktuelle SENSOR_TYPES; Frontend-Keywords durch isBathroomSensor/isKitchenSensor/isFP2Bed ersetzt",
       "0.33.45": "FIX: Alle Keyword-Fallbacks auf exakte Typ-Vergleiche umgestellt (recorder, topology, automation, main, health.py); hallwayKw nur noch aktiv wenn kein Flur in Sensorliste konfiguriert",
