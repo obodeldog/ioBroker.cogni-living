@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 'use strict';
 
 /*
@@ -891,7 +891,8 @@ class CogniLiving extends utils.Adapter {
 
                         const hallwayConf = (this.config.devices || []).filter(d => d.isHallway || d.sensorFunction === 'hallway').map(d => d.location || d.name || '');
                         const hallwayKw = ['flur', 'diele', 'gang', 'korridor'];
-                        const isHallway = (loc) => hallwayConf.includes(loc) || hallwayKw.some(k => (loc || '').toLowerCase().includes(k));
+                        // Keyword-Fallback nur wenn kein Flur konfiguriert (Sensorliste ist Master)
+                        const isHallway = (loc) => hallwayConf.includes(loc) || (hallwayConf.length === 0 && hallwayKw.some(k => (loc || '').toLowerCase().includes(k)));
 
                         const transits = [];
                         for (const seq of todaySeqs) {
@@ -1535,7 +1536,7 @@ class CogniLiving extends utils.Adapter {
                 deadMan.updateLocation(this, evt.location);
             }
             if (isActiveValue(state.val)) {
-                if (dev.type && (dev.type.includes('window') || dev.type.includes('door'))) {
+                if (dev.type && (dev.type === 'window' || dev.type === 'door' || dev.type === 'fenster' || dev.type === 'tur' || dev.type === 'contact' || dev.type === 'kontakt')) {
                     this.analyzeWindowOpening(dev);
                 }
             }

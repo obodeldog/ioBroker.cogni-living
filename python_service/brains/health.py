@@ -75,7 +75,9 @@ class HealthBrain:
             hallway_keywords = ['flur', 'diele', 'gang', 'korridor']
 
             def is_hallway_loc(loc):
-                return loc in hallway_set or any(x in loc.lower() for x in hallway_keywords)
+                if hallway_set:
+                    return loc in hallway_set  # Nur konfigurierte Flure (Sensorliste ist Master)
+                return any(x in loc.lower() for x in hallway_keywords)  # Fallback wenn kein Flur konfiguriert
 
             for seq in sequences:
                 steps = seq.get('steps', [])

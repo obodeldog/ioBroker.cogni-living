@@ -1,8 +1,9 @@
-﻿{
+{
   "common": {
     "name": "cogni-living",
-    "version": "0.33.44",
+    "version": "0.33.45",
     "news": {
+      "0.33.45": "FIX: Alle Keyword-Fallbacks auf exakte Typ-Vergleiche umgestellt (recorder, topology, automation, main, health.py); hallwayKw nur noch aktiv wenn kein Flur in Sensorliste konfiguriert",
       "0.31.6": "NEU: Tageszeit-Normalisierung im Aktivitaets-Balkendiagramm (Ansatz B) - heutiger Balken vergleicht nur Events bis zur aktuellen Uhrzeit mit Vortagen; visuelles Kennzeichen (tÃ¼rkiser Rand)",
       "0.31.5": "FIX: Fresh Air Stosslueftungs-Erkennung live (processEvents) und Wochenansicht korrekt; freshAirLong Pairing-Logik eingefuegt",
       "0.31.4": "FIX: Morning Briefing nie erhalten - subscribeStates fuer analysis.triggerBriefing fehlte; Obfuskierung wieder aktiv",
