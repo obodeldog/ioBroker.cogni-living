@@ -1,11 +1,11 @@
-﻿# --- Abhaengigkeiten -----------------------------------------------------------
+# --- Abhaengigkeiten -----------------------------------------------------------
 node_modules/
 src-admin/node_modules/
 
 # --- Build-Artefakte ----------------------------------------------------------
 src-admin/build/
 admin/assets/
-src/
+/src/
 
 # --- Lock-Dateien -------------------------------------------------------------
 package-lock.json

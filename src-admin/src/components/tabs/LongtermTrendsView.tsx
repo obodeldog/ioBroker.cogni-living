@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box, Typography, Button, ButtonGroup, CircularProgress, Grid, Paper,
     Tooltip as MuiTooltip, IconButton
@@ -146,10 +146,10 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                 if (!e.timestamp) return false;
                                 const hour = new Date(e.timestamp).getHours();
                                 const isNightTime = hour >= 22 || hour < 8;
-                                const isMotion = e.type === 'motion' || e.type === 'presence';
+                                const isMotion = e.type === 'motion' || e.type === 'presence_radar_bool';
                                 const isNightRoom = nightLocs.length > 0
                                     ? nightLocs.includes(e.location)
-                                    : (e.location || e.name || '').toLowerCase().includes('schlaf');
+                                    : (e.isFP2Bed === true || e.isVibrationBed === true);
                                 return isNightTime && isNightRoom && isMotion;
                             }).length;
                         }

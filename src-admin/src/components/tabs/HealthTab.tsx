@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box, Button, Divider, Dialog, DialogTitle, DialogContent, DialogActions,
     Typography, IconButton, Tooltip as MuiTooltip
@@ -239,9 +239,7 @@ export default function HealthTab(props: any) {
                         } else {
                             // Fallback: Alte Formel
                             const motionEventsDay = d.eventHistory.filter((e: any) => {
-                                const isMotion = (e.type || '').toLowerCase().includes('bewegung') || 
-                                                 (e.type || '').toLowerCase().includes('motion') ||
-                                                 (e.type || '').toLowerCase().includes('presence');
+                                const isMotion = e.type === 'motion' || e.type === 'presence_radar_bool';
                                 return isMotion && e.value === true;
                             }).length;
                             const calculatedBattery = Math.min(100, Math.max(20, Math.round(20 + (motionEventsDay / 12.5))));
@@ -342,8 +340,7 @@ export default function HealthTab(props: any) {
                             if (d.eventHistory) {
                                 const roomEvents = d.eventHistory.filter((e: any) => 
                                     (e.location || e.name || '').includes(roomName) && 
-                                    ((e.type || '').toLowerCase().includes('bewegung') || 
-                                     (e.type || '').toLowerCase().includes('motion'))
+                                    (e.type === 'motion' || e.type === 'presence_radar_bool')
                                 );
                                 if (roomEvents.length > 0) {
                                     lastActivity = Math.max(...roomEvents.map((e: any) => e.timestamp || 0));
@@ -581,8 +578,7 @@ export default function HealthTab(props: any) {
                 const hour = new Date(e.timestamp).getHours();
                 const isNight = hour >= 22 || hour < 8;
                 const isBathroom = getRoomCategory(e.name || e.location || '') === 'BATHROOM';
-                const isMotion = (e.type || '').toLowerCase().includes('bewegung') || 
-                                 (e.type || '').toLowerCase().includes('motion');
+                const isMotion = e.type === 'motion' || e.type === 'presence_radar_bool';
                 return isNight && isBathroom && isMotion && e.value === true;
             }).length;
         });
@@ -782,12 +778,12 @@ export default function HealthTab(props: any) {
             if (evt.type === 'door' && isActive) {
                 faCount++; lastFA = date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
             }
-            if ((evt.name || '').toLowerCase().includes('küche') || (evt.name || '').toLowerCase().includes('kitchen')) {
+            if (evt.isKitchenSensor) {
                 if (date.getHours() >= 6 && date.getHours() <= 10) kitchenEventsMorning++;
                 if (date.getHours() >= 12 && date.getHours() <= 14) kitchenEventsNoon++;
                 if (date.getHours() >= 18 && date.getHours() <= 20) kitchenEventsEvening++;
             }
-            if ((evt.name || '').toLowerCase().includes('bad') || (evt.name || '').toLowerCase().includes('wc')) {
+            if (evt.isBathroomSensor) {
                 if (evt.timestamp > lastBadEventTime) {
                     lastBadEventTime = evt.timestamp;
                     lastBadEventActive = isActive;
@@ -811,9 +807,9 @@ export default function HealthTab(props: any) {
             const isActive = val === true || val === 1 || val === 'on' || val === 'true';
 
             if (isActive) {
-                const isMotion = ['motion', 'bewegung', 'präsenz', 'presence', 'occupancy'].some(k => type.includes(k));
-                const isDoor = ['door', 'tür', 'window', 'fenster', 'griff', 'handle', 'lock', 'schloss'].some(k => type.includes(k));
-                const isLight = ['light', 'licht', 'switch', 'schalter', 'dimmer', 'lampe'].some(k => type.includes(k));
+                const isMotion = ['motion', 'presence_radar_bool'].includes(type);
+                const isDoor = ['door', 'lock'].includes(type);
+                const isLight = ['light', 'dimmer'].includes(type);
 
                 if (isMotion || isDoor || isLight) {
                     collectedRelevantEvents.push({
@@ -1524,9 +1520,7 @@ export default function HealthTab(props: any) {
                                             hourEnd.setHours(hour, 59, 59, 999);
                                             
                                             const eventsInHour = day.data.eventHistory.filter((e: any) => {
-                                                const isMotion = (e.type || '').toLowerCase().includes('bewegung') || 
-                                                                 (e.type || '').toLowerCase().includes('motion') ||
-                                                                 (e.type || '').toLowerCase().includes('presence');
+                                                const isMotion = e.type === 'motion' || e.type === 'presence_radar_bool';
                                                 return isMotion && e.value === true && 
                                                        e.timestamp >= hourStart.getTime() && 
                                                        e.timestamp <= hourEnd.getTime();
@@ -1679,8 +1673,8 @@ export default function HealthTab(props: any) {
                                                         const hour = new Date(e.timestamp).getHours();
                                                         const isNight = hour >= 22 || hour < 8;
                                                         const isBathroom = getRoomCategory(e.name || e.location || '') === 'BATHROOM';
-                                                        const isMotion = (e.type || '').toLowerCase().includes('bewegung') || (e.type || '').toLowerCase().includes('motion');
-                                                        return isNight && isBathroom && isMotion && e.value === true;
+                                        const isMotion = e.type === 'motion' || e.type === 'presence_radar_bool';
+                                        return isNight && isBathroom && isMotion && e.value === true;
                                                     }).length : 0;
                                                 
                                                 // Nacht-Aktivität (Bewegungen im Schlafbereich)
@@ -1689,8 +1683,8 @@ export default function HealthTab(props: any) {
                                                         const hour = new Date(e.timestamp).getHours();
                                                         const isNight = hour >= 22 || hour < 8;
                                                         const isBedroom = getRoomCategory(e.name || e.location || '') === 'BEDROOM';
-                                                        const isMotion = (e.type || '').toLowerCase().includes('bewegung') || (e.type || '').toLowerCase().includes('motion');
-                                                        return isNight && isBedroom && isMotion && e.value === true;
+                                        const isMotion = e.type === 'motion' || e.type === 'presence_radar_bool';
+                                        return isNight && isBedroom && isMotion && e.value === true;
                                                     }).length : 0;
                                                 
                                                 // Berechne Aktivität RELATIV zur Baseline (von Backend)
@@ -1704,11 +1698,9 @@ export default function HealthTab(props: any) {
                                                     activity = Math.round(avgActivity);
                                                 } else if (day.hasData && day.data?.eventHistory) {
                                                     // Fallback: Alte Formel (falls Backend nicht antwortet)
-                                                    const motionEvents = day.data.eventHistory.filter((e: any) => {
-                                                        const isMotion = (e.type || '').toLowerCase().includes('bewegung') || 
-                                                                         (e.type || '').toLowerCase().includes('motion') ||
-                                                                         (e.type || '').toLowerCase().includes('presence');
-                                                        return isMotion && e.value === true;
+                                    const motionEvents = day.data.eventHistory.filter((e: any) => {
+                                        const isMotion = e.type === 'motion' || e.type === 'presence_radar_bool';
+                                        return isMotion && e.value === true;
                                                     }).length;
                                                     activity = Math.min(100, Math.max(20, Math.round(20 + (motionEvents / 12.5))));
                                                 }

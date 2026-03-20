@@ -1,8 +1,9 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.45",
+    "version": "0.33.46",
     "news": {
+      "0.33.46": "CLEAN: Alle Legacy-Typwerte entfernt (griff/schloss/tur/bewegung/praesenz/licht/schalter etc.); nur noch aktuelle SENSOR_TYPES; Frontend-Keywords durch isBathroomSensor/isKitchenSensor/isFP2Bed ersetzt",
       "0.33.45": "FIX: Alle Keyword-Fallbacks auf exakte Typ-Vergleiche umgestellt (recorder, topology, automation, main, health.py); hallwayKw nur noch aktiv wenn kein Flur in Sensorliste konfiguriert",
       "0.31.6": "NEU: Tageszeit-Normalisierung im Aktivitaets-Balkendiagramm (Ansatz B) - heutiger Balken vergleicht nur Events bis zur aktuellen Uhrzeit mit Vortagen; visuelles Kennzeichen (tÃ¼rkiser Rand)",
       "0.31.5": "FIX: Fresh Air Stosslueftungs-Erkennung live (processEvents) und Wochenansicht korrekt; freshAirLong Pairing-Logik eingefuegt",

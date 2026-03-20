@@ -1,4 +1,4 @@
-﻿/**
+/**
  * AURA � Medizinische Krankheitsprofile
  * Definiert Sensor-Anforderungen und Validierungslogik fuer jedes Krankheitsbild.
  */
@@ -58,14 +58,14 @@ export interface ValidationResult {
 }
 
 // Sensor-Check-Hilfsfunktionen
-const MOTION_TYPES = ['motion', 'bewegung', 'praesenz', 'presence', 'occupancy'];
-const DOOR_TYPES   = ['door', 'tuer', 'window', 'fenster', 'contact', 'kontakt'];
+const MOTION_TYPES = ['motion', 'presence_radar_bool'];
+const DOOR_TYPES   = ['door', 'lock'];
 
 function hasMotionSensors(devices: DeviceConfig[], minCount = 1): boolean {
-    return devices.filter(d => MOTION_TYPES.some(k => (d.type || '').toLowerCase().includes(k))).length >= minCount;
+    return devices.filter(d => MOTION_TYPES.includes((d.type || '').toLowerCase())).length >= minCount;
 }
 function hasDoorSensors(devices: DeviceConfig[], minCount = 1): boolean {
-    return devices.filter(d => DOOR_TYPES.some(k => (d.type || '').toLowerCase().includes(k))).length >= minCount;
+    return devices.filter(d => DOOR_TYPES.includes((d.type || '').toLowerCase())).length >= minCount;
 }
 // sensorFunction-Shortcut: wie getEffectiveSF in SensorList (inkl. Legacy-Flags)
 function sf(d: DeviceConfig): string {
@@ -76,15 +76,12 @@ function sf(d: DeviceConfig): string {
     if (d.isNightSensor)    return 'bed';
     return '';
 }
-// Umlaut-Normalisierung fuer location-Vergleiche
-function normLoc(s: string): string {
-    return s.toLowerCase().replace(/ü/g, 'ue').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ß/g, 'ss');
-}
+
 function hasFP2(devices: DeviceConfig[]): boolean {
-    return devices.some(d => (d.type || '').toLowerCase().includes('presence_radar'));
+    return devices.some(d => d.type === 'presence_radar_bool');
 }
 function hasVibrationSensor(devices: DeviceConfig[]): boolean {
-    return devices.some(d => (d.type || '').toLowerCase().includes('vibration') && sf(d) === 'bed');
+    return devices.some(d => (d.type === 'vibration_trigger' || d.type === 'vibration_strength') && sf(d) === 'bed');
 }
 
 function hasHallwaySensor(devices: DeviceConfig[]): boolean {
@@ -94,22 +91,13 @@ function hasExitSensor(devices: DeviceConfig[]): boolean {
     return devices.some(d => d.isExit === true);
 }
 function hasNightSensor(devices: DeviceConfig[]): boolean {
-    if (devices.some(d => d.isNightSensor === true || sf(d) === 'bed')) return true;
-    const kw = ['schlaf', 'bedroom', 'nacht', 'night', 'kinderzimmer'];
-    return devices.some(d => kw.some(k => normLoc(d.location || '').includes(k)));
+    return devices.some(d => d.isNightSensor === true || sf(d) === 'bed');
 }
 function hasBathroomSensor(devices: DeviceConfig[]): boolean {
-    if (devices.some(d => d.isBathroomSensor === true || sf(d) === 'bathroom')) return true;
-    const kw = ['bad', 'wc', 'toilet', 'bath', 'dusche', 'shower'];
-    return devices.some(d => kw.some(k => normLoc(d.location || '').includes(k)));
+    return devices.some(d => d.isBathroomSensor === true || sf(d) === 'bathroom');
 }
 function hasKitchenSensor(devices: DeviceConfig[]): boolean {
-    if (devices.some(d => sf(d) === 'kitchen')) return true;
-    const kw = ['kueche', 'kuech', 'kitchen', 'koch'];
-    return devices.some(d =>
-        MOTION_TYPES.some(t => (d.type || '').toLowerCase().includes(t)) &&
-        kw.some(k => normLoc(d.location || '').includes(k))
-    );
+    return devices.some(d => sf(d) === 'kitchen');
 }
 
 export const DISEASE_PROFILES: DiseaseProfile[] = [
