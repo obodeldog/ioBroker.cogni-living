@@ -721,6 +721,32 @@ class CogniLiving extends utils.Adapter {
                 } catch(e) {}
             }
 
+            // --- OC-7 DIAGNOSE-STATE (hilft beim Debuggen ob Sleep-Analyse läuft) ------
+            try {
+                await this.setObjectNotExistsAsync('analysis.health.saveDailyDebug', {
+                    type: 'state', common: { name: 'OC-7 Sleep Debug (letzter saveDailyHistory-Lauf)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {}
+                });
+                const _debugObj = {
+                    timestamp: new Date().toISOString(),
+                    dateStr: dateStr,
+                    eventHistoryCount: this.eventHistory.length,
+                    todayEventsCount: todayEvents.length,
+                    sleepSearchEventsCount: sleepSearchEvents.length,
+                    vibrationBedEventsTotal: sleepSearchEvents.filter(function(e){ return e.isVibrationBed; }).length,
+                    fp2BedEventsTotal: sleepSearchEvents.filter(function(e){ return e.isFP2Bed; }).length,
+                    bedPresenceMinutes: bedPresenceMinutes,
+                    sleepWindowCalcStart: sleepWindowCalc.start ? new Date(sleepWindowCalc.start).toISOString() : null,
+                    sleepWindowCalcEnd:   sleepWindowCalc.end   ? new Date(sleepWindowCalc.end).toISOString()   : null,
+                    sleepWindowOC7Start:  sleepWindowOC7.start  ? new Date(sleepWindowOC7.start).toISOString()  : null,
+                    sleepWindowOC7End:    sleepWindowOC7.end    ? new Date(sleepWindowOC7.end).toISOString()    : null,
+                    sleepStagesCount: sleepStages.length,
+                    sleepScore: sleepScore,
+                    oc4GuardFired: (bedPresenceMinutes < 180 && sleepWindowCalc.start === null && fp2BedEventsTotal > 0),
+                };
+                await this.setStateAsync('analysis.health.saveDailyDebug', { val: JSON.stringify(_debugObj), ack: true });
+                this.log.info('[OC-7 Debug] stages=' + sleepStages.length + ' windowOC7=' + (_debugObj.sleepWindowOC7Start || 'NULL') + ' bedPresMin=' + bedPresenceMinutes + ' vibBedEvts=' + _debugObj.vibrationBedEventsTotal);
+            } catch(_de) { this.log.warn('[OC-7 Debug] Fehler beim Schreiben des Debug-States: ' + _de.message); }
+
             // Vibration Bett: Erschuetterungen im Schlaf-Fenster (Fallback: 22-06)
             const nightVibrationCount = todayEvents.filter(function(e) {
                 if (!e.isVibrationBed) return false;
