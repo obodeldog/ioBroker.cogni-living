@@ -619,14 +619,16 @@ class CogniLiving extends utils.Adapter {
             // Klassifikation in 5-Minuten-Slots anhand Vibrationssensor (Detection + Staerke)
             // Stages: 'deep' | 'light' | 'rem' | 'wake'
             var sleepScore = null;
+            var sleepScoreRaw = null;
             var sleepStages = [];
             if (_sleepFrozen) {
                 // Eingeschlafene Nacht: Schlafdaten aus bestehendem Snapshot übernehmen (nicht überschreiben)
                 sleepWindowCalc.start = _existingSnap.sleepWindowStart;
                 sleepWindowCalc.end   = _existingSnap.sleepWindowEnd;
                 sleepWindowOC7 = { start: _existingSnap.sleepWindowStart, end: _existingSnap.sleepWindowEnd };
-                sleepStages = _existingSnap.sleepStages || [];
-                sleepScore  = _existingSnap.sleepScore  !== undefined ? _existingSnap.sleepScore : null;
+                sleepStages    = _existingSnap.sleepStages    || [];
+                sleepScore     = _existingSnap.sleepScore     !== undefined ? _existingSnap.sleepScore     : null;
+                sleepScoreRaw  = _existingSnap.sleepScoreRaw  !== undefined ? _existingSnap.sleepScoreRaw  : null;
                 this.log.info('[History] Sleep FROZEN: ' + new Date(_existingSnap.sleepWindowStart).toLocaleTimeString() + '-' + new Date(_existingSnap.sleepWindowEnd).toLocaleTimeString() + ' bedPresMin=' + _existingSnap.bedPresenceMinutes);
             } else if (sleepWindowOC7.start && sleepWindowOC7.end) {
                 var SLOT_MS = 5 * 60 * 1000;
@@ -687,11 +689,11 @@ class CogniLiving extends utils.Adapter {
                     var lp = lightSec / totalSecSleep;
                     var wp = wakeSec  / totalSecSleep;
                     var rawScore = dp * 200 + rp * 150 + lp * 80 - wp * 250;
-                    rawScore = Math.max(0, Math.min(100, rawScore));
-                    // Bonus: Schlafdauer 7-9h
+                    // Bonus: Schlafdauer 7-9h (vor Kappung, damit Rohwert den Bonus enthält)
                     var durH = (swEnd - swStart) / 3600000;
-                    if (durH >= 7 && durH <= 9) rawScore = Math.min(100, rawScore + 5);
-                    sleepScore = Math.round(rawScore);
+                    if (durH >= 7 && durH <= 9) rawScore += 5;
+                    sleepScoreRaw = Math.round(Math.max(0, rawScore));  // ungekappter Rohwert (für Wochenansicht)
+                    sleepScore    = Math.round(Math.max(0, Math.min(100, rawScore)));
                     this.log.debug('[SleepScore] Score=' + sleepScore + ' deep=' + Math.round(dp*100) + '% rem=' + Math.round(rp*100) + '% light=' + Math.round(lp*100) + '% wake=' + Math.round(wp*100) + '%');
                 }
             }
@@ -1011,6 +1013,7 @@ class CogniLiving extends utils.Adapter {
                 nightVibrationStrengthMax: nightVibrationStrengthMax,
                 personData: personData,
                 sleepScore: sleepScore,
+                sleepScoreRaw: sleepScoreRaw,
                 sleepStages: sleepStages,
                 garminScore: garminScore,
                 garminDeepMin: garminDeepSec ? Math.round(garminDeepSec/60) : null,

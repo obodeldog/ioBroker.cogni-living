@@ -1231,8 +1231,11 @@ export default function HealthTab(props: any) {
                                 <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>
                                     {wakeConfirmed ? '✓' : '⟳'} {fmtTime(swEnd)}
                                 </div>
-                                <div style={{fontSize:'0.6rem', color: wakeConfirmed ? (isDark?'#555':'#bbb') : '#ffab40', marginTop:'1px'}}>
-                                    {wakeConfirmed ? 'bestätigt' : 'vorläufig'}
+                                <div style={{fontSize:'0.6rem', color: wakeConfirmed ? (isDark?'#555':'#bbb') : '#ffab40', marginTop:'1px'}}
+                                    title={wakeConfirmed
+                                        ? `Bestätigt via ${srcDisplay.label}: Bett ≥1h leer nach 10:00 Uhr`
+                                        : `Vorläufig via ${srcDisplay.label}: Wird bestätigt wenn nach 10:00 Uhr ≥1h kein Bett belegt`}>
+                                    {srcDisplay.icon} {wakeConfirmed ? 'bestätigt' : 'vorläufig'}
                                 </div>
                             </div>
                         </div>
