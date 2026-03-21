@@ -257,10 +257,15 @@ const Help: React.FC<HelpProps> = ({ themeType }) => {
                             Die OC-7-Kachel berechnet aus <strong>Vibrationssensor-Daten</strong> geschätzte Schlafphasen und einen Gesundheitsscore. Optional wird ein FP2-Präsenzradar für präzise Zeiten genutzt.
                         </Typography>
                         <Typography variant="body2" paragraph>
-                            <strong>Sensor-Anforderungen (Graceful Degradation):</strong><br/>
-                            • <strong>Voll aktiv:</strong> FP2-Radar (Bett) + Vibrationssensor → Zeiten + Phasen + Events<br/>
-                            • <strong>Eingeschränkt:</strong> Nur Vibrationssensor → Phasen mit festem 20–09 Uhr Fenster<br/>
-                            • <strong>Minimal:</strong> Kein Sensor → Kachel zeigt Hinweis zur Konfiguration
+                            <strong>Sensor-Anforderungen (Graceful Degradation — beste bis schlechteste Kombination):</strong><br/>
+                            • <strong>📡 Optimal:</strong> FP2-Radar (Bett) + Vibrationssensor → präzise Einschlaf-/Aufwachzeit, Schlafphasen, Außerhalb-Events<br/>
+                            • <strong>🚶 Gut:</strong> Bewegungsmelder Schlafzimmer (Funktion: Bett/Schlafzimmer) + Vibrationssensor → Einschlaf-/Aufwachzeit aus letzter/erster Bewegung, Schlafphasen<br/>
+                            • <strong>📳 Eingeschränkt:</strong> Nur Vibrationssensor → Schlafphasen mit festem 20–09 Uhr Fenster, keine echten Zeiten<br/>
+                            • <strong>⏰ Minimal:</strong> Kein Raumsensor → festes 20–09 Uhr Fenster (Schätzung), nur Phasen wenn Vibration vorhanden<br/>
+                            • <strong>❌ Kein Sensor:</strong> Kachel zeigt Konfigurationshinweis
+                        </Typography>
+                        <Typography variant="body2" paragraph>
+                            <strong>Wichtig für Bewegungsmelder-Nutzer:</strong> Den Sensor in der Sensor-Liste auf Funktion <strong>"Bett / Schlafzimmer"</strong> (lila) setzen — nur dann wird er für die Schlafanalyse genutzt. Ein Bewegungsmelder auf "Allgemein" wird ignoriert.
                         </Typography>
                         <Box sx={{ bgcolor: boxBg, p: 1.5, borderRadius: 1, mb: 2 }}>
                             <Typography variant="subtitle2" fontWeight="bold">AURA-Sleepscore Formel:</Typography>
@@ -276,7 +281,8 @@ const Help: React.FC<HelpProps> = ({ themeType }) => {
                         <Typography variant="body2">
                             <strong>Sensor-Indikator unter Einschlafen/Aufwachen:</strong><br/>
                             • 📡 FP2-Sensor: Zeiten aus FP2-Präsenzradar (genaueste Methode)<br/>
-                            • ⏰ Schätzung: Festes 20:00–09:00 Fenster (kein Raumsensor)<br/><br/>
+                            • 🚶 Bewegungsmelder: Zeiten aus Schlafzimmer-Bewegungsmelder (letzte/erste Bewegung)<br/>
+                            • ⏰ Schätzung: Festes 20:00–09:00 Fenster (kein Raumsensor konfiguriert)<br/><br/>
                             <strong>Aufwachzeit: ⟳ vorläufig / ✓ bestätigt:</strong><br/>
                             Wird bestätigt wenn nach 10:00 Uhr das Bett ≥1h leer war. Bis dahin als vorläufig markiert, da ein Zurücklegen noch möglich ist.<br/><br/>
                             <strong>Balkenfarben:</strong> Dunkelblau = Tief, Hellblau = Leicht, Lila = REM, Gelb = Wach im Bett, Bernstein = Bad-Besuch, Orange-Rot = Außerhalb<br/><br/>

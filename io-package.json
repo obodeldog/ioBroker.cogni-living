@@ -1,8 +1,9 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.52",
+    "version": "0.33.53",
     "news": {
+      "0.33.53": "OC-7: Bewegungsmelder-Fallback (isBedroomMotion, type=motion+sensorFunction=bed) fuer Einschlaf-/Aufwachzeit; Fallback-Kette FP2→Bewegung→Fixfenster; HANDBUCH.md Help.tsx-Texte",
       "0.33.52": "OC-7: sleepScoreRaw (ungekappter Wert), Sensor-Indikator bei Aufwachzeit, OC-7-Abschnitt in Help.tsx, HANDBUCH.md Tooltips-Inventar",
       "0.33.51": "OC-7: sleepWindowSource+outsideBedEvents+wakeConfirmed im Snapshot; AURA-Sleepscore; Sensor-Indikator; vorlaefig/final Aufwachzeit; Schlafbalken Farben+Marker; HANDBUCH.md",
       "0.33.50": "FIX: OC-7 Sleep-Freeze - echte Nacht (>=3h, Aufwachzeit <14Uhr) wird nicht mehr ueberschrieben; Wake-Time-Bug gefixt (|| -> &&)",
