@@ -600,6 +600,8 @@ class CogniLiving extends utils.Adapter {
                 sleepWindowCalc.end = null;
                 this.log.debug('[History] OC-4 Guard: bedPresenceMinutes=' + bedPresenceMinutes + 'min < 180, FP2-sleepWindow verworfen');
             }
+            // Ursprüngliche FP2-Fenstererkennung merken (vor Freeze-Überschreibung) für sleepWindowSource
+            var _origFP2Window = sleepWindowCalc.start !== null;
 
             // Schlaffenster fuer OC-7 (Sleep Score): FP2 wenn vorhanden, sonst festes 20:00-09:00 Fenster.
             // Betrifft NICHT sleepWindowStart/End im Snapshot -- die Schlafzeit-Kachel bleibt FP2-only.
@@ -691,6 +693,46 @@ class CogniLiving extends utils.Adapter {
                     if (durH >= 7 && durH <= 9) rawScore = Math.min(100, rawScore + 5);
                     sleepScore = Math.round(rawScore);
                     this.log.debug('[SleepScore] Score=' + sleepScore + ' deep=' + Math.round(dp*100) + '% rem=' + Math.round(rp*100) + '% light=' + Math.round(lp*100) + '% wake=' + Math.round(wp*100) + '%');
+                }
+            }
+
+            // Schlaf-Fenster-Quelle (fuer OC-7 Sensor-Indikator im Frontend)
+            var sleepWindowSource = _sleepFrozen
+                ? (_existingSnap.sleepWindowSource || (_origFP2Window ? 'fp2' : 'fixed'))
+                : (_origFP2Window ? 'fp2' : 'fixed');
+
+            // Außerhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
+            var outsideBedEvents = [];
+            if (_sleepFrozen && _existingSnap) {
+                outsideBedEvents = _existingSnap.outsideBedEvents || [];
+            } else if (sleepWindowOC7.start && sleepWindowOC7.end) {
+                var _fp2Sorted = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })
+                    .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+                var _bathEvts = sleepSearchEvents.filter(function(e) {
+                    return e.isBathroomSensor && (e.timestamp||0) >= sleepWindowOC7.start && (e.timestamp||0) <= sleepWindowOC7.end;
+                });
+                var _bedWasEmpty = false; var _emptyTs = null;
+                _fp2Sorted.forEach(function(_fe) {
+                    var _ts = _fe.timestamp || 0;
+                    if (_ts < sleepWindowOC7.start || _ts > sleepWindowOC7.end) return;
+                    var _active = isActiveValue(_fe.value) || toPersonCount(_fe.value) > 0;
+                    if (!_active && !_bedWasEmpty) { _bedWasEmpty = true; _emptyTs = _ts; }
+                    else if (_active && _bedWasEmpty && _emptyTs) {
+                        _bedWasEmpty = false;
+                        var _dur = Math.round((_ts - _emptyTs) / 60000);
+                        if (_dur >= 1) {
+                            var _hasBath = _bathEvts.some(function(b) { return (b.timestamp||0) >= _emptyTs && (b.timestamp||0) <= _ts; });
+                            outsideBedEvents.push({ start: _emptyTs, end: _ts, duration: _dur, type: _hasBath ? 'bathroom' : 'outside' });
+                        }
+                        _emptyTs = null;
+                    }
+                });
+                if (_bedWasEmpty && _emptyTs) {
+                    var _lastDur = Math.round((sleepWindowOC7.end - _emptyTs) / 60000);
+                    if (_lastDur >= 1) {
+                        var _lHasBath = _bathEvts.some(function(b) { return (b.timestamp||0) >= _emptyTs; });
+                        outsideBedEvents.push({ start: _emptyTs, end: sleepWindowOC7.end, duration: _lastDur, type: _lHasBath ? 'bathroom' : 'outside' });
+                    }
                 }
             }
 
@@ -973,7 +1015,10 @@ class CogniLiving extends utils.Adapter {
                 garminScore: garminScore,
                 garminDeepMin: garminDeepSec ? Math.round(garminDeepSec/60) : null,
                 garminLightMin: garminLightSec ? Math.round(garminLightSec/60) : null,
-                garminRemMin: garminRemSec ? Math.round(garminRemSec/60) : null
+                garminRemMin: garminRemSec ? Math.round(garminRemSec/60) : null,
+                sleepWindowSource: sleepWindowSource,
+                outsideBedEvents: outsideBedEvents,
+                wakeConfirmed: !!(sleepWindowOC7.end && new Date().getHours() >= 10 && (Date.now() - (sleepWindowOC7.end || 0)) >= 3600000)
             };
 
             const dataDir = utils.getAbsoluteDefaultDataDir();

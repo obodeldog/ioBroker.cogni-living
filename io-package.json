@@ -1,8 +1,9 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.50",
+    "version": "0.33.51",
     "news": {
+      "0.33.51": "OC-7: sleepWindowSource+outsideBedEvents+wakeConfirmed im Snapshot; AURA-Sleepscore; Sensor-Indikator; vorlaefig/final Aufwachzeit; Schlafbalken Farben+Marker; HANDBUCH.md",
       "0.33.50": "FIX: OC-7 Sleep-Freeze - echte Nacht (>=3h, Aufwachzeit <14Uhr) wird nicht mehr ueberschrieben; Wake-Time-Bug gefixt (|| -> &&)",
       "0.33.49": "FIX: OC-7 Zeitbalken mit echter Zeitachse (Uhrzeiten); sleepWindowOC7Start/End im Snapshot; Tooltips mit Uhrzeit pro Stage-Block",
       "0.33.48": "FIX: OC-7 Schlafanalyse-Kachel zeigt jetzt Daten im Live-Modus (HEUTE) - auraSleepData als React-State; fetchData laedt getHistoryData fuer heute",

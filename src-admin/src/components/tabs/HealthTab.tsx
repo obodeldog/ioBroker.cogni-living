@@ -221,7 +221,7 @@ export default function HealthTab(props: any) {
                     if (d.roomHistory && d.roomHistory.history) setRoomHistory(d.roomHistory.history);
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false });
                     setGeminiNight(d.geminiNight || "Keine Daten");
                     setGeminiNightTs(d.geminiNightTs || null);
                     setGeminiDay(d.geminiDay || "Keine Daten");
@@ -695,7 +695,7 @@ export default function HealthTab(props: any) {
             .then((histRes: any) => {
                 if (histRes && histRes.success && histRes.data) {
                     const d = histRes.data;
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false });
                 }
             });
     }, [namespace, socket, adapterName, instance, TRAINING_TARGET, isLive, viewDate]);
@@ -1110,20 +1110,34 @@ export default function HealthTab(props: any) {
         const garminRemMin: number | null = sd?.garminRemMin ?? null;
         const swStart: number | null = sd?.sleepWindowStart ?? null;
         const swEnd: number | null = sd?.sleepWindowEnd ?? null;
+        const sleepWindowSource: string = sd?.sleepWindowSource ?? 'fixed';
+        const outsideBedEvts: {start:number,end:number,duration:number,type:string}[] = sd?.outsideBedEvents ?? [];
+        const wakeConfirmed: boolean = sd?.wakeConfirmed ?? false;
 
-        // Drei Zustände: Daten vorhanden | Schlaffenster erkannt aber kein Vib-Sensor | Noch keine Nacht
         const hasVibSensor = stages.length > 0;
-        const hasSleepWindow = swStart !== null;  // Schlaffenster erkannt (FP2), aber Vib-Sensor fehlt ggf.
+        const hasSleepWindow = swStart !== null;
 
+        // Farben: best → schlimmste (Tief=dunkelblau, Leicht=hellblau, REM=lila, Wach=gelb, Bad=bernstein, Außerhalb=orange)
         const stageColor: Record<string, string> = {
-            deep:  '#1565c0',
-            light: '#42a5f5',
-            rem:   '#ab47bc',
-            wake:  '#ef5350',
+            deep:     '#1565c0',
+            light:    '#42a5f5',
+            rem:      '#ab47bc',
+            wake:     '#ffd54f',  // Gelb statt Rot — Wach im Bett ist milde Störung
+            bathroom: '#ffb300',  // Bernstein — Bad-Besuch
+            outside:  '#ff5722',  // Orange-Rot — Außerhalb Schlafzimmer
         };
         const stageLabel: Record<string, string> = {
-            deep: 'Tief', light: 'Leicht', rem: 'REM', wake: 'Wach'
+            deep: 'Tief', light: 'Leicht', rem: 'REM (est.)', wake: 'Wach', bathroom: 'Bad-Besuch', outside: 'Außerhalb'
         };
+
+        // Sensor-Indikator für Einschlaf-/Aufwachzeit
+        const srcInfo: Record<string, {icon:string, label:string}> = {
+            fp2:      { icon: '📡', label: 'FP2-Sensor' },
+            motion:   { icon: '🚶', label: 'Bewegungsmelder' },
+            vibration:{ icon: '📳', label: 'Vibrationssensor' },
+            fixed:    { icon: '⏰', label: 'Schätzung (20–09 Uhr)' },
+        };
+        const srcDisplay = srcInfo[sleepWindowSource] ?? srcInfo.fixed;
 
         const scoreColor = score === null ? '#888'
             : score >= 80 ? '#00e676'
@@ -1136,16 +1150,45 @@ export default function HealthTab(props: any) {
             return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
         };
 
-        const totalSlots = stages.length;
         const deepCount  = stages.filter(s => s.s === 'deep').length;
         const lightCount = stages.filter(s => s.s === 'light').length;
         const remCount   = stages.filter(s => s.s === 'rem').length;
         const wakeCount  = stages.filter(s => s.s === 'wake').length;
-        const toH = (n: number) => { const m = n * 5; return (m >= 60 ? Math.floor(m/60) + 'h ' : '') + (m%60) + 'min'; };
+        // Außerhalb-Zeit aus outsideBedEvts
+        const outsideTotalMin = outsideBedEvts.reduce((acc, e) => acc + e.duration, 0);
+        const bathMin = outsideBedEvts.filter(e => e.type === 'bathroom').reduce((acc, e) => acc + e.duration, 0);
+        const toH = (n: number, isMin?: boolean) => {
+            const m = isMin ? n : n * 5;
+            return (m >= 60 ? Math.floor(m/60) + 'h ' : '') + (m % 60) + 'min';
+        };
+
+        // Helper: Farbe für Stage-Slot (mit Außerhalb-Overlay)
+        const slotColor = (slot: {t:number,s:string}, absMs: number|null) => {
+            if (absMs && outsideBedEvts.length > 0) {
+                const evt = outsideBedEvts.find(e => absMs >= e.start && absMs < e.end);
+                if (evt) return stageColor[evt.type] ?? stageColor.outside;
+            }
+            return stageColor[slot.s] ?? '#555';
+        };
+        const slotTip = (slot: {t:number,s:string}, absMs: number|null) => {
+            const timeStr = absMs ? fmtTime(absMs) + ' — ' : '';
+            if (absMs && outsideBedEvts.length > 0) {
+                const evt = outsideBedEvts.find(e => absMs >= e.start && absMs < e.end);
+                if (evt) return timeStr + stageLabel[evt.type] + ' (' + evt.duration + ' min)';
+            }
+            return timeStr + (stageLabel[slot.s] || slot.s);
+        };
 
         return (
             <TerminalBox title="SCHLAFANALYSE (OC-7)" themeType={themeType}
-                helpText="Geschätzte Schlafstadien aus Vibrationssensor (Bett). Kein Medizinprodukt — für klinische Diagnose Arzt hinzuziehen.">
+                helpText={
+                    'AURA-Sleepscore: Tief×200 + REM×150 + Leicht×80 − Wach×250 (max. 100). Bonus +5 bei 7–9h Schlafdauer.\n' +
+                    'Quellen: Diekelmann & Born 2010 (Tiefschlaf), Walker 2017 / Stickgold 2005 (REM), AASM Guidelines (Leichtschlaf), Buysse et al. 1989 PSQI (WASO-Abzug).\n' +
+                    'Einschlafzeit (' + srcDisplay.icon + '): Letzte FP2-Bettbelegung ≥10 Min zwischen 18–03 Uhr.\n' +
+                    'Aufwachzeit (' + srcDisplay.icon + '): Erste Bettleere ≥15 Min nach 04 Uhr (⟳ vorläufig bis 10:00 Uhr + 1h Bett leer).\n' +
+                    'Balkenfarben: Dunkelblau=Tief, Hellblau=Leicht, Lila=REM, Gelb=Wach-im-Bett, Bernstein=Bad-Besuch, Orange=Außerhalb.\n' +
+                    'Kein Medizinprodukt — für klinische Diagnose Arzt hinzuziehen.'
+                }>
                 {!hasVibSensor ? (
                     <div style={{color:'#888', textAlign:'center', padding:'20px', fontSize:'0.8rem'}}>
                         <div style={{fontSize:'1.5rem', marginBottom:'8px'}}>&#128716;</div>
@@ -1154,7 +1197,7 @@ export default function HealthTab(props: any) {
                             <span style={{opacity:0.7}}>Sensor am Bett konfigurieren (Typ: Vibration, Funktion: Bett-Sensor).</span></>
                         ) : (
                             <><strong style={{color: isDark?'#ccc':'#555'}}>Heute Nacht werden die ersten Daten gesammelt.</strong><br/>
-                            <span style={{opacity:0.7}}>Der Sleep Score erscheint morgen früh nach der ersten analysierten Nacht.</span></>
+                            <span style={{opacity:0.7}}>Der AURA-Sleepscore erscheint morgen früh nach der ersten analysierten Nacht.</span></>
                         )}
                     </div>
                 ) : (
@@ -1164,6 +1207,9 @@ export default function HealthTab(props: any) {
                             <div>
                                 <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Einschlafen</div>
                                 <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>{fmtTime(swStart)}</div>
+                                <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}} title={'Erkennungsmethode: ' + srcDisplay.label}>
+                                    {srcDisplay.icon} {srcDisplay.label}
+                                </div>
                             </div>
                             <div style={{textAlign:'center'}}>
                                 <div style={{
@@ -1171,7 +1217,7 @@ export default function HealthTab(props: any) {
                                     border: `2px solid ${scoreColor}`, borderRadius:'8px',
                                     padding:'4px 14px', lineHeight:'1.1'
                                 }}>{score ?? '—'}</div>
-                                <div style={{fontSize:'0.65rem', color:'#888', marginTop:'2px'}}>AURA Score</div>
+                                <div style={{fontSize:'0.65rem', color:'#888', marginTop:'2px'}}>AURA-Sleepscore</div>
                                 {garminScore !== null && (
                                     <div style={{fontSize:'0.7rem', color:'#ab47bc', marginTop:'2px'}}>
                                         Garmin: {garminScore} <span style={{color: isDark?'#666':'#aaa'}}>
@@ -1182,23 +1228,50 @@ export default function HealthTab(props: any) {
                             </div>
                             <div style={{textAlign:'right'}}>
                                 <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Aufwachen</div>
-                                <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>{fmtTime(swEnd)}</div>
+                                <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>
+                                    {wakeConfirmed ? '✓' : '⟳'} {fmtTime(swEnd)}
+                                </div>
+                                <div style={{fontSize:'0.6rem', color: wakeConfirmed ? (isDark?'#555':'#bbb') : '#ffab40', marginTop:'1px'}}>
+                                    {wakeConfirmed ? 'bestätigt' : 'vorläufig'}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Schlafphasen-Zeitbalken mit Zeitachse */}
+                        {/* Schlafphasen-Zeitbalken mit Dreiecks-Markern + Zeitachse */}
                         <div style={{marginBottom:'10px'}}>
-                            {/* Der Balken — jeder Block = 5 min → flex:1 ist zeitproportional */}
+                            {/* Dreiecks-Marker über dem Balken */}
+                            {swStart && swEnd && outsideBedEvts.length > 0 && (
+                                <div style={{position:'relative', height:'14px'}}>
+                                    {outsideBedEvts.map((evt, i) => {
+                                        const totalMs = swEnd - swStart;
+                                        const pct = ((evt.start - swStart) / totalMs) * 100;
+                                        const isBath = evt.type === 'bathroom';
+                                        const isLong = evt.duration >= 20;
+                                        if (!isBath && !isLong) return null;
+                                        return (
+                                            <span key={i} style={{
+                                                position:'absolute', left: pct + '%',
+                                                color: isBath ? '#ffb300' : '#ff5722',
+                                                fontSize:'10px', transform:'translateX(-50%)',
+                                                cursor:'default', lineHeight:'14px'
+                                            }} title={isBath ? `Bad-Besuch: ${evt.duration} min` : `Abwesenheit: ${evt.duration} min`}>
+                                                ▼
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Der Balken — jeder Block = 5 min (zeitproportional), Außerhalb-Events als Farboverlay */}
                             <div style={{display:'flex', width:'100%', height:'28px', borderRadius:'4px', overflow:'hidden'}}>
                                 {stages.map((slot, i) => {
                                     const absMs = swStart ? swStart + slot.t * 60000 : null;
-                                    const tipTime = absMs ? fmtTime(absMs) + ' — ' : '';
                                     return (
                                         <div key={i} style={{
                                             flex: 1,
-                                            backgroundColor: stageColor[slot.s] || '#555',
+                                            backgroundColor: slotColor(slot, absMs),
                                             minWidth: 0
-                                        }} title={tipTime + (stageLabel[slot.s] || slot.s)} />
+                                        }} title={slotTip(slot, absMs)} />
                                     );
                                 })}
                             </div>
@@ -1206,16 +1279,15 @@ export default function HealthTab(props: any) {
                             {/* Zeitachse: Start, volle Stunden, Ende */}
                             {swStart && swEnd && (
                                 <div style={{position:'relative', height:'14px', marginTop:'3px'}}>
-                                    <span style={{position:'absolute', left:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa', transform:'translateX(0)'}}>{fmtTime(swStart)}</span>
+                                    <span style={{position:'absolute', left:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa'}}>{fmtTime(swStart)}</span>
                                     {(() => {
                                         const totalMs = swEnd - swStart;
                                         const marks: React.ReactNode[] = [];
-                                        // Erste volle Stunde nach swStart
                                         const first = new Date(swStart);
                                         first.setMinutes(0, 0, 0);
                                         first.setHours(first.getHours() + 1);
                                         let t = first.getTime();
-                                        while (t < swEnd - 900000) { // mind. 15 min vor Ende
+                                        while (t < swEnd - 900000) {
                                             const pct = ((t - swStart) / totalMs) * 100;
                                             marks.push(
                                                 <span key={t} style={{position:'absolute', left: pct + '%', fontSize:'0.55rem', color: isDark?'#555':'#bbb', transform:'translateX(-50%)'}}>
@@ -1226,27 +1298,41 @@ export default function HealthTab(props: any) {
                                         }
                                         return marks;
                                     })()}
-                                    <span style={{position:'absolute', right:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa', transform:'translateX(0)'}}>{fmtTime(swEnd)}</span>
+                                    <span style={{position:'absolute', right:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa'}}>{fmtTime(swEnd)}</span>
                                 </div>
                             )}
                         </div>
 
-                        {/* Legende + Zeiten */}
-                        <div style={{display:'flex', gap:'12px', flexWrap:'wrap', fontSize:'0.7rem', marginBottom:'8px'}}>
-                            {[['deep','Tief'],['light','Leicht'],['rem','REM (est.)'],['wake','Wach']].map(([k,l]) => (
+                        {/* Legende */}
+                        <div style={{display:'flex', gap:'10px', flexWrap:'wrap', fontSize:'0.7rem', marginBottom:'8px'}}>
+                            {([['deep','Tief'],['light','Leicht'],['rem','REM (est.)'],['wake','Wach']] as [string,string][]).map(([k,l]) => (
                                 <span key={k}><span style={{color: stageColor[k]}}>■</span> {l}</span>
                             ))}
+                            {outsideBedEvts.some(e => e.type === 'bathroom') && (
+                                <span><span style={{color: stageColor.bathroom}}>■</span> Bad</span>
+                            )}
+                            {outsideBedEvts.some(e => e.type === 'outside') && (
+                                <span><span style={{color: stageColor.outside}}>■</span> Außerhalb</span>
+                            )}
                         </div>
 
                         {/* Stage-Dauer Zeile */}
                         <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'4px', textAlign:'center', marginBottom:'10px'}}>
-                            {[['deep','Tief',deepCount,'#1565c0'],['light','Leicht',lightCount,'#42a5f5'],['rem','REM',remCount,'#ab47bc'],['wake','Wach',wakeCount,'#ef5350']].map(([k,l,n,c]) => (
-                                <div key={k as string} style={{borderRadius:'4px', padding:'4px', background: isDark?'#1a1a1a':'#f5f5f5'}}>
-                                    <div style={{color: c as string, fontWeight:'bold', fontSize:'0.8rem'}}>{toH(n as number)}</div>
-                                    <div style={{color:'#888', fontSize:'0.65rem'}}>{l as string}</div>
+                            {([['deep','Tief',deepCount,'#1565c0'],['light','Leicht',lightCount,'#42a5f5'],['rem','REM',remCount,'#ab47bc'],['wake','Wach',wakeCount,'#ffd54f']] as [string,string,number,string][]).map(([k,l,n,c]) => (
+                                <div key={k} style={{borderRadius:'4px', padding:'4px', background: isDark?'#1a1a1a':'#f5f5f5'}}>
+                                    <div style={{color: c, fontWeight:'bold', fontSize:'0.8rem'}}>{toH(n)}</div>
+                                    <div style={{color:'#888', fontSize:'0.65rem'}}>{l}</div>
                                 </div>
                             ))}
                         </div>
+
+                        {/* Außerhalb-Zeile (wenn vorhanden) */}
+                        {outsideTotalMin > 0 && (
+                            <div style={{display:'flex', gap:'8px', fontSize:'0.7rem', marginBottom:'8px', color: isDark?'#aaa':'#666'}}>
+                                {bathMin > 0 && <span><span style={{color: stageColor.bathroom}}>■</span> Bad: {toH(bathMin, true)}</span>}
+                                {(outsideTotalMin - bathMin) > 0 && <span><span style={{color: stageColor.outside}}>■</span> Außerhalb: {toH(outsideTotalMin - bathMin, true)}</span>}
+                            </div>
+                        )}
 
                         {/* Garmin-Vergleich wenn vorhanden */}
                         {(garminDeepMin !== null || garminLightMin !== null || garminRemMin !== null) && (
