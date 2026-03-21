@@ -180,6 +180,7 @@ class CogniLiving extends utils.Adapter {
                     isKitchenSensor:  !!(d.sensorFunction === 'kitchen'  || d.isKitchenSensor),
                     isFP2Bed:         !!(d.sensorFunction === 'bed'      && (d.type||'').toLowerCase() === 'presence_radar_bool'),
                     isVibrationBed:   !!(d.sensorFunction === 'bed'      && ['vibration_trigger','vibration_strength'].includes((d.type||'').toLowerCase())),
+                    isBedroomMotion:  !!(d.sensorFunction === 'bed'      && (d.type||'').toLowerCase() === 'motion'),
                 };
             });
             await this.setStateAsync('system.config.sensorList', { val: JSON.stringify(_sensorListData, null, 2), ack: true });
@@ -600,31 +601,70 @@ class CogniLiving extends utils.Adapter {
                 sleepWindowCalc.end = null;
                 this.log.debug('[History] OC-4 Guard: bedPresenceMinutes=' + bedPresenceMinutes + 'min < 180, FP2-sleepWindow verworfen');
             }
+            // Ursprüngliche FP2-Fenstererkennung merken (vor Freeze-Überschreibung) für sleepWindowSource
+            var _origFP2Window = sleepWindowCalc.start !== null;
 
-            // Schlaffenster fuer OC-7 (Sleep Score): FP2 wenn vorhanden, sonst festes 20:00-09:00 Fenster.
+            // Schlaffenster aus Schlafzimmer-Bewegungsmelder (Fallback wenn kein FP2-Bett-Sensor).
+            // Sensor-Konfiguration: type=motion + sensorFunction=bed → isBedroomMotion=true.
+            // Präzision: Einschlafzeit ≈ letzte Bewegung vor ≥45 Min Stille (18–03 Uhr).
+            //            Aufwachzeit ≈ erste Bewegung nach 04 Uhr + mind. 3h nach Einschlafzeit.
+            // Besser als Fixfenster, aber schlechter als FP2 (keine Tief-/Ruhephasen-Erkennung).
+            const sleepWindowMotion = (function() {
+                var motEvts = sleepSearchEvents
+                    .filter(function(e) { return e.isBedroomMotion && isActiveValue(e.value); })
+                    .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+                if (motEvts.length === 0) return { start: null, end: null };
+                // Einschlafzeit: letztes Motion-Event das von ≥45 Min Stille gefolgt wird, zwischen 18:00–03:00
+                var sleepStartTs = null;
+                for (var _msi = 0; _msi < motEvts.length; _msi++) {
+                    var _mse = motEvts[_msi];
+                    var _mhr = new Date(_mse.timestamp||0).getHours();
+                    if (!(_mhr >= 18 || _mhr < 3)) continue;
+                    var _nextMotTs = (_msi < motEvts.length - 1) ? (motEvts[_msi+1].timestamp||0) : Date.now();
+                    var _motGap = (_nextMotTs - (_mse.timestamp||0)) / 60000;
+                    if (_motGap >= 45) sleepStartTs = _mse.timestamp||0;  // letztes solches Event gewinnt
+                }
+                if (!sleepStartTs) return { start: null, end: null };
+                // Aufwachzeit: erste Bewegung nach 04:00 die mindestens 3h nach Einschlafzeit liegt
+                var wakeTs = null;
+                for (var _mwi = 0; _mwi < motEvts.length; _mwi++) {
+                    var _mwe = motEvts[_mwi];
+                    if ((_mwe.timestamp||0) <= sleepStartTs) continue;
+                    var _mwhr = new Date(_mwe.timestamp||0).getHours();
+                    var _sinceStart = ((_mwe.timestamp||0) - sleepStartTs) / 3600000;
+                    if ((_mwhr >= 4 && _mwhr <= 14) && _sinceStart >= 3) { wakeTs = _mwe.timestamp||0; break; }
+                }
+                return { start: sleepStartTs, end: wakeTs };
+            })();
+
+            // Schlaffenster fuer OC-7 (Sleep Score): FP2 → Bewegungsmelder → Fixfenster (Fallback-Kette).
             // Betrifft NICHT sleepWindowStart/End im Snapshot -- die Schlafzeit-Kachel bleibt FP2-only.
             var sleepWindowOC7 = sleepWindowCalc.start
                 ? sleepWindowCalc
-                : (function() {
-                    var _fs = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr
-                    var _fe = _fs + 13 * 3600000;                       // 09:00 naechster Morgen
-                    if (_fs > Date.now()) return { start: null, end: null };
-                    if (_fe > Date.now()) _fe = Date.now();
-                    return { start: _fs, end: _fe };
-                })();
+                : sleepWindowMotion.start
+                    ? sleepWindowMotion
+                    : (function() {
+                        var _fs = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr
+                        var _fe = _fs + 13 * 3600000;                       // 09:00 naechster Morgen
+                        if (_fs > Date.now()) return { start: null, end: null };
+                        if (_fe > Date.now()) _fe = Date.now();
+                        return { start: _fs, end: _fe };
+                    })();
 
             // --- OC-7: AURA SLEEP SCORE ---------------------------------------------------
             // Klassifikation in 5-Minuten-Slots anhand Vibrationssensor (Detection + Staerke)
             // Stages: 'deep' | 'light' | 'rem' | 'wake'
             var sleepScore = null;
+            var sleepScoreRaw = null;
             var sleepStages = [];
             if (_sleepFrozen) {
                 // Eingeschlafene Nacht: Schlafdaten aus bestehendem Snapshot übernehmen (nicht überschreiben)
                 sleepWindowCalc.start = _existingSnap.sleepWindowStart;
                 sleepWindowCalc.end   = _existingSnap.sleepWindowEnd;
                 sleepWindowOC7 = { start: _existingSnap.sleepWindowStart, end: _existingSnap.sleepWindowEnd };
-                sleepStages = _existingSnap.sleepStages || [];
-                sleepScore  = _existingSnap.sleepScore  !== undefined ? _existingSnap.sleepScore : null;
+                sleepStages    = _existingSnap.sleepStages    || [];
+                sleepScore     = _existingSnap.sleepScore     !== undefined ? _existingSnap.sleepScore     : null;
+                sleepScoreRaw  = _existingSnap.sleepScoreRaw  !== undefined ? _existingSnap.sleepScoreRaw  : null;
                 this.log.info('[History] Sleep FROZEN: ' + new Date(_existingSnap.sleepWindowStart).toLocaleTimeString() + '-' + new Date(_existingSnap.sleepWindowEnd).toLocaleTimeString() + ' bedPresMin=' + _existingSnap.bedPresenceMinutes);
             } else if (sleepWindowOC7.start && sleepWindowOC7.end) {
                 var SLOT_MS = 5 * 60 * 1000;
@@ -685,12 +725,54 @@ class CogniLiving extends utils.Adapter {
                     var lp = lightSec / totalSecSleep;
                     var wp = wakeSec  / totalSecSleep;
                     var rawScore = dp * 200 + rp * 150 + lp * 80 - wp * 250;
-                    rawScore = Math.max(0, Math.min(100, rawScore));
-                    // Bonus: Schlafdauer 7-9h
+                    // Bonus: Schlafdauer 7-9h (vor Kappung, damit Rohwert den Bonus enthält)
                     var durH = (swEnd - swStart) / 3600000;
-                    if (durH >= 7 && durH <= 9) rawScore = Math.min(100, rawScore + 5);
-                    sleepScore = Math.round(rawScore);
+                    if (durH >= 7 && durH <= 9) rawScore += 5;
+                    sleepScoreRaw = Math.round(Math.max(0, rawScore));  // ungekappter Rohwert (für Wochenansicht)
+                    sleepScore    = Math.round(Math.max(0, Math.min(100, rawScore)));
                     this.log.debug('[SleepScore] Score=' + sleepScore + ' deep=' + Math.round(dp*100) + '% rem=' + Math.round(rp*100) + '% light=' + Math.round(lp*100) + '% wake=' + Math.round(wp*100) + '%');
+                }
+            }
+
+            // Schlaf-Fenster-Quelle (fuer OC-7 Sensor-Indikator im Frontend)
+            // Reihenfolge: fp2 → motion (Bewegungsmelder) → fixed (Fixfenster)
+            var _motionAvail = sleepWindowMotion.start !== null;
+            var sleepWindowSource = _sleepFrozen
+                ? (_existingSnap.sleepWindowSource || (_origFP2Window ? 'fp2' : (_motionAvail ? 'motion' : 'fixed')))
+                : (_origFP2Window ? 'fp2' : (_motionAvail ? 'motion' : 'fixed'));
+
+            // Außerhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
+            var outsideBedEvents = [];
+            if (_sleepFrozen && _existingSnap) {
+                outsideBedEvents = _existingSnap.outsideBedEvents || [];
+            } else if (sleepWindowOC7.start && sleepWindowOC7.end) {
+                var _fp2Sorted = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })
+                    .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+                var _bathEvts = sleepSearchEvents.filter(function(e) {
+                    return e.isBathroomSensor && (e.timestamp||0) >= sleepWindowOC7.start && (e.timestamp||0) <= sleepWindowOC7.end;
+                });
+                var _bedWasEmpty = false; var _emptyTs = null;
+                _fp2Sorted.forEach(function(_fe) {
+                    var _ts = _fe.timestamp || 0;
+                    if (_ts < sleepWindowOC7.start || _ts > sleepWindowOC7.end) return;
+                    var _active = isActiveValue(_fe.value) || toPersonCount(_fe.value) > 0;
+                    if (!_active && !_bedWasEmpty) { _bedWasEmpty = true; _emptyTs = _ts; }
+                    else if (_active && _bedWasEmpty && _emptyTs) {
+                        _bedWasEmpty = false;
+                        var _dur = Math.round((_ts - _emptyTs) / 60000);
+                        if (_dur >= 1) {
+                            var _hasBath = _bathEvts.some(function(b) { return (b.timestamp||0) >= _emptyTs && (b.timestamp||0) <= _ts; });
+                            outsideBedEvents.push({ start: _emptyTs, end: _ts, duration: _dur, type: _hasBath ? 'bathroom' : 'outside' });
+                        }
+                        _emptyTs = null;
+                    }
+                });
+                if (_bedWasEmpty && _emptyTs) {
+                    var _lastDur = Math.round((sleepWindowOC7.end - _emptyTs) / 60000);
+                    if (_lastDur >= 1) {
+                        var _lHasBath = _bathEvts.some(function(b) { return (b.timestamp||0) >= _emptyTs; });
+                        outsideBedEvents.push({ start: _emptyTs, end: sleepWindowOC7.end, duration: _lastDur, type: _lHasBath ? 'bathroom' : 'outside' });
+                    }
                 }
             }
 
@@ -969,11 +1051,15 @@ class CogniLiving extends utils.Adapter {
                 nightVibrationStrengthMax: nightVibrationStrengthMax,
                 personData: personData,
                 sleepScore: sleepScore,
+                sleepScoreRaw: sleepScoreRaw,
                 sleepStages: sleepStages,
                 garminScore: garminScore,
                 garminDeepMin: garminDeepSec ? Math.round(garminDeepSec/60) : null,
                 garminLightMin: garminLightSec ? Math.round(garminLightSec/60) : null,
-                garminRemMin: garminRemSec ? Math.round(garminRemSec/60) : null
+                garminRemMin: garminRemSec ? Math.round(garminRemSec/60) : null,
+                sleepWindowSource: sleepWindowSource,
+                outsideBedEvents: outsideBedEvents,
+                wakeConfirmed: !!(sleepWindowOC7.end && new Date().getHours() >= 10 && (Date.now() - (sleepWindowOC7.end || 0)) >= 3600000)
             };
 
             const dataDir = utils.getAbsoluteDefaultDataDir();

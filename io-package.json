@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.53",
+    "version": "0.33.54",
     "news": {
       "0.33.53": "OC-7: Bewegungsmelder-Fallback (isBedroomMotion, type=motion+sensorFunction=bed) fuer Einschlaf-/Aufwachzeit; Fallback-Kette FP2→Bewegung→Fixfenster; HANDBUCH.md Help.tsx-Texte",
       "0.33.52": "OC-7: sleepScoreRaw (ungekappter Wert), Sensor-Indikator bei Aufwachzeit, OC-7-Abschnitt in Help.tsx, HANDBUCH.md Tooltips-Inventar",
