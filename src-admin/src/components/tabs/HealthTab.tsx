@@ -221,7 +221,7 @@ export default function HealthTab(props: any) {
                     if (d.roomHistory && d.roomHistory.history) setRoomHistory(d.roomHistory.history);
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false });
                     setGeminiNight(d.geminiNight || "Keine Daten");
                     setGeminiNightTs(d.geminiNightTs || null);
                     setGeminiDay(d.geminiDay || "Keine Daten");
@@ -695,7 +695,7 @@ export default function HealthTab(props: any) {
             .then((histRes: any) => {
                 if (histRes && histRes.success && histRes.data) {
                     const d = histRes.data;
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false });
                 }
             });
     }, [namespace, socket, adapterName, instance, TRAINING_TARGET, isLive, viewDate]);
@@ -1111,6 +1111,10 @@ export default function HealthTab(props: any) {
         const swStart: number | null = sd?.sleepWindowStart ?? null;
         const swEnd: number | null = sd?.sleepWindowEnd ?? null;
         const sleepWindowSource: string = sd?.sleepWindowSource ?? 'fixed';
+        const wakeSource: string = sd?.wakeSource ?? sleepWindowSource;
+        const wakeConf: string = sd?.wakeConf ?? 'none';
+        const isNap: boolean = sd?.isNap ?? false;
+        const unusuallyLongSleep: boolean = sd?.unusuallyLongSleep ?? false;
         const outsideBedEvts: {start:number,end:number,duration:number,type:string}[] = sd?.outsideBedEvents ?? [];
         const wakeConfirmed: boolean = sd?.wakeConfirmed ?? false;
 
@@ -1132,12 +1136,16 @@ export default function HealthTab(props: any) {
 
         // Sensor-Indikator für Einschlaf-/Aufwachzeit
         const srcInfo: Record<string, {icon:string, label:string}> = {
-            fp2:      { icon: '📡', label: 'FP2-Sensor' },
-            motion:   { icon: '🚶', label: 'Bewegungsmelder' },
-            vibration:{ icon: '📳', label: 'Vibrationssensor' },
-            fixed:    { icon: '⏰', label: 'Schätzung (20–09 Uhr)' },
+            garmin:    { icon: '⌚', label: 'Garmin-Uhr' },
+            fp2:       { icon: '📡', label: 'FP2-Sensor' },
+            fp2_other: { icon: '📡', label: 'FP2 + Raum best.' },
+            other:     { icon: '🚶', label: 'Anderer Raum' },
+            motion:    { icon: '🚶', label: 'Bewegungsmelder' },
+            vibration: { icon: '📳', label: 'Vibrationssensor' },
+            fixed:     { icon: '⏰', label: 'Schätzung (20–09 Uhr)' },
         };
-        const srcDisplay = srcInfo[sleepWindowSource] ?? srcInfo.fixed;
+        const srcDisplay  = srcInfo[sleepWindowSource] ?? srcInfo.fixed;
+        const wakeDisplay = srcInfo[wakeSource]        ?? srcInfo.fixed;
 
         const scoreColor = score === null ? '#888'
             : score >= 80 ? '#00e676'
@@ -1202,6 +1210,20 @@ export default function HealthTab(props: any) {
                     </div>
                 ) : (
                     <div>
+                        {/* Datum der Nacht + Hinweise */}
+                        {swStart && (
+                            <div style={{fontSize:'0.65rem', color: isDark?'#666':'#aaa', marginBottom:'6px', textAlign:'center'}}>
+                                {(() => {
+                                    const d1 = new Date(swStart);
+                                    const d2 = swEnd ? new Date(swEnd) : null;
+                                    const fmt = (d: Date) => d.getDate() + '.' + (d.getMonth()+1) + '.' + d.getFullYear();
+                                    if (d2 && d1.getDate() !== d2.getDate()) return `Nacht vom ${fmt(d1)} auf ${fmt(d2)}`;
+                                    return `Nacht ${fmt(d1)}`;
+                                })()}
+                                {isNap && <span style={{marginLeft:'6px', color:'#ffab40'}}>&#9788; Nickerchen</span>}
+                                {unusuallyLongSleep && <span style={{marginLeft:'6px', color:'#ff7043'}}>⚠ Ungewöhnlich lange Liegezeit</span>}
+                            </div>
+                        )}
                         {/* Header: Zeiten + Score-Badge */}
                         <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'10px'}}>
                             <div>
@@ -1233,9 +1255,9 @@ export default function HealthTab(props: any) {
                                 </div>
                                 <div style={{fontSize:'0.6rem', color: wakeConfirmed ? (isDark?'#555':'#bbb') : '#ffab40', marginTop:'1px'}}
                                     title={wakeConfirmed
-                                        ? `Bestätigt via ${srcDisplay.label}: Bett ≥1h leer nach 10:00 Uhr`
-                                        : `Vorläufig via ${srcDisplay.label}: Wird bestätigt wenn nach 10:00 Uhr ≥1h kein Bett belegt`}>
-                                    {srcDisplay.icon} {wakeConfirmed ? 'bestätigt' : 'vorläufig'}
+                                        ? `Bestätigt via ${wakeDisplay.label}: Bett ≥1h leer nach 10:00 Uhr`
+                                        : `Vorläufig via ${wakeDisplay.label}: Wird bestätigt wenn nach 10:00 Uhr ≥1h kein Bett belegt`}>
+                                    {wakeDisplay.icon} {wakeConfirmed ? 'bestätigt' : 'vorläufig'}
                                 </div>
                             </div>
                         </div>
