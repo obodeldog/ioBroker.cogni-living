@@ -503,10 +503,6 @@ class CogniLiving extends utils.Adapter {
                 _existingSnap.sleepWindowEnd &&
                 (_existingSnap.bedPresenceMinutes || 0) >= 180 &&
                 new Date(_existingSnap.sleepWindowEnd).getHours() < 14);
-            // Stages separat einfrieren: nur wenn Snapshot tatsächlich Stages enthält.
-            // Waren Stages leer (z.B. Sensor-Ausfall) → Neuberechnung bei nächstem Lauf.
-            const _stageFrozen = _sleepFrozen &&
-                Array.isArray(_existingSnap.sleepStages) && _existingSnap.sleepStages.length > 0;
 
             // Schlaf-relevante Events: ab 18:00 Uhr des Vortages (Nacht spannt 2 Kalendertage!).
             // Bsp: Einschlafen 23:00 Uhr = gestriger Tag => fehlt in todayEvents.
@@ -516,25 +512,6 @@ class CogniLiving extends utils.Adapter {
             _sleepSearchBase.setHours(18, 0, 0, 0);
             if (new Date().getHours() < 18) { _sleepSearchBase.setDate(_sleepSearchBase.getDate() - 1); }
             const sleepSearchEvents = this.eventHistory.filter(e => (e.timestamp||0) >= _sleepSearchBase.getTime());
-
-            // --- STUFE 0: Garmin-Timestamps (höchste Konfidenz für Ein-/Aufwachzeit) ---
-            var _garminSleepStart = null, _garminSleepEnd = null;
-            try {
-                var _gstartId = (this.config.garminSleepStartStateId || '').trim() || 'garmin.0.dailysleep.dailySleepDTO.sleepStartTimestampGMT';
-                var _gendId   = (this.config.garminSleepEndStateId   || '').trim() || 'garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT';
-                var _gstartSt = await this.getForeignStateAsync(_gstartId);
-                var _gendSt   = await this.getForeignStateAsync(_gendId);
-                var _gsearchFrom = _sleepSearchBase.getTime() - 6 * 3600000; // bis 6h vor Suchbasis plausibel
-                if (_gstartSt && _gstartSt.val != null) {
-                    var _gsMs = Number(_gstartSt.val);
-                    if (!isNaN(_gsMs) && _gsMs > 0 && _gsMs >= _gsearchFrom && _gsMs <= Date.now()) _garminSleepStart = _gsMs;
-                }
-                if (_gendSt && _gendSt.val != null) {
-                    var _geMs = Number(_gendSt.val);
-                    if (!isNaN(_geMs) && _geMs > 0 && _geMs >= _sleepSearchBase.getTime() && _geMs <= Date.now()) _garminSleepEnd = _geMs;
-                }
-                if (_garminSleepStart || _garminSleepEnd) this.log.debug('[Garmin] Timestamps: start=' + (_garminSleepStart ? new Date(_garminSleepStart).toLocaleTimeString() : 'null') + ' end=' + (_garminSleepEnd ? new Date(_garminSleepEnd).toLocaleTimeString() : 'null'));
-            } catch(_ge) { /* Garmin-Adapter nicht verfügbar */ }
 
             // Raum-Verweildauer heute aus roomHistory berechnen (Minuten pro Raum)
             const roomHistoryData = roomHistory?.val ? JSON.parse(roomHistory.val) : {};
@@ -597,11 +574,7 @@ class CogniLiving extends utils.Adapter {
                 }
                 if (presStart) { var _dur2 = (Date.now() - presStart) / 60000; if (_dur2 >= 10) sleepStartTs = presStart; }
                 if (!sleepStartTs) return { start: null, end: null };
-                // Aufwachzeit: LETZTES valides Ende (Bett >= 15 Min leer nach 04:00).
-                // Verbesserungen gegenüber alter Version:
-                //   (1) wakeTs = emptyStart (echter Zeitpunkt Bett wurde leer), nicht emptyStart+_wdur oder Date.now()
-                //   (2) Debounce: Reoccupancy < 5 Min → ignorieren (Bett-Machen, kurzes Hinsetzen)
-                //   (3) Letztes valides Ende nehmen (kein break) → Mehrfaches Aufwachen korrekt behandelt
+                // Aufwachzeit: erstes Mal nach Schlafbeginn dass Bett >= 15 Min leer war nach 04:00
                 var wakeTs = null;
                 var emptyStart = null;
                 for (var _wi = 0; _wi < bedEvts.length; _wi++) {
@@ -613,17 +586,11 @@ class CogniLiving extends utils.Adapter {
                         if (!emptyStart) emptyStart = _we.timestamp||0;
                     } else if (_wv && emptyStart) {
                         var _wdur = ((_we.timestamp||0) - emptyStart) / 60000;
-                        if (_wdur >= 15) {
-                            wakeTs = emptyStart; // Kandidat: echter Aufwachzeitpunkt
-                            emptyStart = null;   // Kein break → letztes valides Ende gewinnt
-                        } else if (_wdur < 5) {
-                            // Debounce: Bett-Machen / kurze Reoccupancy < 5 Min → emptyStart beibehalten
-                        } else {
-                            emptyStart = null;   // Echte Rückkehr ins Bett → Reset
-                        }
+                        if (_wdur >= 15) { wakeTs = emptyStart + _wdur * 60000; emptyStart = null; break; }
+                        emptyStart = null;
                     }
                 }
-                if (emptyStart) { var _wdur2 = (Date.now() - emptyStart) / 60000; if (_wdur2 >= 15) wakeTs = emptyStart; }
+                if (emptyStart) { var _wdur2 = (Date.now() - emptyStart) / 60000; if (_wdur2 >= 15) wakeTs = Date.now(); }
                 return { start: sleepStartTs, end: wakeTs };
             })();
 
@@ -670,114 +637,19 @@ class CogniLiving extends utils.Adapter {
                 return { start: sleepStartTs, end: wakeTs };
             })();
 
-            // ============================================================
-            // MULTI-SENSOR AUFWACHZEIT-KANDIDATEN (Graceful Degradation)
-            // Phase 1: Alle Quellen sammeln
-            // Phase 2: Kombination + Konfidenz → _bestWakeTs / _wakeSource / _wakeConf
-            // ============================================================
-
-            // t_fp2: FP2-Bett-basierter Kandidat (verbesserte Formel oben)
-            var _tFP2wake = sleepWindowCalc.end || null;
-
-            // t_garmin: Garmin-Uhr (höchste Konfidenz)
-            var _tGarminWake = _garminSleepEnd || null;
-
-            // t_other: Beliebiger Nicht-Bett-Sensor nach 04:00 (Single-Person-Guard + personTag-Bad)
-            // Türkontakt mit sensorFunction='bed' ebenfalls als Aufwach-Signal nutzbar
-            var _tOtherWake = null;
-            var _isSingleHousehold = (maxPersonsDetected <= 1);
-            if (_isSingleHousehold) {
-                var _earliestSleepStart = sleepWindowCalc.start || sleepWindowMotion.start || (_garminSleepStart || 0);
-                var _minSince3h = _earliestSleepStart + 3 * 3600000;
-                var _otherWakeEvts = sleepSearchEvents.filter(function(e) {
-                    var _ts = e.timestamp || 0;
-                    if (_ts < _minSince3h) return false;
-                    var _hr = new Date(_ts).getHours();
-                    if (_hr < 4 || _hr > 14) return false;
-                    // Ausschluss: alle Bett-Sensoren
-                    if (e.isFP2Bed || e.isBedroomMotion || e.isVibrationBed || e.isVibrationStrength) return false;
-                    // Bad: nur wenn personTag gesetzt (= persönliches Bad)
-                    if (e.isBathroomSensor && !(e.personTag && e.personTag.trim())) return false;
-                    return isActiveValue(e.value) || toPersonCount(e.value) > 0;
-                }).sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
-                if (_otherWakeEvts.length > 0) _tOtherWake = _otherWakeEvts[0].timestamp || 0;
-            }
-
-            // t_bed_pir: Schlafzimmer-Bewegungsmelder (aus sleepWindowMotion.end)
-            var _tBedPirWake = sleepWindowMotion.end || null;
-
-            // t_vib: Letztes Vibrations-Event nach 04:00 + danach ≥45 Min keine Vibration (schwacher Kandidat)
-            var _tVibWake = null;
-            (function() {
-                var _vibA4 = sleepSearchEvents.filter(function(e) {
-                    return e.isVibrationBed && (isActiveValue(e.value) || toPersonCount(e.value) > 0) &&
-                           new Date(e.timestamp||0).getHours() >= 4;
-                }).sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
-                if (_vibA4.length === 0) return;
-                for (var _vi = _vibA4.length - 1; _vi >= 0; _vi--) {
-                    var _vts = _vibA4[_vi].timestamp || 0;
-                    var _nextVib = (_vi < _vibA4.length - 1) ? (_vibA4[_vi+1].timestamp||0) : Date.now();
-                    if ((_nextVib - _vts) / 60000 >= 45) { _tVibWake = _vts; break; }
-                }
-            })();
-
-            // Phase 2: Kombination + Konfidenz
-            var _bestWakeTs = null;
-            var _wakeConf   = 'none';
-            var _wakeSource = 'fixed';
-
-            if (_tGarminWake) {
-                _bestWakeTs = _tGarminWake; _wakeConf = 'maximal'; _wakeSource = 'garmin';
-            } else if (_tFP2wake && _tOtherWake && Math.abs(_tFP2wake - _tOtherWake) <= 15 * 60000) {
-                _bestWakeTs = Math.min(_tFP2wake, _tOtherWake); _wakeConf = 'very_high'; _wakeSource = 'fp2_other';
-            } else if (_tFP2wake) {
-                _bestWakeTs = _tFP2wake; _wakeConf = 'high'; _wakeSource = 'fp2';
-                // Vibration als Frühwarner: wenn Vib vor FP2 (bis 30 Min) → frühere Zeit nehmen
-                if (_tVibWake && _tVibWake < _tFP2wake && (_tFP2wake - _tVibWake) <= 30 * 60000) {
-                    _bestWakeTs = _tVibWake; _wakeConf = 'high'; _wakeSource = 'fp2'; // Quelle bleibt fp2
-                }
-            } else if (_tOtherWake) {
-                _bestWakeTs = _tOtherWake; _wakeConf = 'medium'; _wakeSource = 'other';
-            } else if (_tBedPirWake) {
-                _bestWakeTs = _tBedPirWake; _wakeConf = 'medium'; _wakeSource = 'motion';
-            } else if (_tVibWake) {
-                _bestWakeTs = _tVibWake; _wakeConf = 'very_low'; _wakeSource = 'vibration';
-            }
-
-            // Beste Aufwachzeit in sleepWindowCalc.end schreiben (überschreibt FP2-only falls besser)
-            if (_bestWakeTs) sleepWindowCalc.end = _bestWakeTs;
-
-            // Einschlafzeit-Quelle bestimmen (für sleepWindowSource / Sensor-Indikator)
-            var _sleepStartSource = sleepWindowCalc.start ? 'fp2'
-                : _garminSleepStart ? 'garmin'
-                : sleepWindowMotion.start ? 'motion'
-                : 'fixed';
-
-            // Schlaffenster für OC-7 (Sleep Score): Garmin → FP2 → Bewegungsmelder → Fixfenster
-            // Betrifft NICHT die SCHLAFZEIT-Kachel (die bleibt FP2-exklusiv via sleepWindowCalc).
-            var _oc7Start = sleepWindowCalc.start || _garminSleepStart || sleepWindowMotion.start || null;
-            var _oc7End   = _bestWakeTs || sleepWindowCalc.end || sleepWindowMotion.end || null;
-            var sleepWindowOC7 = (function() {
-                if (_oc7Start && _oc7End) return { start: _oc7Start, end: _oc7End };
-                if (_oc7Start) return { start: _oc7Start, end: null };
-                // Fixfenster als letzter Fallback
-                var _fs = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr
-                var _fe = _fs + 13 * 3600000;                       // 09:00 naechster Morgen
-                if (_fs > Date.now()) return { start: null, end: null };
-                if (_fe > Date.now()) _fe = Date.now();
-                return { start: _fs, end: _fe };
-            })();
-
-            // Nickerchen-Erkennung: Einschlafzeit außerhalb 19:00–03:00 → keine OC-7 Stages
-            var _isNap = false;
-            if (sleepWindowOC7.start) {
-                var _napHr = new Date(sleepWindowOC7.start).getHours();
-                if (_napHr >= 3 && _napHr < 19) _isNap = true;
-            }
-
-            // Ungewöhnlich lange Liegezeit (> 12h): Konfidenz-Flag für UI
-            var _unusuallyLongSleep = !!(sleepWindowOC7.start && sleepWindowOC7.end &&
-                ((sleepWindowOC7.end - sleepWindowOC7.start) / 3600000) > 12);
+            // Schlaffenster fuer OC-7 (Sleep Score): FP2 → Bewegungsmelder → Fixfenster (Fallback-Kette).
+            // Betrifft NICHT sleepWindowStart/End im Snapshot -- die Schlafzeit-Kachel bleibt FP2-only.
+            var sleepWindowOC7 = sleepWindowCalc.start
+                ? sleepWindowCalc
+                : sleepWindowMotion.start
+                    ? sleepWindowMotion
+                    : (function() {
+                        var _fs = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr
+                        var _fe = _fs + 13 * 3600000;                       // 09:00 naechster Morgen
+                        if (_fs > Date.now()) return { start: null, end: null };
+                        if (_fe > Date.now()) _fe = Date.now();
+                        return { start: _fs, end: _fe };
+                    })();
 
             // --- OC-7: AURA SLEEP SCORE ---------------------------------------------------
             // Klassifikation in 5-Minuten-Slots anhand Vibrationssensor (Detection + Staerke)
@@ -786,22 +658,15 @@ class CogniLiving extends utils.Adapter {
             var sleepScoreRaw = null;
             var sleepStages = [];
             if (_sleepFrozen) {
-                // Schlaffenster einfrieren (Zeiten bleiben fix)
+                // Eingeschlafene Nacht: Schlafdaten aus bestehendem Snapshot übernehmen (nicht überschreiben)
                 sleepWindowCalc.start = _existingSnap.sleepWindowStart;
                 sleepWindowCalc.end   = _existingSnap.sleepWindowEnd;
                 sleepWindowOC7 = { start: _existingSnap.sleepWindowStart, end: _existingSnap.sleepWindowEnd };
-                if (_stageFrozen) {
-                    // Stages + Score aus Snapshot übernehmen wenn vorhanden
-                    sleepStages   = _existingSnap.sleepStages;
-                    sleepScore    = _existingSnap.sleepScore    !== undefined ? _existingSnap.sleepScore    : null;
-                    sleepScoreRaw = _existingSnap.sleepScoreRaw !== undefined ? _existingSnap.sleepScoreRaw : null;
-                    this.log.info('[History] Sleep FROZEN: ' + new Date(_existingSnap.sleepWindowStart).toLocaleTimeString() + '-' + new Date(_existingSnap.sleepWindowEnd).toLocaleTimeString() + ' bedPresMin=' + _existingSnap.bedPresenceMinutes);
-                } else {
-                    // Stages waren leer (z.B. Sensor-Ausfall) → Neuberechnung mit eingefrorenem Fenster
-                    this.log.info('[History] Sleep WINDOW-FROZEN, stages recomputing: ' + new Date(_existingSnap.sleepWindowStart).toLocaleTimeString() + '-' + new Date(_existingSnap.sleepWindowEnd).toLocaleTimeString());
-                }
-            }
-            if ((!_stageFrozen) && sleepWindowOC7.start && sleepWindowOC7.end && !_isNap) {
+                sleepStages    = _existingSnap.sleepStages    || [];
+                sleepScore     = _existingSnap.sleepScore     !== undefined ? _existingSnap.sleepScore     : null;
+                sleepScoreRaw  = _existingSnap.sleepScoreRaw  !== undefined ? _existingSnap.sleepScoreRaw  : null;
+                this.log.info('[History] Sleep FROZEN: ' + new Date(_existingSnap.sleepWindowStart).toLocaleTimeString() + '-' + new Date(_existingSnap.sleepWindowEnd).toLocaleTimeString() + ' bedPresMin=' + _existingSnap.bedPresenceMinutes);
+            } else if (sleepWindowOC7.start && sleepWindowOC7.end) {
                 var SLOT_MS = 5 * 60 * 1000;
                 var swStart = sleepWindowOC7.start;
                 var swEnd   = sleepWindowOC7.end;
@@ -832,8 +697,8 @@ class CogniLiving extends utils.Adapter {
                     var stage;
                     if (slotDet === 0) {
                         consecutiveQuiet++;
-                        // >= 6 ruhige Slots in Folge (30 Min) → Tiefschlaf; davor immer Leichtschlaf
-                        stage = consecutiveQuiet >= 6 ? 'deep' : 'light';
+                        // >= 6 ruhige Slots in Folge (30 Min) ? Tiefschlaf
+                        stage = consecutiveQuiet >= 6 ? 'deep' : (consecutiveQuiet >= 2 ? 'deep' : 'light');
                     } else if (slotDet >= 5 || slotStrMax > 28) {
                         consecutiveQuiet = 0;
                         stage = 'wake';
@@ -869,14 +734,12 @@ class CogniLiving extends utils.Adapter {
                 }
             }
 
-            // Schlaf-Fenster-Quellen für Sensor-Indikator im Frontend
-            // sleepWindowSource = Einschlafzeit-Quelle | wakeSource = Aufwachzeit-Quelle
+            // Schlaf-Fenster-Quelle (fuer OC-7 Sensor-Indikator im Frontend)
+            // Reihenfolge: fp2 → motion (Bewegungsmelder) → fixed (Fixfenster)
+            var _motionAvail = sleepWindowMotion.start !== null;
             var sleepWindowSource = _sleepFrozen
-                ? (_existingSnap.sleepWindowSource || _sleepStartSource)
-                : _sleepStartSource;
-            var wakeSource = _sleepFrozen
-                ? (_existingSnap.wakeSource || _wakeSource)
-                : _wakeSource;
+                ? (_existingSnap.sleepWindowSource || (_origFP2Window ? 'fp2' : (_motionAvail ? 'motion' : 'fixed')))
+                : (_origFP2Window ? 'fp2' : (_motionAvail ? 'motion' : 'fixed'));
 
             // Außerhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
             var outsideBedEvents = [];
@@ -980,16 +843,10 @@ class CogniLiving extends utils.Adapter {
                     sleepWindowOC7End:    sleepWindowOC7.end    ? new Date(sleepWindowOC7.end).toISOString()    : null,
                     sleepStagesCount: sleepStages.length,
                     sleepScore: sleepScore,
-                    wakeSource: _wakeSource,
-                    wakeConf: _wakeConf,
-                    isNap: _isNap,
-                    unusuallyLongSleep: _unusuallyLongSleep,
-                    garminSleepStart: _garminSleepStart ? new Date(_garminSleepStart).toISOString() : null,
-                    garminSleepEnd: _garminSleepEnd ? new Date(_garminSleepEnd).toISOString() : null,
                     oc4GuardFired: (bedPresenceMinutes < 180 && sleepWindowCalc.start === null && fp2BedEventsTotal > 0),
                 };
                 await this.setStateAsync('analysis.health.saveDailyDebug', { val: JSON.stringify(_debugObj), ack: true });
-                this.log.info('[OC-7 Debug] stages=' + sleepStages.length + ' wakeSource=' + _wakeSource + ' wakeConf=' + _wakeConf + ' isNap=' + _isNap + ' windowOC7=' + (_debugObj.sleepWindowOC7Start || 'NULL') + ' bedPresMin=' + bedPresenceMinutes + ' vibBedEvts=' + _debugObj.vibrationBedEventsTotal);
+                this.log.info('[OC-7 Debug] stages=' + sleepStages.length + ' windowOC7=' + (_debugObj.sleepWindowOC7Start || 'NULL') + ' bedPresMin=' + bedPresenceMinutes + ' vibBedEvts=' + _debugObj.vibrationBedEventsTotal);
             } catch(_de) { this.log.warn('[OC-7 Debug] Fehler beim Schreiben des Debug-States: ' + _de.message); }
 
             // Vibration Bett: Erschuetterungen im Schlaf-Fenster (Fallback: 22-06)
@@ -1201,10 +1058,6 @@ class CogniLiving extends utils.Adapter {
                 garminLightMin: garminLightSec ? Math.round(garminLightSec/60) : null,
                 garminRemMin: garminRemSec ? Math.round(garminRemSec/60) : null,
                 sleepWindowSource: sleepWindowSource,
-                wakeSource: wakeSource,
-                wakeConf: _wakeConf,
-                isNap: _isNap,
-                unusuallyLongSleep: _unusuallyLongSleep,
                 outsideBedEvents: outsideBedEvents,
                 wakeConfirmed: !!(sleepWindowOC7.end && new Date().getHours() >= 10 && (Date.now() - (sleepWindowOC7.end || 0)) >= 3600000)
             };
