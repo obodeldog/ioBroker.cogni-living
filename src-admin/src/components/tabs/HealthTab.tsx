@@ -1152,6 +1152,22 @@ export default function HealthTab(props: any) {
         const srcDisplay  = srcInfo[sleepStartSource] ?? srcInfo.fixed;
         const wakeDisplay = srcInfo[wakeSource]        ?? srcInfo.fixed;
 
+        // Hilfsfunktionen — müssen VOR den Tooltips stehen (TDZ-Regel bei const)
+        const fmtTime = (ms: number | null) => {
+            if (!ms) return '—';
+            const d = new Date(ms);
+            return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+        };
+        const fmtDuration = (min: number | null) => {
+            if (!min) return null;
+            const h = Math.floor(min / 60);
+            const m = min % 60;
+            return h > 0 ? `${h}h ${m}min` : `${m}min`;
+        };
+
+        // Schlafdauer
+        const sleepDurMin = (swStart && swEnd && swEnd > swStart) ? Math.round((swEnd - swStart) / 60000) : null;
+
         // DEV-ONLY: alle Wake-Quellen für Hover-Tooltip
         const allWakeSourcesArr: {source:string, ts:number|null}[] = sd?.allWakeSources ?? [];
         const devWakeTooltip = allWakeSourcesArr.length > 0
@@ -1176,25 +1192,10 @@ export default function HealthTab(props: any) {
               }).join('\n')
             : '(keine allSleepStartSources — alter Snapshot ohne diese Daten)';
 
-        // Schlafdauer berechnen
-        const sleepDurMin = (swStart && swEnd && swEnd > swStart) ? Math.round((swEnd - swStart) / 60000) : null;
-        const fmtDuration = (min: number | null) => {
-            if (!min) return null;
-            const h = Math.floor(min / 60);
-            const m = min % 60;
-            return h > 0 ? `${h}h ${m}min` : `${m}min`;
-        };
-
         const scoreColor = score === null ? '#888'
             : score >= 80 ? '#00e676'
             : score >= 60 ? '#ffab40'
             : '#ff5252';
-
-        const fmtTime = (ms: number | null) => {
-            if (!ms) return '—';
-            const d = new Date(ms);
-            return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
-        };
 
         const deepCount  = stages.filter(s => s.s === 'deep').length;
         const lightCount = stages.filter(s => s.s === 'light').length;
