@@ -1237,14 +1237,43 @@ export default function HealthTab(props: any) {
                     'Kein Medizinprodukt — für klinische Diagnose Arzt hinzuziehen.'
                 }>
                 {!hasVibSensor ? (
-                    <div style={{color:'#888', textAlign:'center', padding:'20px', fontSize:'0.8rem'}}>
-                        <div style={{fontSize:'1.5rem', marginBottom:'8px'}}>&#128716;</div>
-                        {hasSleepWindow ? (
-                            <><strong style={{color: isDark?'#ccc':'#555'}}>Kein Vibrationssensor gefunden.</strong><br/>
-                            <span style={{opacity:0.7}}>Sensor am Bett konfigurieren (Typ: Vibration, Funktion: Bett-Sensor).</span></>
+                    <div style={{fontSize:'0.8rem'}}>
+                        {hasSleepWindow && swStart ? (
+                            <>
+                                {/* Degradierter View: Zeiten bekannt, aber keine Vibrationsdaten */}
+                                <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px'}}>
+                                    <div>
+                                        <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Einschlafen</div>
+                                        <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>{fmtTime(swStart)}</div>
+                                        <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
+                                            {srcDisplay.icon} {srcDisplay.label}
+                                        </div>
+                                    </div>
+                                    <div style={{textAlign:'center'}}>
+                                        <div style={{fontSize:'1.8rem', fontWeight:'bold', color:'#888', border:'2px solid #888', borderRadius:'8px', padding:'4px 14px', lineHeight:'1.1'}}>—</div>
+                                        <div style={{fontSize:'0.65rem', color:'#888', marginTop:'2px'}}>AURA-Sleepscore</div>
+                                        {garminScore !== null && (
+                                            <div style={{fontSize:'0.7rem', color:'#ab47bc', marginTop:'2px'}}>Garmin: {garminScore}</div>
+                                        )}
+                                    </div>
+                                    <div style={{textAlign:'right'}}>
+                                        <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Aufwachen</div>
+                                        <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>{fmtTime(swEnd)}</div>
+                                        <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
+                                            {wakeDisplay.icon} {wakeDisplay.label}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{textAlign:'center', padding:'8px', background: isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.03)', borderRadius:'6px', color:'#888', fontSize:'0.72rem'}}>
+                                    📳 Schlafphasen nicht verfügbar — Vibrationsdaten zu alt (tritt auf wenn Adapter tagsüber neu gestartet wird)
+                                </div>
+                            </>
                         ) : (
-                            <><strong style={{color: isDark?'#ccc':'#555'}}>Heute Nacht werden die ersten Daten gesammelt.</strong><br/>
-                            <span style={{opacity:0.7}}>Der AURA-Sleepscore erscheint morgen früh nach der ersten analysierten Nacht.</span></>
+                            <div style={{color:'#888', textAlign:'center', padding:'20px'}}>
+                                <div style={{fontSize:'1.5rem', marginBottom:'8px'}}>&#128716;</div>
+                                <strong style={{color: isDark?'#ccc':'#555'}}>Heute Nacht werden die ersten Daten gesammelt.</strong><br/>
+                                <span style={{opacity:0.7}}>Der AURA-Sleepscore erscheint morgen früh nach der ersten analysierten Nacht.</span>
+                            </div>
                         )}
                     </div>
                 ) : (
