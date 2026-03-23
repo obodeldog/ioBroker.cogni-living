@@ -1301,7 +1301,11 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                             };
                                         }).filter((d: any) => d.date);
                                         const avgVals = data.filter((d: any) => d.avg != null).map((d: any) => d.avg as number);
+                                        const maxVals = data.filter((d: any) => d.max != null).map((d: any) => d.max as number);
                                         const meanAvg = avgVals.length > 0 ? Math.round(avgVals.reduce((a: number,b: number) => a+b,0) / avgVals.length) : 0;
+                                        // Dynamische Y-Achse: max der Daten + 20% Puffer, mindestens 30, aufgerundet auf 10er
+                                        const rawMax = maxVals.length > 0 ? Math.max(...maxVals) : (avgVals.length > 0 ? Math.max(...avgVals) : 30);
+                                        const vibYMax = Math.max(30, Math.ceil(rawMax * 1.2 / 10) * 10);
                                         return (
                                             <Grid item xs={12} md={6} lg={4}>
                                                 <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
@@ -1312,14 +1316,14 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                         <ChartHelp text={"Durchschnittliche und maximale Vibrationsstärke im Schlaffenster. Hohe Werte (>80) können auf Parkinson-Tremor, Epilepsie oder intensive Schlafbewegungen hinweisen. Niedriger Count + hohe Stärke = medizinisch relevant."} />
                                                     </Box>
                                                     <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
-                                                        Ø {meanAvg} · Skala 0–255 · Schlaffenster
+                                                        Ø {meanAvg} · Skala 0–{vibYMax} · Schlaffenster
                                                     </Typography>
                                                     <ResponsiveContainer width="100%" height={150}>
                                                         <ComposedChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                                                             <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                                                             <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
                                                                 interval={Math.floor(data.length / 6)} />
-                                                            <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} domain={[0, 255]} />
+                                                            <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} domain={[0, vibYMax]} />
                                                             <Tooltip
                                                                 formatter={(v: any, name: string) => [
                                                                     v,
@@ -1327,9 +1331,9 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                                 ]}
                                                                 contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}` }}
                                                             />
-                                                            <ReferenceArea y1={0}   y2={30}  fill="rgba(40,167,69,0.08)" />
-                                                            <ReferenceArea y1={30}  y2={80}  fill="rgba(253,126,20,0.08)" />
-                                                            <ReferenceArea y1={80}  y2={255} fill="rgba(220,53,69,0.12)" />
+                                                            <ReferenceArea y1={0}   y2={30}          fill="rgba(40,167,69,0.08)" />
+                                                            <ReferenceArea y1={30}  y2={80}          fill="rgba(253,126,20,0.08)" />
+                                                            <ReferenceArea y1={80}  y2={vibYMax}     fill="rgba(220,53,69,0.12)" />
                                                             <Bar dataKey="avg" name="avg" radius={[2,2,0,0]}>
                                                                 {data.map((entry: any, i: number) => {
                                                                     const v = entry.avg;

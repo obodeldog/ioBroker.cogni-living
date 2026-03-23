@@ -1134,7 +1134,7 @@ export default function HealthTab(props: any) {
             outside:  '#ff5722',  // Orange-Rot — Außerhalb Schlafzimmer
         };
         const stageLabel: Record<string, string> = {
-            deep: 'Tief', light: 'Leicht', rem: 'REM (est.)', wake: 'Wach', bathroom: 'Bad-Besuch', outside: 'Außerhalb'
+            deep: 'Tief', light: 'Leicht', rem: 'REM (est.)', wake: 'Wachliegen', bathroom: 'Bad-Besuch', outside: 'Außerhalb'
         };
 
         // Sensor-Indikator für Einschlaf-/Aufwachzeit
@@ -1394,7 +1394,7 @@ export default function HealthTab(props: any) {
 
                         {/* Legende */}
                         <div style={{display:'flex', gap:'10px', flexWrap:'wrap', fontSize:'0.7rem', marginBottom:'8px'}}>
-                            {([['deep','Tief'],['light','Leicht'],['rem','REM (est.)'],['wake','Wach']] as [string,string][]).map(([k,l]) => (
+                            {([['deep','Tief'],['light','Leicht'],['rem','REM (est.)'],['wake','Wachliegen']] as [string,string][]).map(([k,l]) => (
                                 <span key={k}><span style={{color: stageColor[k]}}>■</span> {l}</span>
                             ))}
                             {outsideBedEvts.some(e => e.type === 'bathroom') && (
@@ -1407,7 +1407,7 @@ export default function HealthTab(props: any) {
 
                         {/* Stage-Dauer Zeile */}
                         <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'4px', textAlign:'center', marginBottom:'10px'}}>
-                            {([['deep','Tief',deepCount,'#1565c0'],['light','Leicht',lightCount,'#42a5f5'],['rem','REM',remCount,'#ab47bc'],['wake','Wach',wakeCount,'#ffd54f']] as [string,string,number,string][]).map(([k,l,n,c]) => (
+                            {([['deep','Tief',deepCount,'#1565c0'],['light','Leicht',lightCount,'#42a5f5'],['rem','REM',remCount,'#ab47bc'],['wake','Wachliegen',wakeCount,'#ffd54f']] as [string,string,number,string][]).map(([k,l,n,c]) => (
                                 <div key={k} style={{borderRadius:'4px', padding:'4px', background: isDark?'#1a1a1a':'#f5f5f5'}}>
                                     <div style={{color: c, fontWeight:'bold', fontSize:'0.8rem'}}>{toH(n)}</div>
                                     <div style={{color:'#888', fontSize:'0.65rem'}}>{l}</div>

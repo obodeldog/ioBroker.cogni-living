@@ -1173,7 +1173,11 @@ class CogniLiving extends utils.Adapter {
                         const todaySeqs = allSeqs.filter(s => (s.timestamp || '').startsWith(todayStr));
                         if (todaySeqs.length < 1) return null;
 
-                        const hallwayConf = (this.config.devices || []).filter(d => d.isHallway || d.sensorFunction === 'hallway').map(d => d.location || d.name || '');
+                        const allHallwayDevs = (this.config.devices || []).filter(d => d.isHallway || d.sensorFunction === 'hallway');
+                        // Primärflur-Logik: wenn mind. ein Sensor als Primärflur markiert, nur diesen verwenden
+                        const primaryHallwayDevs = allHallwayDevs.filter(d => d.isPrimaryHallway);
+                        const activeHallwayDevs = primaryHallwayDevs.length > 0 ? primaryHallwayDevs : allHallwayDevs;
+                        const hallwayConf = activeHallwayDevs.map(d => d.location || d.name || '');
                         const hallwayKw = ['flur', 'diele', 'gang', 'korridor'];
                         // Keyword-Fallback nur wenn kein Flur konfiguriert (Sensorliste ist Master)
                         const isHallway = (loc) => hallwayConf.includes(loc) || (hallwayConf.length === 0 && hallwayKw.some(k => (loc || '').toLowerCase().includes(k)));

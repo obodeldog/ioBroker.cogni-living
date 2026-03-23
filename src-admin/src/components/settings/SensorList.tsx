@@ -193,6 +193,11 @@ export default function SensorList(props) {
                             <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3 }}>
                                 <Tooltip title="Nacht-Sensor: Tagesbeginn ignoriert diesen Raum"><NightsStayIcon sx={{ fontSize: 17, opacity: 0.55 }} /></Tooltip>
                             </TableCell>
+                            <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3 }}>
+                                <Tooltip title="Primärflur: Dieser Flur-Sensor wird als Hauptflur für die Ganggeschwindigkeits-Analyse verwendet. Nur für Sensoren mit Funktion 'Flur/Gang' relevant.">
+                                    <span style={{ cursor: "help", fontSize: "0.65rem", fontWeight: 600, color: "#8d6e63" }}>P-Flur</span>
+                                </Tooltip>
+                            </TableCell>
                             <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3, borderLeft: "3px solid rgba(100,100,100,0.55)" }}>
                                 <Tooltip title="Aus Health-Timeline ausschliessen (Sensor wird weiter aufgezeichnet, aber nicht in Schlafradar/Neuro-Timeline angezeigt)"><BlockIcon sx={{ fontSize: 17, opacity: 0.55 }} /></Tooltip>
                             </TableCell>
@@ -380,6 +385,21 @@ export default function SensorList(props) {
                                                 checkedIcon={<NightsStayIcon sx={{ fontSize: 17, color: "#5c6bc0" }} />}
                                             />
                                         </Tooltip>
+                                    </TableCell>
+
+                                    {/* Primärflur */}
+                                    <TableCell align="center" sx={{ px: 0.3 }}>
+                                        {effectiveSF === 'hallway' ? (
+                                            <Tooltip title="Als Primärflur für Ganggeschwindigkeit verwenden (nur ein Flur aktiv nötig)">
+                                                <Checkbox
+                                                    checked={device.isPrimaryHallway || false}
+                                                    onChange={e => props.onDeviceChange(index, "isPrimaryHallway", e.target.checked)}
+                                                    size="small" sx={{ p: 0.4 }}
+                                                    icon={<span style={{ fontSize: 14, opacity: 0.2 }}>🚶</span>}
+                                                    checkedIcon={<span style={{ fontSize: 14, color: "#8d6e63" }}>🚶</span>}
+                                                />
+                                            </Tooltip>
+                                        ) : <Box sx={{ width: 30 }} />}
                                     </TableCell>
 
                                     {/* Aus Timeline ausschliessen */}
