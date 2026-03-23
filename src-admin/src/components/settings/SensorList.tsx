@@ -1,7 +1,8 @@
-﻿import React from "react";
+import React, { useState, useEffect } from "react";
 import {
     Box, TableContainer, Paper, Table, TableHead, TableRow, TableCell, Tooltip, TableBody,
-    TextField, IconButton, Autocomplete, FormControl, Select, MenuItem, Checkbox, Button, Chip
+    TextField, IconButton, Autocomplete, FormControl, Select, MenuItem, Checkbox, Button, Chip,
+    Collapse, CircularProgress
 } from "@mui/material";
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import WbSunnyIcon from "@mui/icons-material/WbSunny";
@@ -10,6 +11,12 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import BlockIcon from "@mui/icons-material/Block";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import WatchIcon from "@mui/icons-material/Watch";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { I18n } from "@iobroker/adapter-react-v5";
 import { createFilterOptions } from "@mui/material/Autocomplete";
 
@@ -69,8 +76,65 @@ function getSFColor(sfId) {
 
 const filter = createFilterOptions();
 
+const WEARABLE_FIELDS = [
+    { key: "garminSleepScoreStateId",  label: "Sleep-Score",           unit: "0–100",   example: "garmin.0.dailysleep.dailySleepDTO.sleepScores.overall.value",        tooltip: "ioBroker-Objekt-ID des Garmin Schlaf-Scores (0–100). Beispiel: garmin.0.dailysleep.dailySleepDTO.sleepScores.overall.value" },
+    { key: "garminSleepStartStateId",  label: "Schlafbeginn (GMT-ms)", unit: "Unix-ms", example: "garmin.0.dailysleep.dailySleepDTO.sleepStartTimestampGMT",           tooltip: "ioBroker-Objekt-ID des Schlafbeginn-Timestamps (Unix-Millisekunden, GMT). Beispiel: garmin.0.dailysleep.dailySleepDTO.sleepStartTimestampGMT" },
+    { key: "garminSleepEndStateId",    label: "Schlafende (GMT-ms)",   unit: "Unix-ms", example: "garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT",             tooltip: "ioBroker-Objekt-ID des Schlafende-Timestamps (Unix-Millisekunden, GMT). Beispiel: garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT" },
+    { key: "garminDeepSleepStateId",   label: "Tiefschlaf (Sekunden)", unit: "sec",     example: "garmin.0.dailysleep.dailySleepDTO.deepSleepSeconds",                tooltip: "ioBroker-Objekt-ID der Tiefschlaf-Dauer in Sekunden. Beispiel: garmin.0.dailysleep.dailySleepDTO.deepSleepSeconds" },
+    { key: "garminLightSleepStateId",  label: "Leichtschlaf (Sek.)",   unit: "sec",     example: "garmin.0.dailysleep.dailySleepDTO.lightSleepSeconds",               tooltip: "ioBroker-Objekt-ID der Leichtschlaf-Dauer in Sekunden. Beispiel: garmin.0.dailysleep.dailySleepDTO.lightSleepSeconds" },
+    { key: "garminRemSleepStateId",    label: "REM-Schlaf (Sek.)",     unit: "sec",     example: "garmin.0.dailysleep.dailySleepDTO.remSleepSeconds",                 tooltip: "ioBroker-Objekt-ID der REM-Schlaf-Dauer in Sekunden. Beispiel: garmin.0.dailysleep.dailySleepDTO.remSleepSeconds" },
+    { key: "garminLastSyncStateId",    label: "Letzter Sync (Timestamp)", unit: "auto", example: "garmin.0.info.connection",                                          tooltip: "ioBroker-Objekt-ID eines Zustands, dessen letztes Update-Datum als Aktualitätsprüfung dient. Wird verwendet um festzustellen ob die Garmin-Verbindung noch aktiv ist. Empfehlung: garmin.0.info.connection oder ein beliebiger garmin.0-Wert der sich täglich ändert." },
+];
+
+function FreshnessChip({ stateId, socket, isDark }: { stateId: string; socket: any; isDark: boolean }) {
+    const [status, setStatus] = useState<'loading' | 'fresh' | 'stale' | 'old' | 'unknown'>('loading');
+    const [ageHours, setAgeHours] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (!stateId || !socket) { setStatus('unknown'); return; }
+        setStatus('loading');
+        socket.getState(stateId).then((state: any) => {
+            if (!state || state.ts == null) { setStatus('unknown'); return; }
+            const hours = (Date.now() - state.ts) / 3600000;
+            setAgeHours(Math.round(hours * 10) / 10);
+            if (hours < 12)       setStatus('fresh');
+            else if (hours < 30)  setStatus('stale');
+            else                  setStatus('old');
+        }).catch(() => setStatus('unknown'));
+    }, [stateId, socket]);
+
+    if (status === 'loading') return <CircularProgress size={12} sx={{ ml: 0.5 }} />;
+
+    const cfg = {
+        fresh:   { icon: <CheckCircleOutlineIcon sx={{ fontSize: 13 }} />, label: `Aktuell (${ageHours}h)`,   color: "#4caf50" },
+        stale:   { icon: <WarningAmberIcon        sx={{ fontSize: 13 }} />, label: `Veraltet (${ageHours}h)`, color: "#ff9800" },
+        old:     { icon: <ErrorOutlineIcon        sx={{ fontSize: 13 }} />, label: `Eingefroren (${ageHours}h)`, color: "#f44336" },
+        unknown: { icon: <HelpOutlineIcon         sx={{ fontSize: 13 }} />, label: "Unbekannt",                color: isDark ? "#888" : "#aaa" },
+    };
+    const c = cfg[status];
+    return (
+        <Tooltip title={status === 'unknown' ? "Kein Sync-Objekt konfiguriert oder Objekt nicht erreichbar" : `Letzter Datenpunkt vor ${ageHours}h. Frisch < 12h, Veraltet 12–30h, Eingefroren > 30h.`}>
+            <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.3, ml: 0.5, color: c.color, fontSize: "0.65rem", fontWeight: 600, cursor: "help" }}>
+                {c.icon} {c.label}
+            </Box>
+        </Tooltip>
+    );
+}
+
 export default function SensorList(props) {
-    const { devices, isDark, uniqueLocations, sensorProblems } = props;
+    const { devices, isDark, uniqueLocations, sensorProblems, native, onNativeChange, socket } = props;
+    const [wearableOpen, setWearableOpen] = useState(false);
+    const [testResults, setTestResults] = useState<Record<string, 'loading' | 'ok' | 'error' | null>>({});
+
+    const testStateId = (key: string) => {
+        const stateId = (native || {})[key];
+        if (!stateId || !socket) return;
+        setTestResults(r => ({ ...r, [key]: 'loading' }));
+        socket.getState(stateId).then((state: any) => {
+            setTestResults(r => ({ ...r, [key]: state != null ? 'ok' : 'error' }));
+        }).catch(() => setTestResults(r => ({ ...r, [key]: 'error' })));
+    };
+
     // Berechne welche Funktionen tatsaechlich konfiguriert sind
     const activeFunctions = new Set(
         (devices || []).map(d => getEffectiveSF(d)).filter(Boolean)
@@ -392,6 +456,88 @@ export default function SensorList(props) {
                 {devices.length > 0 && (
                     <Button color="error" size="small" onClick={props.onDeleteAll}>Alle loeschen</Button>
                 )}
+            </Box>
+
+            {/* ─── WEARABLE-DATENQUELLEN ─── */}
+            <Box sx={{ mt: 2, border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)"}`, borderRadius: 1 }}>
+                <Box
+                    onClick={() => setWearableOpen(o => !o)}
+                    sx={{
+                        display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 0.8,
+                        cursor: "pointer", userSelect: "none",
+                        bgcolor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+                        borderRadius: wearableOpen ? "4px 4px 0 0" : 1,
+                        "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)" }
+                    }}
+                >
+                    <WatchIcon sx={{ fontSize: 16, opacity: 0.7 }} />
+                    <Box sx={{ fontSize: "0.78rem", fontWeight: 600, flex: 1 }}>
+                        Wearable-Datenquellen (Smartwatch / Garmin)
+                    </Box>
+                    {/* Freshness-Indikator in der Titelzeile wenn Sync-Objekt konfiguriert */}
+                    {(native || {}).garminLastSyncStateId && (
+                        <FreshnessChip stateId={(native || {}).garminLastSyncStateId} socket={socket} isDark={isDark} />
+                    )}
+                    {wearableOpen ? <ExpandLessIcon sx={{ fontSize: 16 }} /> : <ExpandMoreIcon sx={{ fontSize: 16 }} />}
+                </Box>
+                <Collapse in={wearableOpen}>
+                    <Box sx={{ px: 1.5, py: 1, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.1)"}` }}>
+                        <Box sx={{ fontSize: "0.67rem", color: "text.secondary", mb: 1.2, lineHeight: 1.5 }}>
+                            Trage hier die ioBroker-Objekt-IDs deines Garmin- (oder anderen) Adapters ein.
+                            Die Werte werden nur lesend verwendet. Lasse Felder leer wenn kein Adapter installiert ist.
+                            Das Feld <b>Letzter Sync</b> dient der Aktualitätsprüfung — wird als veraltet markiert wenn
+                            der Wert &gt;&nbsp;12&nbsp;h alt ist (Hinweis auf unterbrochene Garmin&nbsp;Connect Verbindung).
+                        </Box>
+                        {WEARABLE_FIELDS.map(f => {
+                            const val = (native || {})[f.key] || "";
+                            const testRes = testResults[f.key];
+                            const isLastSync = f.key === "garminLastSyncStateId";
+                            return (
+                                <Box key={f.key} sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.8 }}>
+                                    <Tooltip title={f.tooltip} placement="top-start">
+                                        <TextField
+                                            label={f.label}
+                                            value={val}
+                                            onChange={e => onNativeChange && onNativeChange(f.key, e.target.value)}
+                                            size="small"
+                                            variant="outlined"
+                                            fullWidth
+                                            placeholder={f.example}
+                                            sx={{ "& .MuiInputBase-input": { fontSize: "0.72rem" }, "& .MuiInputLabel-root": { fontSize: "0.72rem" } }}
+                                            InputProps={{
+                                                endAdornment: isLastSync && val && socket ? (
+                                                    <FreshnessChip stateId={val} socket={socket} isDark={isDark} />
+                                                ) : undefined
+                                            }}
+                                        />
+                                    </Tooltip>
+                                    <Tooltip title={val ? "Objekt-Erreichbarkeit testen" : "Zuerst ID eintragen"}>
+                                        <span>
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                disabled={!val || !socket || testRes === 'loading'}
+                                                onClick={() => testStateId(f.key)}
+                                                sx={{ minWidth: 56, fontSize: "0.65rem", whiteSpace: "nowrap",
+                                                    borderColor: testRes === 'ok' ? "#4caf50" : testRes === 'error' ? "#f44336" : undefined,
+                                                    color:       testRes === 'ok' ? "#4caf50" : testRes === 'error' ? "#f44336" : undefined,
+                                                }}
+                                            >
+                                                {testRes === 'loading' ? <CircularProgress size={12} /> :
+                                                 testRes === 'ok'      ? "✓ OK" :
+                                                 testRes === 'error'   ? "✗ Fehler" : "Testen"}
+                                            </Button>
+                                        </span>
+                                    </Tooltip>
+                                </Box>
+                            );
+                        })}
+                        <Box sx={{ mt: 1, fontSize: "0.62rem", color: "text.disabled", fontStyle: "italic" }}>
+                            Andere Smartwatch-Adapter (Polar, Withings, Fitbit …) können ebenfalls eingetragen werden —
+                            solange die Objekte numerische Werte und Unix-ms-Timestamps liefern.
+                        </Box>
+                    </Box>
+                </Collapse>
             </Box>
         </Box>
     );

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
     Button, Checkbox, CircularProgress, FormControl, IconButton, InputLabel, MenuItem, Select,
     TextField, Tooltip, Snackbar, Alert, Box, Paper, FormControlLabel, Grid, Dialog,
@@ -563,7 +563,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                     </Alert>
                                 )}
                                 <Accordion expanded={expandedAccordion === 'panel4'} onChange={this.handleAccordionChange('panel4')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Sensoren{this.state.sensorProblems.size > 0 ? ' ⚠️' : ''}</Typography></AccordionSummary><AccordionDetails>
-                    <SensorList devices={this.state.devices} isDark={isDark} uniqueLocations={this.collectUniqueLocations()} sensorProblems={this.state.sensorProblems} onDeviceChange={(i, a, v) => this.onDeviceChange(i, a, v)} onDelete={(i) => this.onDeleteDevice(i)} onAdd={() => this.onAddDevice()} onSelectId={(i) => this.openSelectIdDialog(i)} onWizard={this.handleOpenWizard} onBulk={() => this.setState({ showBulkDialog: true })} onDeleteAll={() => this.setState({showDeleteConfirm: true})} />
+                    <SensorList devices={this.state.devices} isDark={isDark} uniqueLocations={this.collectUniqueLocations()} sensorProblems={this.state.sensorProblems} onDeviceChange={(i, a, v) => this.onDeviceChange(i, a, v)} onDelete={(i) => this.onDeleteDevice(i)} onAdd={() => this.onAddDevice()} onSelectId={(i) => this.openSelectIdDialog(i)} onWizard={this.handleOpenWizard} onBulk={() => this.setState({ showBulkDialog: true })} onDeleteAll={() => this.setState({showDeleteConfirm: true})} native={this.props.native} onNativeChange={(attr, val) => this.updateNativeValue(attr, val)} socket={this.props.socket} />
                 </AccordionDetails></Accordion>
             </Box>
         );

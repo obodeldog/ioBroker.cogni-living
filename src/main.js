@@ -637,6 +637,94 @@ class CogniLiving extends utils.Adapter {
                 return { start: sleepStartTs, end: wakeTs };
             })();
 
+            // --- Einschlafzeit-Verfeinerung: Garmin + Vibration -------------------------
+            // Ziel: Unterscheidung "ins Bett gehen" (FP2) vs. "einschlafen" (Vib/Garmin)
+            // Stufe 0: Garmin sleepStartTimestampGMT — nur wenn 18–04 Uhr UND innerhalb FP2+3h
+            // Stufe 1: Vibrations-Verfeinerung — letztes Vib-Event + ≥20min Stille (FP2-Fenster)
+            // Stufe 2: FP2 allein — Zeit ins Bett gehen
+            // Stufe 3: Bewegungsmelder
+            // Stufe 4: Fixfenster
+            var _fp2RawStart = sleepWindowCalc.start || null; // FP2-Start vor Überschreibung merken
+            var garminSleepStartTs = null;
+            var vibRefinedSleepStartTs = null;
+
+            // Garmin Einschlafzeit lesen
+            var _garminSleepStartId = (this.config.garminSleepStartStateId || '').trim()
+                || 'garmin.0.dailysleep.dailySleepDTO.sleepStartTimestampGMT';
+            try {
+                var _gSState = await this.getForeignStateAsync(_garminSleepStartId);
+                if (_gSState && _gSState.val != null) {
+                    var _gSVal = Number(_gSState.val);
+                    if (!isNaN(_gSVal) && _gSVal > 0) {
+                        var _gSHr = new Date(_gSVal).getHours();
+                        var _gSPlausibel = (_gSHr >= 18 || _gSHr < 4);
+                        // Zusatzprüfung: Garmin-Start muss nach FP2-Start und < FP2+3h liegen
+                        var _gSInFP2Window = !_fp2RawStart || (_gSVal >= _fp2RawStart && _gSVal <= _fp2RawStart + 3 * 3600000);
+                        if (_gSPlausibel && _gSInFP2Window) {
+                            garminSleepStartTs = _gSVal;
+                            this.log.debug('[SleepStart] Garmin plausibel: ' + new Date(garminSleepStartTs).toISOString());
+                        } else {
+                            this.log.debug('[SleepStart] Garmin ausserhalb Plausibilitaetsfenster: ' + new Date(_gSVal).toISOString());
+                        }
+                    }
+                }
+            } catch(_gse) { this.log.debug('[SleepStart] Garmin nicht lesbar: ' + _gse.message); }
+
+            // Vibrations-Verfeinerung: letztes Vib-Event mit ≥20min Stille danach (innerhalb FP2+3h)
+            if (_fp2RawStart) {
+                var _vibRefMax = _fp2RawStart + 3 * 3600000;
+                var _vibRefEvts = sleepSearchEvents.filter(function(e) {
+                    return e.isVibrationBed && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
+                        && (e.timestamp||0) >= _fp2RawStart && (e.timestamp||0) <= _vibRefMax;
+                }).sort(function(a, b) { return (a.timestamp||0) - (b.timestamp||0); });
+                if (_vibRefEvts.length >= 2) {
+                    for (var _vsi = _vibRefEvts.length - 1; _vsi >= 0; _vsi--) {
+                        var _vsEvt = _vibRefEvts[_vsi];
+                        var _vsNext = (_vsi < _vibRefEvts.length - 1) ? (_vibRefEvts[_vsi + 1].timestamp||0) : Date.now();
+                        var _vsGap = (_vsNext - (_vsEvt.timestamp||0)) / 60000;
+                        if (_vsGap >= 20) {
+                            vibRefinedSleepStartTs = _vsEvt.timestamp||0;
+                            this.log.debug('[SleepStart] Vib-Verfeinerung: ' + new Date(vibRefinedSleepStartTs).toISOString());
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // allSleepStartSources + sleepStartSource bestimmen
+            var _fixedSleepStartTs = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr
+            var allSleepStartSources = [
+                { source: 'garmin',  ts: garminSleepStartTs },
+                { source: 'fp2_vib', ts: vibRefinedSleepStartTs },
+                { source: 'fp2',     ts: _fp2RawStart },
+                { source: 'motion',  ts: sleepWindowMotion.start || null },
+                { source: 'fixed',   ts: _fixedSleepStartTs }
+            ];
+            var sleepStartSource = _fp2RawStart ? 'fp2'
+                : (sleepWindowMotion.start ? 'motion' : 'fixed');
+
+            // Prioritätskette anwenden (nur wenn nicht frozen)
+            if (!_sleepFrozen) {
+                if (garminSleepStartTs) {
+                    sleepWindowCalc.start = garminSleepStartTs;
+                    sleepStartSource = 'garmin';
+                    this.log.info('[SleepStart] Garmin: ' + new Date(garminSleepStartTs).toISOString());
+                } else if (vibRefinedSleepStartTs) {
+                    sleepWindowCalc.start = vibRefinedSleepStartTs;
+                    sleepStartSource = 'fp2_vib';
+                    this.log.info('[SleepStart] Vib-Verfeinerung: ' + new Date(vibRefinedSleepStartTs).toISOString());
+                }
+            } else {
+                // Frozen: bestehende Quellen-Daten übernehmen, Garmin-Override trotzdem erlauben
+                sleepStartSource = _existingSnap.sleepStartSource || sleepStartSource;
+                if (_existingSnap.allSleepStartSources) allSleepStartSources = _existingSnap.allSleepStartSources;
+                if (garminSleepStartTs) {
+                    sleepWindowCalc.start = garminSleepStartTs;
+                    sleepStartSource = 'garmin';
+                    this.log.info('[SleepStart] Garmin-Override auf Frozen: ' + new Date(garminSleepStartTs).toISOString());
+                }
+            }
+
             // Schlaffenster fuer OC-7 (Sleep Score): FP2 → Bewegungsmelder → Fixfenster (Fallback-Kette).
             // Betrifft NICHT sleepWindowStart/End im Snapshot -- die Schlafzeit-Kachel bleibt FP2-only.
             var sleepWindowOC7 = sleepWindowCalc.start
@@ -774,6 +862,74 @@ class CogniLiving extends utils.Adapter {
                         outsideBedEvents.push({ start: _emptyTs, end: sleepWindowOC7.end, duration: _lastDur, type: _lHasBath ? 'bathroom' : 'outside' });
                     }
                 }
+            }
+
+            // --- Garmin Wake-Override + Aufwachzeit-Quellen --------------------------------
+            // Prioritätskette (absteigend): Garmin → FP2+Vib → FP2 → Motion → Fixed
+            // Garmin sleepEndTimestampGMT überstimmt alle anderen Quellen wenn plausibel (03-14 Uhr)
+            var garminWakeTs = null;
+            var fp2WakeTs    = sleepWindowOC7.end || null;  // aktueller Wert = FP2/motion/fixed
+            var _garminWakeId = (this.config.garminSleepEndStateId || '').trim()
+                || 'garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT';
+            try {
+                var _gwState = await this.getForeignStateAsync(_garminWakeId);
+                if (_gwState && _gwState.val != null) {
+                    var _gwVal = Number(_gwState.val);
+                    if (!isNaN(_gwVal) && _gwVal > 0) {
+                        var _gwHr = new Date(_gwVal).getHours();
+                        if (_gwHr >= 3 && _gwHr < 14) {
+                            garminWakeTs = _gwVal;
+                            this.log.debug('[Wake] Garmin plausibel: ' + new Date(garminWakeTs).toISOString());
+                        } else {
+                            this.log.debug('[Wake] Garmin ausserhalb 03-14h: ' + new Date(_gwVal).toISOString());
+                        }
+                    }
+                }
+            } catch(_gwe) { this.log.debug('[Wake] Garmin-End nicht lesbar: ' + _gwe.message); }
+
+            // Vibrationssensor-Bestätigung: Letztes Vib-Event vor FP2-Leer-Signal (±30min)
+            // Erhöht Konfidenz, ändert aber nicht den Timestamp
+            var vibWakeConfirm = false;
+            if (fp2WakeTs && sleepWindowOC7.start) {
+                var _vibWakeSearch = sleepSearchEvents.filter(function(e) {
+                    return e.isVibrationBed && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
+                        && (e.timestamp||0) >= fp2WakeTs - 30*60*1000
+                        && (e.timestamp||0) <= fp2WakeTs + 5*60*1000;
+                });
+                if (_vibWakeSearch.length > 0) vibWakeConfirm = true;
+            }
+
+            // allWakeSources: alle Kandidaten mit Timestamps (null wenn nicht verfügbar)
+            var allWakeSources = [
+                { source: 'garmin',          ts: garminWakeTs },
+                { source: 'fp2',             ts: fp2WakeTs },
+                { source: 'fp2_other',       ts: null },
+                { source: 'other',           ts: null },
+                { source: 'motion',          ts: (sleepWindowSource === 'motion') ? fp2WakeTs : null },
+                { source: 'vibration_alone', ts: null },
+                { source: 'vibration',       ts: vibWakeConfirm ? fp2WakeTs : null },
+                { source: 'fixed',           ts: (sleepWindowSource === 'fixed') ? fp2WakeTs : null }
+            ];
+
+            // wakeSource + wakeConf bestimmen
+            var wakeSource, wakeConf;
+            if (garminWakeTs) {
+                sleepWindowOC7.end = garminWakeTs;
+                wakeSource = 'garmin';
+                wakeConf   = 'maximal';
+                this.log.info('[Wake] Garmin-Override: ' + new Date(garminWakeTs).toISOString());
+            } else if (sleepWindowSource === 'fp2' && vibWakeConfirm) {
+                wakeSource = 'fp2';
+                wakeConf   = 'sehr_hoch';
+            } else if (sleepWindowSource === 'fp2') {
+                wakeSource = 'fp2';
+                wakeConf   = 'hoch';
+            } else if (sleepWindowSource === 'motion') {
+                wakeSource = 'motion';
+                wakeConf   = 'mittel';
+            } else {
+                wakeSource = 'fixed';
+                wakeConf   = 'niedrig';
             }
 
             // --- Garmin-Validierung (optional) --------------------------------------------
@@ -1059,6 +1215,11 @@ class CogniLiving extends utils.Adapter {
                 garminRemMin: garminRemSec ? Math.round(garminRemSec/60) : null,
                 sleepWindowSource: sleepWindowSource,
                 outsideBedEvents: outsideBedEvents,
+                wakeSource: wakeSource,
+                wakeConf: wakeConf,
+                allWakeSources: allWakeSources,
+                sleepStartSource: sleepStartSource,
+                allSleepStartSources: allSleepStartSources,
                 wakeConfirmed: !!(sleepWindowOC7.end && new Date().getHours() >= 10 && (Date.now() - (sleepWindowOC7.end || 0)) >= 3600000)
             };
 
