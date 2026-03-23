@@ -2023,6 +2023,158 @@ export default function HealthTab(props: any) {
                             )}
                         </TerminalBox>
 
+                        {/* SCHLAF-SCORE & PHASEN — OC-7 Wochenübersicht */}
+                        <TerminalBox title={`SCHLAF-SCORE & PHASEN - ${viewMode === 'MONTH' ? '30 TAGE' : '7 TAGE'}`} themeType={themeType} style={{marginTop:'20px'}}>
+                            {(() => {
+                                const orderedSleepData = [...weekData].reverse(); // älteste links → neueste rechts
+                                const sleepChartData = orderedSleepData.map((day: any) => {
+                                    const stages: any[] = day.data?.sleepStages || [];
+                                    const total = stages.length;
+                                    const deep  = total > 0 ? Math.round(stages.filter((s: any) => s.s === 'deep').length  / total * 100) : null;
+                                    const light = total > 0 ? Math.round(stages.filter((s: any) => s.s === 'light').length / total * 100) : null;
+                                    const rem   = total > 0 ? Math.round(stages.filter((s: any) => s.s === 'rem').length   / total * 100) : null;
+                                    const wake  = total > 0 ? Math.round(stages.filter((s: any) => s.s === 'wake').length  / total * 100) : null;
+                                    return {
+                                        dayName: (day.dayName || '').substring(0, 2),
+                                        hasData: day.hasData,
+                                        score: (day.data?.sleepScore != null) ? Number(day.data.sleepScore) : null,
+                                        garminScore: (day.data?.garminScore != null) ? Number(day.data.garminScore) : null,
+                                        deep, light, rem, wake,
+                                        hasStages: total > 0,
+                                    };
+                                });
+
+                                const hasSleepScore = sleepChartData.some((d: any) => d.score != null);
+                                const hasSleepStages = sleepChartData.some((d: any) => d.hasStages);
+
+                                if (!hasSleepScore && !hasSleepStages) {
+                                    return (
+                                        <div style={{textAlign:'center', padding:'30px', color:'#888', fontSize:'0.8rem'}}>
+                                            Keine Schlaf-Score-Daten verfügbar — erscheint ab der ersten analysierten Nacht.
+                                        </div>
+                                    );
+                                }
+
+                                const scoreCol = (s: number | null) => s == null ? '#555' : s >= 80 ? '#00e676' : s >= 60 ? '#ffab40' : '#ff5252';
+                                const n = sleepChartData.length;
+                                const slotW = 100 / n;
+                                const barW = slotW - 0.8;
+                                const chartH = 90;
+
+                                const avgScores = sleepChartData.filter((d: any) => d.score != null).map((d: any) => d.score as number);
+                                const avgScore = avgScores.length > 0 ? Math.round(avgScores.reduce((a: number, b: number) => a + b, 0) / avgScores.length) : null;
+                                const stageNights = sleepChartData.filter((d: any) => d.hasStages);
+                                const avgDeep = stageNights.length > 0 ? Math.round(stageNights.reduce((s: number, d: any) => s + (d.deep||0), 0) / stageNights.length) : null;
+                                const avgRem  = stageNights.length > 0 ? Math.round(stageNights.reduce((s: number, d: any) => s + (d.rem||0),  0) / stageNights.length) : null;
+
+                                return (
+                                    <div style={{display:'grid', gridTemplateColumns: hasSleepScore && hasSleepStages ? '1fr 1fr' : '1fr', gap:'24px', padding:'8px 0'}}>
+
+                                        {/* Option A: AURA-SLEEPSCORE */}
+                                        {hasSleepScore && (
+                                            <div>
+                                                <div style={{fontSize:'0.65rem', color:isDark?'#888':'#666', marginBottom:'6px', letterSpacing:'0.08em'}}>
+                                                    AURA-SLEEPSCORE{avgScore != null ? ` · Ø ${avgScore}` : ''}
+                                                </div>
+                                                <svg width="100%" height={chartH} viewBox={`0 0 100 ${chartH}`} preserveAspectRatio="none" style={{display:'block'}}>
+                                                    {/* Referenzlinien */}
+                                                    <line x1="0" y1={chartH*0.2} x2="100" y2={chartH*0.2} stroke="#00e67622" strokeWidth="0.8" vectorEffect="non-scaling-stroke"/>
+                                                    <line x1="0" y1={chartH*0.4} x2="100" y2={chartH*0.4} stroke={isDark?'#222':'#eee'} strokeWidth="0.3" strokeDasharray="2,2" vectorEffect="non-scaling-stroke"/>
+                                                    <line x1="0" y1={chartH}     x2="100" y2={chartH}     stroke={isDark?'#333':'#ccc'} strokeWidth="0.5" vectorEffect="non-scaling-stroke"/>
+                                                    {/* Balken + Garmin-Punkt */}
+                                                    {sleepChartData.map((d: any, i: number) => {
+                                                        const x = i * slotW + 0.4;
+                                                        const bH = d.score != null ? (d.score / 100) * (chartH - 4) : 0;
+                                                        const bY = chartH - bH;
+                                                        return (
+                                                            <g key={i}>
+                                                                <rect x={x} y={bY} width={barW} height={bH} fill={d.score != null ? scoreCol(d.score) : '#333'} opacity={0.85} rx="0.5" />
+                                                                {d.garminScore != null && (
+                                                                    <circle cx={x + barW/2} cy={chartH - (d.garminScore / 100) * (chartH - 4) - 1} r="1.1" fill="#ab47bc" opacity="0.9" />
+                                                                )}
+                                                            </g>
+                                                        );
+                                                    })}
+                                                </svg>
+                                                {/* X-Labels */}
+                                                <div style={{display:'flex', fontSize:'0.55rem', color:isDark?'#666':'#aaa', marginTop:'3px'}}>
+                                                    {sleepChartData.map((d: any, i: number) => (
+                                                        <span key={i} style={{flex:1, textAlign:'center'}}>{d.dayName}</span>
+                                                    ))}
+                                                </div>
+                                                {/* Score-Werte */}
+                                                <div style={{display:'flex', fontSize:'0.6rem', marginTop:'2px'}}>
+                                                    {sleepChartData.map((d: any, i: number) => (
+                                                        <span key={i} style={{flex:1, textAlign:'center', color:scoreCol(d.score), fontWeight:'bold'}}>
+                                                            {d.score != null ? d.score : '—'}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                <div style={{fontSize:'0.55rem', color:'#888', marginTop:'6px', display:'flex', gap:'8px', flexWrap:'wrap'}}>
+                                                    <span style={{color:'#ff5252'}}>■ &lt;60</span>
+                                                    <span style={{color:'#ffab40'}}>■ 60–79</span>
+                                                    <span style={{color:'#00e676'}}>■ ≥80</span>
+                                                    <span style={{color:'#ab47bc'}}>● Garmin</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Option B: SCHLAFPHASEN-ANTEILE */}
+                                        {hasSleepStages && (
+                                            <div>
+                                                <div style={{fontSize:'0.65rem', color:isDark?'#888':'#666', marginBottom:'6px', letterSpacing:'0.08em'}}>
+                                                    SCHLAFPHASEN-ANTEILE{avgDeep != null ? ` · Ø Tief ${avgDeep}% · Ø REM ${avgRem}%` : ''}
+                                                </div>
+                                                <svg width="100%" height={chartH} viewBox={`0 0 100 ${chartH}`} preserveAspectRatio="none" style={{display:'block'}}>
+                                                    <line x1="0" y1={chartH} x2="100" y2={chartH} stroke={isDark?'#333':'#ccc'} strokeWidth="0.5" vectorEffect="non-scaling-stroke"/>
+                                                    {sleepChartData.map((d: any, i: number) => {
+                                                        const x = i * slotW + 0.4;
+                                                        if (!d.hasStages) {
+                                                            return <rect key={i} x={x} y={0} width={barW} height={chartH} fill={isDark?'#1a1a1a':'#f0f0f0'} />;
+                                                        }
+                                                        const dH = ((d.deep  || 0) / 100) * chartH;
+                                                        const lH = ((d.light || 0) / 100) * chartH;
+                                                        const rH = ((d.rem   || 0) / 100) * chartH;
+                                                        const wH = ((d.wake  || 0) / 100) * chartH;
+                                                        return (
+                                                            <g key={i}>
+                                                                <rect x={x} y={0}              width={barW} height={dH} fill="#1565c0" opacity={0.85} />
+                                                                <rect x={x} y={dH}             width={barW} height={lH} fill="#42a5f5" opacity={0.85} />
+                                                                <rect x={x} y={dH+lH}          width={barW} height={rH} fill="#ab47bc" opacity={0.85} />
+                                                                <rect x={x} y={dH+lH+rH}       width={barW} height={wH} fill="#ffd54f" opacity={0.85} />
+                                                            </g>
+                                                        );
+                                                    })}
+                                                    {/* Score-Linie */}
+                                                    {hasSleepScore && (() => {
+                                                        const pts = sleepChartData
+                                                            .map((d: any, i: number) => d.score != null
+                                                                ? `${i * slotW + slotW/2},${chartH - (d.score / 100) * (chartH - 4) - 1}`
+                                                                : null)
+                                                            .filter(Boolean).join(' ');
+                                                        return pts ? <polyline points={pts} fill="none" stroke="#ffffff" strokeWidth="0.8" strokeDasharray="2,1" opacity="0.5" vectorEffect="non-scaling-stroke" /> : null;
+                                                    })()}
+                                                </svg>
+                                                {/* X-Labels */}
+                                                <div style={{display:'flex', fontSize:'0.55rem', color:isDark?'#666':'#aaa', marginTop:'3px'}}>
+                                                    {sleepChartData.map((d: any, i: number) => (
+                                                        <span key={i} style={{flex:1, textAlign:'center'}}>{d.dayName}</span>
+                                                    ))}
+                                                </div>
+                                                <div style={{fontSize:'0.55rem', color:'#888', marginTop:'6px', display:'flex', gap:'8px', flexWrap:'wrap'}}>
+                                                    <span style={{color:'#1565c0'}}>■ Tief</span>
+                                                    <span style={{color:'#42a5f5'}}>■ Leicht</span>
+                                                    <span style={{color:'#ab47bc'}}>■ REM</span>
+                                                    <span style={{color:'#ffd54f'}}>■ Wachliegen</span>
+                                                    {hasSleepScore && <span style={{color:'#888'}}>--- Score</span>}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                        </TerminalBox>
+
                         {/* RAUM-NUTZUNG HISTOGRAMME (NEU!) */}
                         <TerminalBox title={`RAUM-NUTZUNG (MOBILITÄT) - ${viewMode === 'MONTH' ? '30 TAGE' : '7 TAGE'}`} themeType={themeType} style={{marginTop:'20px'}}>
                             {(() => {
