@@ -39,6 +39,10 @@ interface DailyDataPoint {
     todayVector?: number[];
     roomActivity?: Record<string, number>;
     windowsByRoom?: Record<string, number>;
+    sleepScore?: number | null;
+    sleepScoreRaw?: number | null;
+    sleepStages?: Array<{t: number, s: string}> | null;
+    garminScore?: number | null;
 }
 
 function ChartHelp({ text }: { text: string }) {
@@ -213,6 +217,11 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                         const sleepWindowEnd   = histData.sleepWindowEnd   || null;
                         const nightVibrationStrengthAvg = histData.nightVibrationStrengthAvg !== undefined ? Number(histData.nightVibrationStrengthAvg) : null;
                         const nightVibrationStrengthMax = histData.nightVibrationStrengthMax !== undefined ? Number(histData.nightVibrationStrengthMax) : null;
+                        // OC-7 Sleep Score + Phasen (seit v0.33.50+)
+                        const sleepScore = histData.sleepScore !== undefined && histData.sleepScore !== null ? Number(histData.sleepScore) : null;
+                        const sleepScoreRaw = histData.sleepScoreRaw !== undefined && histData.sleepScoreRaw !== null ? Number(histData.sleepScoreRaw) : null;
+                        const sleepStages = Array.isArray(histData.sleepStages) && histData.sleepStages.length > 0 ? histData.sleepStages : null;
+                        const garminScore = histData.garminScore !== undefined && histData.garminScore !== null ? Number(histData.garminScore) : null;
 
                         // Raum-Aktivitaet fuer Tooltip (Minuten pro Raum)
                         const roomActivity: {[key: string]: number} = histData.todayRoomMinutes || {};
@@ -251,7 +260,11 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             roomActivity,
                             windowsByRoom,
                             todayVector: todayVector,  // Fuer Python Nacht-IsolationForest
-                            isPartialDay: dateStr === todayDateStr
+                            isPartialDay: dateStr === todayDateStr,
+                            sleepScore,
+                            sleepScoreRaw,
+                            sleepStages,
+                            garminScore
                         });
                     } else {
                     }
@@ -971,6 +984,144 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
 
                     </Grid>
                     </Box>
+
+                    {/* ═══ OC-7 SCHLAF-SCORE & PHASEN ═══ */}
+                    {(() => {
+                        const hasSleepScoreData = dailyDataRaw.some((d: any) => d.sleepScore != null);
+                        const hasSleepStageData = dailyDataRaw.some((d: any) => d.sleepStages != null);
+                        if (!hasSleepScoreData && !hasSleepStageData) return null;
+
+                        const sorted = [...dailyDataRaw].sort((a: any, b: any) => a.date.localeCompare(b.date));
+                        const sleepChartData = sorted.map((d: any) => {
+                            const stages = d.sleepStages as Array<{t: number, s: string}> | null;
+                            let deep: number | null = null, light: number | null = null, rem: number | null = null, wake: number | null = null;
+                            if (stages && stages.length > 0) {
+                                const total = stages.length;
+                                deep  = Math.round(stages.filter((s: any) => s.s === 'deep').length  / total * 100);
+                                light = Math.round(stages.filter((s: any) => s.s === 'light').length / total * 100);
+                                rem   = Math.round(stages.filter((s: any) => s.s === 'rem').length   / total * 100);
+                                wake  = Math.round(stages.filter((s: any) => s.s === 'wake').length  / total * 100);
+                            }
+                            return {
+                                date: d.date ? d.date.substring(5) : '',
+                                score: d.sleepScore != null ? Number(d.sleepScore) : null,
+                                garminScore: d.garminScore != null ? Number(d.garminScore) : null,
+                                deep, light, rem, wake,
+                                hasStages: stages != null,
+                            };
+                        }).filter((d: any) => d.date);
+
+                        const scoreColor = (s: number | null) => {
+                            if (s == null) return isDark ? '#444' : '#ccc';
+                            if (s >= 80) return '#28a745';
+                            if (s >= 60) return '#fd7e14';
+                            return '#dc3545';
+                        };
+                        const avgScores = sleepChartData.filter((d: any) => d.score != null).map((d: any) => d.score as number);
+                        const avgScore = avgScores.length > 0 ? Math.round(avgScores.reduce((a, b) => a + b, 0) / avgScores.length) : null;
+                        const stageNights = sleepChartData.filter((d: any) => d.hasStages);
+                        const avgDeep = stageNights.length > 0 ? Math.round(stageNights.reduce((s: number, d: any) => s + (d.deep || 0), 0) / stageNights.length) : null;
+                        const avgRem  = stageNights.length > 0 ? Math.round(stageNights.reduce((s: number, d: any) => s + (d.rem  || 0), 0) / stageNights.length) : null;
+
+                        return (
+                            <Box sx={{ mt: 3, borderLeft: '4px solid #1565c0', borderRadius: '0 8px 8px 0', bgcolor: isDark ? 'rgba(21,101,192,0.05)' : 'rgba(21,101,192,0.03)', pl: 2, pr: 0.5, pt: 2, pb: 1 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                                    <Typography variant="overline" sx={{ color: '#1565c0', fontWeight: 'bold', letterSpacing: '0.12em', fontSize: '0.7rem', lineHeight: 1 }}>
+                                        🌙 OC-7 SCHLAF-SCORE &amp; PHASEN
+                                    </Typography>
+                                    <ChartHelp text={"AURA-Sleepscore: Tief×200 + REM×150 + Leicht×80 − Wach×250 (max. 100). Balkenfarbe: Grün ≥80 (gut), Orange 60–79 (mittel), Rot <60 (schlecht). Lila Linie = Garmin-Score zum Vergleich. Gestapelte Phasen-Balken zeigen Anteile von Tiefschlaf, Leichtschlaf, REM und Wachliegen pro Nacht."} />
+                                </Box>
+                                <Grid container spacing={2}>
+                                    {/* Option A: Score-Übersicht */}
+                                    {hasSleepScoreData && (
+                                        <Grid item xs={12} md={6}>
+                                            <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#1565c0' }}>
+                                                        AURA-SLEEPSCORE
+                                                    </Typography>
+                                                    <ChartHelp text={"Tagesbalken = AURA-Sleepscore der Nacht (0–100). Grün ≥80, Orange 60–79, Rot <60. Lila Linie = Garmin-Vergleichsscore (falls konfiguriert)."} />
+                                                </Box>
+                                                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
+                                                    {avgScore != null ? `Ø ${avgScore} · ${avgScores.length} Nächte mit Daten` : 'Noch keine Schlaf-Score-Daten'}
+                                                </Typography>
+                                                <ResponsiveContainer width="100%" height={180}>
+                                                    <ComposedChart data={sleepChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor(sleepChartData.length / 7)} />
+                                                        <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} domain={[0, 100]} />
+                                                        <Tooltip
+                                                            formatter={(v: any, name: string) => [v, name === 'score' ? 'AURA-Score' : 'Garmin-Score']}
+                                                            contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}`, fontSize: '0.7rem' }}
+                                                        />
+                                                        <ReferenceArea y1={0}  y2={60}  fill="rgba(220,53,69,0.08)" />
+                                                        <ReferenceArea y1={60} y2={80}  fill="rgba(253,126,20,0.08)" />
+                                                        <ReferenceArea y1={80} y2={100} fill="rgba(40,167,69,0.08)" />
+                                                        <ReferenceLine y={80} stroke="#28a74555" strokeDasharray="4 3" label={{ value: '80', position: 'insideRight', fontSize: 9, fill: '#28a745' }} />
+                                                        <Bar dataKey="score" name="score" radius={[3,3,0,0]} maxBarSize={30}>
+                                                            {sleepChartData.map((entry: any, i: number) => (
+                                                                <Cell key={i} fill={scoreColor(entry.score)} opacity={0.85} />
+                                                            ))}
+                                                        </Bar>
+                                                        <Line type="monotone" dataKey="garminScore" stroke="#ab47bc" strokeWidth={1.5} dot={{ r: 3, fill: '#ab47bc' }} name="garminScore" connectNulls />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                                <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                                                    <span style={{color:'#dc3545'}}>■ &lt;60</span>
+                                                    <span style={{color:'#fd7e14'}}>■ 60–79</span>
+                                                    <span style={{color:'#28a745'}}>■ ≥80</span>
+                                                    <span style={{color:'#ab47bc'}}>◆ Garmin</span>
+                                                </Box>
+                                            </Paper>
+                                        </Grid>
+                                    )}
+                                    {/* Option B: Phasen-Anteile */}
+                                    {hasSleepStageData && (
+                                        <Grid item xs={12} md={6}>
+                                            <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#1565c0' }}>
+                                                        SCHLAFPHASEN-ANTEILE
+                                                    </Typography>
+                                                    <ChartHelp text={"Gestapelte Balken: prozentualer Anteil von Tiefschlaf (dunkelblau), Leichtschlaf (hellblau), REM (lila) und Wachliegen (gelb) pro Nacht. Gestrichelte Linie = AURA-Score (rechte Achse). Optimalwerte: Tiefschlaf 15–25%, REM 20–25% (Walker 2017)."} />
+                                                </Box>
+                                                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
+                                                    {avgDeep != null ? `Ø Tief: ${avgDeep}% · Ø REM: ${avgRem}% · ${stageNights.length} Nächte` : 'Noch keine Phasen-Daten'}
+                                                </Typography>
+                                                <ResponsiveContainer width="100%" height={180}>
+                                                    <ComposedChart data={sleepChartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor(sleepChartData.length / 7)} />
+                                                        <YAxis yAxisId="pct" stroke={lineColor} style={{ fontSize: '0.6rem' }} domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
+                                                        <YAxis yAxisId="score" orientation="right" stroke="#1565c055" style={{ fontSize: '0.6rem' }} domain={[0, 100]} tickFormatter={(v: number) => `${v}`} />
+                                                        <Tooltip
+                                                            formatter={(v: any, name: string) => {
+                                                                const labels: Record<string, string> = { deep: 'Tiefschlaf', light: 'Leichtschlaf', rem: 'REM', wake: 'Wachliegen', score: 'AURA-Score' };
+                                                                return [name === 'score' ? String(v) : `${v}%`, labels[name] || name];
+                                                            }}
+                                                            contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}`, fontSize: '0.7rem' }}
+                                                        />
+                                                        <Bar yAxisId="pct" dataKey="deep"  name="deep"  stackId="ph" fill="#1565c0" opacity={0.85} />
+                                                        <Bar yAxisId="pct" dataKey="light" name="light" stackId="ph" fill="#42a5f5" opacity={0.85} />
+                                                        <Bar yAxisId="pct" dataKey="rem"   name="rem"   stackId="ph" fill="#ab47bc" opacity={0.85} />
+                                                        <Bar yAxisId="pct" dataKey="wake"  name="wake"  stackId="ph" fill="#ffd54f" opacity={0.85} radius={[3,3,0,0]} />
+                                                        <Line yAxisId="score" type="monotone" dataKey="score" stroke="#1565c0" strokeWidth={2} dot={{ r: 2 }} name="score" connectNulls strokeDasharray="5 3" />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                                <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                                                    <span style={{color:'#1565c0'}}>■ Tief</span>
+                                                    <span style={{color:'#42a5f5'}}>■ Leicht</span>
+                                                    <span style={{color:'#ab47bc'}}>■ REM</span>
+                                                    <span style={{color:'#ffd54f'}}>■ Wachliegen</span>
+                                                    <span style={{color:'#1565c0', opacity:0.7}}>--- Score</span>
+                                                </Box>
+                                            </Paper>
+                                        </Grid>
+                                    )}
+                                </Grid>
+                            </Box>
+                        );
+                    })()}
 
                     {/* SCHLAF & SENSORIK Gruppe */}
                     {(() => {

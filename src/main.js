@@ -899,15 +899,53 @@ class CogniLiving extends utils.Adapter {
                 if (_vibWakeSearch.length > 0) vibWakeConfirm = true;
             }
 
-            // allWakeSources: alle Kandidaten mit Timestamps (null wenn nicht verf++gbar)
+            // Wake-Kandidaten mit echten Timestamps berechnen
+            var _4amTs = new Date(); _4amTs.setHours(4,0,0,0); var _4amMs = _4amTs.getTime();
+            var _wakeMinSleepTs = (sleepWindowOC7.start || 0) + 3*3600000; // mind. 3h Schlaf
+
+            // otherRoomWakeTs: erste Aktivitaet in nicht-Schlafzimmer/nicht-Bad nach 04:00 + 3h Schlaf
+            var otherRoomWakeTs = null;
+            var _otherRoomEvts = sleepSearchEvents.filter(function(e) {
+                return !e.isFP2Bed && !e.isVibrationBed && !e.isBathroomSensor
+                    && (e.type === 'motion' || e.type === 'presence_radar_bool')
+                    && (e.timestamp||0) >= _4amMs
+                    && (e.timestamp||0) >= _wakeMinSleepTs;
+            }).sort(function(a,b) { return (a.timestamp||0) - (b.timestamp||0); });
+            if (_otherRoomEvts.length > 0) otherRoomWakeTs = _otherRoomEvts[0].timestamp||null;
+
+            // fp2OtherWakeTs: FP2-Bett leer UND anderer Raum innerhalb +-15 Min
+            var fp2OtherWakeTs = null;
+            if (fp2WakeTs && otherRoomWakeTs && Math.abs(otherRoomWakeTs - fp2WakeTs) <= 15*60*1000) {
+                fp2OtherWakeTs = Math.min(fp2WakeTs, otherRoomWakeTs);
+            }
+
+            // vibAloneWakeTs: letztes Vib-Event mit >=45 Min Stille danach
+            var vibAloneWakeTs = null;
+            var vibWakeTs = null;
+            var _vibEvtsAfter4 = sleepSearchEvents.filter(function(e) {
+                return e.isVibrationBed && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
+                    && (e.timestamp||0) >= _4amMs
+                    && (e.timestamp||0) >= _wakeMinSleepTs;
+            }).sort(function(a,b) { return (a.timestamp||0) - (b.timestamp||0); });
+            for (var _vwi = 0; _vwi < _vibEvtsAfter4.length; _vwi++) {
+                var _vwTs = _vibEvtsAfter4[_vwi].timestamp||0;
+                var _vwNextTs = _vibEvtsAfter4[_vwi+1] ? (_vibEvtsAfter4[_vwi+1].timestamp||0) : null;
+                if (!_vwNextTs || _vwNextTs - _vwTs >= 45*60*1000) { vibAloneWakeTs = _vwTs; }
+            }
+            if (_vibWakeSearch && _vibWakeSearch.length > 0) {
+                var _vwSorted = _vibWakeSearch.slice().sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
+                vibWakeTs = _vwSorted[0].timestamp||null;
+            }
+
+            // allWakeSources: alle Kandidaten mit echten Timestamps
             var allWakeSources = [
                 { source: 'garmin',          ts: garminWakeTs },
                 { source: 'fp2',             ts: fp2WakeTs },
-                { source: 'fp2_other',       ts: null },
-                { source: 'other',           ts: null },
+                { source: 'fp2_other',       ts: fp2OtherWakeTs },
+                { source: 'other',           ts: otherRoomWakeTs },
                 { source: 'motion',          ts: (sleepWindowSource === 'motion') ? fp2WakeTs : null },
-                { source: 'vibration_alone', ts: null },
-                { source: 'vibration',       ts: vibWakeConfirm ? fp2WakeTs : null },
+                { source: 'vibration_alone', ts: vibAloneWakeTs },
+                { source: 'vibration',       ts: vibWakeTs },
                 { source: 'fixed',           ts: (sleepWindowSource === 'fixed') ? fp2WakeTs : null }
             ];
 
