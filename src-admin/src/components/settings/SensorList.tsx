@@ -637,7 +637,7 @@ export default function SensorList(props) {
                                                                 {discoveredId && !device.batteryStateId && (
                                                                     <Box sx={{ fontSize: "0.62rem", color: "text.secondary", mt: 0.2, display: "flex", alignItems: "center", gap: 0.5 }}>
                                                                         <span style={{ color: "#4caf50" }}>✓</span>
-                                                                        <Tooltip title={`Auto-Discovery (${discoveredEntry?.source}): ${discoveredId}`}>
+                                                                        <Tooltip title={`Auto-Discovery (${discoveredEntry?.source === 'hm-auto' ? 'Homematic Kanal-0' : discoveredEntry?.source === 'alias' ? 'Alias-Rekonstruktion' : 'Zigbee/direkt'}): ${discoveredId}`}>
                                                                             <span style={{ cursor: "help", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: 220, display: "inline-block" }}>
                                                                                 {discoveredId}
                                                                             </span>

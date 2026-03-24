@@ -1,8 +1,9 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.68",
+    "version": "0.33.69",
     "news": {
+      "0.33.69": "feat: OC-15 Homematic Battery-Discovery (Kanal 0: LOWBAT/BATTERY_STATE/OPERATING_VOLTAGE); Spannungskonvertierung Volt->Prozent (1.5-4.5V Range)",
       "0.33.68": "feat: OC-15 Battery-UI - Auto-Discovery-Hint + Ladestand im Sensor-Tab; Object-Picker fuer Batterie-State-ID; HANDBUCH.md Batterie-Abschnitt",
       "0.33.67": "feat: OC-15 Batterie-Discovery (Auto/Alias/Manuell) + Pushover 09:00 bei kritisch; OC-2 Topologie-Matrix jetzt primaer im System-Tab; Battery-Badge in Schlafkachel",
       "0.33.66": "feat: OC-9 sleepScoreRaw im Badge (>100 sichtbar); OC-14 Vibration-Label als Konfidenz-Booster; OC-5 Sensor-Offline-Schwelle 7 Tage",
