@@ -166,6 +166,7 @@ export default function HealthTab(props: any) {
     const [driftDetails, setDriftDetails] = useState<string>('');
     const [auraSleepData, setAuraSleepData] = useState<any>(null);
     const [sensorBatteryStatus, setSensorBatteryStatus] = useState<{sensors: {id:string, level:number|null, isLow:boolean, isCritical:boolean, source:string}[]} | null>(null);
+    const [nativeDevices, setNativeDevices] = useState<any[]>([]);
 
     // MASTER-RAUMNAMEN aus System-Tab laden
     const loadMasterRooms = async () => {
@@ -713,14 +714,20 @@ export default function HealthTab(props: any) {
         loadMasterRooms();
     }, []);
 
-    // OC-15: Batterie-Status beim Mount laden (alle 30 Min aktualisieren)
+    // OC-15: Batterie-Status + Gerätekonfiguration beim Mount laden (alle 30 Min aktualisieren)
     useEffect(() => {
         const loadBattery = () => {
             socket.getState(`${adapterName}.${instance}.system.sensorBatteryStatus`).then((s: any) => {
                 if (s && s.val) { try { setSensorBatteryStatus(JSON.parse(s.val)); } catch(e) {} }
             }).catch(() => {});
         };
+        const loadDevices = () => {
+            socket.getObject(`system.adapter.${adapterName}.${instance}`).then((obj: any) => {
+                if (obj && obj.native && obj.native.devices) setNativeDevices(obj.native.devices);
+            }).catch(() => {});
+        };
         loadBattery();
+        loadDevices();
         const t = setInterval(loadBattery, 30 * 60 * 1000);
         return () => clearInterval(t);
     }, [socket, adapterName, instance]);
@@ -1138,16 +1145,31 @@ export default function HealthTab(props: any) {
         const hasVibSensor = stages.length > 0;
         const hasSleepWindow = swStart !== null;
 
-        // OC-15: Batterie-Warnung für Vibrationssensor
+        // OC-15: Batterie-Warnung — nur schlaf-relevante Sensoren
+        // Relevant: Vibration, FP2-Radar, Bewegung mit Funktion bed/bathroom/kitchen/hallway
+        const SLEEP_RELEVANT_TYPES = ['vibration_trigger', 'vibration_strength', 'presence_radar_bool'];
+        const SLEEP_RELEVANT_FUNCS = ['bed', 'bathroom', 'kitchen', 'hallway'];
         const vibBatteryWarning = (() => {
             if (!sensorBatteryStatus || !sensorBatteryStatus.sensors) return null;
-            const lowVibs = sensorBatteryStatus.sensors.filter(s => s.isLow || s.isCritical);
-            if (lowVibs.length === 0) return null;
-            return lowVibs.map(s => ({
-                level: s.level,
-                isCritical: s.isCritical,
-                id: s.id
-            }));
+            const lowSensors = sensorBatteryStatus.sensors.filter(s => {
+                if (!(s.isLow || s.isCritical)) return false;
+                const dev = nativeDevices.find((d: any) => d.id === s.id);
+                if (!dev) return false; // unbekannter Sensor → ignorieren
+                const type = dev.type || 'motion';
+                const sf = dev.sensorFunction || (dev.isBathroomSensor ? 'bathroom' : dev.isKitchenSensor ? 'kitchen' : dev.isHallway ? 'hallway' : dev.isFP2Bed || dev.isVibrationBed ? 'bed' : '');
+                return SLEEP_RELEVANT_TYPES.includes(type) || (type === 'motion' && SLEEP_RELEVANT_FUNCS.includes(sf));
+            });
+            if (lowSensors.length === 0) return null;
+            return lowSensors.map(s => {
+                const dev = nativeDevices.find((d: any) => d.id === s.id);
+                return {
+                    level: s.level,
+                    isCritical: s.isCritical,
+                    id: s.id,
+                    name: dev?.name || dev?.location || s.id,
+                    location: dev?.location || ''
+                };
+            });
         })();
 
         // Farben: best → schlimmste (Tief=dunkelblau, Leicht=hellblau, REM=lila, Wach=gelb, Bad=bernstein, Außerhalb=orange)
@@ -1540,24 +1562,27 @@ export default function HealthTab(props: any) {
                             </div>
                         )}
 
-                        {/* OC-15: Batterie-Warnung wenn Sensor niedrig */}
+                        {/* OC-15: Batterie-Warnung — nur schlaf-relevante Sensoren */}
                         {vibBatteryWarning && vibBatteryWarning.length > 0 && (
                             <div style={{
                                 borderTop: `1px dashed ${isDark?'#444':'#ddd'}`,
                                 paddingTop: '6px',
                                 marginTop: '6px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
                                 fontSize: '0.65rem',
                                 color: vibBatteryWarning.some(s => s.isCritical) ? '#f44336' : '#ff9800'
                             }}>
-                                <span>{vibBatteryWarning.some(s => s.isCritical) ? '🔋' : '🪫'}</span>
-                                <span>
-                                    {vibBatteryWarning.some(s => s.isCritical) ? 'Batterie kritisch' : 'Batterie niedrig'}&nbsp;
-                                    ({vibBatteryWarning.map(s => s.level !== null ? s.level + '%' : '?').join(', ')})
-                                    &nbsp;— Schlafanalyse evtl. ungenau
-                                </span>
+                                {vibBatteryWarning.map((s, i) => (
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: i > 0 ? '3px' : 0 }}>
+                                        <span>{s.isCritical ? '🔋' : '🪫'}</span>
+                                        <span>
+                                            <b>{s.name}{s.location && s.name !== s.location ? ` (${s.location})` : ''}</b>
+                                            {': '}
+                                            {s.isCritical ? 'Batterie kritisch' : 'Batterie niedrig'}
+                                            {s.level !== null ? ` · ${s.level === 5 || s.level === 80 ? (s.level === 5 ? 'LOWBAT aktiv' : 'OK') : s.level + '%'}` : ''}
+                                            {' — Schlafanalyse evtl. ungenau'}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         )}
 

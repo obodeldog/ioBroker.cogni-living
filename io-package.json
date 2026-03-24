@@ -1,8 +1,9 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.72",
+    "version": "0.33.73",
     "news": {
+      "0.33.73": "fix: OC-15 Batterie-Warnung in Schlafkachel - Filter auf schlaf-relevante Sensoren (Vibration/FP2/Bewegung bed+bad+kueche+flur); Sensor-Name + Ort in Warnung sichtbar",
       "0.33.72": "fix: OC-15 Homematic LOW_BAT (Unterstrich-Bug - war LOWBAT, korrekt ist LOW_BAT); val=null-Bug behoben - State-Pfad wird gespeichert auch wenn Wert noch nicht gesendet",
       "0.33.71": "fix: OC-15 Homematic LOWBAT-only (kein OPERATING_VOLTAGE mehr - Spannungswerte ohne Geraetedatenbank nicht konvertierbar); UI zeigt 'OK'/'Niedrig!' statt falsche Prozentwerte",
       "0.33.70": "feat: OC-15 generische Battery-Discovery fuer alle Adapter (deCONZ, Tuya, Shelly, Z-Wave, HomeKit, mihome, Matter); Multi-Level-Pfadsuche Tiefe 1-3",
