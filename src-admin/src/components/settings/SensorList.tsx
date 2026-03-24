@@ -613,6 +613,11 @@ export default function SensorList(props) {
                                     <TableBody>
                                         {battDevices.map((device) => {
                                             const idx = (devices || []).indexOf(device);
+                                            const discoveredEntry = (props.batteryStatus?.sensors || []).find(s => s.id === device.id);
+                                            const discoveredId = discoveredEntry?.stateId || null;
+                                            const discoveredLevel = discoveredEntry?.level ?? null;
+                                            const battLevel = discoveredEntry ? `${discoveredLevel ?? "?"}%` : null;
+                                            const battColor = discoveredEntry?.isCritical ? "#f44336" : discoveredEntry?.isLow ? "#ff9800" : "#4caf50";
                                             return (
                                                 <TableRow key={device.id} sx={{ "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" } }}>
                                                     <TableCell sx={{ fontSize: "0.7rem" }}>
@@ -620,13 +625,35 @@ export default function SensorList(props) {
                                                     </TableCell>
                                                     <TableCell sx={{ fontSize: "0.7rem", color: "text.secondary" }}>{device.location || "—"}</TableCell>
                                                     <TableCell>
-                                                        <TextField
-                                                            size="small"
-                                                            value={device.batteryStateId || ""}
-                                                            placeholder="Auto (leer lassen)"
-                                                            onChange={e => props.onDeviceChange(idx, "batteryStateId", e.target.value)}
-                                                            sx={{ width: "100%", "& input": { fontSize: "0.7rem", p: "3px 6px" } }}
-                                                        />
+                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                            <Box sx={{ flex: 1 }}>
+                                                                <TextField
+                                                                    size="small"
+                                                                    value={device.batteryStateId || ""}
+                                                                    placeholder={discoveredId ? `Auto: ${discoveredId}` : "Auto (leer lassen)"}
+                                                                    onChange={e => props.onDeviceChange(idx, "batteryStateId", e.target.value)}
+                                                                    sx={{ width: "100%", "& input": { fontSize: "0.7rem", p: "3px 6px" } }}
+                                                                />
+                                                                {discoveredId && !device.batteryStateId && (
+                                                                    <Box sx={{ fontSize: "0.62rem", color: "text.secondary", mt: 0.2, display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                                        <span style={{ color: "#4caf50" }}>✓</span>
+                                                                        <Tooltip title={`Auto-Discovery (${discoveredEntry?.source}): ${discoveredId}`}>
+                                                                            <span style={{ cursor: "help", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: 220, display: "inline-block" }}>
+                                                                                {discoveredId}
+                                                                            </span>
+                                                                        </Tooltip>
+                                                                        {battLevel && (
+                                                                            <span style={{ color: battColor, fontWeight: 600, flexShrink: 0 }}>
+                                                                                · {battLevel}
+                                                                            </span>
+                                                                        )}
+                                                                    </Box>
+                                                                )}
+                                                            </Box>
+                                                            <Tooltip title="Objekt aus ioBroker auswählen">
+                                                                <IconButton size="small" onClick={() => props.onSelectBatteryId && props.onSelectBatteryId(idx)} sx={{ p: 0.3, fontSize: "0.65rem", flexShrink: 0 }}>.</IconButton>
+                                                            </Tooltip>
+                                                        </Box>
                                                     </TableCell>
                                                 </TableRow>
                                             );

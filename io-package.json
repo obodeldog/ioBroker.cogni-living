@@ -1,8 +1,9 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.67",
+    "version": "0.33.68",
     "news": {
+      "0.33.68": "feat: OC-15 Battery-UI - Auto-Discovery-Hint + Ladestand im Sensor-Tab; Object-Picker fuer Batterie-State-ID; HANDBUCH.md Batterie-Abschnitt",
       "0.33.67": "feat: OC-15 Batterie-Discovery (Auto/Alias/Manuell) + Pushover 09:00 bei kritisch; OC-2 Topologie-Matrix jetzt primaer im System-Tab; Battery-Badge in Schlafkachel",
       "0.33.66": "feat: OC-9 sleepScoreRaw im Badge (>100 sichtbar); OC-14 Vibration-Label als Konfidenz-Booster; OC-5 Sensor-Offline-Schwelle 7 Tage",
       "0.33.65": "FIX(OC-7): outsideBedEvents jetzt aus Bad/Kuechen-Bewegungsmelder + FP2 kombiniert (exakte Timestamps); Freeze-Supplement fuer retrospektive Ergaenzung",

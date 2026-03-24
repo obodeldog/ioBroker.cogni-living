@@ -41,7 +41,8 @@ interface SettingsState {
     notifyPushoverEnabled: boolean; notifyPushoverInstance: string; notifyPushoverRecipient: string; notifyEmailEnabled: boolean; notifyEmailInstance: string; notifyEmailRecipient: string;
     notifyWhatsappEnabled: boolean; notifyWhatsappInstance: string; notifyWhatsappRecipient: string; notifySignalEnabled: boolean; notifySignalInstance: string; notifySignalRecipient: string;
     briefingEnabled: boolean; briefingTime: string; weeklyBriefingEnabled: boolean; weeklyBriefingTime: string; useWeather: boolean; weatherInstance: string; useCalendar: boolean; calendarInstance: string; calendarSelection: string[];
-    availableInstances: Record<string, string[]>; isTestingNotification: boolean; showSelectId: boolean; selectIdIndex: number; selectIdContext: 'device' | 'presence' | 'simulation' | 'outdoor' | null;
+    availableInstances: Record<string, string[]>; isTestingNotification: boolean; showSelectId: boolean; selectIdIndex: number; selectIdContext: 'device' | 'presence' | 'simulation' | 'outdoor' | 'battery' | null;
+    batteryStatus: { sensors: { id: string; stateId: string; level: number | null; isLow: boolean; isCritical: boolean; source: string }[] } | null;
     isTestingApi: boolean; showWizard: boolean; wizardStep: number; scanFilters: ScanFilters; scannedDevices: ScannedDevice[]; showDeleteConfirm: boolean; availableEnums: EnumItem[];
     availableRooms: string[]; showEnumList: boolean; snackbarOpen: boolean; snackbarMessage: string; snackbarSeverity: AlertColor; expandedAccordion: string | false; showContextDialog: boolean;
     contextResult: { weather: string; calendar: string; } | null; isTestingContext: boolean; detectedCalendars: string[]; isLoadingCalendars: boolean; simTargetId: string;
@@ -86,7 +87,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             notifySignalInstance: native.notifySignalInstance || '', notifySignalRecipient: native.notifySignalRecipient || '', briefingEnabled: native.briefingEnabled || false,
             briefingTime: native.briefingTime || "08:00", weeklyBriefingEnabled: native.weeklyBriefingEnabled || false, weeklyBriefingTime: native.weeklyBriefingTime || "09:00", useWeather: native.useWeather || false, weatherInstance: native.weatherInstance || '', useCalendar: native.useCalendar || false,
             calendarInstance: native.calendarInstance || '', calendarSelection: calSel, availableInstances: {}, isTestingNotification: false, showSelectId: false, selectIdIndex: -1,
-            selectIdContext: null, isTestingApi: false, showWizard: false, wizardStep: 0, scanFilters: { motion: true, doors: true, lights: true, temperature: true, weather: true, selectedFunctionIds: [] },
+            selectIdContext: null, batteryStatus: null, isTestingApi: false, showWizard: false, wizardStep: 0, scanFilters: { motion: true, doors: true, lights: true, temperature: true, weather: true, selectedFunctionIds: [] },
             scannedDevices: [], showDeleteConfirm: false, availableEnums: [], availableRooms: [], showEnumList: false, snackbarOpen: false, snackbarMessage: '', snackbarSeverity: 'info',
             expandedAccordion: 'panel0', showContextDialog: false, contextResult: null, isTestingContext: false, detectedCalendars: [], isLoadingCalendars: false, simTargetId: '',
             simTargetValue: 'true', showBulkDialog: false, autoMode: 'off', autoThreshold: 0.6, autoLastAction: 'Lade...',
@@ -122,7 +123,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         };
     }
 
-    componentDidMount() { this.fetchAvailableInstances(); this.fetchEnums(); this.loadSensorStatus(); }
+    componentDidMount() { this.fetchAvailableInstances(); this.fetchEnums(); this.loadSensorStatus(); this.loadBatteryStatus(); }
     loadSensorStatus() {
         const ns = this.props.adapterName + '.' + this.props.instance;
         this.props.socket.getState(ns + '.system.sensorStatus').then((state: any) => {
@@ -132,6 +133,14 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     const problems = new Set<string>((parsed.sensors || []).filter((s: any) => s.status === 'offline').map((s: any) => s.id));
                     this.setState({ sensorProblems: problems });
                 } catch(e) {}
+            }
+        }).catch(() => {});
+    }
+    loadBatteryStatus() {
+        const ns = this.props.adapterName + '.' + this.props.instance;
+        this.props.socket.getState(ns + '.system.sensorBatteryStatus').then((state: any) => {
+            if (state && state.val) {
+                try { this.setState({ batteryStatus: JSON.parse(state.val) }); } catch(e) {}
             }
         }).catch(() => {});
     }
@@ -151,6 +160,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     onAddPresenceDevice() { this.setState({ showSelectId: true, selectIdContext: 'presence', selectIdIndex: -1 }); }
     openOutdoorSelectId() { this.setState({ showSelectId: true, selectIdContext: 'outdoor', selectIdIndex: -1 }); }
     openSelectIdDialog(index: number) { this.setState({ showSelectId: true, selectIdIndex: index, selectIdContext: 'device' }); }
+    openSelectBatteryIdDialog(index: number) { this.setState({ showSelectId: true, selectIdIndex: index, selectIdContext: 'battery' }); }
     openSimSelectId() { this.setState({ showSelectId: true, selectIdContext: 'simulation' }); }
 
     onSelectId(selectedId?: string) {
@@ -158,6 +168,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             if (this.state.selectIdContext === 'device' && this.state.selectIdIndex !== -1) {
                 const devices = JSON.parse(JSON.stringify(this.state.devices)); devices[this.state.selectIdIndex].id = selectedId;
                 this.props.socket.getObject(selectedId).then(obj => { if (obj && obj.common && obj.common.name) { let name: any = obj.common.name; if (typeof name === 'object') name = name[I18n.getLanguage()] || name.en || name.de || JSON.stringify(name); devices[this.state.selectIdIndex].name = name as string; this.updateDevices(devices); } else { this.updateDevices(devices); } }).catch(e => { this.updateDevices(devices); });
+            } else if (this.state.selectIdContext === 'battery' && this.state.selectIdIndex !== -1) {
+                const devices = JSON.parse(JSON.stringify(this.state.devices)); devices[this.state.selectIdIndex].batteryStateId = selectedId; this.updateDevices(devices);
             } else if (this.state.selectIdContext === 'presence') {
                 const p = [...this.state.presenceDevices]; if (!p.includes(selectedId)) { p.push(selectedId); this.updatePresenceDevices(p); }
             } else if (this.state.selectIdContext === 'simulation') {
@@ -430,7 +442,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         );
     }
 
-    renderDialogs() { return ( <>{this.state.showSelectId && (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={this.state.selectIdContext === 'outdoor' ? this.state.outdoorSensorId : (this.state.selectIdContext === 'device' && this.state.devices[this.state.selectIdIndex]?.id) || ''} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />)}{this.renderWizardDialog()}{this.renderContextDialog()}<Dialog open={this.state.showDeleteConfirm} onClose={() => this.setState({showDeleteConfirm:false})}><DialogTitle>Sicher?</DialogTitle><DialogContent><Typography>Alle Sensoren löschen?</Typography></DialogContent><DialogActions><Button onClick={()=>this.setState({showDeleteConfirm:false})}>Abbrechen</Button><Button onClick={this.onDeleteAllDevices} color="error">Löschen</Button></DialogActions></Dialog><Snackbar open={this.state.snackbarOpen} autoHideDuration={6000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity}>{this.state.snackbarMessage}</Alert></Snackbar><BulkDialog open={this.state.showBulkDialog} onClose={() => this.setState({ showBulkDialog: false })} onImport={this.handleImportBulk} socket={this.props.socket} /></> ); }
+    renderDialogs() { return ( <>{this.state.showSelectId && (<DialogSelectID theme={this.props.theme} imagePrefix="../.." dialogName="selectID" themeType={this.props.themeType} socket={this.props.socket} selected={this.state.selectIdContext === 'outdoor' ? this.state.outdoorSensorId : this.state.selectIdContext === 'battery' ? (this.state.devices[this.state.selectIdIndex]?.batteryStateId || '') : (this.state.selectIdContext === 'device' && this.state.devices[this.state.selectIdIndex]?.id) || ''} onClose={() => this.setState({ showSelectId: false })} onOk={selected => this.onSelectId(selected as string)} />)}{this.renderWizardDialog()}{this.renderContextDialog()}<Dialog open={this.state.showDeleteConfirm} onClose={() => this.setState({showDeleteConfirm:false})}><DialogTitle>Sicher?</DialogTitle><DialogContent><Typography>Alle Sensoren löschen?</Typography></DialogContent><DialogActions><Button onClick={()=>this.setState({showDeleteConfirm:false})}>Abbrechen</Button><Button onClick={this.onDeleteAllDevices} color="error">Löschen</Button></DialogActions></Dialog><Snackbar open={this.state.snackbarOpen} autoHideDuration={6000} onClose={this.handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={this.handleSnackbarClose} severity={this.state.snackbarSeverity}>{this.state.snackbarMessage}</Alert></Snackbar><BulkDialog open={this.state.showBulkDialog} onClose={() => this.setState({ showBulkDialog: false })} onImport={this.handleImportBulk} socket={this.props.socket} /></> ); }
     renderLicenseSection(tooltipProps: any) { return ( <Grid container spacing={3}><Grid item xs={12} md={6}><Tooltip title="Ihr Pro-Lizenzschlüssel." {...tooltipProps}><TextField fullWidth label={I18n.t('license_key')} value={this.state.licenseKey} type="password" onChange={e => this.updateNativeValue('licenseKey', e.target.value)} helperText="Für vollen Funktionsumfang" variant="outlined" size="small" /></Tooltip></Grid><Grid item xs={12} md={6}><Box sx={{display: 'flex', gap: 1}}><Tooltip title="Gemini API Key." {...tooltipProps}><TextField fullWidth label={I18n.t('gemini_api_key')} value={this.state.geminiApiKey} type="password" onChange={e => this.updateNativeValue('geminiApiKey', e.target.value)} variant="outlined" size="small" /></Tooltip><Button variant="outlined" onClick={() => this.handleTestApiClick()} disabled={this.state.isTestingApi || !this.state.geminiApiKey}>{this.state.isTestingApi ? <CircularProgress size={20} /> : "(Test)"}</Button></Box></Grid></Grid> ); }
 
     renderReportingSection(tooltipProps: any) {
@@ -563,7 +575,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                     </Alert>
                                 )}
                                 <Accordion expanded={expandedAccordion === 'panel4'} onChange={this.handleAccordionChange('panel4')} sx={accordionStyle}><AccordionSummary expandIcon={<span>v</span>}><Typography sx={titleStyle}>Sensoren{this.state.sensorProblems.size > 0 ? ' ⚠️' : ''}</Typography></AccordionSummary><AccordionDetails>
-                    <SensorList devices={this.state.devices} isDark={isDark} uniqueLocations={this.collectUniqueLocations()} sensorProblems={this.state.sensorProblems} onDeviceChange={(i, a, v) => this.onDeviceChange(i, a, v)} onDelete={(i) => this.onDeleteDevice(i)} onAdd={() => this.onAddDevice()} onSelectId={(i) => this.openSelectIdDialog(i)} onWizard={this.handleOpenWizard} onBulk={() => this.setState({ showBulkDialog: true })} onDeleteAll={() => this.setState({showDeleteConfirm: true})} native={this.props.native} onNativeChange={(attr, val) => this.updateNativeValue(attr, val)} socket={this.props.socket} />
+                    <SensorList devices={this.state.devices} isDark={isDark} uniqueLocations={this.collectUniqueLocations()} sensorProblems={this.state.sensorProblems} onDeviceChange={(i, a, v) => this.onDeviceChange(i, a, v)} onDelete={(i) => this.onDeleteDevice(i)} onAdd={() => this.onAddDevice()} onSelectId={(i) => this.openSelectIdDialog(i)} onSelectBatteryId={(i) => this.openSelectBatteryIdDialog(i)} onWizard={this.handleOpenWizard} onBulk={() => this.setState({ showBulkDialog: true })} onDeleteAll={() => this.setState({showDeleteConfirm: true})} native={this.props.native} onNativeChange={(attr, val) => this.updateNativeValue(attr, val)} socket={this.props.socket} batteryStatus={this.state.batteryStatus} />
                 </AccordionDetails></Accordion>
             </Box>
         );
