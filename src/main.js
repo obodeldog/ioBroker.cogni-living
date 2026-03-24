@@ -844,14 +844,41 @@ class CogniLiving extends utils.Adapter {
             // Au+ƒerhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
             var outsideBedEvents = [];
             if (_sleepFrozen && _existingSnap) {
-                outsideBedEvents = _existingSnap.outsideBedEvents || [];
+                var _frozenEvts = _existingSnap.outsideBedEvents || [];
+                // Wenn Motion-Events bereits im Snapshot: unverändert übernehmen.
+                // Wenn leer: Motion-Sensor-Events rückwirkend ergänzen (z.B. nach Code-Update).
+                if (_frozenEvts.length > 0) {
+                    outsideBedEvents = _frozenEvts;
+                } else {
+                    var _frozenWinStart = _existingSnap.sleepWindowStart || null;
+                    var _frozenWinEnd   = _existingSnap.sleepWindowEnd   || null;
+                    if (_frozenWinStart && _frozenWinEnd) {
+                        var _fbathIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
+                        var _fkitchIds = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
+                        var _fMotEvts = sleepSearchEvents.filter(function(e) {
+                            var _ts = e.timestamp || 0;
+                            if (_ts < _frozenWinStart || _ts > _frozenWinEnd) return false;
+                            return ((e.isBathroomSensor || _fbathIds.has(e.id)) || (e.isKitchenSensor || _fkitchIds.has(e.id))) && isActiveValue(e.value);
+                        }).sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+                        var _fCluster = null; var _fClusters = [];
+                        var F_CLUSTER_GAP = 5*60*1000; var F_AFTER_EVT = 3*60*1000;
+                        _fMotEvts.forEach(function(e) {
+                            var _ts = e.timestamp || 0; var _ib = e.isBathroomSensor || _fbathIds.has(e.id);
+                            if (!_fCluster) { _fCluster = { start: _ts, end: _ts+F_AFTER_EVT, hasBath: _ib }; }
+                            else if (_ts <= _fCluster.end + F_CLUSTER_GAP) { _fCluster.end = _ts+F_AFTER_EVT; if (_ib) _fCluster.hasBath = true; }
+                            else { _fClusters.push(_fCluster); _fCluster = { start: _ts, end: _ts+F_AFTER_EVT, hasBath: _ib }; }
+                        });
+                        if (_fCluster) _fClusters.push(_fCluster);
+                        outsideBedEvents = _fClusters.map(function(c) {
+                            return { start: c.start, end: c.end, duration: Math.max(1, Math.round((c.end-c.start)/60000)), type: c.hasBath ? 'bathroom' : 'outside' };
+                        });
+                    }
+                }
             } else if (sleepWindowOC7.start && sleepWindowOC7.end) {
+                // === PHASE 1: FP2-basierte Events (Bett-leer-Erkennung — präzise Timestamps) ===
                 var _fp2Sorted = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })
                     .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
-                var _bathEvts = sleepSearchEvents.filter(function(e) {
-                    return e.isBathroomSensor && (e.timestamp||0) >= sleepWindowOC7.start && (e.timestamp||0) <= sleepWindowOC7.end;
-                });
-                var _bedWasEmpty = false; var _emptyTs = null;
+                var _bedWasEmpty = false; var _emptyTs = null; var _fp2Events = [];
                 _fp2Sorted.forEach(function(_fe) {
                     var _ts = _fe.timestamp || 0;
                     if (_ts < sleepWindowOC7.start || _ts > sleepWindowOC7.end) return;
@@ -860,20 +887,57 @@ class CogniLiving extends utils.Adapter {
                     else if (_active && _bedWasEmpty && _emptyTs) {
                         _bedWasEmpty = false;
                         var _dur = Math.round((_ts - _emptyTs) / 60000);
-                        if (_dur >= 1) {
-                            var _hasBath = _bathEvts.some(function(b) { return (b.timestamp||0) >= _emptyTs && (b.timestamp||0) <= _ts; });
-                            outsideBedEvents.push({ start: _emptyTs, end: _ts, duration: _dur, type: _hasBath ? 'bathroom' : 'outside' });
-                        }
+                        if (_dur >= 1) _fp2Events.push({ start: _emptyTs, end: _ts, duration: _dur });
                         _emptyTs = null;
                     }
                 });
                 if (_bedWasEmpty && _emptyTs) {
                     var _lastDur = Math.round((sleepWindowOC7.end - _emptyTs) / 60000);
-                    if (_lastDur >= 1) {
-                        var _lHasBath = _bathEvts.some(function(b) { return (b.timestamp||0) >= _emptyTs; });
-                        outsideBedEvents.push({ start: _emptyTs, end: sleepWindowOC7.end, duration: _lastDur, type: _lHasBath ? 'bathroom' : 'outside' });
-                    }
+                    if (_lastDur >= 1) _fp2Events.push({ start: _emptyTs, end: sleepWindowOC7.end, duration: _lastDur });
                 }
+                // === PHASE 2: Bewegungsmelder-Events (Bad/Küche — Fallback + Ergänzung zu FP2) ===
+                var _bathDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
+                var _kitchDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
+                var CLUSTER_GAP_MS = 5 * 60 * 1000;
+                var AFTER_EVT_MS = 3 * 60 * 1000;
+                var _motOutEvts = sleepSearchEvents.filter(function(e) {
+                    var _ts = e.timestamp || 0;
+                    if (_ts < sleepWindowOC7.start || _ts > sleepWindowOC7.end) return false;
+                    var _isBath = e.isBathroomSensor || _bathDevIds.has(e.id);
+                    var _isKitch = e.isKitchenSensor || _kitchDevIds.has(e.id);
+                    return (_isBath || _isKitch) && isActiveValue(e.value);
+                }).sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+                var _motEvents = []; var _curCluster = null;
+                _motOutEvts.forEach(function(e) {
+                    var _ts = e.timestamp || 0;
+                    var _isBath = e.isBathroomSensor || _bathDevIds.has(e.id);
+                    if (!_curCluster) {
+                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath };
+                    } else if (_ts <= _curCluster.end + CLUSTER_GAP_MS) {
+                        _curCluster.end = _ts + AFTER_EVT_MS;
+                        if (_isBath) _curCluster.hasBath = true;
+                    } else {
+                        _motEvents.push(_curCluster);
+                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath };
+                    }
+                });
+                if (_curCluster) _motEvents.push(_curCluster);
+                // === PHASE 3: Zusammenführen — FP2 hat Vorrang, Motion füllt Lücken ===
+                var _allEvtCandidates = [];
+                _fp2Events.forEach(function(fp2) {
+                    var _hasBath = sleepSearchEvents.some(function(e) {
+                        return (e.isBathroomSensor || _bathDevIds.has(e.id)) && (e.timestamp||0) >= fp2.start && (e.timestamp||0) <= fp2.end;
+                    });
+                    _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: fp2.duration, type: _hasBath ? 'bathroom' : 'outside' });
+                });
+                _motEvents.forEach(function(mot) {
+                    var _overlaps = _allEvtCandidates.some(function(c) { return mot.start < c.end && mot.end > c.start; });
+                    if (!_overlaps) {
+                        var _dur = Math.max(1, Math.round((mot.end - mot.start) / 60000));
+                        _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: mot.hasBath ? 'bathroom' : 'outside' });
+                    }
+                });
+                outsideBedEvents = _allEvtCandidates.sort(function(a,b) { return a.start - b.start; });
             }
 
             // --- Garmin Wake-Override + Aufwachzeit-Quellen --------------------------------
