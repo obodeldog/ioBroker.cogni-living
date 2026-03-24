@@ -1201,9 +1201,26 @@ export default function HealthTab(props: any) {
         const lightCount = stages.filter(s => s.s === 'light').length;
         const remCount   = stages.filter(s => s.s === 'rem').length;
         const wakeCount  = stages.filter(s => s.s === 'wake').length;
-        // Außerhalb-Zeit aus outsideBedEvts
-        const outsideTotalMin = outsideBedEvts.reduce((acc, e) => acc + e.duration, 0);
-        const bathMin = outsideBedEvts.filter(e => e.type === 'bathroom').reduce((acc, e) => acc + e.duration, 0);
+        // Außerhalb-Events strikt auf Schlaf-Fenster clippen (kein Rendering rechts von Aufwachzeit)
+        const clippedOutsideBedEvts: {start:number,end:number,duration:number,type:string}[] = (swStart && swEnd)
+            ? outsideBedEvts
+                .map(e => {
+                    const start = Math.max(e.start, swStart);
+                    const end = Math.min(e.end, swEnd);
+                    if (end <= start) return null;
+                    return {
+                        start,
+                        end,
+                        duration: Math.max(1, Math.round((end - start) / 60000)),
+                        type: e.type
+                    };
+                })
+                .filter((e): e is {start:number,end:number,duration:number,type:string} => !!e)
+            : outsideBedEvts;
+
+        // Außerhalb-Zeit aus geclippten Events
+        const outsideTotalMin = clippedOutsideBedEvts.reduce((acc, e) => acc + e.duration, 0);
+        const bathMin = clippedOutsideBedEvts.filter(e => e.type === 'bathroom').reduce((acc, e) => acc + e.duration, 0);
         const toH = (n: number, isMin?: boolean) => {
             const m = isMin ? n : n * 5;
             return (m >= 60 ? Math.floor(m/60) + 'h ' : '') + (m % 60) + 'min';
@@ -1211,20 +1228,47 @@ export default function HealthTab(props: any) {
 
         // Helper: Farbe für Stage-Slot (mit Außerhalb-Overlay)
         const slotColor = (slot: {t:number,s:string}, absMs: number|null) => {
-            if (absMs && outsideBedEvts.length > 0) {
-                const evt = outsideBedEvts.find(e => absMs >= e.start && absMs < e.end);
+            if (absMs && clippedOutsideBedEvts.length > 0) {
+                const evt = clippedOutsideBedEvts.find(e => absMs >= e.start && absMs < e.end);
                 if (evt) return stageColor[evt.type] ?? stageColor.outside;
             }
             return stageColor[slot.s] ?? '#555';
         };
         const slotTip = (slot: {t:number,s:string}, absMs: number|null) => {
             const timeStr = absMs ? fmtTime(absMs) + ' — ' : '';
-            if (absMs && outsideBedEvts.length > 0) {
-                const evt = outsideBedEvts.find(e => absMs >= e.start && absMs < e.end);
+            if (absMs && clippedOutsideBedEvts.length > 0) {
+                const evt = clippedOutsideBedEvts.find(e => absMs >= e.start && absMs < e.end);
                 if (evt) return timeStr + stageLabel[evt.type] + ' (' + evt.duration + ' min)';
             }
             return timeStr + (stageLabel[slot.s] || slot.s);
         };
+        const renderedStages = (swStart && swEnd)
+            ? stages.filter(slot => {
+                const absMs = swStart + slot.t * 60000;
+                return absMs >= swStart && absMs < swEnd;
+            })
+            : stages;
+        const markerItems = (() => {
+            if (!swStart || !swEnd || clippedOutsideBedEvts.length === 0) return [];
+            const totalMs = swEnd - swStart;
+            const minPctGapForSameLane = 2.2;
+            const lastPctInLane = [-100, -100];
+            return clippedOutsideBedEvts
+                .map((evt, idx) => {
+                    const pct = ((evt.start - swStart) / totalMs) * 100;
+                    const lane = Math.abs(pct - lastPctInLane[0]) >= minPctGapForSameLane ? 0 : 1;
+                    lastPctInLane[lane] = pct;
+                    const isBath = evt.type === 'bathroom';
+                    return {
+                        key: `${evt.start}-${evt.end}-${idx}`,
+                        pct: Math.min(100, Math.max(0, pct)),
+                        lane,
+                        isBath,
+                        title: isBath ? `Bad-Besuch: ${evt.duration} min` : `Abwesenheit: ${evt.duration} min`
+                    };
+                })
+                .sort((a, b) => a.pct - b.pct);
+        })();
 
         return (
             <TerminalBox title="SCHLAFANALYSE (OC-7)" themeType={themeType}
@@ -1358,32 +1402,29 @@ export default function HealthTab(props: any) {
 
                         {/* Schlafphasen-Zeitbalken mit Dreiecks-Markern + Zeitachse */}
                         <div style={{marginBottom:'10px'}}>
-                            {/* Dreiecks-Marker über dem Balken */}
-                            {swStart && swEnd && outsideBedEvts.length > 0 && (
-                                <div style={{position:'relative', height:'14px'}}>
-                                    {outsideBedEvts.map((evt, i) => {
-                                        const totalMs = swEnd - swStart;
-                                        const pct = ((evt.start - swStart) / totalMs) * 100;
-                                        const isBath = evt.type === 'bathroom';
-                                        const isLong = evt.duration >= 20;
-                                        if (!isBath && !isLong) return null;
-                                        return (
-                                            <span key={i} style={{
-                                                position:'absolute', left: pct + '%',
-                                                color: isBath ? '#ffb300' : '#ff5722',
-                                                fontSize:'10px', transform:'translateX(-50%)',
-                                                cursor:'default', lineHeight:'14px'
-                                            }} title={isBath ? `Bad-Besuch: ${evt.duration} min` : `Abwesenheit: ${evt.duration} min`}>
-                                                ▼
-                                            </span>
-                                        );
-                                    })}
+                            {/* Dreiecks-Marker oberhalb/unterhalb (bei Kollisionen zweizeilig) */}
+                            {swStart && swEnd && markerItems.length > 0 && (
+                                <div style={{position:'relative', height:'24px'}}>
+                                    {markerItems.map(marker => (
+                                        <span key={marker.key} style={{
+                                            position:'absolute',
+                                            left: marker.pct + '%',
+                                            top: marker.lane === 0 ? '0px' : '12px',
+                                            color: marker.isBath ? '#ffb300' : '#ff5722',
+                                            fontSize:'10px',
+                                            transform:'translateX(-50%)',
+                                            cursor:'default',
+                                            lineHeight:'12px'
+                                        }} title={marker.title}>
+                                            {marker.lane === 0 ? 'v' : '^'}
+                                        </span>
+                                    ))}
                                 </div>
                             )}
 
                             {/* Der Balken — jeder Block = 5 min (zeitproportional), Außerhalb-Events als Farboverlay */}
                             <div style={{display:'flex', width:'100%', height:'28px', borderRadius:'4px', overflow:'hidden'}}>
-                                {stages.map((slot, i) => {
+                                {renderedStages.map((slot, i) => {
                                     const absMs = swStart ? swStart + slot.t * 60000 : null;
                                     return (
                                         <div key={i} style={{
@@ -1427,10 +1468,10 @@ export default function HealthTab(props: any) {
                             {([['deep','Tief'],['light','Leicht'],['rem','REM (est.)'],['wake','Wachliegen']] as [string,string][]).map(([k,l]) => (
                                 <span key={k}><span style={{color: stageColor[k]}}>■</span> {l}</span>
                             ))}
-                            {outsideBedEvts.some(e => e.type === 'bathroom') && (
+                            {clippedOutsideBedEvts.some(e => e.type === 'bathroom') && (
                                 <span><span style={{color: stageColor.bathroom}}>■</span> Bad</span>
                             )}
-                            {outsideBedEvts.some(e => e.type === 'outside') && (
+                            {clippedOutsideBedEvts.some(e => e.type === 'outside') && (
                                 <span><span style={{color: stageColor.outside}}>■</span> Außerhalb</span>
                             )}
                         </div>

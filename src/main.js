@@ -1,4 +1,4 @@
-/* eslint-disable */
+ï»¿/* eslint-disable */
 'use strict';
 
 /*
@@ -130,6 +130,18 @@ class CogniLiving extends utils.Adapter {
         }
         // Phase 3: Proaktives Screening State
         await this.setObjectNotExistsAsync('analysis.health.screening.hints', { type: 'state', common: { name: 'Proactive Screening Hints (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.health.sleepCalibrationLog', {
+            type: 'state',
+            common: {
+                name: 'Sleep Calibration Log (JSON) - Sensorquellen vs Garmin',
+                type: 'string',
+                role: 'json',
+                read: true,
+                write: false,
+                def: '[]'
+            },
+            native: {}
+        });
         await this.setObjectNotExistsAsync('system.sensorStatus', { type: 'state', common: { name: 'Sensor Health Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.currentPersonCount', { type: 'state', common: { name: 'Aktuelle Personenanzahl im Haus', type: 'number', role: 'value', unit: 'Personen', read: true, write: false, def: 1, desc: 'Geschaetzte Personenanzahl (Config-Baseline + raeumliche Heuristik + FP2)' }, native: {} });
         await this.setObjectNotExistsAsync('system.personCount.heuristicDetection', { type: 'state', common: { name: 'Personenerkennung: Heuristik-Ereignis (SQL) - mind. 2 Personen erkannt', type: 'string', role: 'json', read: true, write: false, def: '{}', desc: 'Wird bei jeder rauemlichen Unmoglichkeitserkennung (>= 2 Hops, <= 5s) geschrieben. Enthaelt: Sensor-IDs, Raeume, Hop-Abstand, Zeitdelta, Personenzahl vorher/nachher.' }, native: {} });
@@ -601,20 +613,20 @@ class CogniLiving extends utils.Adapter {
                 sleepWindowCalc.end = null;
                 this.log.debug('[History] OC-4 Guard: bedPresenceMinutes=' + bedPresenceMinutes + 'min < 180, FP2-sleepWindow verworfen');
             }
-            // Urspr++ngliche FP2-Fenstererkennung merken (vor Freeze-+£berschreibung) f++r sleepWindowSource
+            // Urspr++ngliche FP2-Fenstererkennung merken (vor Freeze-+Â£berschreibung) f++r sleepWindowSource
             var _origFP2Window = sleepWindowCalc.start !== null;
 
             // Schlaffenster aus Schlafzimmer-Bewegungsmelder (Fallback wenn kein FP2-Bett-Sensor).
-            // Sensor-Konfiguration: type=motion + sensorFunction=bed ÔåÆ isBedroomMotion=true.
-            // Pr+ñzision: Einschlafzeit Ôëê letzte Bewegung vor ÔëÑ45 Min Stille (18ÔÇô03 Uhr).
-            //            Aufwachzeit Ôëê erste Bewegung nach 04 Uhr + mind. 3h nach Einschlafzeit.
+            // Sensor-Konfiguration: type=motion + sensorFunction=bed Ã”Ã¥Ã† isBedroomMotion=true.
+            // Pr+Ã±zision: Einschlafzeit Ã”Ã«Ãª letzte Bewegung vor Ã”Ã«Ã‘45 Min Stille (18Ã”Ã‡Ã´03 Uhr).
+            //            Aufwachzeit Ã”Ã«Ãª erste Bewegung nach 04 Uhr + mind. 3h nach Einschlafzeit.
             // Besser als Fixfenster, aber schlechter als FP2 (keine Tief-/Ruhephasen-Erkennung).
             const sleepWindowMotion = (function() {
                 var motEvts = sleepSearchEvents
                     .filter(function(e) { return e.isBedroomMotion && isActiveValue(e.value); })
                     .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
                 if (motEvts.length === 0) return { start: null, end: null };
-                // Einschlafzeit: letztes Motion-Event das von ÔëÑ45 Min Stille gefolgt wird, zwischen 18:00ÔÇô03:00
+                // Einschlafzeit: letztes Motion-Event das von Ã”Ã«Ã‘45 Min Stille gefolgt wird, zwischen 18:00Ã”Ã‡Ã´03:00
                 var sleepStartTs = null;
                 for (var _msi = 0; _msi < motEvts.length; _msi++) {
                     var _mse = motEvts[_msi];
@@ -639,12 +651,12 @@ class CogniLiving extends utils.Adapter {
 
             // --- Einschlafzeit-Verfeinerung: Garmin + Vibration -------------------------
             // Ziel: Unterscheidung "ins Bett gehen" (FP2) vs. "einschlafen" (Vib/Garmin)
-            // Stufe 0: Garmin sleepStartTimestampGMT ÔÇö nur wenn 18ÔÇô04 Uhr UND innerhalb FP2+3h
-            // Stufe 1: Vibrations-Verfeinerung ÔÇö letztes Vib-Event + ÔëÑ20min Stille (FP2-Fenster)
-            // Stufe 2: FP2 allein ÔÇö Zeit ins Bett gehen
+            // Stufe 0: Garmin sleepStartTimestampGMT Ã”Ã‡Ã¶ nur wenn 18Ã”Ã‡Ã´04 Uhr UND innerhalb FP2+3h
+            // Stufe 1: Vibrations-Verfeinerung Ã”Ã‡Ã¶ letztes Vib-Event + Ã”Ã«Ã‘20min Stille (FP2-Fenster)
+            // Stufe 2: FP2 allein Ã”Ã‡Ã¶ Zeit ins Bett gehen
             // Stufe 3: Bewegungsmelder
             // Stufe 4: Fixfenster
-            var _fp2RawStart = sleepWindowCalc.start || null; // FP2-Start vor +£berschreibung merken
+            var _fp2RawStart = sleepWindowCalc.start || null; // FP2-Start vor +Â£berschreibung merken
             var garminSleepStartTs = null;
             var vibRefinedSleepStartTs = null;
 
@@ -670,7 +682,7 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_gse) { this.log.debug('[SleepStart] Garmin nicht lesbar: ' + _gse.message); }
 
-            // Vibrations-Verfeinerung: letztes Vib-Event mit ÔëÑ20min Stille danach (innerhalb FP2+3h)
+            // Vibrations-Verfeinerung: letztes Vib-Event mit Ã”Ã«Ã‘20min Stille danach (innerhalb FP2+3h)
             if (_fp2RawStart) {
                 var _vibRefMax = _fp2RawStart + 3 * 3600000;
                 var _vibRefEvts = sleepSearchEvents.filter(function(e) {
@@ -703,7 +715,7 @@ class CogniLiving extends utils.Adapter {
             var sleepStartSource = _fp2RawStart ? 'fp2'
                 : (sleepWindowMotion.start ? 'motion' : 'fixed');
 
-            // Priorit+ñtskette anwenden (nur wenn nicht frozen)
+            // Priorit+Ã±tskette anwenden (nur wenn nicht frozen)
             if (!_sleepFrozen) {
                 if (garminSleepStartTs) {
                     sleepWindowCalc.start = garminSleepStartTs;
@@ -725,7 +737,7 @@ class CogniLiving extends utils.Adapter {
                 }
             }
 
-            // Schlaffenster fuer OC-7 (Sleep Score): FP2 ÔåÆ Bewegungsmelder ÔåÆ Fixfenster (Fallback-Kette).
+            // Schlaffenster fuer OC-7 (Sleep Score): FP2 Ã”Ã¥Ã† Bewegungsmelder Ã”Ã¥Ã† Fixfenster (Fallback-Kette).
             // Betrifft NICHT sleepWindowStart/End im Snapshot -- die Schlafzeit-Kachel bleibt FP2-only.
             var sleepWindowOC7 = sleepWindowCalc.start
                 ? sleepWindowCalc
@@ -813,7 +825,7 @@ class CogniLiving extends utils.Adapter {
                     var lp = lightSec / totalSecSleep;
                     var wp = wakeSec  / totalSecSleep;
                     var rawScore = dp * 200 + rp * 150 + lp * 80 - wp * 250;
-                    // Bonus: Schlafdauer 7-9h (vor Kappung, damit Rohwert den Bonus enth+ñlt)
+                    // Bonus: Schlafdauer 7-9h (vor Kappung, damit Rohwert den Bonus enth+Ã±lt)
                     var durH = (swEnd - swStart) / 3600000;
                     if (durH >= 7 && durH <= 9) rawScore += 5;
                     sleepScoreRaw = Math.round(Math.max(0, rawScore));  // ungekappter Rohwert (f++r Wochenansicht)
@@ -823,13 +835,13 @@ class CogniLiving extends utils.Adapter {
             }
 
             // Schlaf-Fenster-Quelle (fuer OC-7 Sensor-Indikator im Frontend)
-            // Reihenfolge: fp2 ÔåÆ motion (Bewegungsmelder) ÔåÆ fixed (Fixfenster)
+            // Reihenfolge: fp2 Ã”Ã¥Ã† motion (Bewegungsmelder) Ã”Ã¥Ã† fixed (Fixfenster)
             var _motionAvail = sleepWindowMotion.start !== null;
             var sleepWindowSource = _sleepFrozen
                 ? (_existingSnap.sleepWindowSource || (_origFP2Window ? 'fp2' : (_motionAvail ? 'motion' : 'fixed')))
                 : (_origFP2Window ? 'fp2' : (_motionAvail ? 'motion' : 'fixed'));
 
-            // Au+ƒerhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
+            // Au+Æ’erhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
             var outsideBedEvents = [];
             if (_sleepFrozen && _existingSnap) {
                 outsideBedEvents = _existingSnap.outsideBedEvents || [];
@@ -865,7 +877,7 @@ class CogniLiving extends utils.Adapter {
             }
 
             // --- Garmin Wake-Override + Aufwachzeit-Quellen --------------------------------
-            // Priorit+ñtskette (absteigend): Garmin ÔåÆ FP2+Vib ÔåÆ FP2 ÔåÆ Motion ÔåÆ Fixed
+            // Priorit+Ã±tskette (absteigend): Garmin Ã”Ã¥Ã† FP2+Vib Ã”Ã¥Ã† FP2 Ã”Ã¥Ã† Motion Ã”Ã¥Ã† Fixed
             // Garmin sleepEndTimestampGMT ++berstimmt alle anderen Quellen wenn plausibel (03-14 Uhr)
             var garminWakeTs = null;
             var fp2WakeTs    = sleepWindowOC7.end || null;  // aktueller Wert = FP2/motion/fixed
@@ -887,8 +899,8 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_gwe) { this.log.debug('[Wake] Garmin-End nicht lesbar: ' + _gwe.message); }
 
-            // Vibrationssensor-Best+ñtigung: Letztes Vib-Event vor FP2-Leer-Signal (-¦30min)
-            // Erh+Âht Konfidenz, +ñndert aber nicht den Timestamp
+            // Vibrationssensor-Best+Ã±tigung: Letztes Vib-Event vor FP2-Leer-Signal (-Â¦30min)
+            // Erh+Ã‚ht Konfidenz, +Ã±ndert aber nicht den Timestamp
             var vibWakeConfirm = false;
             if (fp2WakeTs && sleepWindowOC7.start) {
                 var _vibWakeSearch = sleepSearchEvents.filter(function(e) {
@@ -937,9 +949,21 @@ class CogniLiving extends utils.Adapter {
                 vibWakeTs = _vwSorted[0].timestamp||null;
             }
 
+            // fp2VibWakeTs: kombinierte Quelle (FP2 + Vib) bei enger Korrelation und optionalem Outside-Bestaetiger
+            var fp2VibWakeTs = null;
+            if (fp2WakeTs && vibWakeTs && Math.abs(vibWakeTs - fp2WakeTs) <= 12*60*1000) {
+                var _outsideNearVib = outsideBedEvents.some(function(evt) {
+                    return (evt.start || 0) >= vibWakeTs && (evt.start || 0) <= vibWakeTs + 20*60*1000;
+                });
+                if (_outsideNearVib || vibWakeConfirm) {
+                    fp2VibWakeTs = Math.min(fp2WakeTs, vibWakeTs);
+                }
+            }
+
             // allWakeSources: alle Kandidaten mit echten Timestamps
             var allWakeSources = [
                 { source: 'garmin',          ts: garminWakeTs },
+                { source: 'fp2_vib',         ts: fp2VibWakeTs },
                 { source: 'fp2',             ts: fp2WakeTs },
                 { source: 'fp2_other',       ts: fp2OtherWakeTs },
                 { source: 'other',           ts: otherRoomWakeTs },
@@ -956,14 +980,30 @@ class CogniLiving extends utils.Adapter {
                 wakeSource = 'garmin';
                 wakeConf   = 'maximal';
                 this.log.info('[Wake] Garmin-Override: ' + new Date(garminWakeTs).toISOString());
+            } else if (fp2VibWakeTs) {
+                sleepWindowOC7.end = fp2VibWakeTs;
+                wakeSource = 'fp2_vib';
+                wakeConf   = 'sehr_hoch';
+            } else if (fp2OtherWakeTs) {
+                sleepWindowOC7.end = fp2OtherWakeTs;
+                wakeSource = 'fp2_other';
+                wakeConf   = 'sehr_hoch';
             } else if (sleepWindowSource === 'fp2' && vibWakeConfirm) {
                 wakeSource = 'fp2';
                 wakeConf   = 'sehr_hoch';
             } else if (sleepWindowSource === 'fp2') {
                 wakeSource = 'fp2';
                 wakeConf   = 'hoch';
+            } else if (otherRoomWakeTs) {
+                sleepWindowOC7.end = otherRoomWakeTs;
+                wakeSource = 'other';
+                wakeConf   = 'mittel';
             } else if (sleepWindowSource === 'motion') {
                 wakeSource = 'motion';
+                wakeConf   = 'mittel';
+            } else if (vibAloneWakeTs) {
+                sleepWindowOC7.end = vibAloneWakeTs;
+                wakeSource = 'vibration_alone';
                 wakeConf   = 'mittel';
             } else {
                 wakeSource = 'fixed';
@@ -1017,7 +1057,7 @@ class CogniLiving extends utils.Adapter {
                 } catch(e) {}
             }
 
-            // --- OC-7 DIAGNOSE-STATE (hilft beim Debuggen ob Sleep-Analyse l+ñuft) ------
+            // --- OC-7 DIAGNOSE-STATE (hilft beim Debuggen ob Sleep-Analyse l+Ã±uft) ------
             try {
                 await this.setObjectNotExistsAsync('analysis.health.saveDailyDebug', {
                     type: 'state', common: { name: 'OC-7 Sleep Debug (letzter saveDailyHistory-Lauf)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {}
@@ -1212,7 +1252,7 @@ class CogniLiving extends utils.Adapter {
                         if (todaySeqs.length < 1) return null;
 
                         const allHallwayDevs = (this.config.devices || []).filter(d => d.isHallway || d.sensorFunction === 'hallway');
-                        // Prim+ñrflur-Logik: wenn mind. ein Sensor als Prim+ñrflur markiert, nur diesen verwenden
+                        // Prim+Ã±rflur-Logik: wenn mind. ein Sensor als Prim+Ã±rflur markiert, nur diesen verwenden
                         const primaryHallwayDevs = allHallwayDevs.filter(d => d.isPrimaryHallway);
                         const activeHallwayDevs = primaryHallwayDevs.length > 0 ? primaryHallwayDevs : allHallwayDevs;
                         const hallwayConf = activeHallwayDevs.map(d => d.location || d.name || '');
@@ -1272,6 +1312,36 @@ class CogniLiving extends utils.Adapter {
             const filePath = path.join(historyDir, `${dateStr}.json`);
             fs.writeFileSync(filePath, JSON.stringify(snapshot));
             this.log.info(`? History saved: ${filePath}`);
+
+            // Kalibrier-Log: Sensorquellen gegen Garmin (fuer spaetere Auswertung ohne Smartwatch)
+            try {
+                const absDeltaMin = (candidateTs, refTs) => {
+                    if (!candidateTs || !refTs) return null;
+                    return Math.abs(Math.round((candidateTs - refTs) / 60000));
+                };
+                const calibrationEntry = {
+                    date: dateStr,
+                    ts: Date.now(),
+                    chosen: { sleepStartSource: sleepStartSource || null, wakeSource: wakeSource || null, wakeConf: wakeConf || null },
+                    references: { garminSleepStartTs: garminSleepStartTs || null, garminWakeTs: garminWakeTs || null },
+                    candidatesStart: { garmin: garminSleepStartTs || null, fp2_vib: vibRefinedSleepStartTs || null, fp2: _fp2RawStart || null, motion: sleepWindowMotion.start || null, fixed: _fixedSleepStartTs || null },
+                    candidatesWake: { garmin: garminWakeTs || null, fp2_vib: fp2VibWakeTs || null, fp2_other: fp2OtherWakeTs || null, fp2: fp2WakeTs || null, other: otherRoomWakeTs || null, motion: (sleepWindowSource === 'motion') ? fp2WakeTs : null, vibration_alone: vibAloneWakeTs || null, vibration: vibWakeTs || null, fixed: (sleepWindowSource === 'fixed') ? fp2WakeTs : null },
+                    absDeltaToGarminMin: {
+                        sleepStart: { fp2_vib: absDeltaMin(vibRefinedSleepStartTs, garminSleepStartTs), fp2: absDeltaMin(_fp2RawStart, garminSleepStartTs), motion: absDeltaMin(sleepWindowMotion.start, garminSleepStartTs), fixed: absDeltaMin(_fixedSleepStartTs, garminSleepStartTs) },
+                        wake: { fp2_vib: absDeltaMin(fp2VibWakeTs, garminWakeTs), fp2_other: absDeltaMin(fp2OtherWakeTs, garminWakeTs), fp2: absDeltaMin(fp2WakeTs, garminWakeTs), other: absDeltaMin(otherRoomWakeTs, garminWakeTs), vibration_alone: absDeltaMin(vibAloneWakeTs, garminWakeTs), vibration: absDeltaMin(vibWakeTs, garminWakeTs) }
+                    }
+                };
+                let calibrationLog = [];
+                const calState = await this.getStateAsync('analysis.health.sleepCalibrationLog');
+                if (calState && calState.val) {
+                    try { calibrationLog = JSON.parse(calState.val); if (!Array.isArray(calibrationLog)) calibrationLog = []; } catch(_) { calibrationLog = []; }
+                }
+                calibrationLog.push(calibrationEntry);
+                if (calibrationLog.length > 120) calibrationLog = calibrationLog.slice(calibrationLog.length - 120);
+                await this.setStateAsync('analysis.health.sleepCalibrationLog', { val: JSON.stringify(calibrationLog), ack: true });
+            } catch (calErr) {
+                this.log.warn('[SleepCalibration] Log konnte nicht gespeichert werden: ' + calErr.message);
+            }
 
             // N?chtliche Drift-Pr?fung (nach dem Speichern)
             this._checkDriftAlarm(historyDir).catch(e => this.log.warn(`[Drift] Alarm-Check Fehler: ${e.message}`));
@@ -2368,5 +2438,8 @@ class CogniLiving extends utils.Adapter {
 
 if (require.main !== module) module.exports = (options) => new CogniLiving(options);
 else new CogniLiving();
+
+
+
 
 
