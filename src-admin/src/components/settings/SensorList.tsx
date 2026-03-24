@@ -616,7 +616,14 @@ export default function SensorList(props) {
                                             const discoveredEntry = (props.batteryStatus?.sensors || []).find(s => s.id === device.id);
                                             const discoveredId = discoveredEntry?.stateId || null;
                                             const discoveredLevel = discoveredEntry?.level ?? null;
-                                            const battLevel = discoveredEntry ? `${discoveredLevel ?? "?"}%` : null;
+                                            // Boolean-Quellen (LOWBAT): level=5 → "Niedrig!", level=80 → "OK"
+                                            // Echte Prozentwerte: "97%"
+                                            const isLowbatBool = discoveredLevel === 5 || discoveredLevel === 80;
+                                            const battLevel = discoveredEntry
+                                                ? isLowbatBool
+                                                    ? (discoveredLevel === 5 ? "Niedrig!" : "OK")
+                                                    : `${discoveredLevel ?? "?"}%`
+                                                : null;
                                             const battColor = discoveredEntry?.isCritical ? "#f44336" : discoveredEntry?.isLow ? "#ff9800" : "#4caf50";
                                             return (
                                                 <TableRow key={device.id} sx={{ "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" } }}>
