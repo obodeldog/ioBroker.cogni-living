@@ -221,7 +221,7 @@ export default function HealthTab(props: any) {
                     if (d.roomHistory && d.roomHistory.history) setRoomHistory(d.roomHistory.history);
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [] });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [] });
                     setGeminiNight(d.geminiNight || "Keine Daten");
                     setGeminiNightTs(d.geminiNightTs || null);
                     setGeminiDay(d.geminiDay || "Keine Daten");
@@ -695,7 +695,7 @@ export default function HealthTab(props: any) {
             .then((histRes: any) => {
                 if (histRes && histRes.success && histRes.data) {
                     const d = histRes.data;
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [] });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [] });
                 }
             });
     }, [namespace, socket, adapterName, instance, TRAINING_TARGET, isLive, viewDate]);
@@ -1103,6 +1103,7 @@ export default function HealthTab(props: any) {
     const renderSleepScoreCard = () => {
         const sd = auraSleepData;
         const score: number | null = sd?.sleepScore ?? null;
+        const scoreRaw: number | null = sd?.sleepScoreRaw ?? null;
         const stages: {t: number, s: string}[] = sd?.sleepStages ?? [];
         const garminScore: number | null = sd?.garminScore ?? null;
         const garminDeepMin: number | null = sd?.garminDeepMin ?? null;
@@ -1145,7 +1146,7 @@ export default function HealthTab(props: any) {
             fp2_other:       { icon: '📡', label: 'FP2 + Anderer Raum' },
             other:           { icon: '🚶', label: 'Anderer Raum' },
             motion:          { icon: '🚶', label: 'Schlafzimmer-Bewegungsmelder' },
-            vibration:       { icon: '📳', label: 'Vibrationssensor (Bestätigung)' },
+            vibration:       { icon: '📳', label: 'Vibrationssensor (↑ Konfidenz)' },
             vibration_alone: { icon: '📳', label: 'Vibrationssensor allein' },
             fixed:           { icon: '⏰', label: 'Schätzung' },
         };
@@ -1170,13 +1171,15 @@ export default function HealthTab(props: any) {
 
         // DEV-ONLY: alle Wake-Quellen für Hover-Tooltip
         const allWakeSourcesArr: {source:string, ts:number|null}[] = sd?.allWakeSources ?? [];
+        const CONFIDENCE_BOOSTERS = new Set(['vibration']); // Quellen die nur Konfidenz erhöhen, keine eigene Zeit liefern
         const devWakeTooltip = allWakeSourcesArr.length > 0
             ? 'Aufwachzeit — alle Quellen (Priorität absteigend):\n' +
               allWakeSourcesArr.map(ws => {
                   const info = srcInfo[ws.source] ?? { icon: '?', label: ws.source };
                   const active = ws.source === wakeSource ? ' ← AKTIV' : '';
+                  const booster = CONFIDENCE_BOOSTERS.has(ws.source) ? ' [Konfidenz-Booster]' : '';
                   const timeStr = ws.ts ? fmtTime(ws.ts) : '—';
-                  return `${info.icon} ${info.label}: ${timeStr}${active}`;
+                  return `${info.icon} ${info.label}: ${timeStr}${active}${booster}`;
               }).join('\n')
             : '(keine allWakeSources — alter Snapshot ohne diese Daten)';
 
@@ -1273,7 +1276,7 @@ export default function HealthTab(props: any) {
         return (
             <TerminalBox title="SCHLAFANALYSE (OC-7)" themeType={themeType}
                 helpText={
-                    'AURA-Sleepscore: Tief×200 + REM×150 + Leicht×80 − Wach×250 (max. 100). Bonus +5 bei 7–9h Schlafdauer.\n' +
+                    'AURA-Sleepscore: Tief×200 + REM×150 + Leicht×80 − Wach×250 (Anzeige max. 100, Rohwert kann höher sein). Bonus +5 bei 7–9h Schlafdauer.\n' +
                     'Quellen: Diekelmann & Born 2010 (Tiefschlaf), Walker 2017 / Stickgold 2005 (REM), AASM Guidelines (Leichtschlaf), Buysse et al. 1989 PSQI (WASO-Abzug).\n' +
                     'Einschlafzeit (' + srcDisplay.icon + '): Letzte FP2-Bettbelegung ≥10 Min zwischen 18–03 Uhr.\n' +
                     'Aufwachzeit (' + srcDisplay.icon + '): Erste Bettleere ≥15 Min nach 04 Uhr (⟳ vorläufig bis 10:00 Uhr + 1h Bett leer).\n' +
@@ -1368,6 +1371,12 @@ export default function HealthTab(props: any) {
                                     padding:'4px 14px', lineHeight:'1.1'
                                 }}>{score ?? '—'}</div>
                                 <div style={{fontSize:'0.65rem', color:'#888', marginTop:'2px'}}>AURA-Sleepscore</div>
+                                {scoreRaw !== null && scoreRaw > 100 && (
+                                    <div style={{fontSize:'0.6rem', color: isDark?'#80cbc4':'#00897b', marginTop:'1px'}}
+                                        title={`Ungekappter Rohwert: ${scoreRaw} (Score wird für Anzeige auf 100 begrenzt)`}>
+                                        ↑ roh: {scoreRaw}
+                                    </div>
+                                )}
                                 {sleepDurMin !== null && (
                                     <div style={{fontSize:'0.7rem', color: isDark?'#90caf9':'#1565c0', marginTop:'2px', fontWeight:'600'}}>
                                         🕐 {fmtDuration(sleepDurMin)}

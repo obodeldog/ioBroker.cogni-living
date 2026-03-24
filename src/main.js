@@ -1,4 +1,4 @@
-ï»¿/* eslint-disable */
+/* eslint-disable */
 'use strict';
 
 /*
@@ -323,9 +323,9 @@ class CogniLiving extends utils.Adapter {
         var now = Date.now();
         var devices = this.config.devices || [];
         // Schwellwerte pro Typ ? T?r/Fenster 7 Tage (wochenlang geschlossen ist normal)
-        var thresholds = { motion: 24*3600000, presence_radar: 24*3600000, vibration: 24*3600000,
+        var thresholds = { motion: 7*24*3600000, presence_radar: 7*24*3600000, vibration: 7*24*3600000,
             door: 7*24*3600000, temperature: 6*3600000, light: 8*3600000, dimmer: 8*3600000, moisture: 8*3600000 };
-        var defaultThreshold = 24 * 3600000;
+        var defaultThreshold = 7 * 24 * 3600000; // OC-5: Schwelle 7 Tage
         var ALERT_COOLDOWN = 24 * 3600000; // max. 1 Pushover pro Sensor pro Tag
         // KNX/Loxone/BACnet: kabelgebunden, kein Heartbeat ? Timeout-Check ?berspringen
         var WIRED_PREFIXES = ['knx.', 'loxone.', 'bacnet.', 'modbus.'];
@@ -613,20 +613,20 @@ class CogniLiving extends utils.Adapter {
                 sleepWindowCalc.end = null;
                 this.log.debug('[History] OC-4 Guard: bedPresenceMinutes=' + bedPresenceMinutes + 'min < 180, FP2-sleepWindow verworfen');
             }
-            // Urspr++ngliche FP2-Fenstererkennung merken (vor Freeze-+Â£berschreibung) f++r sleepWindowSource
+            // Urspr++ngliche FP2-Fenstererkennung merken (vor Freeze-+£berschreibung) f++r sleepWindowSource
             var _origFP2Window = sleepWindowCalc.start !== null;
 
             // Schlaffenster aus Schlafzimmer-Bewegungsmelder (Fallback wenn kein FP2-Bett-Sensor).
-            // Sensor-Konfiguration: type=motion + sensorFunction=bed Ã”Ã¥Ã† isBedroomMotion=true.
-            // Pr+Ã±zision: Einschlafzeit Ã”Ã«Ãª letzte Bewegung vor Ã”Ã«Ã‘45 Min Stille (18Ã”Ã‡Ã´03 Uhr).
-            //            Aufwachzeit Ã”Ã«Ãª erste Bewegung nach 04 Uhr + mind. 3h nach Einschlafzeit.
+            // Sensor-Konfiguration: type=motion + sensorFunction=bed ÔåÆ isBedroomMotion=true.
+            // Pr+ñzision: Einschlafzeit Ôëê letzte Bewegung vor ÔëÑ45 Min Stille (18ÔÇô03 Uhr).
+            //            Aufwachzeit Ôëê erste Bewegung nach 04 Uhr + mind. 3h nach Einschlafzeit.
             // Besser als Fixfenster, aber schlechter als FP2 (keine Tief-/Ruhephasen-Erkennung).
             const sleepWindowMotion = (function() {
                 var motEvts = sleepSearchEvents
                     .filter(function(e) { return e.isBedroomMotion && isActiveValue(e.value); })
                     .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
                 if (motEvts.length === 0) return { start: null, end: null };
-                // Einschlafzeit: letztes Motion-Event das von Ã”Ã«Ã‘45 Min Stille gefolgt wird, zwischen 18:00Ã”Ã‡Ã´03:00
+                // Einschlafzeit: letztes Motion-Event das von ÔëÑ45 Min Stille gefolgt wird, zwischen 18:00ÔÇô03:00
                 var sleepStartTs = null;
                 for (var _msi = 0; _msi < motEvts.length; _msi++) {
                     var _mse = motEvts[_msi];
@@ -651,12 +651,12 @@ class CogniLiving extends utils.Adapter {
 
             // --- Einschlafzeit-Verfeinerung: Garmin + Vibration -------------------------
             // Ziel: Unterscheidung "ins Bett gehen" (FP2) vs. "einschlafen" (Vib/Garmin)
-            // Stufe 0: Garmin sleepStartTimestampGMT Ã”Ã‡Ã¶ nur wenn 18Ã”Ã‡Ã´04 Uhr UND innerhalb FP2+3h
-            // Stufe 1: Vibrations-Verfeinerung Ã”Ã‡Ã¶ letztes Vib-Event + Ã”Ã«Ã‘20min Stille (FP2-Fenster)
-            // Stufe 2: FP2 allein Ã”Ã‡Ã¶ Zeit ins Bett gehen
+            // Stufe 0: Garmin sleepStartTimestampGMT ÔÇö nur wenn 18ÔÇô04 Uhr UND innerhalb FP2+3h
+            // Stufe 1: Vibrations-Verfeinerung ÔÇö letztes Vib-Event + ÔëÑ20min Stille (FP2-Fenster)
+            // Stufe 2: FP2 allein ÔÇö Zeit ins Bett gehen
             // Stufe 3: Bewegungsmelder
             // Stufe 4: Fixfenster
-            var _fp2RawStart = sleepWindowCalc.start || null; // FP2-Start vor +Â£berschreibung merken
+            var _fp2RawStart = sleepWindowCalc.start || null; // FP2-Start vor +£berschreibung merken
             var garminSleepStartTs = null;
             var vibRefinedSleepStartTs = null;
 
@@ -682,7 +682,7 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_gse) { this.log.debug('[SleepStart] Garmin nicht lesbar: ' + _gse.message); }
 
-            // Vibrations-Verfeinerung: letztes Vib-Event mit Ã”Ã«Ã‘20min Stille danach (innerhalb FP2+3h)
+            // Vibrations-Verfeinerung: letztes Vib-Event mit ÔëÑ20min Stille danach (innerhalb FP2+3h)
             if (_fp2RawStart) {
                 var _vibRefMax = _fp2RawStart + 3 * 3600000;
                 var _vibRefEvts = sleepSearchEvents.filter(function(e) {
@@ -715,7 +715,7 @@ class CogniLiving extends utils.Adapter {
             var sleepStartSource = _fp2RawStart ? 'fp2'
                 : (sleepWindowMotion.start ? 'motion' : 'fixed');
 
-            // Priorit+Ã±tskette anwenden (nur wenn nicht frozen)
+            // Priorit+ñtskette anwenden (nur wenn nicht frozen)
             if (!_sleepFrozen) {
                 if (garminSleepStartTs) {
                     sleepWindowCalc.start = garminSleepStartTs;
@@ -737,7 +737,7 @@ class CogniLiving extends utils.Adapter {
                 }
             }
 
-            // Schlaffenster fuer OC-7 (Sleep Score): FP2 Ã”Ã¥Ã† Bewegungsmelder Ã”Ã¥Ã† Fixfenster (Fallback-Kette).
+            // Schlaffenster fuer OC-7 (Sleep Score): FP2 ÔåÆ Bewegungsmelder ÔåÆ Fixfenster (Fallback-Kette).
             // Betrifft NICHT sleepWindowStart/End im Snapshot -- die Schlafzeit-Kachel bleibt FP2-only.
             var sleepWindowOC7 = sleepWindowCalc.start
                 ? sleepWindowCalc
@@ -825,7 +825,7 @@ class CogniLiving extends utils.Adapter {
                     var lp = lightSec / totalSecSleep;
                     var wp = wakeSec  / totalSecSleep;
                     var rawScore = dp * 200 + rp * 150 + lp * 80 - wp * 250;
-                    // Bonus: Schlafdauer 7-9h (vor Kappung, damit Rohwert den Bonus enth+Ã±lt)
+                    // Bonus: Schlafdauer 7-9h (vor Kappung, damit Rohwert den Bonus enth+ñlt)
                     var durH = (swEnd - swStart) / 3600000;
                     if (durH >= 7 && durH <= 9) rawScore += 5;
                     sleepScoreRaw = Math.round(Math.max(0, rawScore));  // ungekappter Rohwert (f++r Wochenansicht)
@@ -835,18 +835,18 @@ class CogniLiving extends utils.Adapter {
             }
 
             // Schlaf-Fenster-Quelle (fuer OC-7 Sensor-Indikator im Frontend)
-            // Reihenfolge: fp2 Ã”Ã¥Ã† motion (Bewegungsmelder) Ã”Ã¥Ã† fixed (Fixfenster)
+            // Reihenfolge: fp2 ÔåÆ motion (Bewegungsmelder) ÔåÆ fixed (Fixfenster)
             var _motionAvail = sleepWindowMotion.start !== null;
             var sleepWindowSource = _sleepFrozen
                 ? (_existingSnap.sleepWindowSource || (_origFP2Window ? 'fp2' : (_motionAvail ? 'motion' : 'fixed')))
                 : (_origFP2Window ? 'fp2' : (_motionAvail ? 'motion' : 'fixed'));
 
-            // Au+Æ’erhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
+            // Au+ƒerhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
             var outsideBedEvents = [];
             if (_sleepFrozen && _existingSnap) {
                 var _frozenEvts = _existingSnap.outsideBedEvents || [];
-                // Wenn Motion-Events bereits im Snapshot: unverÃ¤ndert Ã¼bernehmen.
-                // Wenn leer: Motion-Sensor-Events rÃ¼ckwirkend ergÃ¤nzen (z.B. nach Code-Update).
+                // Wenn Motion-Events bereits im Snapshot: unverändert übernehmen.
+                // Wenn leer: Motion-Sensor-Events rückwirkend ergänzen (z.B. nach Code-Update).
                 if (_frozenEvts.length > 0) {
                     outsideBedEvents = _frozenEvts;
                 } else {
@@ -875,7 +875,7 @@ class CogniLiving extends utils.Adapter {
                     }
                 }
             } else if (sleepWindowOC7.start && sleepWindowOC7.end) {
-                // === PHASE 1: FP2-basierte Events (Bett-leer-Erkennung â€” prÃ¤zise Timestamps) ===
+                // === PHASE 1: FP2-basierte Events (Bett-leer-Erkennung — präzise Timestamps) ===
                 var _fp2Sorted = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })
                     .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
                 var _bedWasEmpty = false; var _emptyTs = null; var _fp2Events = [];
@@ -895,7 +895,7 @@ class CogniLiving extends utils.Adapter {
                     var _lastDur = Math.round((sleepWindowOC7.end - _emptyTs) / 60000);
                     if (_lastDur >= 1) _fp2Events.push({ start: _emptyTs, end: sleepWindowOC7.end, duration: _lastDur });
                 }
-                // === PHASE 2: Bewegungsmelder-Events (Bad/KÃ¼che â€” Fallback + ErgÃ¤nzung zu FP2) ===
+                // === PHASE 2: Bewegungsmelder-Events (Bad/Küche — Fallback + Ergänzung zu FP2) ===
                 var _bathDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
                 var _kitchDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
                 var CLUSTER_GAP_MS = 5 * 60 * 1000;
@@ -922,7 +922,7 @@ class CogniLiving extends utils.Adapter {
                     }
                 });
                 if (_curCluster) _motEvents.push(_curCluster);
-                // === PHASE 3: ZusammenfÃ¼hren â€” FP2 hat Vorrang, Motion fÃ¼llt LÃ¼cken ===
+                // === PHASE 3: Zusammenführen — FP2 hat Vorrang, Motion füllt Lücken ===
                 var _allEvtCandidates = [];
                 _fp2Events.forEach(function(fp2) {
                     var _hasBath = sleepSearchEvents.some(function(e) {
@@ -941,7 +941,7 @@ class CogniLiving extends utils.Adapter {
             }
 
             // --- Garmin Wake-Override + Aufwachzeit-Quellen --------------------------------
-            // Priorit+Ã±tskette (absteigend): Garmin Ã”Ã¥Ã† FP2+Vib Ã”Ã¥Ã† FP2 Ã”Ã¥Ã† Motion Ã”Ã¥Ã† Fixed
+            // Priorit+ñtskette (absteigend): Garmin ÔåÆ FP2+Vib ÔåÆ FP2 ÔåÆ Motion ÔåÆ Fixed
             // Garmin sleepEndTimestampGMT ++berstimmt alle anderen Quellen wenn plausibel (03-14 Uhr)
             var garminWakeTs = null;
             var fp2WakeTs    = sleepWindowOC7.end || null;  // aktueller Wert = FP2/motion/fixed
@@ -963,8 +963,8 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_gwe) { this.log.debug('[Wake] Garmin-End nicht lesbar: ' + _gwe.message); }
 
-            // Vibrationssensor-Best+Ã±tigung: Letztes Vib-Event vor FP2-Leer-Signal (-Â¦30min)
-            // Erh+Ã‚ht Konfidenz, +Ã±ndert aber nicht den Timestamp
+            // Vibrationssensor-Best+ñtigung: Letztes Vib-Event vor FP2-Leer-Signal (-¦30min)
+            // Erh+Âht Konfidenz, +ñndert aber nicht den Timestamp
             var vibWakeConfirm = false;
             if (fp2WakeTs && sleepWindowOC7.start) {
                 var _vibWakeSearch = sleepSearchEvents.filter(function(e) {
@@ -1121,7 +1121,7 @@ class CogniLiving extends utils.Adapter {
                 } catch(e) {}
             }
 
-            // --- OC-7 DIAGNOSE-STATE (hilft beim Debuggen ob Sleep-Analyse l+Ã±uft) ------
+            // --- OC-7 DIAGNOSE-STATE (hilft beim Debuggen ob Sleep-Analyse l+ñuft) ------
             try {
                 await this.setObjectNotExistsAsync('analysis.health.saveDailyDebug', {
                     type: 'state', common: { name: 'OC-7 Sleep Debug (letzter saveDailyHistory-Lauf)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {}
@@ -1316,7 +1316,7 @@ class CogniLiving extends utils.Adapter {
                         if (todaySeqs.length < 1) return null;
 
                         const allHallwayDevs = (this.config.devices || []).filter(d => d.isHallway || d.sensorFunction === 'hallway');
-                        // Prim+Ã±rflur-Logik: wenn mind. ein Sensor als Prim+Ã±rflur markiert, nur diesen verwenden
+                        // Prim+ñrflur-Logik: wenn mind. ein Sensor als Prim+ñrflur markiert, nur diesen verwenden
                         const primaryHallwayDevs = allHallwayDevs.filter(d => d.isPrimaryHallway);
                         const activeHallwayDevs = primaryHallwayDevs.length > 0 ? primaryHallwayDevs : allHallwayDevs;
                         const hallwayConf = activeHallwayDevs.map(d => d.location || d.name || '');
