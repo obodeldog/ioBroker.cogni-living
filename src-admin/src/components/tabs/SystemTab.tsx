@@ -27,6 +27,8 @@ import HouseIcon from '@mui/icons-material/House';
 
 // IMPORT DER BESTEHENDEN SETTINGS-KOMPONENTE (WICHTIG FÜR DIE EISERNE REGEL)
 import Settings from '../Settings';
+import TopologyView from '../settings/TopologyView';
+import HubIcon from '@mui/icons-material/Hub';
 
 // Version: 0.29.6 (Rollback: Removed manual sanitization because main.js now sends clean data)
 
@@ -587,6 +589,23 @@ export default function SystemTab(props: any) {
                         </Box>
                     );
                 })()}
+            </AccordionDetails>
+        </Accordion>
+
+        {/* OC-2: Topologie-Matrix — ab v0.33.67 primär hier im System-Tab */}
+        <Accordion defaultExpanded={false} sx={{ mt: 1, border: '1px solid rgba(100,100,100,0.2)', borderRadius: '6px !important', '&:before': { display: 'none' } }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <HubIcon sx={{ fontSize: 18, color: '#7b1fa2' }} />
+                    <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>Topologie-Matrix & Raum-Adjazenz</Typography>
+                    <Chip label="Zentral hier" size="small" sx={{ fontSize: '0.65rem', height: 18, bgcolor: '#7b1fa220', color: '#7b1fa2', border: '1px solid #7b1fa260' }} />
+                </Box>
+            </AccordionSummary>
+            <AccordionDetails sx={{ p: 1 }}>
+                <Alert severity="info" sx={{ mb: 1.5, py: 0.4, fontSize: '0.72rem' }}>
+                    Die Topologie-Matrix definiert welche Räume benachbart sind. Sie wird für <b>Personenzählung</b>, <b>Ganggeschwindigkeit</b> und die <b>Sicherheits-Anomalieerkennung</b> verwendet. Primäre Konfiguration ab v0.33.67 hier im System-Tab.
+                </Alert>
+                <TopologyView socket={socket} adapterName={adapterName} instance={instance} themeType={themeType} />
             </AccordionDetails>
         </Accordion>
         </Box>

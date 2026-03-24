@@ -165,6 +165,7 @@ export default function HealthTab(props: any) {
     const [driftStatus, setDriftStatus] = useState<string>('Unknown');
     const [driftDetails, setDriftDetails] = useState<string>('');
     const [auraSleepData, setAuraSleepData] = useState<any>(null);
+    const [sensorBatteryStatus, setSensorBatteryStatus] = useState<{sensors: {id:string, level:number|null, isLow:boolean, isCritical:boolean, source:string}[]} | null>(null);
 
     // MASTER-RAUMNAMEN aus System-Tab laden
     const loadMasterRooms = async () => {
@@ -712,6 +713,18 @@ export default function HealthTab(props: any) {
         loadMasterRooms();
     }, []);
 
+    // OC-15: Batterie-Status beim Mount laden (alle 30 Min aktualisieren)
+    useEffect(() => {
+        const loadBattery = () => {
+            socket.getState(`${adapterName}.${instance}.system.sensorBatteryStatus`).then((s: any) => {
+                if (s && s.val) { try { setSensorBatteryStatus(JSON.parse(s.val)); } catch(e) {} }
+            }).catch(() => {});
+        };
+        loadBattery();
+        const t = setInterval(loadBattery, 30 * 60 * 1000);
+        return () => clearInterval(t);
+    }, [socket, adapterName, instance]);
+
     const handleDateChange = (days: number) => {
         const newDate = new Date(viewDate);
         newDate.setDate(newDate.getDate() + days);
@@ -1125,6 +1138,18 @@ export default function HealthTab(props: any) {
         const hasVibSensor = stages.length > 0;
         const hasSleepWindow = swStart !== null;
 
+        // OC-15: Batterie-Warnung für Vibrationssensor
+        const vibBatteryWarning = (() => {
+            if (!sensorBatteryStatus || !sensorBatteryStatus.sensors) return null;
+            const lowVibs = sensorBatteryStatus.sensors.filter(s => s.isLow || s.isCritical);
+            if (lowVibs.length === 0) return null;
+            return lowVibs.map(s => ({
+                level: s.level,
+                isCritical: s.isCritical,
+                id: s.id
+            }));
+        })();
+
         // Farben: best → schlimmste (Tief=dunkelblau, Leicht=hellblau, REM=lila, Wach=gelb, Bad=bernstein, Außerhalb=orange)
         const stageColor: Record<string, string> = {
             deep:     '#1565c0',
@@ -1512,6 +1537,27 @@ export default function HealthTab(props: any) {
                                     {garminLightMin !== null && <span><span style={{color:'#42a5f5'}}>■</span> Leicht: {garminLightMin}min</span>}
                                     {garminRemMin   !== null && <span><span style={{color:'#ab47bc'}}>■</span> REM: {garminRemMin}min</span>}
                                 </div>
+                            </div>
+                        )}
+
+                        {/* OC-15: Batterie-Warnung wenn Sensor niedrig */}
+                        {vibBatteryWarning && vibBatteryWarning.length > 0 && (
+                            <div style={{
+                                borderTop: `1px dashed ${isDark?'#444':'#ddd'}`,
+                                paddingTop: '6px',
+                                marginTop: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '0.65rem',
+                                color: vibBatteryWarning.some(s => s.isCritical) ? '#f44336' : '#ff9800'
+                            }}>
+                                <span>{vibBatteryWarning.some(s => s.isCritical) ? '🔋' : '🪫'}</span>
+                                <span>
+                                    {vibBatteryWarning.some(s => s.isCritical) ? 'Batterie kritisch' : 'Batterie niedrig'}&nbsp;
+                                    ({vibBatteryWarning.map(s => s.level !== null ? s.level + '%' : '?').join(', ')})
+                                    &nbsp;— Schlafanalyse evtl. ungenau
+                                </span>
                             </div>
                         )}
 

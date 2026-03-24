@@ -57,6 +57,11 @@ class CogniLiving extends utils.Adapter {
         this.sensorAlertSent = {};   // { sensorId: lastAlertTs } - verhindert Spam
         this.sensorCheckInterval = null;
 
+        // OC-15: Batterie-Monitoring
+        this.batteryStates = {};           // { sensorId: { stateId, level, isLow, isCritical, source } }
+        this.batteryDiscoveryInterval = null;
+        this._lastBatteryPushoverDay = null;
+
         // Active Modules
         this.activeModules = { health: true, security: true, energy: true, comfort: true };
 
@@ -142,6 +147,7 @@ class CogniLiving extends utils.Adapter {
             },
             native: {}
         });
+        await this.setObjectNotExistsAsync('system.sensorBatteryStatus', { type: 'state', common: { name: 'Sensor Battery Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorStatus', { type: 'state', common: { name: 'Sensor Health Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.currentPersonCount', { type: 'state', common: { name: 'Aktuelle Personenanzahl im Haus', type: 'number', role: 'value', unit: 'Personen', read: true, write: false, def: 1, desc: 'Geschaetzte Personenanzahl (Config-Baseline + raeumliche Heuristik + FP2)' }, native: {} });
         await this.setObjectNotExistsAsync('system.personCount.heuristicDetection', { type: 'state', common: { name: 'Personenerkennung: Heuristik-Ereignis (SQL) - mind. 2 Personen erkannt', type: 'string', role: 'json', read: true, write: false, def: '{}', desc: 'Wird bei jeder rauemlichen Unmoglichkeitserkennung (>= 2 Hops, <= 5s) geschrieben. Enthaelt: Sensor-IDs, Raeume, Hop-Abstand, Zeitdelta, Personenzahl vorher/nachher.' }, native: {} });
@@ -244,11 +250,19 @@ class CogniLiving extends utils.Adapter {
         }
         // St?ndlicher Sensor-Ausfall-Check
         if (this.sensorCheckInterval) clearInterval(this.sensorCheckInterval);
+            if (this.batteryDiscoveryInterval) clearInterval(this.batteryDiscoveryInterval);
         this.sensorCheckInterval = setInterval(() => { this.checkSensorHealth(); }, 60 * 60 * 1000);
         // St?ndlicher History-Save: heute-Datei aktuell halten damit Chart heute-Balken zeigt
         if (this.hourlySaveInterval) clearInterval(this.hourlySaveInterval);
         this.hourlySaveInterval = setInterval(() => { this.saveDailyHistory().catch(e => {}); }, 60 * 60 * 1000);
         setTimeout(() => this.checkSensorHealth(), 5 * 60 * 1000); // auch 5 min nach Start
+
+        // OC-15: Batterie-Discovery beim Start und alle 12 Stunden
+        if (this.batteryDiscoveryInterval) clearInterval(this.batteryDiscoveryInterval);
+        this.discoverBatteryStates().then(() => this.checkBatteryLevels()).catch(e => this.log.warn('[BATTERY] Init error: ' + e.message));
+        this.batteryDiscoveryInterval = setInterval(async () => {
+            try { await this.discoverBatteryStates(); await this.checkBatteryLevels(); } catch(e) {}
+        }, 12 * 60 * 60 * 1000);
 
         if (this.roomIntegratorTimer) clearInterval(this.roomIntegratorTimer);
         this.integrateRoomTime();
@@ -366,6 +380,127 @@ class CogniLiving extends utils.Adapter {
             var msg = '?? Sensor-Ausfall:\n' + alerts.join('\n');
             this.log.warn('[SENSOR-CHECK] ' + alerts.join(', '));
             try { setup.sendNotification(this, msg, true, false, '?? NUUKANNI: Sensor-Ausfall'); } catch(e) {}
+        }
+        // OC-15: Batteriestand stuendlich pruefen (Pushover taeglich um 09:00)
+        try { await this.checkBatteryLevels(); } catch(e) {}
+    }
+
+    async discoverBatteryStates() {
+        var _self = this;
+        var devices = this.config.devices || [];
+        var BATTERY_NAMES = ['battery', 'BATTERY', 'battery_low', 'lowBattery', 'Battery'];
+        var WIRED_PREFIXES = ['knx.', 'loxone.', 'bacnet.', 'modbus.'];
+        var BATTERY_TYPES = ['motion', 'vibration', 'vibration_trigger', 'vibration_strength', 'presence_radar', 'presence_radar_bool', 'moisture', 'door', 'temperature'];
+        for (var _bi = 0; _bi < devices.length; _bi++) {
+            var d = devices[_bi];
+            if (!d.id) continue;
+            var isWired = WIRED_PREFIXES.some(function(p) { return d.id.toLowerCase().startsWith(p); });
+            if (isWired) continue;
+            if (BATTERY_TYPES.indexOf(d.type || 'motion') === -1) continue;
+            var batteryStateId = null;
+            var bSource = 'none';
+            // 1. Manuelles Feld aus Config
+            if (d.batteryStateId && d.batteryStateId.trim()) {
+                batteryStateId = d.batteryStateId.trim();
+                bSource = 'manual';
+            }
+            // 2. Alias-Rekonstruktion: alias.id -> nativer Geraetepfad -> battery
+            if (!batteryStateId) {
+                try {
+                    var aliasObj = await _self.getForeignObjectAsync(d.id);
+                    if (aliasObj && aliasObj.common && aliasObj.common.alias && aliasObj.common.alias.id) {
+                        var nativeId = typeof aliasObj.common.alias.id === 'object'
+                            ? (aliasObj.common.alias.id.read || aliasObj.common.alias.id.write)
+                            : aliasObj.common.alias.id;
+                        if (nativeId) {
+                            var aliasParts = String(nativeId).split('.');
+                            aliasParts.pop();
+                            var aliasDevPath = aliasParts.join('.');
+                            for (var _an = 0; _an < BATTERY_NAMES.length; _an++) {
+                                try {
+                                    var cStateA = await _self.getForeignStateAsync(aliasDevPath + '.' + BATTERY_NAMES[_an]);
+                                    if (cStateA !== null && cStateA !== undefined && cStateA.val !== undefined && cStateA.val !== null) {
+                                        batteryStateId = aliasDevPath + '.' + BATTERY_NAMES[_an];
+                                        bSource = 'alias';
+                                        break;
+                                    }
+                                } catch(e) {}
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+            // 3. Direktsuche im gleichen Geraetepfad
+            if (!batteryStateId) {
+                try {
+                    var dParts = d.id.split('.');
+                    dParts.pop();
+                    var devPath = dParts.join('.');
+                    for (var _dn = 0; _dn < BATTERY_NAMES.length; _dn++) {
+                        try {
+                            var cStateD = await _self.getForeignStateAsync(devPath + '.' + BATTERY_NAMES[_dn]);
+                            if (cStateD !== null && cStateD !== undefined && cStateD.val !== undefined && cStateD.val !== null) {
+                                batteryStateId = devPath + '.' + BATTERY_NAMES[_dn];
+                                bSource = 'auto';
+                                break;
+                            }
+                        } catch(e) {}
+                    }
+                } catch(e) {}
+            }
+            if (batteryStateId) {
+                if (!_self.batteryStates[d.id]) _self.batteryStates[d.id] = {};
+                _self.batteryStates[d.id].stateId = batteryStateId;
+                _self.batteryStates[d.id].source = bSource;
+                _self.log.debug('[BATTERY] ' + (d.name || d.id) + ': ' + batteryStateId + ' (' + bSource + ')');
+            } else {
+                delete _self.batteryStates[d.id];
+            }
+        }
+    }
+
+    async checkBatteryLevels() {
+        var _self = this;
+        var now = Date.now();
+        var criticals = [];
+        var devices = this.config.devices || [];
+        for (var _sid in _self.batteryStates) {
+            var info = _self.batteryStates[_sid];
+            if (!info || !info.stateId) continue;
+            try {
+                var bst = await _self.getForeignStateAsync(info.stateId);
+                if (!bst || bst.val === null || bst.val === undefined) continue;
+                var level = null; var isLow = false; var isCritical = false;
+                if (typeof bst.val === 'boolean') {
+                    isLow = bst.val; isCritical = bst.val; level = bst.val ? 5 : 80;
+                } else if (typeof bst.val === 'number') {
+                    level = bst.val; isLow = level <= 20; isCritical = level <= 10;
+                }
+                info.level = level; info.isLow = isLow; info.isCritical = isCritical;
+                if (isCritical) {
+                    var _bd = devices.find(function(dv) { return dv.id === _sid; });
+                    var _bname = (_bd && _bd.name) ? _bd.name : _sid;
+                    var _bloc = (_bd && _bd.location) ? _bd.location : '?';
+                    criticals.push(_bname + ' (' + _bloc + '): ' + (level !== null ? level + '%' : 'kritisch'));
+                }
+            } catch(e) {}
+        }
+        // Status in State schreiben
+        try {
+            var batteryList = Object.keys(_self.batteryStates).map(function(id) {
+                var inf = _self.batteryStates[id];
+                return { id: id, stateId: inf.stateId, level: inf.level !== undefined ? inf.level : null, isLow: inf.isLow || false, isCritical: inf.isCritical || false, source: inf.source || 'auto' };
+            });
+            await _self.setStateAsync('system.sensorBatteryStatus', { val: JSON.stringify({ timestamp: now, sensors: batteryList }), ack: true });
+        } catch(e) {}
+        // Taeglich einmal um 09:00 Uhr Pushover bei kritischer Batterie
+        var _nowH2 = new Date(now).getHours();
+        var _dayKey2 = new Date(now).toDateString();
+        if (criticals.length > 0 && _nowH2 >= 9 && _self._lastBatteryPushoverDay !== _dayKey2) {
+            _self._lastBatteryPushoverDay = _dayKey2;
+            var _bMsg = '\uD83D\uDD0B Batterie-Warnung:\n' + criticals.join('\n');
+            _self.log.warn('[BATTERY] Kritisch: ' + criticals.join(', '));
+            try { setup.sendNotification(_self, _bMsg, true, false, '\uD83D\uDD0B NUUKANNI: Batterie fast leer'); } catch(e) {}
         }
     }
 
@@ -613,20 +748,20 @@ class CogniLiving extends utils.Adapter {
                 sleepWindowCalc.end = null;
                 this.log.debug('[History] OC-4 Guard: bedPresenceMinutes=' + bedPresenceMinutes + 'min < 180, FP2-sleepWindow verworfen');
             }
-            // Urspr++ngliche FP2-Fenstererkennung merken (vor Freeze-+£berschreibung) f++r sleepWindowSource
+            // Urspr++ngliche FP2-Fenstererkennung merken (vor Freeze-+ï¿½berschreibung) f++r sleepWindowSource
             var _origFP2Window = sleepWindowCalc.start !== null;
 
             // Schlaffenster aus Schlafzimmer-Bewegungsmelder (Fallback wenn kein FP2-Bett-Sensor).
-            // Sensor-Konfiguration: type=motion + sensorFunction=bed ÔåÆ isBedroomMotion=true.
-            // Pr+ñzision: Einschlafzeit Ôëê letzte Bewegung vor ÔëÑ45 Min Stille (18ÔÇô03 Uhr).
-            //            Aufwachzeit Ôëê erste Bewegung nach 04 Uhr + mind. 3h nach Einschlafzeit.
+            // Sensor-Konfiguration: type=motion + sensorFunction=bed ï¿½ï¿½ï¿½ isBedroomMotion=true.
+            // Pr+ï¿½zision: Einschlafzeit ï¿½ï¿½ï¿½ letzte Bewegung vor ï¿½ï¿½ï¿½45 Min Stille (18ï¿½ï¿½ï¿½03 Uhr).
+            //            Aufwachzeit ï¿½ï¿½ï¿½ erste Bewegung nach 04 Uhr + mind. 3h nach Einschlafzeit.
             // Besser als Fixfenster, aber schlechter als FP2 (keine Tief-/Ruhephasen-Erkennung).
             const sleepWindowMotion = (function() {
                 var motEvts = sleepSearchEvents
                     .filter(function(e) { return e.isBedroomMotion && isActiveValue(e.value); })
                     .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
                 if (motEvts.length === 0) return { start: null, end: null };
-                // Einschlafzeit: letztes Motion-Event das von ÔëÑ45 Min Stille gefolgt wird, zwischen 18:00ÔÇô03:00
+                // Einschlafzeit: letztes Motion-Event das von ï¿½ï¿½ï¿½45 Min Stille gefolgt wird, zwischen 18:00ï¿½ï¿½ï¿½03:00
                 var sleepStartTs = null;
                 for (var _msi = 0; _msi < motEvts.length; _msi++) {
                     var _mse = motEvts[_msi];
@@ -651,12 +786,12 @@ class CogniLiving extends utils.Adapter {
 
             // --- Einschlafzeit-Verfeinerung: Garmin + Vibration -------------------------
             // Ziel: Unterscheidung "ins Bett gehen" (FP2) vs. "einschlafen" (Vib/Garmin)
-            // Stufe 0: Garmin sleepStartTimestampGMT ÔÇö nur wenn 18ÔÇô04 Uhr UND innerhalb FP2+3h
-            // Stufe 1: Vibrations-Verfeinerung ÔÇö letztes Vib-Event + ÔëÑ20min Stille (FP2-Fenster)
-            // Stufe 2: FP2 allein ÔÇö Zeit ins Bett gehen
+            // Stufe 0: Garmin sleepStartTimestampGMT ï¿½ï¿½ï¿½ nur wenn 18ï¿½ï¿½ï¿½04 Uhr UND innerhalb FP2+3h
+            // Stufe 1: Vibrations-Verfeinerung ï¿½ï¿½ï¿½ letztes Vib-Event + ï¿½ï¿½ï¿½20min Stille (FP2-Fenster)
+            // Stufe 2: FP2 allein ï¿½ï¿½ï¿½ Zeit ins Bett gehen
             // Stufe 3: Bewegungsmelder
             // Stufe 4: Fixfenster
-            var _fp2RawStart = sleepWindowCalc.start || null; // FP2-Start vor +£berschreibung merken
+            var _fp2RawStart = sleepWindowCalc.start || null; // FP2-Start vor +ï¿½berschreibung merken
             var garminSleepStartTs = null;
             var vibRefinedSleepStartTs = null;
 
@@ -682,7 +817,7 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_gse) { this.log.debug('[SleepStart] Garmin nicht lesbar: ' + _gse.message); }
 
-            // Vibrations-Verfeinerung: letztes Vib-Event mit ÔëÑ20min Stille danach (innerhalb FP2+3h)
+            // Vibrations-Verfeinerung: letztes Vib-Event mit ï¿½ï¿½ï¿½20min Stille danach (innerhalb FP2+3h)
             if (_fp2RawStart) {
                 var _vibRefMax = _fp2RawStart + 3 * 3600000;
                 var _vibRefEvts = sleepSearchEvents.filter(function(e) {
@@ -715,7 +850,7 @@ class CogniLiving extends utils.Adapter {
             var sleepStartSource = _fp2RawStart ? 'fp2'
                 : (sleepWindowMotion.start ? 'motion' : 'fixed');
 
-            // Priorit+ñtskette anwenden (nur wenn nicht frozen)
+            // Priorit+ï¿½tskette anwenden (nur wenn nicht frozen)
             if (!_sleepFrozen) {
                 if (garminSleepStartTs) {
                     sleepWindowCalc.start = garminSleepStartTs;
@@ -737,7 +872,7 @@ class CogniLiving extends utils.Adapter {
                 }
             }
 
-            // Schlaffenster fuer OC-7 (Sleep Score): FP2 ÔåÆ Bewegungsmelder ÔåÆ Fixfenster (Fallback-Kette).
+            // Schlaffenster fuer OC-7 (Sleep Score): FP2 ï¿½ï¿½ï¿½ Bewegungsmelder ï¿½ï¿½ï¿½ Fixfenster (Fallback-Kette).
             // Betrifft NICHT sleepWindowStart/End im Snapshot -- die Schlafzeit-Kachel bleibt FP2-only.
             var sleepWindowOC7 = sleepWindowCalc.start
                 ? sleepWindowCalc
@@ -825,7 +960,7 @@ class CogniLiving extends utils.Adapter {
                     var lp = lightSec / totalSecSleep;
                     var wp = wakeSec  / totalSecSleep;
                     var rawScore = dp * 200 + rp * 150 + lp * 80 - wp * 250;
-                    // Bonus: Schlafdauer 7-9h (vor Kappung, damit Rohwert den Bonus enth+ñlt)
+                    // Bonus: Schlafdauer 7-9h (vor Kappung, damit Rohwert den Bonus enth+ï¿½lt)
                     var durH = (swEnd - swStart) / 3600000;
                     if (durH >= 7 && durH <= 9) rawScore += 5;
                     sleepScoreRaw = Math.round(Math.max(0, rawScore));  // ungekappter Rohwert (f++r Wochenansicht)
@@ -835,18 +970,18 @@ class CogniLiving extends utils.Adapter {
             }
 
             // Schlaf-Fenster-Quelle (fuer OC-7 Sensor-Indikator im Frontend)
-            // Reihenfolge: fp2 ÔåÆ motion (Bewegungsmelder) ÔåÆ fixed (Fixfenster)
+            // Reihenfolge: fp2 ï¿½ï¿½ï¿½ motion (Bewegungsmelder) ï¿½ï¿½ï¿½ fixed (Fixfenster)
             var _motionAvail = sleepWindowMotion.start !== null;
             var sleepWindowSource = _sleepFrozen
                 ? (_existingSnap.sleepWindowSource || (_origFP2Window ? 'fp2' : (_motionAvail ? 'motion' : 'fixed')))
                 : (_origFP2Window ? 'fp2' : (_motionAvail ? 'motion' : 'fixed'));
 
-            // Au+ƒerhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
+            // Au+ï¿½erhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
             var outsideBedEvents = [];
             if (_sleepFrozen && _existingSnap) {
                 var _frozenEvts = _existingSnap.outsideBedEvents || [];
-                // Wenn Motion-Events bereits im Snapshot: unverändert übernehmen.
-                // Wenn leer: Motion-Sensor-Events rückwirkend ergänzen (z.B. nach Code-Update).
+                // Wenn Motion-Events bereits im Snapshot: unverï¿½ndert ï¿½bernehmen.
+                // Wenn leer: Motion-Sensor-Events rï¿½ckwirkend ergï¿½nzen (z.B. nach Code-Update).
                 if (_frozenEvts.length > 0) {
                     outsideBedEvents = _frozenEvts;
                 } else {
@@ -875,7 +1010,7 @@ class CogniLiving extends utils.Adapter {
                     }
                 }
             } else if (sleepWindowOC7.start && sleepWindowOC7.end) {
-                // === PHASE 1: FP2-basierte Events (Bett-leer-Erkennung — präzise Timestamps) ===
+                // === PHASE 1: FP2-basierte Events (Bett-leer-Erkennung ï¿½ prï¿½zise Timestamps) ===
                 var _fp2Sorted = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })
                     .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
                 var _bedWasEmpty = false; var _emptyTs = null; var _fp2Events = [];
@@ -895,7 +1030,7 @@ class CogniLiving extends utils.Adapter {
                     var _lastDur = Math.round((sleepWindowOC7.end - _emptyTs) / 60000);
                     if (_lastDur >= 1) _fp2Events.push({ start: _emptyTs, end: sleepWindowOC7.end, duration: _lastDur });
                 }
-                // === PHASE 2: Bewegungsmelder-Events (Bad/Küche — Fallback + Ergänzung zu FP2) ===
+                // === PHASE 2: Bewegungsmelder-Events (Bad/Kï¿½che ï¿½ Fallback + Ergï¿½nzung zu FP2) ===
                 var _bathDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
                 var _kitchDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
                 var CLUSTER_GAP_MS = 5 * 60 * 1000;
@@ -922,7 +1057,7 @@ class CogniLiving extends utils.Adapter {
                     }
                 });
                 if (_curCluster) _motEvents.push(_curCluster);
-                // === PHASE 3: Zusammenführen — FP2 hat Vorrang, Motion füllt Lücken ===
+                // === PHASE 3: Zusammenfï¿½hren ï¿½ FP2 hat Vorrang, Motion fï¿½llt Lï¿½cken ===
                 var _allEvtCandidates = [];
                 _fp2Events.forEach(function(fp2) {
                     var _hasBath = sleepSearchEvents.some(function(e) {
@@ -941,7 +1076,7 @@ class CogniLiving extends utils.Adapter {
             }
 
             // --- Garmin Wake-Override + Aufwachzeit-Quellen --------------------------------
-            // Priorit+ñtskette (absteigend): Garmin ÔåÆ FP2+Vib ÔåÆ FP2 ÔåÆ Motion ÔåÆ Fixed
+            // Priorit+ï¿½tskette (absteigend): Garmin ï¿½ï¿½ï¿½ FP2+Vib ï¿½ï¿½ï¿½ FP2 ï¿½ï¿½ï¿½ Motion ï¿½ï¿½ï¿½ Fixed
             // Garmin sleepEndTimestampGMT ++berstimmt alle anderen Quellen wenn plausibel (03-14 Uhr)
             var garminWakeTs = null;
             var fp2WakeTs    = sleepWindowOC7.end || null;  // aktueller Wert = FP2/motion/fixed
@@ -963,8 +1098,8 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_gwe) { this.log.debug('[Wake] Garmin-End nicht lesbar: ' + _gwe.message); }
 
-            // Vibrationssensor-Best+ñtigung: Letztes Vib-Event vor FP2-Leer-Signal (-¦30min)
-            // Erh+Âht Konfidenz, +ñndert aber nicht den Timestamp
+            // Vibrationssensor-Best+ï¿½tigung: Letztes Vib-Event vor FP2-Leer-Signal (-ï¿½30min)
+            // Erh+ï¿½ht Konfidenz, +ï¿½ndert aber nicht den Timestamp
             var vibWakeConfirm = false;
             if (fp2WakeTs && sleepWindowOC7.start) {
                 var _vibWakeSearch = sleepSearchEvents.filter(function(e) {
@@ -1121,7 +1256,7 @@ class CogniLiving extends utils.Adapter {
                 } catch(e) {}
             }
 
-            // --- OC-7 DIAGNOSE-STATE (hilft beim Debuggen ob Sleep-Analyse l+ñuft) ------
+            // --- OC-7 DIAGNOSE-STATE (hilft beim Debuggen ob Sleep-Analyse l+ï¿½uft) ------
             try {
                 await this.setObjectNotExistsAsync('analysis.health.saveDailyDebug', {
                     type: 'state', common: { name: 'OC-7 Sleep Debug (letzter saveDailyHistory-Lauf)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {}
@@ -1316,7 +1451,7 @@ class CogniLiving extends utils.Adapter {
                         if (todaySeqs.length < 1) return null;
 
                         const allHallwayDevs = (this.config.devices || []).filter(d => d.isHallway || d.sensorFunction === 'hallway');
-                        // Prim+ñrflur-Logik: wenn mind. ein Sensor als Prim+ñrflur markiert, nur diesen verwenden
+                        // Prim+ï¿½rflur-Logik: wenn mind. ein Sensor als Prim+ï¿½rflur markiert, nur diesen verwenden
                         const primaryHallwayDevs = allHallwayDevs.filter(d => d.isPrimaryHallway);
                         const activeHallwayDevs = primaryHallwayDevs.length > 0 ? primaryHallwayDevs : allHallwayDevs;
                         const hallwayConf = activeHallwayDevs.map(d => d.location || d.name || '');

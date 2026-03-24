@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import {
     Box, TableContainer, Paper, Table, TableHead, TableRow, TableCell, Tooltip, TableBody,
     TextField, IconButton, Autocomplete, FormControl, Select, MenuItem, Checkbox, Button, Chip,
-    Collapse, CircularProgress
+    Collapse, CircularProgress, Alert
 } from "@mui/material";
+import BatteryAlertIcon from "@mui/icons-material/BatteryAlert";
+import Battery20Icon from "@mui/icons-material/Battery20";
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import WbSunnyIcon from "@mui/icons-material/WbSunny";
 import NightsStayIcon from "@mui/icons-material/NightsStay";
@@ -124,6 +126,7 @@ function FreshnessChip({ stateId, socket, isDark }: { stateId: string; socket: a
 export default function SensorList(props) {
     const { devices, isDark, uniqueLocations, sensorProblems, native, onNativeChange, socket } = props;
     const [wearableOpen, setWearableOpen] = useState(false);
+    const [batteryOpen, setBatteryOpen] = useState(false);
     const [testResults, setTestResults] = useState<Record<string, 'loading' | 'ok' | 'error' | null>>({});
 
     const testStateId = (key: string) => {
@@ -559,6 +562,82 @@ export default function SensorList(props) {
                     </Box>
                 </Collapse>
             </Box>
+
+            {/* ─── BATTERIE-KONFIGURATION (OC-15) ─── */}
+            {(() => {
+                const WIRED = ['knx.', 'loxone.', 'bacnet.', 'modbus.'];
+                const BATT_TYPES = ['motion', 'vibration', 'vibration_trigger', 'vibration_strength', 'presence_radar', 'presence_radar_bool', 'moisture', 'door', 'temperature'];
+                const battDevices = (devices || []).filter(d =>
+                    d.id &&
+                    !WIRED.some(p => d.id.toLowerCase().startsWith(p)) &&
+                    BATT_TYPES.includes(d.type || 'motion')
+                );
+                if (battDevices.length === 0) return null;
+                return (
+                    <Box sx={{ mt: 2, border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)"}`, borderRadius: 1 }}>
+                        <Box
+                            onClick={() => setBatteryOpen(o => !o)}
+                            sx={{
+                                display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 0.8,
+                                cursor: "pointer", userSelect: "none",
+                                bgcolor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+                                borderRadius: batteryOpen ? "4px 4px 0 0" : 1,
+                                "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)" }
+                            }}
+                        >
+                            <Battery20Icon sx={{ fontSize: 16, opacity: 0.7, color: "#ff9800" }} />
+                            <Box sx={{ fontSize: "0.78rem", fontWeight: 600, flex: 1 }}>
+                                Batterie-Konfiguration (OC-15) — {battDevices.length} Sensor{battDevices.length !== 1 ? "en" : ""}
+                            </Box>
+                            {batteryOpen ? <ExpandLessIcon sx={{ fontSize: 16 }} /> : <ExpandMoreIcon sx={{ fontSize: 16 }} />}
+                        </Box>
+                        <Collapse in={batteryOpen}>
+                            <Box sx={{ px: 1.5, py: 1, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.1)"}` }}>
+                                <Alert severity="info" icon={<BatteryAlertIcon />} sx={{ mb: 1.5, py: 0.3, fontSize: "0.72rem" }}>
+                                    <b>Auto-Discovery</b> versucht automatisch einen Battery-State zu finden (auch bei Alias-Objekten). Nur eintragen wenn Auto-Discovery fehlschlägt.
+                                    Kabel­gebundene Sensoren (KNX, Loxone) werden automatisch übersprungen.
+                                    Schwellen: ≤ 20 % = Warnung · ≤ 10 % = Kritisch + Pushover täglich 09:00 Uhr.
+                                </Alert>
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell sx={{ fontWeight: 600, fontSize: "0.7rem", width: "35%" }}>Sensor</TableCell>
+                                            <TableCell sx={{ fontWeight: 600, fontSize: "0.7rem", width: "20%" }}>Ort</TableCell>
+                                            <TableCell sx={{ fontWeight: 600, fontSize: "0.7rem" }}>
+                                                <Tooltip title="Optionaler ioBroker-Objekt-Pfad für den Batterie-State. Leer lassen für Auto-Discovery. Beispiel: zigbee.0.00158d0001234567.battery">
+                                                    <span style={{ cursor: "help", textDecoration: "underline dotted" }}>Batterie-State-ID (optional, manuell)</span>
+                                                </Tooltip>
+                                            </TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {battDevices.map((device) => {
+                                            const idx = (devices || []).indexOf(device);
+                                            return (
+                                                <TableRow key={device.id} sx={{ "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" } }}>
+                                                    <TableCell sx={{ fontSize: "0.7rem" }}>
+                                                        <Tooltip title={device.id}><span style={{ cursor: "help" }}>{device.name || device.id}</span></Tooltip>
+                                                    </TableCell>
+                                                    <TableCell sx={{ fontSize: "0.7rem", color: "text.secondary" }}>{device.location || "—"}</TableCell>
+                                                    <TableCell>
+                                                        <TextField
+                                                            size="small"
+                                                            value={device.batteryStateId || ""}
+                                                            placeholder="Auto (leer lassen)"
+                                                            onChange={e => props.onDeviceChange(idx, "batteryStateId", e.target.value)}
+                                                            sx={{ width: "100%", "& input": { fontSize: "0.7rem", p: "3px 6px" } }}
+                                                        />
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </Box>
+                        </Collapse>
+                    </Box>
+                );
+            })()}
         </Box>
     );
 }
