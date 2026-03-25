@@ -1199,11 +1199,13 @@ export default function HealthTab(props: any) {
         };
 
         // Sensor-Indikator für Einschlaf-/Aufwachzeit
+        // OC-18 FP2-Label-Fix: nur echte Präsenz-Radare bekommen das "FP2"-Label
+        const hasFP2Sensor = nativeDevices.some((d: any) => d.type === 'presence_radar_bool' || d.isFP2Bed === true);
         const srcInfo: Record<string, {icon:string, label:string}> = {
             garmin:          { icon: '⌚', label: 'Garmin-Uhr' },
-            fp2_vib:         { icon: '📡', label: 'FP2 + Vibration' },
-            fp2:             { icon: '📡', label: 'FP2-Sensor' },
-            fp2_other:       { icon: '📡', label: 'FP2 + Anderer Raum' },
+            fp2_vib:         { icon: hasFP2Sensor ? '📡' : '🛏️', label: hasFP2Sensor ? 'FP2 + Vibration' : 'Bett-Sensor + Vibration' },
+            fp2:             { icon: hasFP2Sensor ? '📡' : '🛏️', label: hasFP2Sensor ? 'FP2-Sensor' : 'Bett-Bewegungsmelder' },
+            fp2_other:       { icon: hasFP2Sensor ? '📡' : '🛏️', label: hasFP2Sensor ? 'FP2 + Anderer Raum' : 'Bett-Sensor + Anderer Raum' },
             other:           { icon: '🚶', label: 'Anderer Raum' },
             motion:          { icon: '🚶', label: 'Schlafzimmer-Bewegungsmelder' },
             vibration:       { icon: '📳', label: 'Vibrationssensor (↑ Konfidenz)' },

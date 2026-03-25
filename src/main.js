@@ -1185,19 +1185,46 @@ class CogniLiving extends utils.Adapter {
             var _4amTs = new Date(); _4amTs.setHours(4,0,0,0); var _4amMs = _4amTs.getTime();
             var _wakeMinSleepTs = (sleepWindowOC7.start || 0) + 3*3600000; // mind. 3h Schlaf
 
-            // otherRoomWakeTs: erste Aktivitaet in nicht-Schlafzimmer/nicht-Bad nach 04:00 + 3h Schlaf
+            // otherRoomWakeTs: Letzte Abfahrt ohne Rueckkehr (OC-19 Return-to-Bed + OC-18 Problem-A-Fix)
+            // Problem A: isBedroomMotion ausgeschlossen (andere Schlafzimmer sind kein "anderer Raum")
             var otherRoomWakeTs = null;
             var _otherRoomEvts = sleepSearchEvents.filter(function(e) {
-                return !e.isFP2Bed && !e.isVibrationBed && !e.isBathroomSensor
+                return !e.isFP2Bed && !e.isVibrationBed && !e.isBathroomSensor && !e.isBedroomMotion
                     && (e.type === 'motion' || e.type === 'presence_radar_bool')
                     && (e.timestamp||0) >= _4amMs
                     && (e.timestamp||0) >= _wakeMinSleepTs;
             }).sort(function(a,b) { return (a.timestamp||0) - (b.timestamp||0); });
-            if (_otherRoomEvts.length > 0) otherRoomWakeTs = _otherRoomEvts[0].timestamp||null;
+            if (_otherRoomEvts.length > 0) {
+                // OC-19: "Letzte Abfahrt ohne Rueckkehr" — kein fixer Zeitwert
+                // Zeitfenster-basiert (2-Min-Puffer fuer PIR-Nachlaufzeit, keine Flankenerkennung)
+                var _rtbBedEvts = sleepSearchEvents.filter(function(e) {
+                    return (e.isBedroomMotion || e.isFP2Bed) && (e.timestamp||0) >= _4amMs;
+                }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                var _rtbCi = 0;
+                while (_rtbCi < _otherRoomEvts.length) {
+                    var _rtbDep = _otherRoomEvts[_rtbCi].timestamp || 0;
+                    var _rtbRet = null;
+                    for (var _rtbBi = 0; _rtbBi < _rtbBedEvts.length; _rtbBi++) {
+                        if ((_rtbBedEvts[_rtbBi].timestamp||0) > _rtbDep + 2*60*1000) {
+                            _rtbRet = _rtbBedEvts[_rtbBi]; break;
+                        }
+                    }
+                    if (!_rtbRet) { otherRoomWakeTs = _rtbDep; break; }
+                    var _rtbRetTs = _rtbRet.timestamp || 0;
+                    var _rtbNi = -1;
+                    for (var _rtbJ = _rtbCi + 1; _rtbJ < _otherRoomEvts.length; _rtbJ++) {
+                        if ((_otherRoomEvts[_rtbJ].timestamp||0) > _rtbRetTs + 2*60*1000) {
+                            _rtbNi = _rtbJ; break;
+                        }
+                    }
+                    if (_rtbNi === -1) { otherRoomWakeTs = null; break; }
+                    _rtbCi = _rtbNi;
+                }
+            }
 
-            // fp2OtherWakeTs: FP2-Bett leer UND anderer Raum innerhalb +-15 Min
+            // fp2OtherWakeTs: nur bei echtem FP2-Praesenzradar (sleepWindowSource === fp2), OC-18 FP2-Label-Fix
             var fp2OtherWakeTs = null;
-            if (fp2WakeTs && otherRoomWakeTs && Math.abs(otherRoomWakeTs - fp2WakeTs) <= 15*60*1000) {
+            if (sleepWindowSource === 'fp2' && fp2WakeTs && otherRoomWakeTs && Math.abs(otherRoomWakeTs - fp2WakeTs) <= 15*60*1000) {
                 fp2OtherWakeTs = Math.min(fp2WakeTs, otherRoomWakeTs);
             }
 
