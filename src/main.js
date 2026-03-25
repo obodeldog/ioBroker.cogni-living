@@ -1494,11 +1494,70 @@ class CogniLiving extends utils.Adapter {
                         });
                         if (recentPersonEvt.length > 0) nocturiaAttr++;
                     });
+                    // OC-18 Prio 2: Schlafanalyse pro Person (separate Schlafkacheln)
+                    // sleepSearchEvents-Events haben personTag, isBedroomMotion etc. direkt als Properties
+                    var _p4am = new Date(); _p4am.setHours(4,0,0,0);
+                    var _pMinSlTs = (winStart||0) + 3*3600000;
+                    // Schlafzimmer-Events dieser Person (nach winStart)
+                    var _pBedEvts = sleepSearchEvents.filter(function(e) {
+                        return e.personTag === person && (e.isBedroomMotion || e.isFP2Bed)
+                            && (e.timestamp||0) >= winStart;
+                    }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                    // Schlafbeginn: letztes Abend-Bett-Event mit >15-Min-Stille danach
+                    var _pSleepStart = null;
+                    var _pEve = _pBedEvts.filter(function(e) {
+                        var hr = new Date(e.timestamp||0).getHours();
+                        return (hr >= 18 && hr <= 23) || hr === 0;
+                    });
+                    for (var _pei = _pEve.length - 1; _pei >= 0; _pei--) {
+                        var _pCurTs = _pEve[_pei].timestamp||0;
+                        var _pNextTs = _pEve[_pei+1] ? (_pEve[_pei+1].timestamp||0) : Infinity;
+                        if (_pNextTs - _pCurTs > 15*60*1000) { _pSleepStart = _pCurTs; break; }
+                    }
+                    // Andere-Raum-Events (nicht Bett, nicht Bad, nicht andere Person) nach 04:00
+                    var _pOtherEvts = sleepSearchEvents.filter(function(e) {
+                        var _isBed = e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion;
+                        var _isOtherPers = e.personTag && e.personTag !== person;
+                        if (_isBed || e.isBathroomSensor || _isOtherPers) return false;
+                        return (e.type === 'motion' || e.type === 'presence_radar_bool')
+                            && (e.timestamp||0) >= _p4am.getTime()
+                            && (e.timestamp||0) >= _pMinSlTs;
+                    }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                    // OC-19 Return-to-Bed: Letzte Abfahrt ohne Rueckkehr ins eigene Schlafzimmer
+                    var _pWakeTs = null; var _pWakeSrc = null;
+                    var _pBedRet = _pBedEvts.filter(function(e){ return (e.timestamp||0) >= _p4am.getTime(); });
+                    if (_pOtherEvts.length > 0) {
+                        var _pCi2 = 0;
+                        while (_pCi2 < _pOtherEvts.length) {
+                            var _pDep2 = _pOtherEvts[_pCi2].timestamp || 0;
+                            var _pRet2 = null;
+                            for (var _pBi2 = 0; _pBi2 < _pBedRet.length; _pBi2++) {
+                                if ((_pBedRet[_pBi2].timestamp||0) > _pDep2 + 2*60*1000) { _pRet2 = _pBedRet[_pBi2]; break; }
+                            }
+                            if (!_pRet2) { _pWakeTs = _pDep2; _pWakeSrc = 'other'; break; }
+                            var _pRetTs2 = _pRet2.timestamp || 0;
+                            var _pNi2 = -1;
+                            for (var _pJ2 = _pCi2 + 1; _pJ2 < _pOtherEvts.length; _pJ2++) {
+                                if ((_pOtherEvts[_pJ2].timestamp||0) > _pRetTs2 + 2*60*1000) { _pNi2 = _pJ2; break; }
+                            }
+                            if (_pNi2 === -1) { _pWakeTs = null; break; }
+                            _pCi2 = _pNi2;
+                        }
+                    }
+                    // Fallback: letzter Bedroom-Event nach 04:00
+                    if (_pWakeTs === null && _pBedRet.length > 0) {
+                        _pWakeTs = _pBedRet[_pBedRet.length - 1].timestamp || null;
+                        _pWakeSrc = 'motion';
+                    }
                     result[person] = {
                         nightActivityCount: nightActivityCount,
                         wakeTimeMin: wakeTimeMin,
                         sleepOnsetMin: sleepOnsetMin,
-                        nocturiaAttr: nocturiaAttr
+                        nocturiaAttr: nocturiaAttr,
+                        sleepWindowStart: _pSleepStart,
+                        sleepWindowEnd: _pWakeTs,
+                        wakeSource: _pWakeSrc || null,
+                        wakeConf: _pWakeTs ? (_pWakeSrc === 'other' ? 'mittel' : 'niedrig') : 'niedrig'
                     };
                 });
                 return result;

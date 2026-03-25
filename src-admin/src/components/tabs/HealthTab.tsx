@@ -165,6 +165,7 @@ export default function HealthTab(props: any) {
     const [driftStatus, setDriftStatus] = useState<string>('Unknown');
     const [driftDetails, setDriftDetails] = useState<string>('');
     const [auraSleepData, setAuraSleepData] = useState<any>(null);
+    const [personHistoryData, setPersonHistoryData] = useState<Record<string, any>>({});
     const [sensorBatteryStatus, setSensorBatteryStatus] = useState<{sensors: {id:string, level:number|null, isLow:boolean, isCritical:boolean, source:string}[]} | null>(null);
     const [nativeDevices, setNativeDevices] = useState<any[]>([]);
 
@@ -224,6 +225,7 @@ export default function HealthTab(props: any) {
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
                     setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [] });
+                    setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                     setGeminiNight(d.geminiNight || "Keine Daten");
                     setGeminiNightTs(d.geminiNightTs || null);
                     setGeminiDay(d.geminiDay || "Keine Daten");
@@ -709,6 +711,7 @@ export default function HealthTab(props: any) {
                 if (histRes && histRes.success && histRes.data) {
                     const d = histRes.data;
                     setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [] });
+                    setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                 }
             });
     }, [namespace, socket, adapterName, instance, TRAINING_TARGET, isLive, viewDate]);
@@ -1130,9 +1133,9 @@ export default function HealthTab(props: any) {
     };
 
 
-    // ═══ OC-7: AURA SLEEP SCORE CARD ══════════════════════════════════════════════
-    const renderSleepScoreCard = () => {
-        const sd = auraSleepData;
+    // ═══ OC-7: AURA SLEEP SCORE CARD (OC-18 Prio 2: auch per Person aufrufbar) ═══
+    const renderSleepScoreCard = (overrideData?: any, personLabel?: string) => {
+        const sd = overrideData ?? auraSleepData;
         const score: number | null = sd?.sleepScore ?? null;
         const scoreRaw: number | null = sd?.sleepScoreRaw ?? null;
         const stages: {t: number, s: string}[] = sd?.sleepStages ?? [];
@@ -1341,7 +1344,7 @@ export default function HealthTab(props: any) {
         })();
 
         return (
-            <TerminalBox title="SCHLAFANALYSE (OC-7)" themeType={themeType}
+            <TerminalBox title={personLabel ? `SCHLAFANALYSE — ${personLabel}` : 'SCHLAFANALYSE (OC-7)'} themeType={themeType}
                 helpText={
                     'AURA-Sleepscore: Tief×200 + REM×150 + Leicht×80 − Wach×250 (Anzeige max. 100, Rohwert kann höher sein). Bonus +5 bei 7–9h Schlafdauer.\n' +
                     'Quellen: Diekelmann & Born 2010 (Tiefschlaf), Walker 2017 / Stickgold 2005 (REM), AASM Guidelines (Leichtschlaf), Buysse et al. 1989 PSQI (WASO-Abzug).\n' +
@@ -2538,7 +2541,40 @@ export default function HealthTab(props: any) {
                 </div>
 
                 {renderTimelines()}
-                {renderSleepScoreCard()}
+                {(() => {
+                    // OC-18 Prio 2: Separate Schlafkacheln pro Person
+                    // Wenn personHistoryData Einträge mit sleepWindowEnd hat → je eine Kachel pro Person
+                    // Sonst: Legacy-Modus (kombinierte Kachel, Einpersonenhaushalt oder kein personTag)
+                    const personsWithSleep = Object.entries(personHistoryData)
+                        .filter(([, pd]: [string, any]) => pd && (pd.sleepWindowEnd != null || pd.sleepWindowStart != null))
+                        .map(([name]) => name)
+                        .sort();
+                    if (personsWithSleep.length >= 2) {
+                        return (
+                            <>
+                                {personsWithSleep.map(pName => {
+                                    const pd = personHistoryData[pName];
+                                    const overrideData = {
+                                        sleepScore: null, sleepScoreRaw: null, sleepStages: [],
+                                        garminScore: null, garminDeepMin: null, garminLightMin: null, garminRemMin: null,
+                                        sleepWindowStart: pd.sleepWindowStart ?? null,
+                                        sleepWindowEnd:   pd.sleepWindowEnd   ?? null,
+                                        sleepWindowSource: pd.wakeSource || 'motion',
+                                        wakeSource:       pd.wakeSource  ?? null,
+                                        wakeConf:         pd.wakeConf    ?? 'niedrig',
+                                        isNap: false, unusuallyLongSleep: false,
+                                        garminDataFresh: null, garminLastSyncAgeH: null,
+                                        outsideBedEvents: [], wakeConfirmed: false,
+                                        allWakeSources: [], sleepStartSource: pd.wakeSource || 'motion',
+                                        allSleepStartSources: [],
+                                    };
+                                    return <React.Fragment key={pName}>{renderSleepScoreCard(overrideData, pName)}</React.Fragment>;
+                                })}
+                            </>
+                        );
+                    }
+                    return renderSleepScoreCard();
+                })()}
                 {renderMobility()}
 
                 <div style={{display:'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px'}}>
