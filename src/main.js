@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 'use strict';
 
 /*
@@ -227,7 +227,7 @@ class CogniLiving extends utils.Adapter {
 
         const schedule = require('node-schedule');
         if (this.historyJob) this.historyJob.cancel();
-        this.historyJob = schedule.scheduleJob('59 23 * * *', () => {
+        this.historyJob = schedule.scheduleJob({ hour: 23, minute: 59, second: 59 }, () => {
             this.saveDailyHistory();
         });
 
@@ -388,7 +388,19 @@ class CogniLiving extends utils.Adapter {
     async discoverBatteryStates() {
         var _self = this;
         var devices = this.config.devices || [];
-        var BATTERY_NAMES = ['battery', 'BATTERY', 'battery_low', 'lowBattery', 'Battery'];
+        // Gängige Battery-State-Namen quer durch alle ioBroker-Adapter:
+        // battery/BATTERY       → Zigbee, deCONZ, Tuya, mihome, ZHA
+        // battery_percentage    → Tuya, einige BLE-Adapter
+        // battery_level/Level   → HomeKit-Controller, Matter, ESPHome
+        // battery-level         → HomeKit Controller (Bindestrich)
+        // Bat.value/Bat.percent → Shelly (batteriebetrieben: DW2, H&T, Motion)
+        // params.battery.Battery_Level → Z-Wave 2 (zwave2-Adapter)
+        var BATTERY_NAMES = [
+            'battery', 'BATTERY', 'battery_low', 'lowBattery', 'Battery',
+            'battery_percentage', 'battery_level', 'batteryLevel', 'battery-level', 'BatteryLevel',
+            'Bat.value', 'Bat.percent', 'bat.value',
+            'params.battery.Battery_Level', 'params.battery.Battery_Level_Alarm'
+        ];
         var WIRED_PREFIXES = ['knx.', 'loxone.', 'bacnet.', 'modbus.'];
         var BATTERY_TYPES = ['motion', 'vibration', 'vibration_trigger', 'vibration_strength', 'presence_radar', 'presence_radar_bool', 'moisture', 'door', 'temperature'];
         for (var _bi = 0; _bi < devices.length; _bi++) {
@@ -419,7 +431,7 @@ class CogniLiving extends utils.Adapter {
                             for (var _an = 0; _an < BATTERY_NAMES.length; _an++) {
                                 try {
                                     var cStateA = await _self.getForeignStateAsync(aliasDevPath + '.' + BATTERY_NAMES[_an]);
-                                    if (cStateA !== null && cStateA !== undefined && cStateA.val !== undefined && cStateA.val !== null) {
+                                    if (cStateA !== null && cStateA !== undefined) {
                                         batteryStateId = aliasDevPath + '.' + BATTERY_NAMES[_an];
                                         bSource = 'alias';
                                         break;
@@ -430,21 +442,54 @@ class CogniLiving extends utils.Adapter {
                     }
                 } catch(e) {}
             }
-            // 3. Direktsuche im gleichen Geraetepfad
+            // 3. Direktsuche — bis zu 3 Pfad-Ebenen hoch
+            //    Tiefe 1: adapter.0.device.channel  → adapter.0.device
+            //    Tiefe 2: adapter.0.device.ch.state → adapter.0.device  (Shelly: Bat.value)
+            //    Tiefe 3: adapter.0.Node.ch.sub.st  → adapter.0.Node   (Z-Wave: params.battery.Battery_Level)
             if (!batteryStateId) {
                 try {
-                    var dParts = d.id.split('.');
-                    dParts.pop();
-                    var devPath = dParts.join('.');
-                    for (var _dn = 0; _dn < BATTERY_NAMES.length; _dn++) {
-                        try {
-                            var cStateD = await _self.getForeignStateAsync(devPath + '.' + BATTERY_NAMES[_dn]);
-                            if (cStateD !== null && cStateD !== undefined && cStateD.val !== undefined && cStateD.val !== null) {
-                                batteryStateId = devPath + '.' + BATTERY_NAMES[_dn];
-                                bSource = 'auto';
-                                break;
+                    var _dParts = d.id.split('.');
+                    var _maxDepth = Math.min(3, _dParts.length - 3); // mind. adapter.instance.device uebrig lassen
+                    _discoveryLoop:
+                    for (var _depth = 1; _depth <= _maxDepth; _depth++) {
+                        var _devPath = _dParts.slice(0, _dParts.length - _depth).join('.');
+                        for (var _dn = 0; _dn < BATTERY_NAMES.length; _dn++) {
+                            try {
+                                var cStateD = await _self.getForeignStateAsync(_devPath + '.' + BATTERY_NAMES[_dn]);
+                                if (cStateD !== null && cStateD !== undefined) {
+                                    batteryStateId = _devPath + '.' + BATTERY_NAMES[_dn];
+                                    bSource = 'auto';
+                                    break _discoveryLoop;
+                                }
+                            } catch(e) {}
+                        }
+                    }
+                } catch(e) {}
+            }
+            // 4. Homematic: Kanal 0 (Maintenance) fuer LOWBAT und BATTERY_STATE
+            if (!batteryStateId) {
+                try {
+                    var HM_PREFIXES = ['hm-rpc.', 'hmip-rfc.', 'hm-rega.'];
+                    var isHM = HM_PREFIXES.some(function(p) { return d.id.toLowerCase().startsWith(p); });
+                    if (isHM) {
+                        // hm-rpc.0.DEVADDR:X.DATAPOINT -> hm-rpc.0.DEVADDR:0
+                        var hmMatchColon = d.id.match(/^([\w-]+\.\d+\.[^:]+):(\d+)\./);
+                        // hm-rpc.0.DEVADDR.X.DATAPOINT -> hm-rpc.0.DEVADDR.0 (HmIP style)
+                        var hmMatchDot   = !hmMatchColon && d.id.match(/^([\w-]+\.\d+\.[^\.]+)\.\d+\./);
+                        var hmCh0 = hmMatchColon ? hmMatchColon[1] + ':0' : (hmMatchDot ? hmMatchDot[1] + '.0' : null);
+                        if (hmCh0) {
+                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans — Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
+                            for (var _hn = 0; _hn < HM_BATT_NAMES.length; _hn++) {
+                                try {
+                                    var cStateHM = await _self.getForeignStateAsync(hmCh0 + '.' + HM_BATT_NAMES[_hn]);
+                                    if (cStateHM !== null && cStateHM !== undefined) {
+                                        batteryStateId = hmCh0 + '.' + HM_BATT_NAMES[_hn];
+                                        bSource = 'hm-auto';
+                                        break;
+                                    }
+                                } catch(e) {}
                             }
-                        } catch(e) {}
+                        }
                     }
                 } catch(e) {}
             }
@@ -474,7 +519,14 @@ class CogniLiving extends utils.Adapter {
                 if (typeof bst.val === 'boolean') {
                     isLow = bst.val; isCritical = bst.val; level = bst.val ? 5 : 80;
                 } else if (typeof bst.val === 'number') {
-                    level = bst.val; isLow = level <= 20; isCritical = level <= 10;
+                    // Nur echte Prozentwerte (0-100) verarbeiten.
+                    // Spannungswerte (< 10) werden bewusst ignoriert — ohne Geraete-Datenbank
+                    // nicht zuverlaessig konvertierbar (1x CR2032 vs 2x AAA vs 1x 1.5V).
+                    if (bst.val >= 0 && bst.val <= 100) {
+                        level = bst.val;
+                        isLow = level <= 20; isCritical = level <= 10;
+                    }
+                    // else: Spannungswert -> kein Eintrag in batteryStates (wird uebersprungen)
                 }
                 info.level = level; info.isLow = isLow; info.isCritical = isCritical;
                 if (isCritical) {
@@ -1035,25 +1087,32 @@ class CogniLiving extends utils.Adapter {
                 var _kitchDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
                 var CLUSTER_GAP_MS = 5 * 60 * 1000;
                 var AFTER_EVT_MS = 3 * 60 * 1000;
+                // Mehrpersonenhaushalt: Konfiguration fuer Ausser-Bett-Zuordnung
+                var _cfgHousehold = this.config.householdSize || 'single';
+                var _isMultiPerson = (_cfgHousehold === 'couple' || _cfgHousehold === 'family');
+                var _hasFP2Bed = _fp2Events.length > 0;
+                // Alle Nicht-Schlafzimmer-Events im Schlaffenster (Bad + Kueche + andere Raeume)
                 var _motOutEvts = sleepSearchEvents.filter(function(e) {
                     var _ts = e.timestamp || 0;
                     if (_ts < sleepWindowOC7.start || _ts > sleepWindowOC7.end) return false;
-                    var _isBath = e.isBathroomSensor || _bathDevIds.has(e.id);
-                    var _isKitch = e.isKitchenSensor || _kitchDevIds.has(e.id);
-                    return (_isBath || _isKitch) && isActiveValue(e.value);
+                    var _isBed = e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion;
+                    if (_isBed) return false;
+                    return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
                 }).sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
                 var _motEvents = []; var _curCluster = null;
                 _motOutEvts.forEach(function(e) {
                     var _ts = e.timestamp || 0;
                     var _isBath = e.isBathroomSensor || _bathDevIds.has(e.id);
+                    var _isOther = !_isBath && !(e.isKitchenSensor || _kitchDevIds.has(e.id));
                     if (!_curCluster) {
-                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath };
+                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath, hasOther: _isOther };
                     } else if (_ts <= _curCluster.end + CLUSTER_GAP_MS) {
                         _curCluster.end = _ts + AFTER_EVT_MS;
                         if (_isBath) _curCluster.hasBath = true;
+                        if (_isOther) _curCluster.hasOther = true;
                     } else {
                         _motEvents.push(_curCluster);
-                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath };
+                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath, hasOther: _isOther };
                     }
                 });
                 if (_curCluster) _motEvents.push(_curCluster);
@@ -1069,7 +1128,19 @@ class CogniLiving extends utils.Adapter {
                     var _overlaps = _allEvtCandidates.some(function(c) { return mot.start < c.end && mot.end > c.start; });
                     if (!_overlaps) {
                         var _dur = Math.max(1, Math.round((mot.end - mot.start) / 60000));
-                        _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: mot.hasBath ? 'bathroom' : 'outside' });
+                        var _motType;
+                        if (mot.hasBath) {
+                            _motType = 'bathroom';
+                        } else if (_isMultiPerson) {
+                            // Mehrpersonenhaushalt: Aktivitaet nur zuordnen wenn FP2 Bett-leer bestaetigt
+                            var _bedEmpty = _hasFP2Bed && _fp2Events.some(function(fp2) {
+                                return mot.start < fp2.end && mot.end > fp2.start;
+                            });
+                            _motType = _bedEmpty ? 'outside' : 'other_person';
+                        } else {
+                            _motType = 'outside';
+                        }
+                        _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: _motType });
                     }
                 });
                 outsideBedEvents = _allEvtCandidates.sort(function(a,b) { return a.start - b.start; });

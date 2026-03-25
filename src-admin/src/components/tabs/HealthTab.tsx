@@ -317,12 +317,23 @@ export default function HealthTab(props: any) {
                         }
                         
                         // MERGE: Kombiniere gestern (44-47) + heute (0-15) für Schlaf-Radar
+                        // Für 22:00-23:59 (Slots 44-47): outsideBedEvents aus heutigem Snapshot als
+                        // primäre Quelle nutzen — erfasst auch Events kurz vor Mitternacht (23:59:xx)
+                        // die nach dem 23:59:59-Snapshot-Save entstehen könnten
+                        const obeNightBuckets = new Array(48).fill(0);
+                        if (d.outsideBedEvents && d.outsideBedEvents.length > 0) {
+                            (d.outsideBedEvents as any[]).forEach((obe: any) => {
+                                const s = new Date(obe.start);
+                                const slotIdx = s.getHours() * 2 + (s.getMinutes() >= 30 ? 1 : 0);
+                                if (slotIdx >= 44) obeNightBuckets[slotIdx]++; // nur 22:00-23:59
+                            });
+                        }
                         const mergedSleepBuckets = todaySleepBuckets.map((val, idx) => {
                             if (idx >= 44) return yesterdaySleepBuckets[idx]; // 22:00-23:59 vom VORTAG
                             return val; // Rest von HEUTE
                         });
                         const mergedOutsideBuckets = todayOutsideBuckets.map((val, idx) => {
-                            if (idx >= 44) return yesterdayOutsideBuckets[idx];
+                            if (idx >= 44) return Math.max(yesterdayOutsideBuckets[idx], obeNightBuckets[idx]);
                             return val;
                         });
                         
@@ -1172,17 +1183,19 @@ export default function HealthTab(props: any) {
             });
         })();
 
-        // Farben: best → schlimmste (Tief=dunkelblau, Leicht=hellblau, REM=lila, Wach=gelb, Bad=bernstein, Außerhalb=orange)
+        // Farben: best → schlimmste (Tief=dunkelblau, Leicht=hellblau, REM=lila, Wach=gelb, Bad=bernstein, Außerhalb=rot, Andere Person=blau)
         const stageColor: Record<string, string> = {
-            deep:     '#1565c0',
-            light:    '#42a5f5',
-            rem:      '#ab47bc',
-            wake:     '#ffd54f',  // Gelb statt Rot — Wach im Bett ist milde Störung
-            bathroom: '#ffb300',  // Bernstein — Bad-Besuch
-            outside:  '#ff5722',  // Orange-Rot — Außerhalb Schlafzimmer
+            deep:         '#1565c0',
+            light:        '#42a5f5',
+            rem:          '#ab47bc',
+            wake:         '#ffd54f',      // Gelb — Wach im Bett ist milde Störung
+            bathroom:     '#ffb300',      // Bernstein — Bad-Besuch (orange)
+            outside:      '#e53935',      // Rot — bestätigte Außer-Bett-Aktivität (du warst es)
+            other_person: '#1e88e5',      // Blau — andere Person im Haus
         };
         const stageLabel: Record<string, string> = {
-            deep: 'Tief', light: 'Leicht', rem: 'REM (est.)', wake: 'Wachliegen', bathroom: 'Bad-Besuch', outside: 'Außerhalb'
+            deep: 'Tief', light: 'Leicht', rem: 'REM (est.)', wake: 'Wachliegen',
+            bathroom: 'Bad-Besuch', outside: 'Außerhalb', other_person: 'Andere Person'
         };
 
         // Sensor-Indikator für Einschlaf-/Aufwachzeit
@@ -1308,13 +1321,18 @@ export default function HealthTab(props: any) {
                     const pct = ((evt.start - swStart) / totalMs) * 100;
                     const lane = Math.abs(pct - lastPctInLane[0]) >= minPctGapForSameLane ? 0 : 1;
                     lastPctInLane[lane] = pct;
-                    const isBath = evt.type === 'bathroom';
+                    const evtType = evt.type ?? 'outside';
+                    const titleMap: Record<string, string> = {
+                        bathroom:     `Bad-Besuch: ${evt.duration} min`,
+                        outside:      `Außerhalb: ${evt.duration} min`,
+                        other_person: `Andere Person aktiv: ${evt.duration} min`,
+                    };
                     return {
                         key: `${evt.start}-${evt.end}-${idx}`,
                         pct: Math.min(100, Math.max(0, pct)),
                         lane,
-                        isBath,
-                        title: isBath ? `Bad-Besuch: ${evt.duration} min` : `Abwesenheit: ${evt.duration} min`
+                        evtType,
+                        title: titleMap[evtType] ?? `Abwesenheit: ${evt.duration} min`
                     };
                 })
                 .sort((a, b) => a.pct - b.pct);
@@ -1461,20 +1479,21 @@ export default function HealthTab(props: any) {
                             {/* Dreiecks-Marker oberhalb/unterhalb (bei Kollisionen zweizeilig) */}
                             {swStart && swEnd && markerItems.length > 0 && (
                                 <div style={{position:'relative', height:'24px'}}>
-                                    {markerItems.map(marker => (
-                                        <span key={marker.key} style={{
-                                            position:'absolute',
-                                            left: marker.pct + '%',
-                                            top: marker.lane === 0 ? '0px' : '12px',
-                                            color: marker.isBath ? '#ffb300' : '#ff5722',
-                                            fontSize:'10px',
-                                            transform:'translateX(-50%)',
-                                            cursor:'default',
-                                            lineHeight:'12px'
-                                        }} title={marker.title}>
-                                            {marker.lane === 0 ? 'v' : '^'}
-                                        </span>
-                                    ))}
+                    {markerItems.map(marker => (
+                        <span key={marker.key} style={{
+                            position:'absolute',
+                            left: marker.pct + '%',
+                            top: marker.lane === 0 ? '-2px' : '10px',
+                            color: stageColor[marker.evtType] ?? '#e53935',
+                            fontSize:'15px',
+                            fontWeight:'bold',
+                            transform:'translateX(-50%)',
+                            cursor:'default',
+                            lineHeight:'13px'
+                        }} title={marker.title}>
+                            {marker.lane === 0 ? '▼' : '▲'}
+                        </span>
+                    ))}
                                 </div>
                             )}
 
@@ -1530,6 +1549,9 @@ export default function HealthTab(props: any) {
                             {clippedOutsideBedEvts.some(e => e.type === 'outside') && (
                                 <span><span style={{color: stageColor.outside}}>■</span> Außerhalb</span>
                             )}
+                            {clippedOutsideBedEvts.some(e => e.type === 'other_person') && (
+                                <span><span style={{color: stageColor.other_person}}>■</span> Andere Person</span>
+                            )}
                         </div>
 
                         {/* Stage-Dauer Zeile */}
@@ -1546,7 +1568,8 @@ export default function HealthTab(props: any) {
                         {outsideTotalMin > 0 && (
                             <div style={{display:'flex', gap:'8px', fontSize:'0.7rem', marginBottom:'8px', color: isDark?'#aaa':'#666'}}>
                                 {bathMin > 0 && <span><span style={{color: stageColor.bathroom}}>■</span> Bad: {toH(bathMin, true)}</span>}
-                                {(outsideTotalMin - bathMin) > 0 && <span><span style={{color: stageColor.outside}}>■</span> Außerhalb: {toH(outsideTotalMin - bathMin, true)}</span>}
+                                {clippedOutsideBedEvts.filter(e => e.type === 'outside').reduce((a,e) => a+e.duration, 0) > 0 && <span><span style={{color: stageColor.outside}}>■</span> Außerhalb: {toH(clippedOutsideBedEvts.filter(e => e.type === 'outside').reduce((a,e) => a+e.duration, 0), true)}</span>}
+                                {clippedOutsideBedEvts.filter(e => e.type === 'other_person').reduce((a,e) => a+e.duration, 0) > 0 && <span><span style={{color: stageColor.other_person}}>■</span> Andere Person: {toH(clippedOutsideBedEvts.filter(e => e.type === 'other_person').reduce((a,e) => a+e.duration, 0), true)}</span>}
                             </div>
                         )}
 
