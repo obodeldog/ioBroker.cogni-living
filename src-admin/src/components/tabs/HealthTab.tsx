@@ -168,6 +168,7 @@ export default function HealthTab(props: any) {
     const [personHistoryData, setPersonHistoryData] = useState<Record<string, any>>({});
     const [sensorBatteryStatus, setSensorBatteryStatus] = useState<{sensors: {id:string, level:number|null, isLow:boolean, isCritical:boolean, source:string}[]} | null>(null);
     const [nativeDevices, setNativeDevices] = useState<any[]>([]);
+    const [topoData, setTopoData] = useState<{rooms:string[], matrix:number[][]} | null>(null);
 
     // MASTER-RAUMNAMEN aus System-Tab laden
     const loadMasterRooms = async () => {
@@ -742,6 +743,9 @@ export default function HealthTab(props: any) {
         };
         loadBattery();
         loadDevices();
+        socket.getState(`${namespace}.analysis.topology.structure`).then((s: any) => {
+            if (s && s.val) { try { setTopoData(JSON.parse(s.val)); } catch(e) {} }
+        }).catch(() => {});
         const t = setInterval(loadBattery, 30 * 60 * 1000);
         return () => clearInterval(t);
     }, [socket, adapterName, instance]);
@@ -1160,18 +1164,50 @@ export default function HealthTab(props: any) {
         const hasSleepWindow = swStart !== null;
 
         // OC-15: Batterie-Warnung — nur schlaf-relevante Sensoren
-        // Relevant: Vibration, FP2-Radar, Bewegung mit Funktion bed/bathroom/kitchen/hallway
+        // OC-17: Topologie-Hop-Filter — nur Sensoren in ≤2 Hops vom Schlafzimmer warnen
         const SLEEP_RELEVANT_TYPES = ['vibration_trigger', 'vibration_strength', 'presence_radar_bool'];
         const SLEEP_RELEVANT_FUNCS = ['bed', 'bathroom', 'kitchen', 'hallway'];
+        // BFS: alle Räume innerhalb maxHops Schritten von startRooms ermitteln
+        const bfsHops = (topo: {rooms:string[], matrix:number[][]}, startRooms: string[], maxHops: number): Set<string> => {
+            const reachable = new Set(startRooms);
+            let frontier = [...startRooms];
+            for (let h = 0; h < maxHops; h++) {
+                const next: string[] = [];
+                for (const room of frontier) {
+                    const ri = topo.rooms.indexOf(room);
+                    if (ri === -1) continue;
+                    topo.rooms.forEach((r, j) => {
+                        if (topo.matrix[ri]?.[j] === 1 && !reachable.has(r)) { reachable.add(r); next.push(r); }
+                    });
+                }
+                frontier = next;
+            }
+            return reachable;
+        };
+        // Topologie-Nähefilter: Schlafzimmer-nahe Räume (Hop ≤ 2) für Batterie-Warnung
+        let battNearRooms: Set<string> | null = null;
+        if (topoData && topoData.rooms.length > 0) {
+            const bedRooms = nativeDevices
+                .filter((d: any) => d.isFP2Bed || d.isVibrationBed || d.sensorFunction === 'bed')
+                .map((d: any) => (d.location || '').trim())
+                .filter((l: string) => l.length > 0);
+            if (bedRooms.length > 0) battNearRooms = bfsHops(topoData, bedRooms, 2);
+        }
         const vibBatteryWarning = (() => {
             if (!sensorBatteryStatus || !sensorBatteryStatus.sensors) return null;
             const lowSensors = sensorBatteryStatus.sensors.filter(s => {
                 if (!(s.isLow || s.isCritical)) return false;
                 const dev = nativeDevices.find((d: any) => d.id === s.id);
-                if (!dev) return false; // unbekannter Sensor → ignorieren
+                if (!dev) return false;
                 const type = dev.type || 'motion';
                 const sf = dev.sensorFunction || (dev.isBathroomSensor ? 'bathroom' : dev.isKitchenSensor ? 'kitchen' : dev.isHallway ? 'hallway' : dev.isFP2Bed || dev.isVibrationBed ? 'bed' : '');
-                return SLEEP_RELEVANT_TYPES.includes(type) || (type === 'motion' && SLEEP_RELEVANT_FUNCS.includes(sf));
+                if (!(SLEEP_RELEVANT_TYPES.includes(type) || (type === 'motion' && SLEEP_RELEVANT_FUNCS.includes(sf)))) return false;
+                // Topologie-Hop-Filter: Sensor > 2 Hops vom Schlafzimmer → keine Warnung
+                if (battNearRooms && battNearRooms.size > 0) {
+                    const loc = (dev.location || '').trim();
+                    if (loc && !battNearRooms.has(loc)) return false;
+                }
+                return true;
             });
             if (lowSensors.length === 0) return null;
             return lowSensors.map(s => {

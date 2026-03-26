@@ -1,4 +1,4 @@
-/* eslint-disable */
+ï»¿/* eslint-disable */
 'use strict';
 
 /*
@@ -388,7 +388,7 @@ class CogniLiving extends utils.Adapter {
     async discoverBatteryStates() {
         var _self = this;
         var devices = this.config.devices || [];
-        // Gängige Battery-State-Namen quer durch alle ioBroker-Adapter:
+        // Gï¿½ngige Battery-State-Namen quer durch alle ioBroker-Adapter:
         // battery/BATTERY       ? Zigbee, deCONZ, Tuya, mihome, ZHA
         // battery_percentage    ? Tuya, einige BLE-Adapter
         // battery_level/Level   ? HomeKit-Controller, Matter, ESPHome
@@ -442,7 +442,7 @@ class CogniLiving extends utils.Adapter {
                     }
                 } catch(e) {}
             }
-            // 3. Direktsuche — bis zu 3 Pfad-Ebenen hoch
+            // 3. Direktsuche ï¿½ bis zu 3 Pfad-Ebenen hoch
             //    Tiefe 1: adapter.0.device.channel  ? adapter.0.device
             //    Tiefe 2: adapter.0.device.ch.state ? adapter.0.device  (Shelly: Bat.value)
             //    Tiefe 3: adapter.0.Node.ch.sub.st  ? adapter.0.Node   (Z-Wave: params.battery.Battery_Level)
@@ -478,7 +478,7 @@ class CogniLiving extends utils.Adapter {
                         var hmMatchDot   = !hmMatchColon && d.id.match(/^([\w-]+\.\d+\.[^\.]+)\.\d+\./);
                         var hmCh0 = hmMatchColon ? hmMatchColon[1] + ':0' : (hmMatchDot ? hmMatchDot[1] + '.0' : null);
                         if (hmCh0) {
-                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans — Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
+                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans ï¿½ Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
                             for (var _hn = 0; _hn < HM_BATT_NAMES.length; _hn++) {
                                 try {
                                     var cStateHM = await _self.getForeignStateAsync(hmCh0 + '.' + HM_BATT_NAMES[_hn]);
@@ -520,7 +520,7 @@ class CogniLiving extends utils.Adapter {
                     isLow = bst.val; isCritical = bst.val; level = bst.val ? 5 : 80;
                 } else if (typeof bst.val === 'number') {
                     // Nur echte Prozentwerte (0-100) verarbeiten.
-                    // Spannungswerte (< 10) werden bewusst ignoriert — ohne Geraete-Datenbank
+                    // Spannungswerte (< 10) werden bewusst ignoriert ï¿½ ohne Geraete-Datenbank
                     // nicht zuverlaessig konvertierbar (1x CR2032 vs 2x AAA vs 1x 1.5V).
                     if (bst.val >= 0 && bst.val <= 100) {
                         level = bst.val;
@@ -1091,15 +1091,55 @@ class CogniLiving extends utils.Adapter {
                 var _cfgHousehold = this.config.householdSize || 'single';
                 var _isMultiPerson = (_cfgHousehold === 'couple' || _cfgHousehold === 'family');
                 var _hasFP2Bed = _fp2Events.length > 0;
+                // Topologie-Hop-Filter: Schlafzimmer-nahe Raeume per BFS ermitteln (Hop <= 2)
+                // Fallback: wenn Topo nicht verfuegbar -> kein Filter (graceful degradation)
+                var _configDevices = this.config.devices || [];
+                var _topoNearRooms = null;
+                try {
+                    var _topoState = await this.getStateAsync('analysis.topology.structure');
+                    if (_topoState && _topoState.val) {
+                        var _topoData = JSON.parse(_topoState.val);
+                        var _tRooms = _topoData.rooms || [];
+                        var _tMatrix = _topoData.matrix || [];
+                        if (_tRooms.length > 0) {
+                            var _bedRooms = new Set(_configDevices
+                                .filter(function(d) { return d.isFP2Bed || d.isVibrationBed || d.sensorFunction === 'bed'; })
+                                .map(function(d) { return (d.location || '').trim(); })
+                                .filter(function(l) { return l.length > 0; }));
+                            if (_bedRooms.size > 0) {
+                                _topoNearRooms = new Set(_bedRooms);
+                                var _tFrontier = Array.from(_bedRooms);
+                                for (var _tHop = 0; _tHop < 2; _tHop++) {
+                                    var _tNext = [];
+                                    _tFrontier.forEach(function(room) {
+                                        var _ri = _tRooms.indexOf(room);
+                                        if (_ri === -1) return;
+                                        for (var _j = 0; _j < _tRooms.length; _j++) {
+                                            if (_tMatrix[_ri] && _tMatrix[_ri][_j] === 1 && !_topoNearRooms.has(_tRooms[_j])) {
+                                                _topoNearRooms.add(_tRooms[_j]);
+                                                _tNext.push(_tRooms[_j]);
+                                            }
+                                        }
+                                    });
+                                    _tFrontier = _tNext;
+                                }
+                            }
+                        }
+                    }
+                } catch(_topoErr) { this.log.debug('[OC-7] Topology load failed: ' + (_topoErr.message||_topoErr)); }
                 // Alle Nicht-Schlafzimmer-Events im Schlaffenster (Bad + Kueche + andere Raeume)
                 var _motOutEvts = sleepSearchEvents.filter(function(e) {
                     var _ts = e.timestamp || 0;
                     if (_ts < sleepWindowOC7.start || _ts > sleepWindowOC7.end) return false;
                     var _isBed = e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion;
                     if (_isBed) return false;
+                    // Topologie-Hop-Filter: Sensoren > 2 Hops vom Schlafzimmer ignorieren
+                    if (_topoNearRooms && _topoNearRooms.size > 0) {
+                        var _evtLoc = (e.location || '').trim();
+                        if (_evtLoc && !_topoNearRooms.has(_evtLoc)) return false;
+                    }
                     return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
-                }).sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
-                var _motEvents = []; var _curCluster = null;
+                }).sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });                var _motEvents = []; var _curCluster = null;
                 _motOutEvts.forEach(function(e) {
                     var _ts = e.timestamp || 0;
                     var _isBath = e.isBathroomSensor || _bathDevIds.has(e.id);
@@ -1196,7 +1236,7 @@ class CogniLiving extends utils.Adapter {
                     && (e.timestamp||0) >= _wakeMinSleepTs;
             }).sort(function(a,b) { return (a.timestamp||0) - (b.timestamp||0); });
             if (_otherRoomEvts.length > 0) {
-                // OC-19: "Letzte Abfahrt ohne Rueckkehr" — kein fixer Zeitwert
+                // OC-19: "Letzte Abfahrt ohne Rueckkehr" ï¿½ kein fixer Zeitwert
                 // Zeitfenster-basiert (2-Min-Puffer fuer PIR-Nachlaufzeit, keine Flankenerkennung)
                 var _rtbBedEvts = sleepSearchEvents.filter(function(e) {
                     return (e.isBedroomMotion || e.isFP2Bed) && (e.timestamp||0) >= _4amMs;
