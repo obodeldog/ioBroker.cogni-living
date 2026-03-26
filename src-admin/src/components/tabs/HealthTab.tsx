@@ -1324,7 +1324,9 @@ export default function HealthTab(props: any) {
             return clippedOutsideBedEvts
                 .map((evt, idx) => {
                     const pct = ((evt.start - swStart) / totalMs) * 100;
-                    const lane = Math.abs(pct - lastPctInLane[0]) >= minPctGapForSameLane ? 0 : 1;
+                    const lane = Math.abs(pct - lastPctInLane[0]) >= minPctGapForSameLane ? 0
+                               : Math.abs(pct - lastPctInLane[1]) >= minPctGapForSameLane ? 1
+                               : 0;
                     lastPctInLane[lane] = pct;
                     const evtType = evt.type ?? 'outside';
                     const titleMap: Record<string, string> = {
