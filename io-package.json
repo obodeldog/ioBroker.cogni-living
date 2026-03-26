@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.78",
+    "version": "0.33.79",
     "news": {
       "0.33.74": "feat(OC-7): Ausser-Bett-Aktivitaet auf alle Nicht-Schlafzimmer-Sensoren erweitert (rot=du, blau=andere Person); Mehrpersonenhaushalt-Logik mit FP2-Bestaetigung; Snapshot-Timing 23:59:59; Dreiecke groesser+Unicode; Schlaf-Radar 22-23Uhr aus outsideBedEvents",
       "0.33.73": "fix: OC-15 Batterie-Warnung in Schlafkachel - Filter auf schlaf-relevante Sensoren (Vibration/FP2/Bewegung bed+bad+kueche+flur); Sensor-Name + Ort in Warnung sichtbar",

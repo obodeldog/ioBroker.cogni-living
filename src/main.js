@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 'use strict';
 
 /*
@@ -836,6 +836,37 @@ class CogniLiving extends utils.Adapter {
                 return { start: sleepStartTs, end: wakeTs };
             })();
 
+            // "Haus-wird-still" Einschlafzeit fuer PIR-only (OC-7 Erweiterung):
+            // Zuverlaessiger als Schlafzimmer-Stille: Schlafzimmer-PIR feuert auch im Schlaf,
+            // aber Kueche/Wohnzimmer/Flur bleiben nachts dauerhaft ruhig.
+            // Algorithmus: letztes Bett-Event im 18:00-02:00 Fenster nach dem alle Gemeinschafts-
+            // bereiche >= 30 Min still bleiben = Einschlafkandidat.
+            const sleepWindowHausStill = (function() {
+                var _hsCommon = sleepSearchEvents
+                    .filter(function(e) {
+                        return !e.isFP2Bed && !e.isVibrationBed && !e.isBathroomSensor && !e.isBedroomMotion
+                            && (e.type === 'motion' || e.type === 'presence_radar_bool')
+                            && isActiveValue(e.value);
+                    })
+                    .sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                var _hsBedEvts = sleepSearchEvents
+                    .filter(function(e) { return e.isBedroomMotion && isActiveValue(e.value); })
+                    .sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                if (_hsBedEvts.length === 0 || _hsCommon.length === 0) return { start: null, end: null };
+                var _hsSleepTs = null;
+                for (var _hsi = _hsBedEvts.length - 1; _hsi >= 0; _hsi--) {
+                    var _hsE = _hsBedEvts[_hsi];
+                    var _hsHr = new Date(_hsE.timestamp||0).getHours();
+                    if (!(_hsHr >= 18 || _hsHr < 2)) continue;
+                    var _hsCandTs = _hsE.timestamp||0;
+                    var _hasCommonAfter = _hsCommon.some(function(ce) {
+                        return (ce.timestamp||0) > _hsCandTs && (ce.timestamp||0) <= _hsCandTs + 30*60*1000;
+                    });
+                    if (!_hasCommonAfter) { _hsSleepTs = _hsCandTs; break; }
+                }
+                return { start: _hsSleepTs, end: null };
+            })();
+
             // --- Einschlafzeit-Verfeinerung: Garmin + Vibration -------------------------
             // Ziel: Unterscheidung "ins Bett gehen" (FP2) vs. "einschlafen" (Vib/Garmin)
             // Stufe 0: Garmin sleepStartTimestampGMT ??? nur wenn 18???04 Uhr UND innerhalb FP2+3h
@@ -893,14 +924,15 @@ class CogniLiving extends utils.Adapter {
             // allSleepStartSources + sleepStartSource bestimmen
             var _fixedSleepStartTs = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr
             var allSleepStartSources = [
-                { source: 'garmin',  ts: garminSleepStartTs },
-                { source: 'fp2_vib', ts: vibRefinedSleepStartTs },
-                { source: 'fp2',     ts: _fp2RawStart },
-                { source: 'motion',  ts: sleepWindowMotion.start || null },
-                { source: 'fixed',   ts: _fixedSleepStartTs }
+                { source: 'garmin',     ts: garminSleepStartTs },
+                { source: 'fp2_vib',   ts: vibRefinedSleepStartTs },
+                { source: 'fp2',       ts: _fp2RawStart },
+                { source: 'haus_still', ts: sleepWindowHausStill.start || null },
+                { source: 'motion',    ts: sleepWindowMotion.start || null },
+                { source: 'fixed',     ts: _fixedSleepStartTs }
             ];
             var sleepStartSource = _fp2RawStart ? 'fp2'
-                : (sleepWindowMotion.start ? 'motion' : 'fixed');
+                : (sleepWindowHausStill.start ? 'haus_still' : (sleepWindowMotion.start ? 'motion' : 'fixed'));
 
             // Priorit+?tskette anwenden (nur wenn nicht frozen)
             if (!_sleepFrozen) {
@@ -928,15 +960,17 @@ class CogniLiving extends utils.Adapter {
             // Betrifft NICHT sleepWindowStart/End im Snapshot -- die Schlafzeit-Kachel bleibt FP2-only.
             var sleepWindowOC7 = sleepWindowCalc.start
                 ? sleepWindowCalc
-                : sleepWindowMotion.start
-                    ? sleepWindowMotion
-                    : (function() {
-                        var _fs = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr
-                        var _fe = _fs + 13 * 3600000;                       // 09:00 naechster Morgen
-                        if (_fs > Date.now()) return { start: null, end: null };
-                        if (_fe > Date.now()) _fe = Date.now();
-                        return { start: _fs, end: _fe };
-                    })();
+                : sleepWindowHausStill.start
+                    ? sleepWindowHausStill
+                    : sleepWindowMotion.start
+                        ? sleepWindowMotion
+                        : (function() {
+                            var _fs = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr
+                            var _fe = _fs + 13 * 3600000;                       // 09:00 naechster Morgen
+                            if (_fs > Date.now()) return { start: null, end: null };
+                            if (_fe > Date.now()) _fe = Date.now();
+                            return { start: _fs, end: _fe };
+                        })();
 
             // --- OC-7: AURA SLEEP SCORE ---------------------------------------------------
             // Klassifikation in 5-Minuten-Slots anhand Vibrationssensor (Detection + Staerke)
@@ -1024,9 +1058,10 @@ class CogniLiving extends utils.Adapter {
             // Schlaf-Fenster-Quelle (fuer OC-7 Sensor-Indikator im Frontend)
             // Reihenfolge: fp2 ??? motion (Bewegungsmelder) ??? fixed (Fixfenster)
             var _motionAvail = sleepWindowMotion.start !== null;
+            var _hausStillAvail = sleepWindowHausStill.start !== null;
             var sleepWindowSource = _sleepFrozen
-                ? (_existingSnap.sleepWindowSource || (_origFP2Window ? 'fp2' : (_motionAvail ? 'motion' : 'fixed')))
-                : (_origFP2Window ? 'fp2' : (_motionAvail ? 'motion' : 'fixed'));
+                ? (_existingSnap.sleepWindowSource || (_origFP2Window ? 'fp2' : (_hausStillAvail ? 'haus_still' : (_motionAvail ? 'motion' : 'fixed'))))
+                : (_origFP2Window ? 'fp2' : (_hausStillAvail ? 'haus_still' : (_motionAvail ? 'motion' : 'fixed')));
 
             // Au+?erhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
             var outsideBedEvents = [];
@@ -1225,6 +1260,9 @@ class CogniLiving extends utils.Adapter {
             // Wake-Kandidaten mit echten Timestamps berechnen
             var _4amTs = new Date(); _4amTs.setHours(4,0,0,0); var _4amMs = _4amTs.getTime();
             var _wakeMinSleepTs = (sleepWindowOC7.start || 0) + 3*3600000; // mind. 3h Schlaf
+            // Hard Cap: Aufwachzeit max. 12:00 Uhr (kurze Tageseintraege nicht als Wake werten)
+            var _wakeHardCapTs = new Date(); _wakeHardCapTs.setHours(12, 0, 0, 0);
+            var _wakeHardCapMs = _wakeHardCapTs.getTime();
 
             // otherRoomWakeTs: Letzte Abfahrt ohne Rueckkehr (OC-19 Return-to-Bed + OC-18 Problem-A-Fix)
             // Problem A: isBedroomMotion ausgeschlossen (andere Schlafzimmer sind kein "anderer Raum")
@@ -1233,14 +1271,26 @@ class CogniLiving extends utils.Adapter {
                 return !e.isFP2Bed && !e.isVibrationBed && !e.isBathroomSensor && !e.isBedroomMotion
                     && (e.type === 'motion' || e.type === 'presence_radar_bool')
                     && (e.timestamp||0) >= _4amMs
-                    && (e.timestamp||0) >= _wakeMinSleepTs;
+                    && (e.timestamp||0) >= _wakeMinSleepTs
+                    && (e.timestamp||0) <= _wakeHardCapMs;
             }).sort(function(a,b) { return (a.timestamp||0) - (b.timestamp||0); });
             if (_otherRoomEvts.length > 0) {
-                // OC-19: "Letzte Abfahrt ohne Rueckkehr" � kein fixer Zeitwert
+                // OC-19: "Letzte Abfahrt ohne Rueckkehr" - kein fixer Zeitwert
                 // Zeitfenster-basiert (2-Min-Puffer fuer PIR-Nachlaufzeit, keine Flankenerkennung)
-                var _rtbBedEvts = sleepSearchEvents.filter(function(e) {
-                    return (e.isBedroomMotion || e.isFP2Bed) && (e.timestamp||0) >= _4amMs;
+                var _rtbBedRaw = sleepSearchEvents.filter(function(e) {
+                    return (e.isBedroomMotion || e.isFP2Bed)
+                        && (e.timestamp||0) >= _4amMs
+                        && (e.timestamp||0) <= _wakeHardCapMs;
                 }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                // Sustained-Filter: kurze Tages-SZ-Eintraege (nach 10:00, isoliert) kein Bett-Return
+                var _rtbBedEvts = _rtbBedRaw.filter(function(e, idx) {
+                    if (e.isFP2Bed) return true;
+                    var _eTs = e.timestamp||0;
+                    if (new Date(_eTs).getHours() < 10) return true;
+                    var _prev = idx > 0 ? (_rtbBedRaw[idx-1].timestamp||0) : 0;
+                    var _next = idx < _rtbBedRaw.length - 1 ? (_rtbBedRaw[idx+1].timestamp||0) : Infinity;
+                    return (_eTs - _prev <= 15*60*1000) || (_next - _eTs <= 15*60*1000);
+                });
                 var _rtbCi = 0;
                 while (_rtbCi < _otherRoomEvts.length) {
                     var _rtbDep = _otherRoomEvts[_rtbCi].timestamp || 0;
@@ -1335,7 +1385,8 @@ class CogniLiving extends utils.Adapter {
             } else if (otherRoomWakeTs) {
                 sleepWindowOC7.end = otherRoomWakeTs;
                 wakeSource = 'other';
-                wakeConf   = 'mittel';
+                // Kein Schlafbeginn bekannt -> niedrigere Konfidenz fuer Aufwachzeit
+                wakeConf   = sleepWindowOC7.start ? 'mittel' : 'niedrig';
             } else if (sleepWindowSource === 'motion') {
                 wakeSource = 'motion';
                 wakeConf   = 'mittel';
@@ -1548,25 +1599,54 @@ class CogniLiving extends utils.Adapter {
                     var _pSleepStart = null;
                     var _pEve = _pBedEvts.filter(function(e) {
                         var hr = new Date(e.timestamp||0).getHours();
-                        return (hr >= 18 && hr <= 23) || hr === 0;
+                        return hr >= 18 || hr < 2; // 18:00-01:59 (spaete Schlaefaenger einschliessen)
                     });
                     for (var _pei = _pEve.length - 1; _pei >= 0; _pei--) {
                         var _pCurTs = _pEve[_pei].timestamp||0;
                         var _pNextTs = _pEve[_pei+1] ? (_pEve[_pei+1].timestamp||0) : Infinity;
                         if (_pNextTs - _pCurTs > 15*60*1000) { _pSleepStart = _pCurTs; break; }
                     }
-                    // Andere-Raum-Events (nicht Bett, nicht Bad, nicht andere Person) nach 04:00
+                    // Per-Person Haus-wird-still: letztes eigenes Bett-Event nach dem eigene/shared Sensoren >=30 Min still sind
+                    if (!_pSleepStart) {
+                        var _pCommonEvts = sleepSearchEvents.filter(function(e) {
+                            var _isOtherP = e.personTag && e.personTag !== person;
+                            if (_isOtherP || e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion || e.isBathroomSensor) return false;
+                            return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                        var _pBedActive = _pBedEvts.filter(function(e){ return isActiveValue(e.value); });
+                        for (var _phsi = _pBedActive.length - 1; _phsi >= 0; _phsi--) {
+                            var _phsE = _pBedActive[_phsi];
+                            var _phsHr = new Date(_phsE.timestamp||0).getHours();
+                            if (!(_phsHr >= 18 || _phsHr < 2)) continue;
+                            var _phsTs = _phsE.timestamp||0;
+                            var _phsCommonAfter = _pCommonEvts.some(function(ce) {
+                                return (ce.timestamp||0) > _phsTs && (ce.timestamp||0) <= _phsTs + 30*60*1000;
+                            });
+                            if (!_phsCommonAfter) { _pSleepStart = _phsTs; break; }
+                        }
+                    }
+                    // Andere-Raum-Events (nicht Bett, nicht Bad, nicht andere Person) nach 04:00, max 12:00
                     var _pOtherEvts = sleepSearchEvents.filter(function(e) {
                         var _isBed = e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion;
                         var _isOtherPers = e.personTag && e.personTag !== person;
                         if (_isBed || e.isBathroomSensor || _isOtherPers) return false;
                         return (e.type === 'motion' || e.type === 'presence_radar_bool')
                             && (e.timestamp||0) >= _p4am.getTime()
-                            && (e.timestamp||0) >= _pMinSlTs;
+                            && (e.timestamp||0) >= _pMinSlTs
+                            && (e.timestamp||0) <= _wakeHardCapMs;
                     }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
                     // OC-19 Return-to-Bed: Letzte Abfahrt ohne Rueckkehr ins eigene Schlafzimmer
                     var _pWakeTs = null; var _pWakeSrc = null;
-                    var _pBedRet = _pBedEvts.filter(function(e){ return (e.timestamp||0) >= _p4am.getTime(); });
+                    var _pBedRetRaw = _pBedEvts.filter(function(e){ return (e.timestamp||0) >= _p4am.getTime() && (e.timestamp||0) <= _wakeHardCapMs; });
+                    // Sustained-Filter: kurze Tages-SZ-Eintraege (nach 10:00, isoliert) kein Bett-Return
+                    var _pBedRet = _pBedRetRaw.filter(function(e, idx) {
+                        if (e.isFP2Bed) return true;
+                        var _eTs = e.timestamp||0;
+                        if (new Date(_eTs).getHours() < 10) return true;
+                        var _pp = idx > 0 ? (_pBedRetRaw[idx-1].timestamp||0) : 0;
+                        var _pn = idx < _pBedRetRaw.length - 1 ? (_pBedRetRaw[idx+1].timestamp||0) : Infinity;
+                        return (_eTs - _pp <= 15*60*1000) || (_pn - _eTs <= 15*60*1000);
+                    });
                     if (_pOtherEvts.length > 0) {
                         var _pCi2 = 0;
                         while (_pCi2 < _pOtherEvts.length) {
