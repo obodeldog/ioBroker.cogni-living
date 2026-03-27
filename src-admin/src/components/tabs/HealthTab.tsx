@@ -1247,6 +1247,8 @@ export default function HealthTab(props: any) {
             fp2_other:       { icon: hasFP2Sensor ? '📡' : '🛏️', label: hasFP2Sensor ? 'FP2 + Anderer Raum' : 'Bett-Sensor + Anderer Raum' },
             other:           { icon: '🚶', label: 'Anderer Raum' },
             motion:          { icon: '🚶', label: 'Schlafzimmer-Bewegungsmelder' },
+            motion_vib:      { icon: '🚶', label: 'Bewegungsmelder + Vibration' },
+            haus_still:      { icon: '🏠', label: 'Haus-wird-still' },
             vibration:       { icon: '📳', label: 'Vibrationssensor (↑ Konfidenz)' },
             vibration_alone: { icon: '📳', label: 'Vibrationssensor allein' },
             fixed:           { icon: '⏰', label: 'Schätzung' },

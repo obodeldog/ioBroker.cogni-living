@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 'use strict';
 
 /*
@@ -872,6 +872,7 @@ class CogniLiving extends utils.Adapter {
             // Stufe 0: Garmin sleepStartTimestampGMT ??? nur wenn 18???04 Uhr UND innerhalb FP2+3h
             // Stufe 1: Vibrations-Verfeinerung ??? letztes Vib-Event + ???20min Stille (FP2-Fenster)
             // Stufe 2: FP2 allein ??? Zeit ins Bett gehen
+            // Stufe 2b: Bewegungsmelder + Vibration (motion_vib, kein FP2)
             // Stufe 3: Bewegungsmelder
             // Stufe 4: Fixfenster
             var _fp2RawStart = sleepWindowCalc.start || null; // FP2-Start vor +?berschreibung merken
@@ -921,18 +922,42 @@ class CogniLiving extends utils.Adapter {
                 }
             }
 
+            // Vibrations-Verfeinerung auf Bewegungsmelder-Basis (kein FP2, aber Vibration vorhanden)
+            // Analog zu fp2_vib: Bewegungsmelder liefert Fenster-Anker, Vibration praezisiert Einschlafzeit
+            var motionVibSleepStartTs = null;
+            if (!_fp2RawStart && sleepWindowMotion.start) {
+                var _mvRefMax = sleepWindowMotion.start + 3 * 3600000;
+                var _mvRefEvts = sleepSearchEvents.filter(function(e) {
+                    return e.isVibrationBed && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
+                        && (e.timestamp||0) >= sleepWindowMotion.start && (e.timestamp||0) <= _mvRefMax;
+                }).sort(function(a, b) { return (a.timestamp||0) - (b.timestamp||0); });
+                if (_mvRefEvts.length >= 2) {
+                    for (var _mvi = _mvRefEvts.length - 1; _mvi >= 0; _mvi--) {
+                        var _mvEvt = _mvRefEvts[_mvi];
+                        var _mvNext = (_mvi < _mvRefEvts.length - 1) ? (_mvRefEvts[_mvi + 1].timestamp||0) : Date.now();
+                        var _mvGap = (_mvNext - (_mvEvt.timestamp||0)) / 60000;
+                        if (_mvGap >= 20) {
+                        motionVibSleepStartTs = _mvEvt.timestamp||0;
+                        this.log.debug('[SleepStart] Motion+Vib-Verfeinerung: ' + new Date(motionVibSleepStartTs).toISOString());
+                        break;
+                        }
+                    }
+                }
+            }
+
             // allSleepStartSources + sleepStartSource bestimmen
             var _fixedSleepStartTs = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr
             var allSleepStartSources = [
                 { source: 'garmin',     ts: garminSleepStartTs },
                 { source: 'fp2_vib',   ts: vibRefinedSleepStartTs },
                 { source: 'fp2',       ts: _fp2RawStart },
+                { source: 'motion_vib', ts: motionVibSleepStartTs },
                 { source: 'haus_still', ts: sleepWindowHausStill.start || null },
                 { source: 'motion',    ts: sleepWindowMotion.start || null },
                 { source: 'fixed',     ts: _fixedSleepStartTs }
             ];
             var sleepStartSource = _fp2RawStart ? 'fp2'
-                : (sleepWindowHausStill.start ? 'haus_still' : (sleepWindowMotion.start ? 'motion' : 'fixed'));
+                : (sleepWindowHausStill.start ? 'haus_still' : (motionVibSleepStartTs ? 'motion_vib' : (sleepWindowMotion.start ? 'motion' : 'fixed')));
 
             // Priorit+?tskette anwenden (nur wenn nicht frozen)
             if (!_sleepFrozen) {
@@ -944,6 +969,10 @@ class CogniLiving extends utils.Adapter {
                     sleepWindowCalc.start = vibRefinedSleepStartTs;
                     sleepStartSource = 'fp2_vib';
                     this.log.info('[SleepStart] Vib-Verfeinerung: ' + new Date(vibRefinedSleepStartTs).toISOString());
+                } else if (motionVibSleepStartTs) {
+                    sleepWindowMotion.start = motionVibSleepStartTs;
+                    sleepStartSource = 'motion_vib';
+                    this.log.info('[SleepStart] Motion+Vib-Verfeinerung: ' + new Date(motionVibSleepStartTs).toISOString());
                 }
             } else {
                 // Frozen: bestehende Quellen-Daten ++bernehmen, Garmin-Override trotzdem erlauben
