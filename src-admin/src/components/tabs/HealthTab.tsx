@@ -227,7 +227,7 @@ export default function HealthTab(props: any) {
                     if (d.roomHistory && d.roomHistory.history) setRoomHistory(d.roomHistory.history);
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [] });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null });
                     setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                     setGeminiNight(d.geminiNight || "Keine Daten");
                     setGeminiNightTs(d.geminiNightTs || null);
@@ -713,7 +713,7 @@ export default function HealthTab(props: any) {
             .then((histRes: any) => {
                 if (histRes && histRes.success && histRes.data) {
                     const d = histRes.data;
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [] });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null });
                     setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                 }
             });
@@ -1161,7 +1161,10 @@ export default function HealthTab(props: any) {
         const garminLastSyncAgeH: number | null = sd?.garminLastSyncAgeH ?? null;
         const outsideBedEvts: {start:number,end:number,duration:number,type:string}[] = sd?.outsideBedEvents ?? [];
         const wakeConfirmed: boolean = sd?.wakeConfirmed ?? false;
-        const sleepDateStr: string | null = sd?.sleepDate ?? null;
+        const sleepDateStr: string | null = sd?.sleepDate ?? (sd?.sleepWindowStart ? (() => {
+            const d = new Date((sd.sleepWindowStart as number) - 3 * 3600000);
+            return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        })() : null);
         const sleepStartOverridden: boolean = sd?.sleepStartOverridden ?? false;
 
         const handleSetOverride = async (source: string, ts: number) => {
