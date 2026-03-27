@@ -1,8 +1,9 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.81",
+    "version": "0.33.82",
     "news": {
+      "0.33.82": "feat(OC-23): Manueller Override der Einschlafzeit-Quelle (Variante B Backend-Trigger); interaktives Quellen-Panel in Schlafkachel; sleepDate+sleepStartOverridden+sleepStartOverrideSource im Snapshot; State analysis.sleep.startOverride",
       "0.33.81": "fix(OC-18): Per-Person Schlafkacheln (Ingrid/Robert) leer wegen winStart-Bug - Fallback war 22:00 heute (Zukunft) statt gestern; fix: winStart = sleepWindowOC7.start || _sleepSearchBase (gestern 18:00)",
       "0.33.80": "fix(OC-7): haus_still-Label im Quellen-Popup korrekt anzeigen (war: '? haus_still'); motion_vib als neue Einschlafzeit-Quelle fuer PIR+Vibration ohne FP2 (Bewegungsmelder + Vibration verfeinert Einschlafzeit analog zu fp2_vib)",
       "0.33.74": "feat(OC-7): Ausser-Bett-Aktivitaet auf alle Nicht-Schlafzimmer-Sensoren erweitert (rot=du, blau=andere Person); Mehrpersonenhaushalt-Logik mit FP2-Bestaetigung; Snapshot-Timing 23:59:59; Dreiecke groesser+Unicode; Schlaf-Radar 22-23Uhr aus outsideBedEvents",

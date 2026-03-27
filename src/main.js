@@ -147,6 +147,7 @@ class CogniLiving extends utils.Adapter {
             },
             native: {}
         });
+        await this.setObjectNotExistsAsync('analysis.sleep.startOverride', { type: 'state', common: { name: 'Sleep Start Override (OC-23) - JSON', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorBatteryStatus', { type: 'state', common: { name: 'Sensor Battery Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorStatus', { type: 'state', common: { name: 'Sensor Health Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.currentPersonCount', { type: 'state', common: { name: 'Aktuelle Personenanzahl im Haus', type: 'number', role: 'value', unit: 'Personen', read: true, write: false, def: 1, desc: 'Geschaetzte Personenanzahl (Config-Baseline + raeumliche Heuristik + FP2)' }, native: {} });
@@ -710,6 +711,7 @@ class CogniLiving extends utils.Adapter {
             const _sleepSearchBase = new Date();
             _sleepSearchBase.setHours(18, 0, 0, 0);
             if (new Date().getHours() < 18) { _sleepSearchBase.setDate(_sleepSearchBase.getDate() - 1); }
+            const sleepDate = _sleepSearchBase.getFullYear() + '-' + String(_sleepSearchBase.getMonth()+1).padStart(2,'0') + '-' + String(_sleepSearchBase.getDate()).padStart(2,'0');
             const sleepSearchEvents = this.eventHistory.filter(e => (e.timestamp||0) >= _sleepSearchBase.getTime());
 
             // Raum-Verweildauer heute aus roomHistory berechnen (Minuten pro Raum)
@@ -959,7 +961,27 @@ class CogniLiving extends utils.Adapter {
             var sleepStartSource = _fp2RawStart ? 'fp2'
                 : (sleepWindowHausStill.start ? 'haus_still' : (motionVibSleepStartTs ? 'motion_vib' : (sleepWindowMotion.start ? 'motion' : 'fixed')));
 
+            // OC-23: Manueller Override der Einschlafzeit-Quelle
+            var _overrideApplied = false;
+            try {
+                var _ovState = await this.getStateAsync('analysis.sleep.startOverride');
+                if (_ovState && _ovState.val && _ovState.val !== 'null') {
+                    var _ov = JSON.parse(_ovState.val);
+                    var _ovWinMin = _sleepSearchBase.getTime();
+                    var _ovWinMax = _sleepSearchBase.getTime() + 10 * 3600000;
+                    var _ovSources = ['garmin','fp2_vib','fp2','motion_vib','haus_still','motion','fixed'];
+                    if (_ov && _ov.date === sleepDate && _ov.source && _ovSources.indexOf(_ov.source) >= 0
+                        && _ov.ts && _ov.ts >= _ovWinMin && _ov.ts <= _ovWinMax) {
+                        sleepWindowCalc.start = _ov.ts;
+                        sleepStartSource = _ov.source;
+                        _overrideApplied = true;
+                        this.log.info('[OC-23] Manueller Override aktiv: ' + _ov.source + ' = ' + new Date(_ov.ts).toISOString());
+                    }
+                }
+            } catch(_ovErr) { this.log.warn('[OC-23] Override-Fehler: ' + _ovErr.message); }
+
             // Priorit+?tskette anwenden (nur wenn nicht frozen)
+            if (!_overrideApplied) {
             if (!_sleepFrozen) {
                 if (garminSleepStartTs) {
                     sleepWindowCalc.start = garminSleepStartTs;
@@ -983,6 +1005,7 @@ class CogniLiving extends utils.Adapter {
                     sleepStartSource = 'garmin';
                     this.log.info('[SleepStart] Garmin-Override auf Frozen: ' + new Date(garminSleepStartTs).toISOString());
                 }
+            }
             }
 
             // Schlaffenster fuer OC-7 (Sleep Score): FP2 ??? Bewegungsmelder ??? Fixfenster (Fallback-Kette).
@@ -1572,7 +1595,7 @@ class CogniLiving extends utils.Adapter {
                     personSensorIds[p].add(d.id);
                 });
                 if (Object.keys(personSensorIds).length === 0) return result;
-                var winStart = sleepWindowCalc.start || (function(){ var d=new Date(); d.setHours(22,0,0,0); return d.getTime(); })();
+                var winStart = sleepWindowCalc.start || sleepWindowOC7.start || _sleepSearchBase.getTime(); // Fallback: gestern 18:00 (analog _sleepSearchBase) statt 22:00 heute
                 var winEnd   = sleepWindowCalc.end   || (function(){ var d=new Date(); d.setHours(6,0,0,0); if(d.getTime()<winStart) d.setDate(d.getDate()+1); return d.getTime(); })();
                 Object.keys(personSensorIds).forEach(function(person) {
                     var ids = personSensorIds[person];
@@ -1808,7 +1831,10 @@ class CogniLiving extends utils.Adapter {
                 allWakeSources: allWakeSources,
                 sleepStartSource: sleepStartSource,
                 allSleepStartSources: allSleepStartSources,
-                wakeConfirmed: !!(sleepWindowOC7.end && new Date().getHours() >= 10 && (Date.now() - (sleepWindowOC7.end || 0)) >= 3600000)
+                wakeConfirmed: !!(sleepWindowOC7.end && new Date().getHours() >= 10 && (Date.now() - (sleepWindowOC7.end || 0)) >= 3600000),
+                sleepDate: sleepDate,
+                sleepStartOverridden: _overrideApplied,
+                sleepStartOverrideSource: _overrideApplied ? sleepStartSource : null
             };
 
             const dataDir = utils.getAbsoluteDefaultDataDir();
@@ -2227,6 +2253,40 @@ class CogniLiving extends utils.Adapter {
                     this.sendTo(obj.from, obj.command, { success: false }, obj.callback);
                 }
             }
+        else if (obj.command === 'setSleepStartOverride') {
+            try {
+                var _ovMsg = obj.message || {};
+                var _allowedOvSrc = ['garmin','fp2_vib','fp2','motion_vib','haus_still','motion','fixed'];
+                if (!_ovMsg.date || !_ovMsg.source || !_ovMsg.ts || _allowedOvSrc.indexOf(_ovMsg.source) < 0) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Ungueltige Override-Daten' }, obj.callback); return;
+                }
+                var _ovPayload = { date: _ovMsg.date, source: _ovMsg.source, ts: _ovMsg.ts, setBy: 'ui', setAt: Date.now() };
+                await this.setStateAsync('analysis.sleep.startOverride', { val: JSON.stringify(_ovPayload), ack: true });
+                await this.saveDailyHistory();
+                var _ovDataDir = utils.getAbsoluteDefaultDataDir();
+                var _ovNow = new Date();
+                var _ovDateStr = _ovNow.getFullYear() + '-' + String(_ovNow.getMonth()+1).padStart(2,'0') + '-' + String(_ovNow.getDate()).padStart(2,'0');
+                var _ovPath = path.join(_ovDataDir, 'cogni-living', 'history', _ovDateStr + '.json');
+                if (fs.existsSync(_ovPath)) {
+                    var _ovSnap = JSON.parse(fs.readFileSync(_ovPath, 'utf8'));
+                    this.sendTo(obj.from, obj.command, { success: true, data: _ovSnap }, obj.callback);
+                } else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_ovE) { this.sendTo(obj.from, obj.command, { success: false, error: _ovE.message }, obj.callback); }
+        }
+        else if (obj.command === 'clearSleepStartOverride') {
+            try {
+                await this.setStateAsync('analysis.sleep.startOverride', { val: 'null', ack: true });
+                await this.saveDailyHistory();
+                var _clDataDir = utils.getAbsoluteDefaultDataDir();
+                var _clNow = new Date();
+                var _clDateStr = _clNow.getFullYear() + '-' + String(_clNow.getMonth()+1).padStart(2,'0') + '-' + String(_clNow.getDate()).padStart(2,'0');
+                var _clPath = path.join(_clDataDir, 'cogni-living', 'history', _clDateStr + '.json');
+                if (fs.existsSync(_clPath)) {
+                    var _clSnap = JSON.parse(fs.readFileSync(_clPath, 'utf8'));
+                    this.sendTo(obj.from, obj.command, { success: true, data: _clSnap }, obj.callback);
+                } else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_clE) { this.sendTo(obj.from, obj.command, { success: false, error: _clE.message }, obj.callback); }
+        }
         }
     }
 

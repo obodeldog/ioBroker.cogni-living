@@ -165,6 +165,8 @@ export default function HealthTab(props: any) {
     const [driftStatus, setDriftStatus] = useState<string>('Unknown');
     const [driftDetails, setDriftDetails] = useState<string>('');
     const [auraSleepData, setAuraSleepData] = useState<any>(null);
+    const [overridePanelOpen, setOverridePanelOpen] = useState(false);
+    const [overrideLoading, setOverrideLoading] = useState(false);
     const [personHistoryData, setPersonHistoryData] = useState<Record<string, any>>({});
     const [sensorBatteryStatus, setSensorBatteryStatus] = useState<{sensors: {id:string, level:number|null, isLow:boolean, isCritical:boolean, source:string}[]} | null>(null);
     const [nativeDevices, setNativeDevices] = useState<any[]>([]);
@@ -1159,6 +1161,31 @@ export default function HealthTab(props: any) {
         const garminLastSyncAgeH: number | null = sd?.garminLastSyncAgeH ?? null;
         const outsideBedEvts: {start:number,end:number,duration:number,type:string}[] = sd?.outsideBedEvents ?? [];
         const wakeConfirmed: boolean = sd?.wakeConfirmed ?? false;
+        const sleepDateStr: string | null = sd?.sleepDate ?? null;
+        const sleepStartOverridden: boolean = sd?.sleepStartOverridden ?? false;
+
+        const handleSetOverride = async (source: string, ts: number) => {
+            if (!sleepDateStr) return;
+            setOverrideLoading(true);
+            try {
+                const result: any = await socket.sendTo(adapterName + '.' + instance, 'setSleepStartOverride', {
+                    date: sleepDateStr, source, ts, setBy: 'ui', setAt: Date.now()
+                });
+                if (result?.data) setAuraSleepData({ ...result.data });
+            } finally {
+                setOverrideLoading(false);
+                setOverridePanelOpen(false);
+            }
+        };
+        const handleClearOverride = async () => {
+            setOverrideLoading(true);
+            try {
+                const result: any = await socket.sendTo(adapterName + '.' + instance, 'clearSleepStartOverride', {});
+                if (result?.data) setAuraSleepData({ ...result.data });
+            } finally {
+                setOverrideLoading(false);
+            }
+        };
 
         const hasVibSensor = stages.length > 0;
         const hasSleepWindow = swStart !== null;
@@ -1468,11 +1495,63 @@ export default function HealthTab(props: any) {
                                 <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}} title={'Erkennungsmethode: ' + srcDisplay.label}>
                                     {srcDisplay.icon} {srcDisplay.label}
                                 </div>
-                                {/* DEV-ONLY: Quellen-Tooltip Einschlafzeit */}
-                                <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor:'help', opacity:0.7}}
-                                    title={devSleepStartTooltip}>
-                                    ⚙ Quellen
+                                {/* OC-23: Einschlafzeit-Quelle Override */}
+                                {sleepStartOverridden && (
+                                    <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
+                                )}
+                                <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: overrideLoading ? 'wait' : 'pointer', opacity:0.8,
+                                             display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
+                                    title={overrideLoading ? 'Wird neu berechnet...' : 'Einschlafzeit-Quelle manuell wählen'}
+                                    onClick={() => { if (!overrideLoading) setOverridePanelOpen(v => !v); }}>
+                                    {overrideLoading ? '⏳' : '⚙'} Quellen {overridePanelOpen ? '▲' : '▼'}
                                 </div>
+                                {overridePanelOpen && !overrideLoading && allSleepStartSourcesArr.length > 0 && (
+                                    <div style={{marginTop:'4px', background: isDark?'#1e2a1e':'#f1f8e9',
+                                                 border:'1px solid ' + (isDark?'#388e3c':'#a5d6a7'),
+                                                 borderRadius:'6px', padding:'6px 8px', minWidth:'200px',
+                                                 boxShadow:'0 4px 12px rgba(0,0,0,0.3)'}}>
+                                        <div style={{fontSize:'0.55rem', color: isDark?'#aaa':'#555', marginBottom:'4px', fontWeight:'bold'}}>
+                                            Einschlafzeit-Quelle wählen:
+                                        </div>
+                                        {allSleepStartSourcesArr.map(ss => {
+                                            const info = srcInfo[ss.source] ?? { icon: '?', label: ss.source };
+                                            const isActive = ss.source === sleepStartSource;
+                                            const hasTs = !!ss.ts;
+                                            return (
+                                                <div key={ss.source} style={{
+                                                    display:'flex', alignItems:'center', justifyContent:'space-between',
+                                                    padding:'2px 4px', marginBottom:'2px', borderRadius:'3px',
+                                                    opacity: hasTs ? 1 : 0.4,
+                                                    background: isActive ? (isDark?'#1b5e20':'#c8e6c9') : 'transparent'
+                                                }}>
+                                                    <span style={{fontSize:'0.6rem', color: isDark?'#ddd':'#333'}}>
+                                                        {info.icon} {info.label}: {ss.ts ? fmtTime(ss.ts) : '—'}
+                                                        {isActive ? ' ✓' : ''}
+                                                    </span>
+                                                    {hasTs && !isActive && sleepDateStr && (
+                                                        <button
+                                                            onClick={() => handleSetOverride(ss.source, ss.ts!)}
+                                                            style={{fontSize:'0.5rem', padding:'1px 6px', cursor:'pointer',
+                                                                   background:'#1565c0', color:'#fff', border:'none',
+                                                                   borderRadius:'3px', marginLeft:'6px', flexShrink:0}}>
+                                                            Wählen
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                        {sleepStartOverridden && (
+                                            <div style={{marginTop:'4px', borderTop:'1px solid ' + (isDark?'#444':'#ccc'), paddingTop:'4px'}}>
+                                                <button onClick={handleClearOverride}
+                                                    style={{fontSize:'0.5rem', padding:'2px 6px', cursor:'pointer',
+                                                           background:'#b71c1c', color:'#fff', border:'none',
+                                                           borderRadius:'3px', width:'100%'}}>
+                                                    ↺ Automatik wiederherstellen
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                             <div style={{textAlign:'center'}}>
                                 <div style={{
