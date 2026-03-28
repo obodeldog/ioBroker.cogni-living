@@ -1,7 +1,7 @@
 {
     "common":  {
                    "name":  "cogni-living",
-                   "version":  "0.33.86",
+                   "version":  "0.33.87",
                    "news":  {
                                 "0.33.83":  "fix(OC-23): sleepDate/sleepStartOverridden/sleepStartOverrideSource fehlten in setAuraSleepData-Aufrufen (Wählen-Buttons nicht sichtbar); Fallback sleepDate aus sleepWindowStart für alte Snapshots",
                                 "0.33.82":  "feat(OC-23): Manueller Override der Einschlafzeit-Quelle (Variante B Backend-Trigger); interaktives Quellen-Panel in Schlafkachel; sleepDate+sleepStartOverridden+sleepStartOverrideSource im Snapshot; State analysis.sleep.startOverride",

@@ -637,7 +637,7 @@ class CogniLiving extends utils.Adapter {
         this.log.info("? Dashboard Data (Rooms & Timeline & Details) restored.");
     }
 
-    async saveDailyHistory() {
+    async saveDailyHistory(_directOverride) {
         // Sequenzen f?r Gait-Speed-Berechnung vorladen
         try {
             const _sq = await this.getStateAsync('LTM.trainingData.sequences');
@@ -991,9 +991,12 @@ class CogniLiving extends utils.Adapter {
             // OC-23: Manueller Override der Einschlafzeit-Quelle
             var _overrideApplied = false;
             try {
-                var _ovState = await this.getStateAsync('analysis.sleep.startOverride');
-                if (_ovState && _ovState.val && _ovState.val !== 'null') {
-                    var _ov = JSON.parse(_ovState.val);
+                // _directOverride: direkt uebergeben (bypasses State-Cache-Timing-Bug)
+                var _ovRaw = _directOverride
+                    ? JSON.stringify(_directOverride)
+                    : (await this.getStateAsync('analysis.sleep.startOverride'))?.val;
+                if (_ovRaw && _ovRaw !== 'null') {
+                    var _ov = JSON.parse(_ovRaw);
                     var _ovWinMin = _sleepSearchBase.getTime();
                     var _ovWinMax = _sleepSearchBase.getTime() + 10 * 3600000;
                     var _ovSources = ['garmin','fp2_vib','fp2','motion_vib','haus_still','motion','fixed'];
@@ -2306,7 +2309,7 @@ class CogniLiving extends utils.Adapter {
                 }
                 var _ovPayload = { date: _ovMsg.date, source: _ovMsg.source, ts: _ovMsg.ts, setBy: 'ui', setAt: Date.now() };
                 await this.setStateAsync('analysis.sleep.startOverride', { val: JSON.stringify(_ovPayload), ack: true });
-                await this.saveDailyHistory();
+                await this.saveDailyHistory(_ovPayload);
                 var _ovDataDir = utils.getAbsoluteDefaultDataDir();
                 var _ovNow = new Date();
                 var _ovDateStr = _ovNow.getFullYear() + '-' + String(_ovNow.getMonth()+1).padStart(2,'0') + '-' + String(_ovNow.getDate()).padStart(2,'0');
