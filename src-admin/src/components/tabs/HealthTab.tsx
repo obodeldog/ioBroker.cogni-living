@@ -1624,14 +1624,27 @@ export default function HealthTab(props: any) {
                                 </div>
                             )}
 
-                            {/* Der Balken — jeder Block = 5 min (zeitproportional), Außerhalb-Events als Farboverlay */}
+                            {/* Der Balken — proportionale Slots (5 min), no-data-Segment vor Stage-Fenster */}
                             <div style={{display:'flex', width:'100%', height:'28px', borderRadius:'4px', overflow:'hidden'}}>
+                                {preStageMs > 0 && totalWindowMs && (
+                                    <div style={{
+                                        width: (preStageMs / totalWindowMs * 100) + '%',
+                                        flexShrink: 0,
+                                        backgroundColor: isDark ? '#1a1a1a' : '#eeeeee',
+                                        backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 8px)',
+                                        borderRight: '1px dashed ' + (isDark ? '#444' : '#ccc'),
+                                        minWidth: 0
+                                    }} title={'Keine Sensordaten (' + (swStart ? fmtTime(swStart) : '?') + '–' + (stagesWindowStart ? fmtTime(stagesWindowStart) : '?') + ')'} />
+                                )}
                                 {renderedStages.map((slot, i) => {
-                                    const absMs = swStart ? swStart + slot.t * 60000 : null;
+                                    const absMs = stagesWindowStart ? stagesWindowStart + slot.t * 60000 : (swStart ? swStart + slot.t * 60000 : null);
+                                    const slotW = totalWindowMs ? (5 * 60000 / totalWindowMs * 100) + '%' : undefined;
                                     return (
                                         <div key={i} style={{
-                                            flex: 1,
+                                            width: slotW,
+                                            flex: slotW ? undefined : 1,
                                             backgroundColor: slotColor(slot, absMs),
+                                            flexShrink: 0,
                                             minWidth: 0
                                         }} title={slotTip(slot, absMs)} />
                                     );

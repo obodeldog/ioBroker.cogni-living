@@ -1061,9 +1061,16 @@ class CogniLiving extends utils.Adapter {
                 // Eingeschlafene Nacht: Schlafdaten aus bestehendem Snapshot uebernehmen
                 // Fix C: OC-23 Override bypasses FROZEN fuer Schlafstart (analog Garmin-Wake-Override)
                 if (!_overrideApplied) {
-                    sleepWindowCalc.start = _existingSnap.sleepWindowStart;
-                    sleepWindowCalc.end   = _existingSnap.sleepWindowEnd;
-                    sleepWindowOC7 = { start: _existingSnap.sleepWindowStart, end: _existingSnap.sleepWindowEnd };
+                    // Fix 1: Garmin hat hoechste Prio auch bei Frozen (wurde in Prioritaetskette gesetzt)
+                    sleepWindowCalc.end = _existingSnap.sleepWindowEnd;
+                    if (garminSleepStartTs) {
+                        // Garmin-Wert bereits korrekt in sleepWindowCalc.start (aus Prioritaetskette)
+                        sleepWindowOC7 = { start: sleepWindowCalc.start, end: _existingSnap.sleepWindowEnd };
+                        this.log.info('[SleepStart] Garmin auf Frozen (automatisch): ' + new Date(sleepWindowCalc.start).toISOString());
+                    } else {
+                        sleepWindowCalc.start = _existingSnap.sleepWindowStart;
+                        sleepWindowOC7 = { start: _existingSnap.sleepWindowStart, end: _existingSnap.sleepWindowEnd };
+                    }
                 } else {
                     sleepWindowCalc.end = _existingSnap.sleepWindowEnd;
                     sleepWindowOC7 = { start: sleepWindowCalc.start, end: _existingSnap.sleepWindowEnd };
@@ -1854,6 +1861,9 @@ class CogniLiving extends utils.Adapter {
                 sleepScore: sleepScore,
                 sleepScoreRaw: sleepScoreRaw,
                 sleepStages: sleepStages,
+                stagesWindowStart: _sleepFrozen
+                    ? (_existingSnap.stagesWindowStart ?? _existingSnap.sleepWindowStart ?? null)
+                    : (sleepWindowOC7.start ?? null),
                 garminScore: garminScore,
                 garminDeepMin: garminDeepSec ? Math.round(garminDeepSec/60) : null,
                 garminLightMin: garminLightSec ? Math.round(garminLightSec/60) : null,
