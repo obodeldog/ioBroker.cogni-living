@@ -1151,6 +1151,8 @@ export default function HealthTab(props: any) {
         const garminRemMin: number | null = sd?.garminRemMin ?? null;
         const swStart: number | null = sd?.sleepWindowStart ?? null;
         const swEnd: number | null = sd?.sleepWindowEnd ?? null;
+        // stagesWindowStart: ursprünglicher Startpunkt des Stage-Analyse-Fensters (kann bei Override von swStart abweichen)
+        const stagesWindowStart: number | null = (sd as any)?.stagesWindowStart ?? swStart;
         const sleepWindowSource: string = sd?.sleepWindowSource ?? 'fixed';
         const sleepStartSource: string = sd?.sleepStartSource ?? sleepWindowSource;
         const wakeSource: string = sd?.wakeSource ?? sleepWindowSource;
@@ -1378,12 +1380,16 @@ export default function HealthTab(props: any) {
             }
             return timeStr + (stageLabel[slot.s] || slot.s);
         };
-        const renderedStages = (swStart && swEnd)
+        const renderedStages = (stagesWindowStart && swEnd)
             ? stages.filter(slot => {
-                const absMs = swStart + slot.t * 60000;
-                return absMs >= swStart && absMs < swEnd;
+                const absMs = stagesWindowStart + slot.t * 60000;
+                return absMs >= (swStart ?? stagesWindowStart) && absMs < swEnd;
             })
             : stages;
+        // Kein-Daten-Bereich: wenn Override den Start vor das Stage-Fenster verschiebt
+        const preStageMs = (swStart && stagesWindowStart && stagesWindowStart > swStart && swEnd)
+            ? stagesWindowStart - swStart : 0;
+        const totalWindowMs = (swStart && swEnd) ? swEnd - swStart : null;
         const markerItems = (() => {
             if (!swStart || !swEnd || clippedOutsideBedEvts.length === 0) return [];
             const totalMs = swEnd - swStart;
