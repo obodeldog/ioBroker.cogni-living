@@ -759,8 +759,12 @@ class CogniLiving extends utils.Adapter {
                 var bedEvts = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })
                     .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
                 if (bedEvts.length === 0) return { start: null, end: null };
-                // Schlafbeginn: letztes Mal dass Bett >= 10 Min belegt wurde zwischen 18:00-02:00
-                var sleepStartTs = null;
+                // Fix A: Schlafbeginn per Gap-Fusion bestimmen
+                // Belegungs-Bloecke aufbauen, Luecken < 30min fusionieren (naecht. Wachphasen),
+                // laengsten fusionierten Block als Haupt-Schlafblock waehlen.
+                // Verhindert Re-Anchoring wenn Nutzer kurz aufsteht (WC, Kueche).
+                var GAP_TOLERANCE_MS = 30 * 60 * 1000;
+                var _rawBlocks = [];
                 var presStart = null;
                 for (var _si = 0; _si < bedEvts.length; _si++) {
                     var _se = bedEvts[_si];
@@ -768,12 +772,33 @@ class CogniLiving extends utils.Adapter {
                     var _shr = new Date(_se.timestamp||0).getHours();
                     if (_sv && !presStart && (_shr >= 18 || _shr < 3)) { presStart = _se.timestamp||0; }
                     else if (!_sv && presStart) {
-                        var _dur = ((_se.timestamp||0) - presStart) / 60000;
-                        if (_dur >= 10) sleepStartTs = presStart;
+                        _rawBlocks.push({ start: presStart, end: _se.timestamp||0 });
                         presStart = null;
                     }
                 }
-                if (presStart) { var _dur2 = (Date.now() - presStart) / 60000; if (_dur2 >= 10) sleepStartTs = presStart; }
+                if (presStart) _rawBlocks.push({ start: presStart, end: Date.now() });
+                // Bloecke < 10 Min verwerfen, dann Luecken <= GAP_TOLERANCE_MS fusionieren
+                var _merged = [];
+                for (var _bi = 0; _bi < _rawBlocks.length; _bi++) {
+                    var _b = _rawBlocks[_bi];
+                    if ((_b.end - _b.start) < 10 * 60000) continue;
+                    if (_merged.length === 0) {
+                        _merged.push({ start: _b.start, end: _b.end });
+                    } else {
+                        var _lastM = _merged[_merged.length - 1];
+                        if ((_b.start - _lastM.end) <= GAP_TOLERANCE_MS) {
+                            _lastM.end = _b.end; // Naecht. Wachphase: fusionieren, nicht neu ankern
+                        } else {
+                            _merged.push({ start: _b.start, end: _b.end });
+                        }
+                    }
+                }
+                if (_merged.length === 0) return { start: null, end: null };
+                // Laengsten fusionierten Block als Haupt-Schlafblock waehlen
+                var _mainBlock = _merged.reduce(function(best, cur) {
+                    return (cur.end - cur.start) > (best.end - best.start) ? cur : best;
+                }, _merged[0]);
+                var sleepStartTs = _mainBlock.start;
                 if (!sleepStartTs) return { start: null, end: null };
                 // Aufwachzeit: erstes Mal nach Schlafbeginn dass Bett >= 15 Min leer war nach 04:00
                 var wakeTs = null;
@@ -891,9 +916,11 @@ class CogniLiving extends utils.Adapter {
                     if (!isNaN(_gSVal) && _gSVal > 0) {
                         var _gSHr = new Date(_gSVal).getHours();
                         var _gSPlausibel = (_gSHr >= 18 || _gSHr < 4);
-                        // Zusatzpr++fung: Garmin-Start muss nach FP2-Start und < FP2+3h liegen
-                        var _gSInFP2Window = !_fp2RawStart || (_gSVal >= _fp2RawStart && _gSVal <= _fp2RawStart + 3 * 3600000);
-                        if (_gSPlausibel && _gSInFP2Window) {
+                        // Fix B: bidirektional +-3h von fp2 + Datum-Konsistenz
+                        var _gSInFP2Window = !_fp2RawStart || (Math.abs(_gSVal - _fp2RawStart) <= 3 * 3600000);
+                        var _gSNightOk = (_gSVal >= (_sleepSearchBase.getTime() - 2 * 3600000))
+                            && (_gSVal <= (_sleepSearchBase.getTime() + 16 * 3600000));
+                        if (_gSPlausibel && _gSInFP2Window && _gSNightOk) {
                             garminSleepStartTs = _gSVal;
                             this.log.debug('[SleepStart] Garmin plausibel: ' + new Date(garminSleepStartTs).toISOString());
                         } else {
@@ -1031,10 +1058,17 @@ class CogniLiving extends utils.Adapter {
             var sleepScoreRaw = null;
             var sleepStages = [];
             if (_sleepFrozen) {
-                // Eingeschlafene Nacht: Schlafdaten aus bestehendem Snapshot ++bernehmen (nicht ++berschreiben)
-                sleepWindowCalc.start = _existingSnap.sleepWindowStart;
-                sleepWindowCalc.end   = _existingSnap.sleepWindowEnd;
-                sleepWindowOC7 = { start: _existingSnap.sleepWindowStart, end: _existingSnap.sleepWindowEnd };
+                // Eingeschlafene Nacht: Schlafdaten aus bestehendem Snapshot uebernehmen
+                // Fix C: OC-23 Override bypasses FROZEN fuer Schlafstart (analog Garmin-Wake-Override)
+                if (!_overrideApplied) {
+                    sleepWindowCalc.start = _existingSnap.sleepWindowStart;
+                    sleepWindowCalc.end   = _existingSnap.sleepWindowEnd;
+                    sleepWindowOC7 = { start: _existingSnap.sleepWindowStart, end: _existingSnap.sleepWindowEnd };
+                } else {
+                    sleepWindowCalc.end = _existingSnap.sleepWindowEnd;
+                    sleepWindowOC7 = { start: sleepWindowCalc.start, end: _existingSnap.sleepWindowEnd };
+                    this.log.info('[OC-23] Override auf Frozen Snapshot: start=' + new Date(sleepWindowCalc.start).toISOString() + ' end=' + new Date(_existingSnap.sleepWindowEnd).toISOString());
+                }
                 sleepStages    = _existingSnap.sleepStages    || [];
                 sleepScore     = _existingSnap.sleepScore     !== undefined ? _existingSnap.sleepScore     : null;
                 sleepScoreRaw  = _existingSnap.sleepScoreRaw  !== undefined ? _existingSnap.sleepScoreRaw  : null;
@@ -3004,6 +3038,7 @@ class CogniLiving extends utils.Adapter {
 
 if (require.main !== module) module.exports = (options) => new CogniLiving(options);
 else new CogniLiving();
+
 
 
 
