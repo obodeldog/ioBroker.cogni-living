@@ -886,9 +886,10 @@ class CogniLiving extends utils.Adapter {
                     var _hsHr = new Date(_hsE.timestamp||0).getHours();
                     if (!(_hsHr >= 18 || _hsHr < 2)) continue;
                     var _hsCandTs = _hsE.timestamp||0;
-                    var _hasCommonAfter = _hsCommon.some(function(ce) {
+                    var _hsCommonAfterIds = new Set(_hsCommon.filter(function(ce) {
                         return (ce.timestamp||0) > _hsCandTs && (ce.timestamp||0) <= _hsCandTs + 30*60*1000;
-                    });
+                    }).map(function(ce) { return ce.id || ce.sensorId || ''; }));
+                    var _hasCommonAfter = _hsCommonAfterIds.size >= 2;
                     if (!_hasCommonAfter) { _hsSleepTs = _hsCandTs; break; }
                 }
                 return { start: _hsSleepTs, end: null };
@@ -1054,12 +1055,37 @@ class CogniLiving extends utils.Adapter {
                             return { start: _fs, end: _fe };
                         })();
 
+            // [FROZEN-Fix] Garmin-Wake vorab lesen damit Stage-Berechnung korrektes Fenster-Ende hat.
+            // Garmin-Wake wird normalerweise erst nach Stage-Calc gesetzt (Reihenfolge-Bug) - hier vorab.
+            if (sleepWindowOC7.start && !_sleepFrozen) {
+                try {
+                    var _gwIdPre = (this.config.garminSleepEndStateId || '').trim()
+                        || 'garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT';
+                    var _gwPre = await this.getForeignStateAsync(_gwIdPre);
+                    if (_gwPre && _gwPre.val != null) {
+                        var _gwPreVal = Number(_gwPre.val);
+                        if (!isNaN(_gwPreVal) && _gwPreVal > 0) {
+                            var _gwPreH = new Date(_gwPreVal).getUTCHours();
+                            var _gwPreOk = _gwPreVal >= sleepWindowOC7.start
+                                && _gwPreVal <= sleepWindowOC7.start + 20 * 3600000;
+                            if (_gwPreH >= 3 && _gwPreH < 14 && _gwPreOk) {
+                                if (!sleepWindowOC7.end || _gwPreVal < sleepWindowOC7.end) {
+                                    sleepWindowOC7.end = _gwPreVal;
+                                    this.log.debug('[OC-7] Garmin Wake vorab (Reihenfolge-Fix): ' + new Date(_gwPreVal).toISOString());
+                                }
+                            }
+                        }
+                    }
+                } catch(_gpe) {}
+            }
+
             // --- OC-7: AURA SLEEP SCORE ---------------------------------------------------
             // Klassifikation in 5-Minuten-Slots anhand Vibrationssensor (Detection + Staerke)
             // Stages: 'deep' | 'light' | 'rem' | 'wake'
             var sleepScore = null;
             var sleepScoreRaw = null;
             var sleepStages = [];
+            var _shouldRecalcStages = false;
             if (_sleepFrozen) {
                 // Eingeschlafene Nacht: Schlafdaten aus bestehendem Snapshot uebernehmen
                 // Fix C: OC-23 Override bypasses FROZEN fuer Schlafstart (analog Garmin-Wake-Override)
@@ -1079,11 +1105,22 @@ class CogniLiving extends utils.Adapter {
                     sleepWindowOC7 = { start: sleepWindowCalc.start, end: _existingSnap.sleepWindowEnd };
                     this.log.info('[OC-23] Override auf Frozen Snapshot: start=' + new Date(sleepWindowCalc.start).toISOString() + ' end=' + new Date(_existingSnap.sleepWindowEnd).toISOString());
                 }
-                sleepStages    = _existingSnap.sleepStages    || [];
-                sleepScore     = _existingSnap.sleepScore     !== undefined ? _existingSnap.sleepScore     : null;
-                sleepScoreRaw  = _existingSnap.sleepScoreRaw  !== undefined ? _existingSnap.sleepScoreRaw  : null;
-                this.log.info('[History] Sleep FROZEN: ' + new Date(_existingSnap.sleepWindowStart).toLocaleTimeString() + '-' + new Date(_existingSnap.sleepWindowEnd).toLocaleTimeString() + ' bedPresMin=' + _existingSnap.bedPresenceMinutes);
+                // [FROZEN-Fix] Garmin verschob Einschlafzeit um > 5 Min -> Stages neu berechnen
+                var _frozenStartShift = (garminSleepStartTs && _existingSnap.sleepWindowStart)
+                    ? Math.abs(garminSleepStartTs - _existingSnap.sleepWindowStart) : 0;
+                if (_frozenStartShift > 5 * 60 * 1000) {
+                    this.log.info('[FROZEN-Fix] Garmin verschob Start um ' + Math.round(_frozenStartShift / 60000) + ' Min -> Stages neu berechnen');
+                    _shouldRecalcStages = true;
+                } else {
+                    sleepStages    = _existingSnap.sleepStages    || [];
+                    sleepScore     = _existingSnap.sleepScore     !== undefined ? _existingSnap.sleepScore     : null;
+                    sleepScoreRaw  = _existingSnap.sleepScoreRaw  !== undefined ? _existingSnap.sleepScoreRaw  : null;
+                    this.log.info('[History] Sleep FROZEN: ' + new Date(_existingSnap.sleepWindowStart).toLocaleTimeString() + '-' + new Date(_existingSnap.sleepWindowEnd).toLocaleTimeString() + ' bedPresMin=' + _existingSnap.bedPresenceMinutes);
+                }
             } else if (sleepWindowOC7.start && sleepWindowOC7.end) {
+                _shouldRecalcStages = true;
+            }
+            if (_shouldRecalcStages && sleepWindowOC7.start && sleepWindowOC7.end) {
                 var SLOT_MS = 5 * 60 * 1000;
                 var swStart = sleepWindowOC7.start;
                 var swEnd   = sleepWindowOC7.end;
@@ -1300,19 +1337,21 @@ class CogniLiving extends utils.Adapter {
                     var _overlaps = _allEvtCandidates.some(function(c) { return mot.start < c.end && mot.end > c.start; });
                     if (!_overlaps) {
                         var _dur = Math.max(1, Math.round((mot.end - mot.start) / 60000));
-                        var _motType;
                         if (mot.hasBath) {
-                            _motType = 'bathroom';
+                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'bathroom' });
+                            if (mot.hasOther) {
+                                // Cluster hat Bad UND andere Aussenraeume -> zwei Marker (orange + rot)
+                                _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'outside' });
+                            }
                         } else if (_isMultiPerson) {
                             // Mehrpersonenhaushalt: Aktivitaet nur zuordnen wenn FP2 Bett-leer bestaetigt
                             var _bedEmpty = _hasFP2Bed && _fp2Events.some(function(fp2) {
                                 return mot.start < fp2.end && mot.end > fp2.start;
                             });
-                            _motType = _bedEmpty ? 'outside' : 'other_person';
+                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: _bedEmpty ? 'outside' : 'other_person' });
                         } else {
-                            _motType = 'outside';
+                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'outside' });
                         }
-                        _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: _motType });
                     }
                 });
                 outsideBedEvents = _allEvtCandidates.sort(function(a,b) { return a.start - b.start; });
