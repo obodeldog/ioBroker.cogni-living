@@ -1729,6 +1729,8 @@ class CogniLiving extends utils.Adapter {
                             if (!_phsCommonAfter) { _pSleepStart = _phsTs; break; }
                         }
                     }
+                    // Fallback: Person hatte Bett-Events aber keinen Einschlafzeitpunkt (z.B. vor winStart eingeschlafen)
+                    if (!_pSleepStart && _pBedEvts.length > 0) { _pSleepStart = winStart; }
                     // Andere-Raum-Events (nicht Bett, nicht Bad, nicht andere Person) nach 04:00, max 12:00
                     var _pOtherEvts = sleepSearchEvents.filter(function(e) {
                         var _isBed = e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion;
