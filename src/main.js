@@ -1694,20 +1694,26 @@ class CogniLiving extends utils.Adapter {
                     // sleepSearchEvents-Events haben personTag, isBedroomMotion etc. direkt als Properties
                     var _p4am = new Date(); _p4am.setHours(4,0,0,0);
                     var _pMinSlTs = (winStart||0) + 3*3600000;
-                    // Schlafzimmer-Events dieser Person (nach winStart)
+                    // Schlafzimmer-Events ab 18:00 Vortag, um Abend-Zubettgehzeiten zu erfassen
+                    var _pSearchFrom = (function(){ var d=new Date(winStart); d.setHours(18,0,0,0); if(d.getTime()>winStart) d.setDate(d.getDate()-1); return d.getTime(); })();
                     var _pBedEvts = sleepSearchEvents.filter(function(e) {
                         return e.personTag === person && (e.isBedroomMotion || e.isFP2Bed)
-                            && (e.timestamp||0) >= winStart;
+                            && (e.timestamp||0) >= _pSearchFrom;
                     }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                    // Schlafbeginn: letztes Abend-Bett-Event mit >15-Min-Stille danach
+                    // Schlafbeginn: letztes Abend-Bett-Event vor langem Gap
+                    // _pNextTs aus allen _pBedEvts (nicht nur _pEve) -> PIR-only korrekt
                     var _pSleepStart = null;
                     var _pEve = _pBedEvts.filter(function(e) {
                         var hr = new Date(e.timestamp||0).getHours();
-                        return hr >= 18 || hr < 2; // 18:00-01:59 (spaete Schlaefaenger einschliessen)
+                        return hr >= 18 || hr < 2;
                     });
                     for (var _pei = _pEve.length - 1; _pei >= 0; _pei--) {
                         var _pCurTs = _pEve[_pei].timestamp||0;
-                        var _pNextTs = _pEve[_pei+1] ? (_pEve[_pei+1].timestamp||0) : Infinity;
+                        var _pNextBed = null;
+                        for (var _pnidx = 0; _pnidx < _pBedEvts.length; _pnidx++) {
+                            if ((_pBedEvts[_pnidx].timestamp||0) > _pCurTs) { _pNextBed = _pBedEvts[_pnidx].timestamp||0; break; }
+                        }
+                        var _pNextTs = _pNextBed !== null ? _pNextBed : Infinity;
                         if (_pNextTs - _pCurTs > 15*60*1000) { _pSleepStart = _pCurTs; break; }
                     }
                     // Per-Person Haus-wird-still: letztes eigenes Bett-Event nach dem eigene/shared Sensoren >=30 Min still sind
