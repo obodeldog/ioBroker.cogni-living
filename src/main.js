@@ -1280,7 +1280,7 @@ class CogniLiving extends utils.Adapter {
                 _motOutEvts.forEach(function(e) {
                     var _ts = e.timestamp || 0;
                     var _isBath = e.isBathroomSensor || _bathDevIds.has(e.id);
-                    var _isOther = !_isBath && !(e.isKitchenSensor || _kitchDevIds.has(e.id));
+                    var _isOther = !_isBath; // Kueche zaehlt hier als anderer Raum (nur fuer outsideBedEvents-Dreieck relevant; isKitchenSensor bleibt fuer andere Algorithmen unveraendert)
                     if (!_curCluster) {
                         _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath, hasOther: _isOther };
                     } else if (_ts <= _curCluster.end + CLUSTER_GAP_MS) {
@@ -1296,11 +1296,26 @@ class CogniLiving extends utils.Adapter {
                 // === PHASE 3: Zusammenf?hren ? FP2 hat Vorrang, Motion f?llt L?cken ===
                 var _allEvtCandidates = [];
                 _fp2Events.forEach(function(fp2) {
-                    // 2-Min-Vorpuffer: Bad-Sensor kann vor FP2-Leer-Erkennung feuern (Nutzer geht ins Bad bevor FP2 reagiert)
+                    // 2-Min-Vorpuffer: Bad-Sensor kann vor FP2-Leer-Erkennung feuern
                     var _hasBath = sleepSearchEvents.some(function(e) {
                         return (e.isBathroomSensor || _bathDevIds.has(e.id)) && (e.timestamp||0) >= fp2.start - 2*60*1000 && (e.timestamp||0) <= fp2.end;
                     });
-                    _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: fp2.duration, type: _hasBath ? 'bathroom' : 'outside' });
+                    // Zusaetzlich: andere Raeume aktiv? (Kueche zaehlt als anderer Raum)
+                    var _hasOtherInFp2 = _hasBath && sleepSearchEvents.some(function(e) {
+                        var _ts2 = e.timestamp||0;
+                        if (_ts2 < fp2.start - 2*60*1000 || _ts2 > fp2.end) return false;
+                        var _isBath2 = e.isBathroomSensor || _bathDevIds.has(e.id);
+                        var _isBed2  = e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion;
+                        if (_isBath2 || _isBed2) return false;
+                        if (_topoNearRooms && _topoNearRooms.size > 0 && (e.location||"").trim() && !_topoNearRooms.has((e.location||"").trim())) return false;
+                        return (e.type === "motion" || e.type === "presence_radar_bool") && isActiveValue(e.value);
+                    });
+                    var _fp2Dur = fp2.duration;
+                    _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: _hasBath ? "bathroom" : "outside" });
+                    if (_hasBath && _hasOtherInFp2) {
+                        // FP2-Cluster hat Bad UND andere Aussenraeume -> zweiter Marker (rot) analog Phase-2-Fix v0.33.88
+                        _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: "outside" });
+                    }
                 });
                 _motEvents.forEach(function(mot) {
                     var _overlaps = _allEvtCandidates.some(function(c) { return mot.start < c.end && mot.end > c.start; });
