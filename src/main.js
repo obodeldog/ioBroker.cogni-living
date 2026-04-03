@@ -1715,12 +1715,13 @@ class CogniLiving extends utils.Adapter {
                         return e.personTag === person && (e.isBedroomMotion || e.isFP2Bed)
                             && (e.timestamp||0) >= _pSearchFrom;
                     }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                    // Schlafbeginn: letztes Abend-Bett-Event vor langem Gap
+                    // Schlafbeginn: letztes Abend-Bett-Event vor langem Gap (>=60 Min)
+                    // Schwelle 60 Min (statt 15): verhindert Fehlausloesung durch Radar-Sensoren (SNZB-06P u.ae.)
                     // _pNextTs aus allen _pBedEvts (nicht nur _pEve) -> PIR-only korrekt
                     var _pSleepStart = null;
                     var _pEve = _pBedEvts.filter(function(e) {
                         var hr = new Date(e.timestamp||0).getHours();
-                        return hr >= 18 || hr < 2;
+                        return hr >= 21 || hr < 2;
                     });
                     for (var _pei = _pEve.length - 1; _pei >= 0; _pei--) {
                         var _pCurTs = _pEve[_pei].timestamp||0;
@@ -1729,7 +1730,37 @@ class CogniLiving extends utils.Adapter {
                             if ((_pBedEvts[_pnidx].timestamp||0) > _pCurTs) { _pNextBed = _pBedEvts[_pnidx].timestamp||0; break; }
                         }
                         var _pNextTs = _pNextBed !== null ? _pNextBed : Infinity;
-                        if (_pNextTs - _pCurTs > 15*60*1000) { _pSleepStart = _pCurTs; break; }
+                        if (_pNextTs - _pCurTs > 60*60*1000) { _pSleepStart = _pCurTs; break; }
+                    }
+                    // Last-Outside: letztes personTagged Nicht-SZ-Event im Abend-Fenster ohne
+                    // nachfolgende Aussenbewegung dieser Person (>=30 Min) ->
+                    // erstes SZ-Event danach = Einschlafzeit.
+                    // Robuster als Gap-Methode bei Radar-Sensoren (z.B. SNZB-06P) die Schlafende erkennen.
+                    if (!_pSleepStart) {
+                        var _pExtEvts = sleepSearchEvents.filter(function(e) {
+                            if (!e.personTag || e.personTag !== person) return false;
+                            if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed) return false;
+                            return isActiveValue(e.value);
+                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                        var _pExtEve = _pExtEvts.filter(function(e) {
+                            var hr = new Date(e.timestamp||0).getHours();
+                            return hr >= 18 || hr < 2;
+                        });
+                        for (var _ploi = _pExtEve.length - 1; _ploi >= 0; _ploi--) {
+                            var _ploTs = _pExtEve[_ploi].timestamp||0;
+                            var _ploHasNext = _pExtEvts.some(function(e) {
+                                return (e.timestamp||0) > _ploTs && (e.timestamp||0) <= _ploTs + 30*60*1000;
+                            });
+                            if (!_ploHasNext) {
+                                var _ploBedAfter = null;
+                                for (var _plbi = 0; _plbi < _pBedEvts.length; _plbi++) {
+                                    if ((_pBedEvts[_plbi].timestamp||0) > _ploTs && isActiveValue(_pBedEvts[_plbi].value)) {
+                                        _ploBedAfter = _pBedEvts[_plbi].timestamp||0; break;
+                                    }
+                                }
+                                if (_ploBedAfter) { _pSleepStart = _ploBedAfter; break; }
+                            }
+                        }
                     }
                     // Per-Person Haus-wird-still: letztes eigenes Bett-Event nach dem eigene/shared Sensoren >=30 Min still sind
                     if (!_pSleepStart) {
