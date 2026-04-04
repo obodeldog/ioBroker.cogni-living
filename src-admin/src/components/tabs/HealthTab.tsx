@@ -227,7 +227,7 @@ export default function HealthTab(props: any) {
                     if (d.roomHistory && d.roomHistory.history) setRoomHistory(d.roomHistory.history);
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false });
                     setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                     setGeminiNight(d.geminiNight || "Keine Daten");
                     setGeminiNightTs(d.geminiNightTs || null);
@@ -713,7 +713,7 @@ export default function HealthTab(props: any) {
             .then((histRes: any) => {
                 if (histRes && histRes.success && histRes.data) {
                     const d = histRes.data;
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false });
                     setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                 }
             });
@@ -1168,6 +1168,7 @@ export default function HealthTab(props: any) {
             return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         })() : null);
         const sleepStartOverridden: boolean = sd?.sleepStartOverridden ?? false;
+        const bedWasEmpty: boolean = sd?.bedWasEmpty ?? false;
 
         const handleSetOverride = async (source: string, ts: number) => {
             if (!sleepDateStr) return;
@@ -1283,7 +1284,7 @@ export default function HealthTab(props: any) {
             haus_still:      { icon: '🏠', label: 'Haus-wird-still' },
             vibration:       { icon: '📳', label: 'Vibrationssensor (↑ Konfidenz)' },
             vibration_alone: { icon: '📳', label: 'Vibrationssensor allein' },
-            fixed:           { icon: '⏰', label: 'Schätzung' },
+            fixed:           { icon: '⏱', label: 'Fallback 20:00 Uhr' },
         };
         const srcDisplay  = srcInfo[sleepStartSource] ?? srcInfo.fixed;
         const wakeDisplay = srcInfo[wakeSource]        ?? srcInfo.fixed;
@@ -1386,10 +1387,16 @@ export default function HealthTab(props: any) {
                 return absMs >= (swStart ?? stagesWindowStart) && absMs < swEnd;
             })
             : stages;
-        // Kein-Daten-Bereich: wenn Override den Start vor das Stage-Fenster verschiebt
+        // Kein-Daten-Bereich VOR Stage-Fenster (wenn Override den Start nach vorne verschiebt)
         const preStageMs = (swStart && stagesWindowStart && stagesWindowStart > swStart && swEnd)
             ? stagesWindowStart - swStart : 0;
         const totalWindowMs = (swStart && swEnd) ? swEnd - swStart : null;
+        // Kein-Daten-Bereich NACH dem letzten Stage-Slot (Stages decken oft nur Anfang der Nacht ab)
+        const lastSlotEndMs = (stagesWindowStart && renderedStages.length > 0)
+            ? stagesWindowStart + (renderedStages[renderedStages.length - 1].t + 5) * 60000
+            : (stagesWindowStart ?? swStart ?? null);
+        const postStageMs = (lastSlotEndMs && swEnd && lastSlotEndMs < swEnd)
+            ? swEnd - lastSlotEndMs : 0;
         const markerItems = (() => {
             if (!swStart || !swEnd || clippedOutsideBedEvts.length === 0) return [];
             const totalMs = swEnd - swStart;
@@ -1429,7 +1436,32 @@ export default function HealthTab(props: any) {
                     'Balkenfarben: Dunkelblau=Tief, Hellblau=Leicht, Lila=REM, Gelb=Wach-im-Bett, Bernstein=Bad-Besuch, Orange=Außerhalb.\n' +
                     'Kein Medizinprodukt — für klinische Diagnose Arzt hinzuziehen.'
                 }>
-                {!hasVibSensor ? (
+                {bedWasEmpty ? (
+                    <div style={{fontSize:'0.8rem'}}>
+                        {swStart && (
+                            <div style={{fontSize:'0.65rem', color: isDark?'#666':'#aaa', marginBottom:'8px', textAlign:'center'}}>
+                                {(() => {
+                                    const d1 = new Date(swStart);
+                                    return `Nacht ${d1.getDate()}.${d1.getMonth()+1}.${d1.getFullYear()}`;
+                                })()}
+                            </div>
+                        )}
+                        <div style={{textAlign:'center', padding:'12px 8px', background: isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.03)', borderRadius:'6px'}}>
+                            <div style={{fontSize:'1.4rem', marginBottom:'6px'}}>🏠</div>
+                            <div style={{fontSize:'0.9rem', fontWeight:'bold', color: isDark?'#ccc':'#444', marginBottom:'4px'}}>Bett war leer</div>
+                            <div style={{fontSize:'0.72rem', color:'#888', marginBottom:'8px'}}>
+                                Kein Sensor hat eine Anwesenheit bestätigt — möglicherweise auswärts geschlafen.
+                            </div>
+                            {(swStart && swEnd) && (
+                                <div style={{fontSize:'0.7rem', color: isDark?'#666':'#aaa', borderTop: isDark?'1px solid #333':'1px solid #ddd', paddingTop:'6px', marginTop:'4px'}}>
+                                    <span style={{color:isDark?'#555':'#bbb'}}>⌚ Garmin-Referenz:</span>{' '}
+                                    {fmtTime(swStart)} – {fmtTime(swEnd)}
+                                    {garminScore !== null && <span style={{marginLeft:'8px', color:'#ab47bc'}}>Score: {garminScore}</span>}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : !hasVibSensor ? (
                     <div style={{fontSize:'0.8rem'}}>
                         {hasSleepWindow && swStart ? (
                             <>
@@ -1458,7 +1490,9 @@ export default function HealthTab(props: any) {
                                     </div>
                                 </div>
                                 <div style={{textAlign:'center', padding:'8px', background: isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.03)', borderRadius:'6px', color:'#888', fontSize:'0.72rem'}}>
-                                    📳 Schlafphasen nicht verfügbar — Vibrationsdaten zu alt (tritt auf wenn Adapter tagsüber neu gestartet wird)
+                                    {personLabel
+                                        ? '📊 Schlafphasen nicht verfügbar — nur Einschlaf- und Aufwachzeit analysiert'
+                                        : '📳 Schlafphasen nicht verfügbar — Vibrationsdaten zu alt (tritt auf wenn Adapter tagsüber neu gestartet wird)'}
                                 </div>
                             </>
                         ) : (
@@ -1508,12 +1542,14 @@ export default function HealthTab(props: any) {
                                 {sleepStartOverridden && (
                                     <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
                                 )}
+                                {allSleepStartSourcesArr.length > 0 && (
                                 <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: overrideLoading ? 'wait' : 'pointer', opacity:0.8,
                                              display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
                                     title={overrideLoading ? 'Wird neu berechnet...' : 'Einschlafzeit-Quelle manuell wählen'}
                                     onClick={() => { if (!overrideLoading) setOverridePanelOpen(v => !v); }}>
                                     {overrideLoading ? '⏳' : '⚙'} Quellen {overridePanelOpen ? '▲' : '▼'}
                                 </div>
+                                )}
                                 {overridePanelOpen && !overrideLoading && allSleepStartSourcesArr.length > 0 && (
                                     <div style={{marginTop:'4px', background: isDark?'#1e2a1e':'#f1f8e9',
                                                  border:'1px solid ' + (isDark?'#388e3c':'#a5d6a7'),
@@ -1655,6 +1691,17 @@ export default function HealthTab(props: any) {
                                         }} title={slotTip(slot, absMs)} />
                                     );
                                 })}
+                                {/* Kein-Daten-Bereich nach letztem Stage-Slot (Stages decken oft nur Anfang der Nacht ab) */}
+                                {postStageMs > 0 && totalWindowMs && (
+                                    <div style={{
+                                        width: (postStageMs / totalWindowMs * 100) + '%',
+                                        flexShrink: 0,
+                                        backgroundColor: isDark ? '#1a1a1a' : '#eeeeee',
+                                        backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 8px)',
+                                        borderLeft: '1px dashed ' + (isDark ? '#444' : '#ccc'),
+                                        minWidth: 0
+                                    }} title={'Keine Sensordaten (' + (lastSlotEndMs ? fmtTime(lastSlotEndMs) : '?') + '–' + (swEnd ? fmtTime(swEnd) : '?') + ')'} />
+                                )}
                             </div>
 
                             {/* Zeitachse: Start, volle Stunden, Ende */}
@@ -2706,7 +2753,7 @@ export default function HealthTab(props: any) {
                                         isNap: false, unusuallyLongSleep: false,
                                         garminDataFresh: null, garminLastSyncAgeH: null,
                                         outsideBedEvents: [], wakeConfirmed: false,
-                                        allWakeSources: [], sleepStartSource: pd.wakeSource || 'motion',
+                                        allWakeSources: [], sleepStartSource: 'motion',
                                         allSleepStartSources: [],
                                     };
                                     return <React.Fragment key={pName}>{renderSleepScoreCard(overrideData, pName)}</React.Fragment>;

@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 'use strict';
 
 /*
@@ -389,7 +389,7 @@ class CogniLiving extends utils.Adapter {
     async discoverBatteryStates() {
         var _self = this;
         var devices = this.config.devices || [];
-        // G�ngige Battery-State-Namen quer durch alle ioBroker-Adapter:
+        // Gï¿½ngige Battery-State-Namen quer durch alle ioBroker-Adapter:
         // battery/BATTERY       ? Zigbee, deCONZ, Tuya, mihome, ZHA
         // battery_percentage    ? Tuya, einige BLE-Adapter
         // battery_level/Level   ? HomeKit-Controller, Matter, ESPHome
@@ -443,7 +443,7 @@ class CogniLiving extends utils.Adapter {
                     }
                 } catch(e) {}
             }
-            // 3. Direktsuche � bis zu 3 Pfad-Ebenen hoch
+            // 3. Direktsuche ï¿½ bis zu 3 Pfad-Ebenen hoch
             //    Tiefe 1: adapter.0.device.channel  ? adapter.0.device
             //    Tiefe 2: adapter.0.device.ch.state ? adapter.0.device  (Shelly: Bat.value)
             //    Tiefe 3: adapter.0.Node.ch.sub.st  ? adapter.0.Node   (Z-Wave: params.battery.Battery_Level)
@@ -479,7 +479,7 @@ class CogniLiving extends utils.Adapter {
                         var hmMatchDot   = !hmMatchColon && d.id.match(/^([\w-]+\.\d+\.[^\.]+)\.\d+\./);
                         var hmCh0 = hmMatchColon ? hmMatchColon[1] + ':0' : (hmMatchDot ? hmMatchDot[1] + '.0' : null);
                         if (hmCh0) {
-                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans � Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
+                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans ï¿½ Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
                             for (var _hn = 0; _hn < HM_BATT_NAMES.length; _hn++) {
                                 try {
                                     var cStateHM = await _self.getForeignStateAsync(hmCh0 + '.' + HM_BATT_NAMES[_hn]);
@@ -521,7 +521,7 @@ class CogniLiving extends utils.Adapter {
                     isLow = bst.val; isCritical = bst.val; level = bst.val ? 5 : 80;
                 } else if (typeof bst.val === 'number') {
                     // Nur echte Prozentwerte (0-100) verarbeiten.
-                    // Spannungswerte (< 10) werden bewusst ignoriert � ohne Geraete-Datenbank
+                    // Spannungswerte (< 10) werden bewusst ignoriert ï¿½ ohne Geraete-Datenbank
                     // nicht zuverlaessig konvertierbar (1x CR2032 vs 2x AAA vs 1x 1.5V).
                     if (bst.val >= 0 && bst.val <= 100) {
                         level = bst.val;
@@ -1619,6 +1619,28 @@ class CogniLiving extends utils.Adapter {
             const nightVibrationStrengthAvg = _vibStrCount > 0 ? Math.round(_vibStrSum / _vibStrCount) : null;
             const nightVibrationStrengthMax = _vibStrCount > 0 ? _vibStrMax : null;
 
+            // ============================================================
+            // bedWasEmpty: Bett leer erkennen (Person auswaerts geschlafen)
+            // Alle drei Kriterien muessen erfuellt sein:
+            // 1. nightVibrationCount === 0 (kein Vibrationssensor)
+            // 2. Keine FP2-Bed-Events im Schlaffenster
+            // 3. Alle lokalen sleepStart-Quellen null (fp2, fp2_vib, haus_still, motion_vib)
+            // ============================================================
+            var _fp2InWindow = (sleepWindowOC7.start && sleepWindowOC7.end)
+                ? sleepSearchEvents.filter(function(e) {
+                    return e.isFP2Bed && (e.timestamp||0) >= sleepWindowOC7.start && (e.timestamp||0) <= sleepWindowOC7.end;
+                }).length : 0;
+            var _localSourcesNull = !allSleepStartSources.some(function(s) {
+                return (s.source === 'fp2' || s.source === 'fp2_vib' || s.source === 'haus_still' || s.source === 'motion_vib') && s.ts;
+            });
+            var bedWasEmpty = nightVibrationCount === 0 && _fp2InWindow === 0 && _localSourcesNull;
+            if (bedWasEmpty) {
+                sleepScore    = null;
+                sleepScoreRaw = null;
+                sleepStages   = [];
+                this.log.info('[bedWasEmpty] Bett leer erkannt: fp2InWindow=' + _fp2InWindow + ' vibCount=0 lokalNull=' + _localSourcesNull);
+            }
+
             // Nykturie: Badezimmer-Sensor-Ereignisse ? dynamisches Schlaf-Fenster (Fallback: 22-06)
             const _bathroomDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
             const _kitchenDevIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
@@ -1943,7 +1965,8 @@ class CogniLiving extends utils.Adapter {
                 wakeConfirmed: !!(sleepWindowOC7.end && new Date().getHours() >= 10 && (Date.now() - (sleepWindowOC7.end || 0)) >= 3600000),
                 sleepDate: sleepDate,
                 sleepStartOverridden: _overrideApplied,
-                sleepStartOverrideSource: _overrideApplied ? sleepStartSource : null
+                sleepStartOverrideSource: _overrideApplied ? sleepStartSource : null,
+                bedWasEmpty: bedWasEmpty
             };
 
             const dataDir = utils.getAbsoluteDefaultDataDir();
