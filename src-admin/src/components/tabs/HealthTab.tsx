@@ -167,6 +167,8 @@ export default function HealthTab(props: any) {
     const [auraSleepData, setAuraSleepData] = useState<any>(null);
     const [overridePanelOpen, setOverridePanelOpen] = useState(false);
     const [overrideLoading, setOverrideLoading] = useState(false);
+    const [personOverridePanelOpen, setPersonOverridePanelOpen] = useState<string|null>(null);
+    const [personOverrideLoading, setPersonOverrideLoading] = useState(false);
     const [personHistoryData, setPersonHistoryData] = useState<Record<string, any>>({});
     const [sensorBatteryStatus, setSensorBatteryStatus] = useState<{sensors: {id:string, level:number|null, isLow:boolean, isCritical:boolean, source:string}[]} | null>(null);
     const [nativeDevices, setNativeDevices] = useState<any[]>([]);
@@ -1172,26 +1174,54 @@ export default function HealthTab(props: any) {
 
         const handleSetOverride = async (source: string, ts: number) => {
             if (!sleepDateStr) return;
-            setOverrideLoading(true);
-            try {
-                const result: any = await socket.sendTo(adapterName + '.' + instance, 'setSleepStartOverride', {
-                    date: sleepDateStr, source, ts, setBy: 'ui', setAt: Date.now()
-                });
-                if (result?.data) setAuraSleepData({ ...result.data });
-            } finally {
-                setOverrideLoading(false);
-                setOverridePanelOpen(false);
+            if (personLabel) {
+                setPersonOverrideLoading(true);
+                try {
+                    const result: any = await socket.sendTo(adapterName + '.' + instance, 'setPersonSleepStartOverride', {
+                        person: personLabel, date: sleepDateStr, source, ts, setBy: 'ui', setAt: Date.now()
+                    });
+                    if (result?.data?.personData) setPersonHistoryData(result.data.personData);
+                } finally {
+                    setPersonOverrideLoading(false);
+                    setPersonOverridePanelOpen(null);
+                }
+            } else {
+                setOverrideLoading(true);
+                try {
+                    const result: any = await socket.sendTo(adapterName + '.' + instance, 'setSleepStartOverride', {
+                        date: sleepDateStr, source, ts, setBy: 'ui', setAt: Date.now()
+                    });
+                    if (result?.data) setAuraSleepData({ ...result.data });
+                } finally {
+                    setOverrideLoading(false);
+                    setOverridePanelOpen(false);
+                }
             }
         };
         const handleClearOverride = async () => {
-            setOverrideLoading(true);
-            try {
-                const result: any = await socket.sendTo(adapterName + '.' + instance, 'clearSleepStartOverride', {});
-                if (result?.data) setAuraSleepData({ ...result.data });
-            } finally {
-                setOverrideLoading(false);
+            if (personLabel) {
+                setPersonOverrideLoading(true);
+                try {
+                    const result: any = await socket.sendTo(adapterName + '.' + instance, 'clearPersonSleepStartOverride', { person: personLabel });
+                    if (result?.data?.personData) setPersonHistoryData(result.data.personData);
+                } finally {
+                    setPersonOverrideLoading(false);
+                }
+            } else {
+                setOverrideLoading(true);
+                try {
+                    const result: any = await socket.sendTo(adapterName + '.' + instance, 'clearSleepStartOverride', {});
+                    if (result?.data) setAuraSleepData({ ...result.data });
+                } finally {
+                    setOverrideLoading(false);
+                }
             }
         };
+        const isOverrideLoading = personLabel ? personOverrideLoading : overrideLoading;
+        const isOverridePanelOpen = personLabel ? (personOverridePanelOpen === personLabel) : overridePanelOpen;
+        const setIsOverridePanelOpen = personLabel
+            ? (v: boolean) => setPersonOverridePanelOpen(v ? personLabel : null)
+            : (v: boolean) => setOverridePanelOpen(v);
 
         const hasVibSensor = stages.length > 0;
         const hasSleepWindow = swStart !== null;
@@ -1285,6 +1315,10 @@ export default function HealthTab(props: any) {
             vibration:       { icon: '📳', label: 'Vibrationssensor (↑ Konfidenz)' },
             vibration_alone: { icon: '📳', label: 'Vibrationssensor allein' },
             fixed:           { icon: '⏱', label: 'Fallback 20:00 Uhr' },
+            gap60:           { icon: '🛏️', label: 'Bett-Gap (60 Min)' },
+            last_outside:    { icon: '🚶', label: 'Letzte Außenaktiv.' },
+            winstart:        { icon: '⏱', label: 'Fenster-Start (Fallback)' },
+            override:        { icon: '✏️', label: 'Manuell überschrieben' },
         };
         const srcDisplay  = srcInfo[sleepStartSource] ?? srcInfo.fixed;
         const wakeDisplay = srcInfo[wakeSource]        ?? srcInfo.fixed;
@@ -1543,14 +1577,14 @@ export default function HealthTab(props: any) {
                                     <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
                                 )}
                                 {allSleepStartSourcesArr.length > 0 && (
-                                <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: overrideLoading ? 'wait' : 'pointer', opacity:0.8,
+                                <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: isOverrideLoading ? 'wait' : 'pointer', opacity:0.8,
                                              display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
-                                    title={overrideLoading ? 'Wird neu berechnet...' : 'Einschlafzeit-Quelle manuell wählen'}
-                                    onClick={() => { if (!overrideLoading) setOverridePanelOpen(v => !v); }}>
-                                    {overrideLoading ? '⏳' : '⚙'} Quellen {overridePanelOpen ? '▲' : '▼'}
+                                    title={isOverrideLoading ? 'Wird neu berechnet...' : 'Einschlafzeit-Quelle manuell wählen'}
+                                    onClick={() => { if (!isOverrideLoading) setIsOverridePanelOpen(!isOverridePanelOpen); }}>
+                                    {isOverrideLoading ? '⏳' : '⚙'} Quellen {isOverridePanelOpen ? '▲' : '▼'}
                                 </div>
                                 )}
-                                {overridePanelOpen && !overrideLoading && allSleepStartSourcesArr.length > 0 && (
+                                {isOverridePanelOpen && !isOverrideLoading && allSleepStartSourcesArr.length > 0 && (
                                     <div style={{marginTop:'4px', background: isDark?'#1e2a1e':'#f1f8e9',
                                                  border:'1px solid ' + (isDark?'#388e3c':'#a5d6a7'),
                                                  borderRadius:'6px', padding:'6px 8px', minWidth:'200px',
@@ -2745,16 +2779,22 @@ export default function HealthTab(props: any) {
                                     const overrideData = {
                                         sleepScore: null, sleepScoreRaw: null, sleepStages: [],
                                         garminScore: null, garminDeepMin: null, garminLightMin: null, garminRemMin: null,
-                                        sleepWindowStart: pd.sleepWindowStart ?? null,
-                                        sleepWindowEnd:   pd.sleepWindowEnd   ?? null,
-                                        sleepWindowSource: pd.wakeSource || 'motion',
-                                        wakeSource:       pd.wakeSource  ?? null,
-                                        wakeConf:         pd.wakeConf    ?? 'niedrig',
+                                        sleepWindowStart:    pd.sleepWindowStart    ?? null,
+                                        sleepWindowEnd:      pd.sleepWindowEnd      ?? null,
+                                        sleepWindowSource:   pd.sleepStartSource    || 'motion',
+                                        wakeSource:          pd.wakeSource          ?? null,
+                                        wakeConf:            pd.wakeConf            ?? 'niedrig',
                                         isNap: false, unusuallyLongSleep: false,
                                         garminDataFresh: null, garminLastSyncAgeH: null,
-                                        outsideBedEvents: [], wakeConfirmed: false,
-                                        allWakeSources: [], sleepStartSource: 'motion',
-                                        allSleepStartSources: [],
+                                        outsideBedEvents:       [],
+                                        wakeConfirmed:          pd.wakeConfirmed          ?? false,
+                                        allWakeSources:         pd.allWakeSources         ?? [],
+                                        sleepStartSource:       pd.sleepStartSource       ?? 'motion',
+                                        allSleepStartSources:   pd.allSleepStartSources   ?? [],
+                                        sleepDate:              auraSleepData?.sleepDate   ?? null,
+                                        sleepStartOverridden:   pd.sleepStartOverridden   ?? false,
+                                        sleepStartOverrideSource: pd.sleepStartOverridden ? pd.sleepStartSource : null,
+                                        bedWasEmpty:            pd.bedWasEmpty            ?? false,
                                     };
                                     return <React.Fragment key={pName}>{renderSleepScoreCard(overrideData, pName)}</React.Fragment>;
                                 })}

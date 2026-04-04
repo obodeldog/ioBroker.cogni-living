@@ -148,6 +148,7 @@ class CogniLiving extends utils.Adapter {
             native: {}
         });
         await this.setObjectNotExistsAsync('analysis.sleep.startOverride', { type: 'state', common: { name: 'Sleep Start Override (OC-23) - JSON', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.sleep.personStartOverrides', { type: 'state', common: { name: 'Per-Person Sleep Start Overrides (JSON)', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorBatteryStatus', { type: 'state', common: { name: 'Sensor Battery Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorStatus', { type: 'state', common: { name: 'Sensor Health Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.currentPersonCount', { type: 'state', common: { name: 'Aktuelle Personenanzahl im Haus', type: 'number', role: 'value', unit: 'Personen', read: true, write: false, def: 1, desc: 'Geschaetzte Personenanzahl (Config-Baseline + raeumliche Heuristik + FP2)' }, native: {} });
@@ -1011,6 +1012,16 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_ovErr) { this.log.warn('[OC-23] Override-Fehler: ' + _ovErr.message); }
 
+            // Per-Person Overrides lesen (fuer personData-Block weiter unten)
+            var _personOverrides = {};
+            try {
+                var _povRaw = (await this.getStateAsync('analysis.sleep.personStartOverrides'))?.val;
+                if (_povRaw && _povRaw !== 'null') {
+                    var _povParsed = JSON.parse(_povRaw);
+                    if (_povParsed && typeof _povParsed === 'object') _personOverrides = _povParsed;
+                }
+            } catch(_povErr) { this.log.warn('[Per-Person Override] Lesefehler: ' + _povErr.message); }
+
             // Priorit+?tskette anwenden (nur wenn nicht frozen)
             if (!_overrideApplied) {
             if (!_sleepFrozen) {
@@ -1747,7 +1758,7 @@ class CogniLiving extends utils.Adapter {
                     // Schlafbeginn: letztes Abend-Bett-Event vor langem Gap (>=60 Min)
                     // Schwelle 60 Min (statt 15): verhindert Fehlausloesung durch Radar-Sensoren (SNZB-06P u.ae.)
                     // _pNextTs aus allen _pBedEvts (nicht nur _pEve) -> PIR-only korrekt
-                    var _pSleepStart = null;
+                    var _pSleepStart = null; var _pSleepStartSrc = 'winstart';
                     var _pEve = _pBedEvts.filter(function(e) {
                         var hr = new Date(e.timestamp||0).getHours();
                         return hr >= 21 || hr < 2;
@@ -1759,7 +1770,7 @@ class CogniLiving extends utils.Adapter {
                             if ((_pBedEvts[_pnidx].timestamp||0) > _pCurTs) { _pNextBed = _pBedEvts[_pnidx].timestamp||0; break; }
                         }
                         var _pNextTs = _pNextBed !== null ? _pNextBed : Infinity;
-                        if (_pNextTs - _pCurTs > 60*60*1000) { _pSleepStart = _pCurTs; break; }
+                        if (_pNextTs - _pCurTs > 60*60*1000) { _pSleepStart = _pCurTs; _pSleepStartSrc = 'gap60'; break; }
                     }
                     // Last-Outside: letztes personTagged Nicht-SZ-Event im Abend-Fenster ohne
                     // nachfolgende Aussenbewegung dieser Person (>=30 Min) ->
@@ -1787,7 +1798,7 @@ class CogniLiving extends utils.Adapter {
                                         _ploBedAfter = _pBedEvts[_plbi].timestamp||0; break;
                                     }
                                 }
-                                if (_ploBedAfter) { _pSleepStart = _ploBedAfter; break; }
+                                if (_ploBedAfter) { _pSleepStart = _ploBedAfter; _pSleepStartSrc = 'last_outside'; break; }
                             }
                         }
                     }
@@ -1807,7 +1818,7 @@ class CogniLiving extends utils.Adapter {
                             var _phsCommonAfter = _pCommonEvts.some(function(ce) {
                                 return (ce.timestamp||0) > _phsTs && (ce.timestamp||0) <= _phsTs + 30*60*1000;
                             });
-                            if (!_phsCommonAfter) { _pSleepStart = _phsTs; break; }
+                            if (!_phsCommonAfter) { _pSleepStart = _phsTs; _pSleepStartSrc = 'haus_still'; break; }
                         }
                     }
                     // Fallback: Person hatte Bett-Events aber keinen Einschlafzeitpunkt (z.B. vor winStart eingeschlafen)
@@ -1870,6 +1881,35 @@ class CogniLiving extends utils.Adapter {
                             _self.log.info('[Per-Person FROZEN] ' + person + ': Aufwachzeit eingefroren auf ' + new Date(_pWakeTs).toLocaleTimeString());
                         }
                     }
+                    // Per-Person Override (OC-neu-C): manuelle Einschlafzeit-Korrektur
+                    var _pOvEntry = _personOverrides && _personOverrides[person] ? _personOverrides[person] : null;
+                    var _pOverrideApplied = false;
+                    if (_pOvEntry && _pOvEntry.date === sleepDate && _pOvEntry.ts) {
+                        var _pOvWinMin = _sleepSearchBase.getTime();
+                        var _pOvWinMax = _sleepSearchBase.getTime() + 10 * 3600000;
+                        if (_pOvEntry.ts >= _pOvWinMin && _pOvEntry.ts <= _pOvWinMax) {
+                            _pSleepStart = _pOvEntry.ts;
+                            _pSleepStartSrc = _pOvEntry.source || 'override';
+                            _pOverrideApplied = true;
+                            _self.log.info('[Per-Person Override] ' + person + ': ' + _pSleepStartSrc + ' = ' + new Date(_pSleepStart).toLocaleTimeString());
+                        }
+                    }
+                    // allSleepStartSources pro Person (fuer Tooltip im Frontend)
+                    var _pAllSleepSources = [
+                        { source: 'gap60',        ts: _pSleepStartSrc === 'gap60'        ? _pSleepStart : null },
+                        { source: 'last_outside', ts: _pSleepStartSrc === 'last_outside' ? _pSleepStart : null },
+                        { source: 'haus_still',   ts: _pSleepStartSrc === 'haus_still'   ? _pSleepStart : null },
+                        { source: 'winstart',     ts: _pBedEvts.length > 0 ? winStart : null }
+                    ];
+                    // allWakeSources pro Person
+                    var _pAllWakeSources = [
+                        { source: 'other',  ts: _pWakeSrc === 'other'  ? _pWakeTs : null },
+                        { source: 'motion', ts: _pWakeSrc === 'motion' ? _pWakeTs : null }
+                    ];
+                    // wakeConfirmed: nach 10:00 und mindestens 1h seit Aufwachzeit
+                    var _pWakeConfirmed = !!(_pWakeTs && new Date().getHours() >= 10 && (Date.now() - _pWakeTs) >= 3600000);
+                    // bedWasEmpty pro Person: keine eigenen Bett-Events im Schlaffenster
+                    var _pBedWasEmpty = nightActivityCount === 0 || (_pBedEvts.filter(function(e){ var ts=e.timestamp||0; return ts>=(_pSleepStart||winStart) && ts<=(_pWakeTs||Date.now()); }).length === 0);
                     result[person] = {
                         nightActivityCount: nightActivityCount,
                         wakeTimeMin: wakeTimeMin,
@@ -1878,7 +1918,13 @@ class CogniLiving extends utils.Adapter {
                         sleepWindowStart: _pSleepStart,
                         sleepWindowEnd: _pWakeTs,
                         wakeSource: _pWakeSrc || null,
-                        wakeConf: _pWakeTs ? (_pWakeSrc === 'other' ? 'mittel' : 'niedrig') : 'niedrig'
+                        wakeConf: _pWakeTs ? (_pWakeSrc === 'other' ? 'mittel' : 'niedrig') : 'niedrig',
+                        sleepStartSource: _pSleepStartSrc,
+                        sleepStartOverridden: _pOverrideApplied,
+                        allSleepStartSources: _pAllSleepSources,
+                        allWakeSources: _pAllWakeSources,
+                        wakeConfirmed: _pWakeConfirmed,
+                        bedWasEmpty: _pBedWasEmpty
                     };
                 });
                 return result;
@@ -2438,6 +2484,48 @@ class CogniLiving extends utils.Adapter {
                     this.sendTo(obj.from, obj.command, { success: true, data: _clSnap }, obj.callback);
                 } else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
             } catch(_clE) { this.sendTo(obj.from, obj.command, { success: false, error: _clE.message }, obj.callback); }
+        }
+        else if (obj.command === 'setPersonSleepStartOverride') {
+            try {
+                var _povMsg = obj.message || {};
+                var _povAllowed = ['gap60','last_outside','haus_still','winstart','motion','other'];
+                if (!_povMsg.person || !_povMsg.date || !_povMsg.source || !_povMsg.ts
+                    || _povAllowed.indexOf(_povMsg.source) < 0) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Ungueltige Per-Person Override-Daten' }, obj.callback); return;
+                }
+                var _povRawOld = (await this.getStateAsync('analysis.sleep.personStartOverrides'))?.val;
+                var _povAll = (_povRawOld && _povRawOld !== 'null') ? JSON.parse(_povRawOld) : {};
+                _povAll[_povMsg.person] = { date: _povMsg.date, source: _povMsg.source, ts: _povMsg.ts, setBy: 'ui', setAt: Date.now() };
+                await this.setStateAsync('analysis.sleep.personStartOverrides', { val: JSON.stringify(_povAll), ack: true });
+                await this.saveDailyHistory();
+                var _povDir = utils.getAbsoluteDefaultDataDir();
+                var _povNow = new Date();
+                var _povPath = require('path').join(_povDir, 'cogni-living', 'history', _povNow.getFullYear() + '-' + String(_povNow.getMonth()+1).padStart(2,'0') + '-' + String(_povNow.getDate()).padStart(2,'0') + '.json');
+                if (fs.existsSync(_povPath)) {
+                    var _povSnap = JSON.parse(fs.readFileSync(_povPath, 'utf8'));
+                    this.sendTo(obj.from, obj.command, { success: true, data: _povSnap }, obj.callback);
+                } else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_povE) { this.sendTo(obj.from, obj.command, { success: false, error: _povE.message }, obj.callback); }
+        }
+        else if (obj.command === 'clearPersonSleepStartOverride') {
+            try {
+                var _pcMsg = obj.message || {};
+                if (!_pcMsg.person) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'person fehlt' }, obj.callback); return;
+                }
+                var _pcRawOld = (await this.getStateAsync('analysis.sleep.personStartOverrides'))?.val;
+                var _pcAll = (_pcRawOld && _pcRawOld !== 'null') ? JSON.parse(_pcRawOld) : {};
+                delete _pcAll[_pcMsg.person];
+                await this.setStateAsync('analysis.sleep.personStartOverrides', { val: JSON.stringify(_pcAll), ack: true });
+                await this.saveDailyHistory();
+                var _pcDir = utils.getAbsoluteDefaultDataDir();
+                var _pcNow = new Date();
+                var _pcPath = require('path').join(_pcDir, 'cogni-living', 'history', _pcNow.getFullYear() + '-' + String(_pcNow.getMonth()+1).padStart(2,'0') + '-' + String(_pcNow.getDate()).padStart(2,'0') + '.json');
+                if (fs.existsSync(_pcPath)) {
+                    var _pcSnap = JSON.parse(fs.readFileSync(_pcPath, 'utf8'));
+                    this.sendTo(obj.from, obj.command, { success: true, data: _pcSnap }, obj.callback);
+                } else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_pcE) { this.sendTo(obj.from, obj.command, { success: false, error: _pcE.message }, obj.callback); }
         }
         }
     }
