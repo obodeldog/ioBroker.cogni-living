@@ -1105,11 +1105,18 @@ class CogniLiving extends utils.Adapter {
                     sleepWindowOC7 = { start: sleepWindowCalc.start, end: _existingSnap.sleepWindowEnd };
                     this.log.info('[OC-23] Override auf Frozen Snapshot: start=' + new Date(sleepWindowCalc.start).toISOString() + ' end=' + new Date(_existingSnap.sleepWindowEnd).toISOString());
                 }
-                // [FROZEN-Fix] Garmin verschob Einschlafzeit um > 5 Min -> Stages neu berechnen
+                // [OC-28 + FROZEN-Fix] Stages neu berechnen wenn:
+                // (a) Garmin verschob Einschlafzeit um >5 Min, ODER
+                // (b) Schlaffenster laeuft noch / wurde gerade erst beendet (<30 Min zurueck)
                 var _frozenStartShift = (garminSleepStartTs && _existingSnap.sleepWindowStart)
                     ? Math.abs(garminSleepStartTs - _existingSnap.sleepWindowStart) : 0;
-                if (_frozenStartShift > 5 * 60 * 1000) {
-                    this.log.info('[FROZEN-Fix] Garmin verschob Start um ' + Math.round(_frozenStartShift / 60000) + ' Min -> Stages neu berechnen');
+                var _frozenWinEnd = sleepWindowOC7.end || _existingSnap.sleepWindowEnd || 0;
+                var _stagesStillFresh = _frozenWinEnd > 0 && Date.now() < _frozenWinEnd + 30 * 60 * 1000;
+                if (_frozenStartShift > 5 * 60 * 1000 || _stagesStillFresh) {
+                    if (_stagesStillFresh)
+                        this.log.info('[OC-28] Stages neu berechnen: Fenster noch aktiv/gerade beendet (end=' + new Date(_frozenWinEnd).toLocaleTimeString() + ')');
+                    else
+                        this.log.info('[FROZEN-Fix] Garmin verschob Start um ' + Math.round(_frozenStartShift / 60000) + ' Min -> Stages neu berechnen');
                     _shouldRecalcStages = true;
                 } else {
                     sleepStages    = _existingSnap.sleepStages    || [];
@@ -1849,6 +1856,19 @@ class CogniLiving extends utils.Adapter {
                     if (_pWakeTs === null && _pBedRet.length > 0) {
                         _pWakeTs = _pBedRet[_pBedRet.length - 1].timestamp || null;
                         _pWakeSrc = 'motion';
+                    }
+                    // Per-Person FROZEN: gespeicherte Aufwachzeit beibehalten wenn stabil
+                    // (>2h in Vergangenheit, Stunde >= 5) -> verhindert Aufwachzeit-Drift durch Tages-Bett-Events
+                    var _pExistSnap = _existingSnap && _existingSnap.personData && _existingSnap.personData[person]
+                        ? _existingSnap.personData[person] : null;
+                    if (_pExistSnap && _pExistSnap.sleepWindowEnd) {
+                        var _pExistWakeHr  = new Date(_pExistSnap.sleepWindowEnd).getHours();
+                        var _pExistWakeAge = Date.now() - _pExistSnap.sleepWindowEnd;
+                        if (_pExistWakeHr >= 5 && _pExistWakeAge > 2 * 3600000) {
+                            _pWakeTs  = _pExistSnap.sleepWindowEnd;
+                            _pWakeSrc = _pExistSnap.wakeSource || _pWakeSrc;
+                            _self.log.info('[Per-Person FROZEN] ' + person + ': Aufwachzeit eingefroren auf ' + new Date(_pWakeTs).toLocaleTimeString());
+                        }
                     }
                     result[person] = {
                         nightActivityCount: nightActivityCount,
