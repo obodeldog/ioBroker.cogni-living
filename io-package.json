@@ -1,7 +1,7 @@
 ﻿{
   "common": {
     "name": "cogni-living",
-    "version": "0.33.97",
+    "version": "0.33.98",
     "news": {
       "0.33.92": "fix(OC-7): rotes Dreieck bei FP2+Bad+AndererRaum: Phase-1-Pfad erzeugt jetzt zwei Marker (bathroom+outside); Kueche zaehlt fuer outsideBedEvents als anderer Raum (isKitchenSensor unveraendert fuer alle anderen Algorithmen)",
       "0.33.91": "fix(OC-18): Per-Person Einschlafzeit-Erkennung fuer PIR-only Haeuser verbessert (_pBedEvts ab 18:00, _pNextTs aus allen BedEvts); fix(Frontend): Quellen-Button versteckt wenn leer; Meldung 'Vibrationsdaten zu alt' fuer per-Person korrekt; sleepStartSource='motion' statt wakeSource",

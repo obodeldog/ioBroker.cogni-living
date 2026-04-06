@@ -1095,6 +1095,9 @@ class CogniLiving extends utils.Adapter {
             // Stages: 'deep' | 'light' | 'rem' | 'wake'
             var sleepScore = null;
             var sleepScoreRaw = null;
+            var sleepScoreCal = null;
+            var sleepScoreCalNights = 0;
+            var sleepScoreCalStatus = 'uncalibrated';
             var sleepStages = [];
             var _shouldRecalcStages = false;
             if (_sleepFrozen) {
@@ -1169,8 +1172,8 @@ class CogniLiving extends utils.Adapter {
                     var stage;
                     if (slotDet === 0) {
                         consecutiveQuiet++;
-                        // >= 6 ruhige Slots in Folge (30 Min) ? Tiefschlaf
-                        stage = consecutiveQuiet >= 6 ? 'deep' : (consecutiveQuiet >= 2 ? 'deep' : 'light');
+                        // >= 5 ruhige Slots in Folge (25 Min) = Tiefschlaf (angehobene Schwelle)
+                        stage = consecutiveQuiet >= 5 ? 'deep' : 'light';
                     } else if (slotDet >= 5 || slotStrMax > 28) {
                         consecutiveQuiet = 0;
                         stage = 'wake';
@@ -1189,21 +1192,25 @@ class CogniLiving extends utils.Adapter {
                     else                         wakeSec  += 300;
                 }
 
-                // Score berechnen (0-100)
+                // Score berechnen (0-100) - V2: Dauer-basiert (kalibriert an AURA vs Garmin, r=0.886)
                 var totalSecSleep = deepSec + lightSec + remSec + wakeSec;
+                var durMin = (swEnd - swStart) / 60000;
+                // Dauer-Komponente (Haupttreiber): linear kalibriert auf Garmin-Wertebereich
+                var durScore = Math.max(20, Math.min(95, 25 + 0.12 * durMin));
+                // Phasen-Adjustment (max +-8 Pkt), skaliert nach Coverage des Schlaffensters
+                var stageAdjustment = 0;
                 if (totalSecSleep > 0) {
                     var dp = deepSec / totalSecSleep;
                     var rp = remSec  / totalSecSleep;
                     var lp = lightSec / totalSecSleep;
                     var wp = wakeSec  / totalSecSleep;
-                    var rawScore = dp * 200 + rp * 150 + lp * 80 - wp * 250;
-                    // Bonus: Schlafdauer 7-9h (vor Kappung, damit Rohwert den Bonus enth+?lt)
-                    var durH = (swEnd - swStart) / 3600000;
-                    if (durH >= 7 && durH <= 9) rawScore += 5;
-                    sleepScoreRaw = Math.round(Math.max(0, rawScore));  // ungekappter Rohwert (f++r Wochenansicht)
-                    sleepScore    = Math.round(Math.max(0, Math.min(100, rawScore)));
-                    this.log.debug('[SleepScore] Score=' + sleepScore + ' deep=' + Math.round(dp*100) + '% rem=' + Math.round(rp*100) + '% light=' + Math.round(lp*100) + '% wake=' + Math.round(wp*100) + '%');
+                    var coverage = Math.min(1, (totalSecSleep / 60) / Math.max(1, durMin));
+                    // REM-Bonus (selten, aber valides Signal), Wake-Penalty (starkes Signal)
+                    stageAdjustment = Math.max(-8, Math.min(8, Math.round((rp * 30 - wp * 50) * coverage)));
                 }
+                sleepScoreRaw = Math.round(Math.max(0, durScore + stageAdjustment));
+                sleepScore    = Math.round(Math.max(0, Math.min(100, sleepScoreRaw)));
+                this.log.debug('[SleepScore-V2] Score=' + sleepScore + ' dur=' + Math.round(durMin) + 'min durScore=' + Math.round(durScore) + ' adj=' + stageAdjustment + ' deep=' + (totalSecSleep>0?Math.round(deepSec/totalSecSleep*100):0) + '% rem=' + (totalSecSleep>0?Math.round(remSec/totalSecSleep*100):0) + '%');
             }
 
             // Schlaf-Fenster-Quelle (fuer OC-7 Sensor-Indikator im Frontend)
@@ -1568,6 +1575,7 @@ class CogniLiving extends utils.Adapter {
                 var validationObj = {
                     date: dateStr,
                     auraScore: sleepScore,
+                    auraScoreCal: sleepScoreCal,
                     garminScore: garminScore,
                     delta: (sleepScore !== null && garminScore !== null) ? garminScore - sleepScore : null,
                     garminDeepMin:  garminDeepSec  ? Math.round(garminDeepSec  / 60) : null,
@@ -1931,6 +1939,35 @@ class CogniLiving extends utils.Adapter {
             })();
             try { await this.setStateAsync('system.personData', { val: JSON.stringify(personData), ack: true }); } catch(e) {}
 
+
+            // --- Garmin-Kalibrierung: sleepScoreCal berechnen ---
+            try {
+                await this.setObjectNotExistsAsync('analysis.health.sleepScoreHistory', {
+                    type: 'state', common: { name: 'Sleep Score History for Calibration (JSON)', type: 'string', role: 'json', read: true, write: false, def: '[]' }, native: {}
+                });
+                var _scoreHistory = [];
+                var _histState = await this.getStateAsync('analysis.health.sleepScoreHistory');
+                if (_histState && _histState.val) { try { _scoreHistory = JSON.parse(_histState.val); if (!Array.isArray(_scoreHistory)) _scoreHistory = []; } catch(_) { _scoreHistory = []; } }
+                if (sleepScore !== null) {
+                    var _existingHIdx = _scoreHistory.findIndex(function(e) { return e.date === dateStr; });
+                    var _histEntry = { date: dateStr, aura: sleepScore, garmin: garminScore || null };
+                    if (_existingHIdx >= 0) _scoreHistory[_existingHIdx] = _histEntry; else _scoreHistory.push(_histEntry);
+                }
+                if (_scoreHistory.length > 60) _scoreHistory = _scoreHistory.slice(_scoreHistory.length - 60);
+                await this.setStateAsync('analysis.health.sleepScoreHistory', { val: JSON.stringify(_scoreHistory), ack: true });
+                var _calNights = _scoreHistory.filter(function(e) { return e.aura !== null && e.garmin !== null; });
+                sleepScoreCalNights = _calNights.length;
+                if (_calNights.length >= 7) {
+                    sleepScoreCalStatus = _calNights.length >= 14 ? 'calibrated' : 'calibrating';
+                    var _meanOffset = _calNights.reduce(function(sum, e) { return sum + (e.garmin - e.aura); }, 0) / _calNights.length;
+                    if (sleepScore !== null) {
+                        sleepScoreCal = Math.round(Math.max(0, Math.min(100, sleepScore + _meanOffset)));
+                    }
+                    this.log.debug('[SleepScoreCal] Status=' + sleepScoreCalStatus + ' nights=' + _calNights.length + ' offset=' + Math.round(_meanOffset) + ' cal=' + sleepScoreCal);
+                }
+            } catch (_calErr) {
+                this.log.warn('[SleepScoreCal] Fehler: ' + _calErr.message);
+            }
             const snapshot = {
                 date: dateStr,
                 timestamp: Date.now(),
@@ -2013,6 +2050,9 @@ class CogniLiving extends utils.Adapter {
                 personData: personData,
                 sleepScore: sleepScore,
                 sleepScoreRaw: sleepScoreRaw,
+                sleepScoreCal: sleepScoreCal,
+                sleepScoreCalNights: sleepScoreCalNights,
+                sleepScoreCalStatus: sleepScoreCalStatus,
                 sleepStages: sleepStages,
                 stagesWindowStart: _sleepFrozen
                     ? (_existingSnap.stagesWindowStart ?? _existingSnap.sleepWindowStart ?? null)

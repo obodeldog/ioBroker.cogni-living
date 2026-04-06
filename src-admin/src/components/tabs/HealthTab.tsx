@@ -229,7 +229,7 @@ export default function HealthTab(props: any) {
                     if (d.roomHistory && d.roomHistory.history) setRoomHistory(d.roomHistory.history);
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false });
                     setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                     setGeminiNight(d.geminiNight || "Keine Daten");
                     setGeminiNightTs(d.geminiNightTs || null);
@@ -715,7 +715,7 @@ export default function HealthTab(props: any) {
             .then((histRes: any) => {
                 if (histRes && histRes.success && histRes.data) {
                     const d = histRes.data;
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false });
                     setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                 }
             });
@@ -1146,6 +1146,9 @@ export default function HealthTab(props: any) {
         const sd = overrideData ?? auraSleepData;
         const score: number | null = sd?.sleepScore ?? null;
         const scoreRaw: number | null = sd?.sleepScoreRaw ?? null;
+        const scoreCal: number | null = (sd as any)?.sleepScoreCal ?? null;
+        const scoreCalNights: number = (sd as any)?.sleepScoreCalNights ?? 0;
+        const scoreCalStatus: string = (sd as any)?.sleepScoreCalStatus ?? 'uncalibrated';
         const stages: {t: number, s: string}[] = sd?.sleepStages ?? [];
         const garminScore: number | null = sd?.garminScore ?? null;
         const garminDeepMin: number | null = sd?.garminDeepMin ?? null;
@@ -1365,9 +1368,10 @@ export default function HealthTab(props: any) {
               }).join('\n')
             : '(keine allSleepStartSources — alter Snapshot ohne diese Daten)';
 
-        const scoreColor = score === null ? '#888'
-            : score >= 80 ? '#00e676'
-            : score >= 60 ? '#ffab40'
+        const _displayScore = scoreCal ?? score;
+        const scoreColor = _displayScore === null ? '#888'
+            : _displayScore >= 80 ? '#00e676'
+            : _displayScore >= 60 ? '#ffab40'
             : '#ff5252';
 
         const deepCount  = stages.filter(s => s.s === 'deep').length;
@@ -1701,12 +1705,32 @@ export default function HealthTab(props: any) {
                                     fontSize:'1.8rem', fontWeight:'bold', color: scoreColor,
                                     border: `2px solid ${scoreColor}`, borderRadius:'8px',
                                     padding:'4px 14px', lineHeight:'1.1'
-                                }}>{score ?? '—'}</div>
+                                }}>{scoreCal ?? score ?? '—'}</div>
                                 <div style={{fontSize:'0.65rem', color:'#888', marginTop:'2px'}}>AURA-Sleepscore</div>
-                                {scoreRaw !== null && scoreRaw > 100 && (
-                                    <div style={{fontSize:'0.6rem', color: isDark?'#80cbc4':'#00897b', marginTop:'1px'}}
-                                        title={`Ungekappter Rohwert: ${scoreRaw} (Score wird für Anzeige auf 100 begrenzt)`}>
-                                        ↑ roh: {scoreRaw}
+                                {/* Kalibrierungsstatus-Badge */}
+                                {scoreCalStatus === 'calibrated' && (
+                                    <div style={{fontSize:'0.55rem', color:'#43a047', marginTop:'1px', fontWeight:'bold', cursor:'help'}}
+                                        title={`Kalibriert an ${scoreCalNights} Nächten mit Smartwatch-Daten (lineares Offset-Modell)`}>
+                                        ✓ kalibriert ({scoreCalNights}N)
+                                    </div>
+                                )}
+                                {scoreCalStatus === 'calibrating' && (
+                                    <div style={{fontSize:'0.55rem', color:'#ffa726', marginTop:'1px', cursor:'help'}}
+                                        title={`In Kalibrierung: ${scoreCalNights}/14 Smartwatch-Nächte gesammelt`}>
+                                        ⟳ kalibriert ({scoreCalNights}/14N)
+                                    </div>
+                                )}
+                                {scoreCalStatus === 'uncalibrated' && (
+                                    <div style={{fontSize:'0.55rem', color: isDark?'#666':'#bbb', marginTop:'1px', cursor:'help'}}
+                                        title={'Basiert auf Schlafdauer + Sensorphasen (keine Smartwatch-Kalibrierung)'}>
+                                        ○ unkalibriert
+                                    </div>
+                                )}
+                                {/* Rohwert wenn kalibrierter Score abweicht */}
+                                {scoreCal !== null && score !== null && scoreCal !== score && (
+                                    <div style={{fontSize:'0.55rem', color:'#888', marginTop:'1px', cursor:'help'}}
+                                        title={`Unkalibrierter AURA-Score: ${score}`}>
+                                        AURA: {score}
                                     </div>
                                 )}
                                 {sleepDurMin !== null && (
@@ -1717,7 +1741,7 @@ export default function HealthTab(props: any) {
                                 {garminScore !== null && (
                                     <div style={{fontSize:'0.7rem', color:'#ab47bc', marginTop:'2px'}}>
                                         Garmin: {garminScore} <span style={{color: isDark?'#666':'#aaa'}}>
-                                            ({garminScore - (score ?? 0) >= 0 ? '+' : ''}{garminScore - (score ?? 0)})
+                                            ({garminScore - (scoreCal ?? score ?? 0) >= 0 ? '+' : ''}{garminScore - (scoreCal ?? score ?? 0)})
                                         </span>
                                     </div>
                                 )}
