@@ -118,6 +118,9 @@ class CogniLiving extends utils.Adapter {
         schedulers.initSchedules(this);
         // -------------------------------------------------
 
+        // Migration: V2-Score einmalig fuer alte History-Dateien berechnen
+        this.migrateScoresToV2().catch(e => this.log.warn('[ScoreMigration] ' + e.message));
+
         await this.setObjectNotExistsAsync('analysis.visualization.pulse', { type: 'state', common: { name: 'Live Event Pulse', type: 'number', role: 'value', read: true, write: false }, native: {} });
         await this.setObjectNotExistsAsync('analysis.activity.roomStats', { type: 'state', common: { name: 'Room Dwell Time Stats', type: 'string', role: 'json', read: true, write: false, def: '{"today":{}, "yesterday":{}, "date":""}' }, native: {} });
         await this.setObjectNotExistsAsync('analysis.activity.roomHistory', { type: 'state', common: { name: 'Room History (24h Buckets)', type: 'string', role: 'json', read: true, write: false, def: '{"history":{}}' }, native: {} });
@@ -636,6 +639,46 @@ class CogniLiving extends utils.Adapter {
         await this.setStateAsync(detailsId, { val: JSON.stringify(todayDetails), ack: true });
 
         this.log.info("? Dashboard Data (Rooms & Timeline & Details) restored.");
+    }
+
+    async migrateScoresToV2() {
+        try {
+            const dataDir = utils.getAbsoluteDefaultDataDir();
+            const historyDir = require('path').join(dataDir, 'cogni-living', 'history');
+            if (!require('fs').existsSync(historyDir)) return;
+            const files = require('fs').readdirSync(historyDir).filter(function(f) { return f.endsWith('.json'); });
+            var updated = 0;
+            for (var fi = 0; fi < files.length; fi++) {
+                try {
+                    var fp = require('path').join(historyDir, files[fi]);
+                    var data = JSON.parse(require('fs').readFileSync(fp, 'utf8'));
+                    // Bereits migriert oder kein Schlaffenster: skip
+                    if (data.sleepScoreCalStatus !== undefined) continue;
+                    if (!data.sleepWindowStart || !data.sleepWindowEnd) continue;
+                    if (data.bedWasEmpty) { data.sleepScoreCalStatus = 'uncalibrated'; require('fs').writeFileSync(fp, JSON.stringify(data)); continue; }
+                    var durMin = (data.sleepWindowEnd - data.sleepWindowStart) / 60000;
+                    var durScore = Math.max(20, Math.min(95, 25 + 0.12 * durMin));
+                    var stageAdj = 0;
+                    if (data.sleepStages && data.sleepStages.length > 0) {
+                        var _deep = 0, _rem = 0, _wake = 0, _total = 0;
+                        data.sleepStages.forEach(function(s) { _total += 300; if (s.s === 'deep') _deep += 300; else if (s.s === 'rem') _rem += 300; else if (s.s === 'wake') _wake += 300; });
+                        if (_total > 0) {
+                            var _cov = Math.min(1, (_total / 60) / Math.max(1, durMin));
+                            stageAdj = Math.max(-8, Math.min(8, Math.round((_rem/_total*30 - _wake/_total*50) * _cov)));
+                        }
+                    }
+                    var newScore = Math.round(Math.max(0, Math.min(100, durScore + stageAdj)));
+                    data.sleepScore = newScore;
+                    data.sleepScoreRaw = newScore;
+                    data.sleepScoreCal = null;
+                    data.sleepScoreCalNights = 0;
+                    data.sleepScoreCalStatus = 'uncalibrated';
+                    require('fs').writeFileSync(fp, JSON.stringify(data));
+                    updated++;
+                } catch(_fe) { this.log.warn('[ScoreMigration] Datei ' + files[fi] + ': ' + _fe.message); }
+            }
+            if (updated > 0) this.log.info('[ScoreMigration] V2-Score fuer ' + updated + ' History-Dateien aktualisiert.');
+        } catch (me) { this.log.warn('[ScoreMigration] Fehler: ' + me.message); }
     }
 
     async saveDailyHistory(_directOverride) {
