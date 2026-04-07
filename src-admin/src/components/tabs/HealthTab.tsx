@@ -1435,33 +1435,40 @@ export default function HealthTab(props: any) {
             : (stagesWindowStart ?? swStart ?? null);
         const postStageMs = (lastSlotEndMs && swEnd && lastSlotEndMs < swEnd)
             ? swEnd - lastSlotEndMs : 0;
+        // Marker-Logik: Bad → über Balken (▼), Außerhalb/andere → unter Balken (▲)
         const markerItems = (() => {
-            if (!swStart || !swEnd || clippedOutsideBedEvts.length === 0) return [];
+            if (!swStart || !swEnd || clippedOutsideBedEvts.length === 0) return { above: [], below: [] };
             const totalMs = swEnd - swStart;
-            const minPctGapForSameLane = 2.2;
-            const lastPctInLane = [-100, -100];
-            return clippedOutsideBedEvts
-                .map((evt, idx) => {
-                    const pct = ((evt.start - swStart) / totalMs) * 100;
-                    const lane = Math.abs(pct - lastPctInLane[0]) >= minPctGapForSameLane ? 0
-                               : Math.abs(pct - lastPctInLane[1]) >= minPctGapForSameLane ? 1
+            const minPctGap = 2.2;
+            const titleMap: Record<string, string> = {
+                bathroom:     'Bad-Besuch',
+                outside:      'Außerhalb',
+                other_person: 'Andere Person aktiv',
+            };
+            const assignLanes = (evts: typeof clippedOutsideBedEvts, idxOffset: number) => {
+                const lastPctInLane = [-100, -100];
+                return evts.map((evt, i) => {
+                    const pct = ((evt.start - swStart!) / totalMs) * 100;
+                    const lane = Math.abs(pct - lastPctInLane[0]) >= minPctGap ? 0
+                               : Math.abs(pct - lastPctInLane[1]) >= minPctGap ? 1
                                : 0;
                     lastPctInLane[lane] = pct;
                     const evtType = evt.type ?? 'outside';
-                    const titleMap: Record<string, string> = {
-                        bathroom:     `Bad-Besuch: ${evt.duration} min`,
-                        outside:      `Außerhalb: ${evt.duration} min`,
-                        other_person: `Andere Person aktiv: ${evt.duration} min`,
-                    };
                     return {
-                        key: `${evt.start}-${evt.end}-${idx}`,
+                        key: `${evt.start}-${evt.end}-${idxOffset + i}`,
                         pct: Math.min(100, Math.max(0, pct)),
                         lane,
                         evtType,
-                        title: titleMap[evtType] ?? `Abwesenheit: ${evt.duration} min`
+                        title: `${titleMap[evtType] ?? 'Abwesenheit'}: ${evt.duration} min`
                     };
-                })
-                .sort((a, b) => a.pct - b.pct);
+                }).sort((a, b) => a.pct - b.pct);
+            };
+            const aboveEvts = clippedOutsideBedEvts.filter(e => (e.type ?? 'outside') === 'bathroom');
+            const belowEvts = clippedOutsideBedEvts.filter(e => (e.type ?? 'outside') !== 'bathroom');
+            return {
+                above: assignLanes(aboveEvts, 0),
+                below: assignLanes(belowEvts, aboveEvts.length)
+            };
         })();
 
         return (
@@ -1767,25 +1774,25 @@ export default function HealthTab(props: any) {
 
                         {/* Schlafphasen-Zeitbalken mit Dreiecks-Markern + Zeitachse */}
                         <div style={{marginBottom:'10px'}}>
-                            {/* Dreiecks-Marker oberhalb/unterhalb (bei Kollisionen zweizeilig) */}
-                            {swStart && swEnd && markerItems.length > 0 && (
-                                <div style={{position:'relative', height:'24px'}}>
-                    {markerItems.map(marker => (
-                        <span key={marker.key} style={{
-                            position:'absolute',
-                            left: marker.pct + '%',
-                            top: marker.lane === 0 ? '-2px' : '10px',
-                            color: stageColor[marker.evtType] ?? '#e53935',
-                            fontSize:'15px',
-                            fontWeight:'bold',
-                            transform:'translateX(-50%)',
-                            cursor:'default',
-                            lineHeight:'13px'
-                        }} title={marker.title}>
-                            {marker.lane === 0 ? '▼' : '▲'}
-                        </span>
-                    ))}
+                            {/* Dreiecks-Marker ÜBER Balken: Bad-Besuch orange ▼ (zeigt zum Balken runter) */}
+                            {swStart && swEnd && markerItems.above.length > 0 && (
+                                <div style={{position:'relative', height:'18px'}}>
+                                    {markerItems.above.map(marker => (
+                                        <span key={marker.key} style={{
+                                            position:'absolute',
+                                            left: marker.pct + '%',
+                                            top: marker.lane === 0 ? '3px' : '-9px',
+                                            color: stageColor[marker.evtType] ?? '#ffb300',
+                                            fontSize:'14px', fontWeight:'bold',
+                                            transform:'translateX(-50%)',
+                                            cursor:'default', lineHeight:'13px'
+                                        }} title={marker.title}>▼</span>
+                                    ))}
                                 </div>
+                            )}
+                            {/* Platzhalter damit Balken nicht springt wenn keine above-Marker */}
+                            {swStart && swEnd && markerItems.above.length === 0 && markerItems.below.length > 0 && (
+                                <div style={{height:'18px'}} />
                             )}
 
                             {/* Der Balken — proportionale Slots (5 min), no-data-Segment vor Stage-Fenster */}
@@ -1825,6 +1832,23 @@ export default function HealthTab(props: any) {
                                     }} title={'Keine Sensordaten (' + (lastSlotEndMs ? fmtTime(lastSlotEndMs) : '?') + '–' + (swEnd ? fmtTime(swEnd) : '?') + ')'} />
                                 )}
                             </div>
+
+                            {/* Dreiecks-Marker UNTER Balken: Außerhalb/andere Person rot ▲ (zeigt zum Balken hoch) */}
+                            {swStart && swEnd && markerItems.below.length > 0 && (
+                                <div style={{position:'relative', height:'18px'}}>
+                                    {markerItems.below.map(marker => (
+                                        <span key={marker.key} style={{
+                                            position:'absolute',
+                                            left: marker.pct + '%',
+                                            top: marker.lane === 0 ? '2px' : '10px',
+                                            color: stageColor[marker.evtType] ?? '#e53935',
+                                            fontSize:'14px', fontWeight:'bold',
+                                            transform:'translateX(-50%)',
+                                            cursor:'default', lineHeight:'13px'
+                                        }} title={marker.title}>▲</span>
+                                    ))}
+                                </div>
+                            )}
 
                             {/* Zeitachse: Start, volle Stunden, Ende */}
                             {swStart && swEnd && (

@@ -678,6 +678,31 @@ class CogniLiving extends utils.Adapter {
                 } catch(_fe) { this.log.warn('[ScoreMigration] Datei ' + files[fi] + ': ' + _fe.message); }
             }
             if (updated > 0) this.log.info('[ScoreMigration] V2-Score fuer ' + updated + ' History-Dateien aktualisiert.');
+
+            // sleepScoreHistory retroaktiv befuellen (fuer Kalibrierung)
+            try {
+                var _curHistState = await this.getStateAsync('analysis.health.sleepScoreHistory');
+                var _curHistory = [];
+                if (_curHistState && _curHistState.val) { try { _curHistory = JSON.parse(_curHistState.val); } catch(_) {} }
+                var _existingDates = new Set(_curHistory.map(function(e) { return e.date; }));
+                var _backfill = [];
+                for (var _bi = 0; _bi < files.length; _bi++) {
+                    try {
+                        var _bp = require('path').join(historyDir, files[_bi]);
+                        var _bd = JSON.parse(require('fs').readFileSync(_bp, 'utf8'));
+                        var _bdate = files[_bi].replace('.json', '');
+                        if (_bd.sleepScore !== null && _bd.sleepScore !== undefined && !_existingDates.has(_bdate)) {
+                            _backfill.push({ date: _bdate, aura: _bd.sleepScore, garmin: _bd.garminScore || null });
+                        }
+                    } catch(_be) {}
+                }
+                if (_backfill.length > 0) {
+                    var _merged = _curHistory.concat(_backfill).sort(function(a,b){ return a.date.localeCompare(b.date); });
+                    if (_merged.length > 60) _merged = _merged.slice(_merged.length - 60);
+                    await this.setStateAsync('analysis.health.sleepScoreHistory', { val: JSON.stringify(_merged), ack: true });
+                    this.log.info('[ScoreMigration] sleepScoreHistory mit ' + _backfill.length + ' historischen Eintraegen ergaenzt (' + _merged.filter(function(e){return e.garmin!==null;}).length + ' mit Garmin).');
+                }
+            } catch (_he) { this.log.warn('[ScoreMigration] History-Backfill Fehler: ' + _he.message); }
         } catch (me) { this.log.warn('[ScoreMigration] Fehler: ' + me.message); }
     }
 
