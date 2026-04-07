@@ -767,11 +767,23 @@ class CogniLiving extends utils.Adapter {
             let _existingSnap = null;
             try { if (fs.existsSync(_filePath0)) _existingSnap = JSON.parse(fs.readFileSync(_filePath0, 'utf8')); } catch(_fe) {}
             // Eingefroren wenn: Aufwachzeit vorhanden + vor 14:00 Uhr (= echte Nacht) + mind. 3h Bettzeit
+            const _sleepFrozenMotionOnly = !!(
+                _existingSnap && _existingSnap.personData &&
+                _existingSnap.sleepWindowStart && _existingSnap.sleepWindowEnd &&
+                new Date(_existingSnap.sleepWindowEnd).getHours() < 14 &&
+                Object.keys(_existingSnap.personData).some(function(pk) {
+                    var _ppd = _existingSnap.personData[pk];
+                    return _ppd && _ppd.wakeConfirmed === true;
+                })
+            );
             const _sleepFrozen = !!(_existingSnap &&
                 _existingSnap.sleepWindowStart &&
                 _existingSnap.sleepWindowEnd &&
-                _existingSnap.sleepStages && _existingSnap.sleepStages.length > 0 &&
-                new Date(_existingSnap.sleepWindowEnd).getHours() < 14);
+                new Date(_existingSnap.sleepWindowEnd).getHours() < 14 &&
+                (
+                    (_existingSnap.sleepStages && _existingSnap.sleepStages.length > 0) ||
+                    _sleepFrozenMotionOnly
+                ));
 
             // Schlaf-relevante Events: ab 18:00 Uhr des Vortages (Nacht spannt 2 Kalendertage!).
             // Bsp: Einschlafen 23:00 Uhr = gestriger Tag => fehlt in todayEvents.
@@ -1990,7 +2002,13 @@ class CogniLiving extends utils.Adapter {
                     // wakeConfirmed: nach 10:00 und mindestens 1h seit Aufwachzeit
                     var _pWakeConfirmed = !!(_pWakeTs && new Date().getHours() >= 10 && (Date.now() - _pWakeTs) >= 3600000);
                     // bedWasEmpty pro Person: keine eigenen Bett-Events im Schlaffenster
-                    var _pBedWasEmpty = nightActivityCount === 0 || (_pBedEvts.filter(function(e){ var ts=e.timestamp||0; return ts>=(_pSleepStart||winStart) && ts<=(_pWakeTs||Date.now()); }).length === 0);
+                    var _pWinS_check = _pSleepStart || winStart;
+                    var _pWinE_check = _pWakeTs || Date.now();
+                    // Invertiertes Fenster (heute Abend eingeschlafen, wakeTs von heute Morgen): historisches Fenster nutzen
+                    var _pBedInWin = (_pWinS_check <= _pWinE_check)
+                        ? _pBedEvts.filter(function(e){ var ts=e.timestamp||0; return ts>=_pWinS_check && ts<=_pWinE_check; })
+                        : _pBedEvts.filter(function(e){ var ts=e.timestamp||0; return ts>=winStart && ts<=_pWinE_check; });
+                    var _pBedWasEmpty = _pBedInWin.length === 0; }).length === 0);
                     result[person] = {
                         nightActivityCount: nightActivityCount,
                         wakeTimeMin: wakeTimeMin,
