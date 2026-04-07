@@ -1433,6 +1433,11 @@ class CogniLiving extends utils.Adapter {
                 });
                 outsideBedEvents = _allEvtCandidates.sort(function(a,b) { return a.start - b.start; });
             }
+            // OBE-Freeze-Fallback: wenn Snapshot eingefroren und frische Berechnung leer -> gespeicherte Events verwenden
+            if (outsideBedEvents.length === 0 && _sleepFrozen && _existingSnap && Array.isArray(_existingSnap.outsideBedEvents) && _existingSnap.outsideBedEvents.length > 0) {
+                outsideBedEvents = _existingSnap.outsideBedEvents;
+                this.log.debug('[outsideBedEvents] Frozen-Fallback: ' + outsideBedEvents.length + ' Events aus Snapshot wiederhergestellt.');
+            }
 
             // --- Garmin Wake-Override + Aufwachzeit-Quellen --------------------------------
             // Priorit+?tskette (absteigend): Garmin ??? FP2+Vib ??? FP2 ??? Motion ??? Fixed
