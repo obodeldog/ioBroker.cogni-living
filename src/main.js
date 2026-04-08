@@ -2117,7 +2117,106 @@ class CogniLiving extends utils.Adapter {
             } catch (_calErr) {
                 this.log.warn('[SleepScoreCal] Fehler: ' + _calErr.message);
             }
-            const snapshot = {
+            // ═══════════════════════════════════════════════════════════════════
+            // INTIMACY DETECTION (OC-SEX): Vibrations-basierte Aktivitaetserkennung
+            // Erkennt intime Aktivitaeten anhand Vibrationssensor-Cluster (16:00-02:00 Uhr)
+            // Nur gespeichert wenn moduleSex === true (Datenschutz-Default: off)
+            // ═══════════════════════════════════════════════════════════════════
+            var intimacyEvents = [];
+            if (this.config.moduleSex === true) {
+                try {
+                    // Alle Vibrations-Events des Tages + Vortag (ab 16:00)
+                    var _intim16h = new Date(); _intim16h.setHours(16,0,0,0);
+                    if (new Date().getHours() < 16) _intim16h.setDate(_intim16h.getDate()-1);
+                    var _intimEvts = sleepSearchEvents.filter(function(e) {
+                        var _ts = e.timestamp||0;
+                        return _ts >= _intim16h.getTime()
+                            && (e.type==='vibration_strength'||e.type==='vibration_trigger')
+                            && (e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion));
+                    }).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
+                    var _intimVibStr  = _intimEvts.filter(function(e){return e.type==='vibration_strength';});
+                    var _intimVibTrig = _intimEvts.filter(function(e){return e.type==='vibration_trigger';});
+                    // 15-Min-Slot-Analyse
+                    var SLOT_MS = 15*60*1000;
+                    var _intimSlots = [];
+                    var _intimWinStart = _intim16h.getTime();
+                    var _intimWinEnd   = _intimWinStart + 10*3600000; // 16:00-02:00
+                    for (var _iS=_intimWinStart; _iS<_intimWinEnd; _iS+=SLOT_MS) {
+                        var _iE=_iS+SLOT_MS;
+                        var _str=_intimVibStr.filter(function(e){return (e.timestamp||0)>=_iS&&(e.timestamp||0)<_iE;});
+                        var _trig=_intimVibTrig.filter(function(e){return (e.timestamp||0)>=_iS&&(e.timestamp||0)<_iE;});
+                        var _strVals=_str.map(function(e){return Number(e.value)||0;});
+                        var _strMax=_strVals.length>0?Math.max.apply(null,_strVals):0;
+                        var _strAvg=_strVals.length>0?Math.round(_strVals.reduce(function(a,b){return a+b;},0)/_strVals.length):0;
+                        _intimSlots.push({start:_iS,end:_iE,strCnt:_str.length,trigCnt:_trig.length,strMax:_strMax,strAvg:_strAvg});
+                    }
+                    // Kandidaten: 3+ konsekutive Slots mit trigCnt>=2 UND min 1 strCnt>=1 UND strMax>=50
+                    var MIN_CONSEC=3, MIN_TRIG=2, MIN_PEAK=50;
+                    var _iCand=[]; var _iRun=[];
+                    _intimSlots.forEach(function(sl,idx){
+                        var _active=(sl.trigCnt>=MIN_TRIG||sl.strCnt>=1)&&sl.strMax>=MIN_PEAK;
+                        if(_active){_iRun.push(idx);}
+                        else{
+                            if(_iRun.length>=MIN_CONSEC) _iCand.push(_iRun.slice());
+                            _iRun=[];
+                        }
+                    });
+                    if(_iRun.length>=MIN_CONSEC) _iCand.push(_iRun.slice());
+                    // Für jeden Kandidaten: Score berechnen + Typ schätzen
+                    var _garminHRVals = [];
+                    if (this.config.sexGarminHRStateId) {
+                        try {
+                            var _hrState = await this.getForeignStateAsync((this.config.sexGarminHRStateId||'').trim());
+                            if (_hrState && _hrState.val) {
+                                var _hrParsed = typeof _hrState.val==='string' ? JSON.parse(_hrState.val) : _hrState.val;
+                                if (Array.isArray(_hrParsed)) _garminHRVals = _hrParsed;
+                            }
+                        } catch(_hrE){ this.log.debug('[OC-SEX] Garmin HR nicht lesbar: '+_hrE.message); }
+                    }
+                    _iCand.forEach(function(run){
+                        var _sl0=_intimSlots[run[0]], _slN=_intimSlots[run[run.length-1]];
+                        var _evtStart=_sl0.start, _evtEnd=_slN.end;
+                        var _durMin=Math.round(run.length*15);
+                        var _runSlots=run.map(function(i){return _intimSlots[i];});
+                        var _peakMax=Math.max.apply(null,_runSlots.map(function(s){return s.strMax;}));
+                        var _avgAvg=Math.round(_runSlots.reduce(function(a,s){return a+s.strAvg;},0)/_runSlots.length);
+                        var _avgTrig=Math.round(_runSlots.reduce(function(a,s){return a+s.trigCnt;},0)/_runSlots.length);
+                        // Score (0-100): Staerke 50% + Dichte 30% + Dauer 20%
+                        var _sStr=Math.min(100,Math.round((_peakMax/120)*100)); // Peak normiert auf 120
+                        var _sDens=Math.min(100,Math.round((_avgTrig/10)*100)); // Trig-Dichte normiert auf 10
+                        var _sDur=Math.min(100,Math.round((_durMin/90)*100)); // Dauer normiert auf 90 Min
+                        var _score=Math.round(_sStr*0.5+_sDens*0.3+_sDur*0.2);
+                        // Typ-Schaetzung: vaginal wenn Peak>=80 UND Str-Events pro Slot>=5 in mind. 1 Slot
+                        var _highSlots=_runSlots.filter(function(s){return s.strMax>=80&&s.strCnt>=5;});
+                        var _type=_highSlots.length>=1?'vaginal':(_peakMax>=55?'oral_hand':'intim');
+                        // Garmin HR im Fenster (optional)
+                        var _hrMax=null, _hrAvg=null;
+                        if(_garminHRVals.length>0){
+                            var _hrInWin=_garminHRVals.filter(function(h){
+                                var _t=h.startGMT?new Date(h.startGMT).getTime():(h.timestamp||0);
+                                return _t>=_evtStart-5*60000&&_t<=_evtEnd+5*60000;
+                            });
+                            if(_hrInWin.length>0){
+                                var _hrVs=_hrInWin.map(function(h){return Number(h.value||h.heartRate||0);}).filter(function(v){return v>0;});
+                                if(_hrVs.length>0){
+                                    _hrMax=Math.max.apply(null,_hrVs);
+                                    _hrAvg=Math.round(_hrVs.reduce(function(a,b){return a+b;},0)/_hrVs.length);
+                                    // HR-Boost: wenn HR>100 -> +10 Score, +15 wenn vaginal bestätigt
+                                    if(_hrMax>100) _score=Math.min(100,_score+(_type==='vaginal'?15:10));
+                                }
+                            }
+                        }
+                        intimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:_hrMax,garminHRAvg:_hrAvg,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
+                    });
+                    if(intimacyEvents.length>0){
+                        this.log.info('[OC-SEX] '+intimacyEvents.length+' Intimacy-Event(s) erkannt. Scores: '+intimacyEvents.map(function(e){return e.score+'('+e.type+')';}).join(', '));
+                    }
+                } catch(_intimErr) {
+                    this.log.warn('[OC-SEX] Fehler bei Intimacy-Detection: '+_intimErr.message);
+                }
+            }
+
+                        const snapshot = {
                 date: dateStr,
                 timestamp: Date.now(),
                 roomHistory: roomHistoryData,
@@ -2212,6 +2311,7 @@ class CogniLiving extends utils.Adapter {
                 garminRemMin: garminRemSec ? Math.round(garminRemSec/60) : null,
                 sleepWindowSource: sleepWindowSource,
                 outsideBedEvents: outsideBedEvents,
+                intimacyEvents: intimacyEvents,
                 wakeSource: wakeSource,
                 wakeConf: wakeConf,
                 allWakeSources: allWakeSources,

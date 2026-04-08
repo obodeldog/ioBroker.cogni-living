@@ -497,6 +497,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         const ms = native.moduleSecurity !== false;
         const me = native.moduleEnergy !== false;
         const mc = native.moduleComfort !== false;
+        const mx = native.moduleSex === true;          // Datenschutz: default OFF
+        const mxFun = native.sexFunMode !== false;     // Fun-Modus: default ON wenn Sex aktiviert
 
         return (
             <Grid container spacing={2}>
@@ -526,6 +528,28 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         <WeekendIcon fontSize="large" style={{color: mc ? '#9c27b0' : 'grey'}}/>
                         <Typography variant="subtitle2">Komfort</Typography>
                         <Switch checked={mc} onChange={(e) => this.updateNativeValue('moduleComfort', e.target.checked)} />
+                    </Paper>
+                </Grid>
+                <Grid item xs={12}>
+                    <Paper variant="outlined" sx={{p: 2, border: '1px dashed #ab47bc', opacity: mx ? 1 : 0.7}}>
+                        <Typography variant="subtitle2" sx={{mb: 1, color: '#ab47bc', display:'flex', alignItems:'center', gap:1}}>
+                            🔒 SEX-Kachel (Datenschutz-Modul)
+                        </Typography>
+                        <Typography variant="caption" sx={{color:'#888', display:'block', mb:1}}>
+                            Erkennt intime Aktivitäten anhand des Vibrationssensors. Daten bleiben lokal — keine Cloud-Übertragung. Standard: deaktiviert.
+                        </Typography>
+                        <Grid container spacing={2} alignItems="center">
+                            <Grid item>
+                                <Typography variant="caption">SEX-Kachel aktivieren</Typography>
+                                <Switch checked={mx} onChange={(e) => this.updateNativeValue('moduleSex', e.target.checked)} />
+                            </Grid>
+                            {mx && (
+                                <Grid item>
+                                    <Typography variant="caption">Fun-Modus (witzige Kommentare)</Typography>
+                                    <Switch checked={mxFun} onChange={(e) => this.updateNativeValue('sexFunMode', e.target.checked)} />
+                                </Grid>
+                            )}
+                        </Grid>
                     </Paper>
                 </Grid>
             </Grid>
