@@ -1399,11 +1399,22 @@ class CogniLiving extends utils.Adapter {
                 });
                 if (_curCluster) _motEvents.push(_curCluster);
                 // === PHASE 3: Zusammenf?hren ? FP2 hat Vorrang, Motion f?llt L?cken ===
+                // FP2-Solo-Dropout-Filter: kurze FP2-Abwesenheiten ohne Bestaetigung durch anderen Raum-Sensor erzeugen kein rotes Dreieck
+                var MIN_FP2_SOLO_MIN = 5;
+                var _fp2SoloDropoutsIgnored = 0;
                 var _allEvtCandidates = [];
                 _fp2Events.forEach(function(fp2) {
                     // 2-Min-Vorpuffer: Bad-Sensor kann vor FP2-Leer-Erkennung feuern
                     var _hasBath = sleepSearchEvents.some(function(e) {
                         return (e.isBathroomSensor || _bathDevIds.has(e.id)) && (e.timestamp||0) >= fp2.start - 2*60*1000 && (e.timestamp||0) <= fp2.end;
+                    });
+                    // Sind ausserhalb des Schlafzimmers irgendwelche Nicht-Bett-Sensoren aktiv? (Bad + andere Raeume)
+                    var _hasAnySensorOutside = sleepSearchEvents.some(function(e) {
+                        var _ts2 = e.timestamp||0;
+                        if (_ts2 < fp2.start - 2*60*1000 || _ts2 > fp2.end + 2*60*1000) return false;
+                        if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion) return false;
+                        if (_topoNearRooms && _topoNearRooms.size > 0 && (e.location||'').trim() && !_topoNearRooms.has((e.location||'').trim())) return false;
+                        return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
                     });
                     // Zusaetzlich: andere Raeume aktiv? (Kueche zaehlt als anderer Raum)
                     var _hasOtherInFp2 = _hasBath && sleepSearchEvents.some(function(e) {
@@ -1416,12 +1427,20 @@ class CogniLiving extends utils.Adapter {
                         return (e.type === "motion" || e.type === "presence_radar_bool") && isActiveValue(e.value);
                     });
                     var _fp2Dur = fp2.duration;
+                    // FP2-Solo-Dropout: kein externer Sensor bestaetigt + unter Mindestdauer -> kein Dreieck
+                    if (!_hasBath && !_hasAnySensorOutside && _fp2Dur < MIN_FP2_SOLO_MIN) {
+                        _fp2SoloDropoutsIgnored++;
+                        return;
+                    }
                     _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: _hasBath ? "bathroom" : "outside" });
                     if (_hasBath && _hasOtherInFp2) {
                         // FP2-Cluster hat Bad UND andere Aussenraeume -> zweiter Marker (rot) analog Phase-2-Fix v0.33.88
                         _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: "outside" });
                     }
                 });
+                if (_fp2SoloDropoutsIgnored > 0) {
+                    this.log.debug('[OC-7] ' + _fp2SoloDropoutsIgnored + ' FP2-Solo-Dropout(s) < ' + MIN_FP2_SOLO_MIN + 'min ignoriert (kein Aussensensor bestaetigt)');
+                }
                 _motEvents.forEach(function(mot) {
                     var _overlaps = _allEvtCandidates.some(function(c) { return mot.start < c.end && mot.end > c.start; });
                     if (!_overlaps) {
@@ -2008,7 +2027,7 @@ class CogniLiving extends utils.Adapter {
                     var _pBedInWin = (_pWinS_check <= _pWinE_check)
                         ? _pBedEvts.filter(function(e){ var ts=e.timestamp||0; return ts>=_pWinS_check && ts<=_pWinE_check; })
                         : _pBedEvts.filter(function(e){ var ts=e.timestamp||0; return ts>=winStart && ts<=_pWinE_check; });
-                    var _pBedWasEmpty = _pBedInWin.length === 0; }).length === 0);
+                    var _pBedWasEmpty = _pBedInWin.length === 0;
                     result[person] = {
                         nightActivityCount: nightActivityCount,
                         wakeTimeMin: wakeTimeMin,
