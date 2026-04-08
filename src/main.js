@@ -1303,6 +1303,45 @@ class CogniLiving extends utils.Adapter {
 
             // Au+?erhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
             var outsideBedEvents = [];
+
+            // [Multi-Person-Motion-Only Wake+Start-Fallback aus per-Person-Snapshot]
+            // Ziel: sleepWindowOC7.end setzen wenn bisher null (kein FP2, kein Garmin),
+            //       sleepWindowOC7.start korrigieren wenn invertiert (Abendberechnung).
+            // Wirkung: OBE-Dreiecke erscheinen, bedWasEmpty=false, naechster Tag eingefroren.
+            if (!_sleepFrozen && _existingSnap && _existingSnap.personData) {
+                var _ppWakeList = Object.keys(_existingSnap.personData).map(function(pk) {
+                    var ppd = _existingSnap.personData[pk];
+                    return (ppd && ppd.wakeConfirmed && ppd.sleepWindowEnd
+                        && new Date(ppd.sleepWindowEnd).getHours() < 14) ? ppd.sleepWindowEnd : null;
+                }).filter(Boolean).sort(function(a,b){return a-b;});
+                if (_ppWakeList.length > 0) {
+                    var _ppLatestWake = _ppWakeList[_ppWakeList.length - 1];
+                    if (!sleepWindowOC7.end) {
+                        sleepWindowOC7.end = _ppLatestWake;
+                        this.log.info('[OC-7] Multi-Person-Wake-Fallback: sleepWindowEnd=' + new Date(_ppLatestWake).toLocaleTimeString() + ' (' + _ppWakeList.length + ' Person(en))');
+                    }
+                    // Invertiertes Fenster korrigieren: start (heutiger Abend) > end (gestriger Morgen)
+                    if (sleepWindowOC7.start && sleepWindowOC7.end && sleepWindowOC7.start > sleepWindowOC7.end) {
+                        var _ppCorrectedStart = null;
+                        var _ppMidnightRef = _sleepSearchBase.getTime() + 6 * 3600000;
+                        Object.keys(_existingSnap.personData).forEach(function(pk) {
+                            var ppd = _existingSnap.personData[pk];
+                            if (!ppd || !ppd.allSleepStartSources) return;
+                            ppd.allSleepStartSources.forEach(function(src) {
+                                if (!src.ts || src.source === 'winstart') return;
+                                var srcHr = new Date(src.ts).getHours();
+                                if ((srcHr >= 18 || srcHr < 4) && src.ts < _ppMidnightRef + 4 * 3600000) {
+                                    if (!_ppCorrectedStart || src.ts < _ppCorrectedStart) _ppCorrectedStart = src.ts;
+                                }
+                            });
+                        });
+                        var _ppStartTs = _ppCorrectedStart || _sleepSearchBase.getTime();
+                        sleepWindowOC7.start = _ppStartTs;
+                        sleepWindowCalc.start = _ppStartTs;
+                        this.log.info('[OC-7] Multi-Person-Start-Korrektur: sleepWindowStart=' + new Date(_ppStartTs).toLocaleTimeString() + (_ppCorrectedStart ? ' (aus per-Person-Quellen)' : ' (Fallback gestern 18:00)'));
+                    }
+                }
+            }
             if (sleepWindowOC7.start && sleepWindowOC7.end) {
                 // === PHASE 1: FP2-basierte Events (Bett-leer-Erkennung ? pr?zise Timestamps) ===
                 var _fp2Sorted = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })

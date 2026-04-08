@@ -1,199 +1,17 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.103",
-    "news": {
-    "0.33.103": "fix(OC-7): FP2-Solo-Dropout-Filter: kurze FP2-Abwesenheiten ohne Bestaetigung durch Aussensensor (<5min) erzeugen kein rotes Dreieck mehr",
-      "0.33.92": "fix(OC-7): rotes Dreieck bei FP2+Bad+AndererRaum: Phase-1-Pfad erzeugt jetzt zwei Marker (bathroom+outside); Kueche zaehlt fuer outsideBedEvents als anderer Raum (isKitchenSensor unveraendert fuer alle anderen Algorithmen)",
-      "0.33.91": "fix(OC-18): Per-Person Einschlafzeit-Erkennung fuer PIR-only Haeuser verbessert (_pBedEvts ab 18:00, _pNextTs aus allen BedEvts); fix(Frontend): Quellen-Button versteckt wenn leer; Meldung 'Vibrationsdaten zu alt' fuer per-Person korrekt; sleepStartSource='motion' statt wakeSource",
-      "0.33.90": "fix(OC-18): Per-Person sleepWindowStart=null wenn Person vor winStart eingeschlafen - Fallback auf winStart wenn _pBedEvts vorhanden aber kein Einschlafzeitpunkt gefunden (hr-Filter 18-01:59 zu eng fuer spaete winStart-Zeiten)",
-      "0.33.89": "fix(OC-7): outsideBedEvents FROZEN-Bug - FROZEN-Pfad kopierte alte (unvollstaendige) outsideBedEvents statt volle Phase-1/2/3-Analyse zu laufen; Diele/Wohnzimmer-Events wurden nie als hasOther erkannt; jetzt immer komplette Analyse",
-      "0.33.83": "fix(OC-23): sleepDate/sleepStartOverridden/sleepStartOverrideSource fehlten in setAuraSleepData-Aufrufen (WÃ¤hlen-Buttons nicht sichtbar); Fallback sleepDate aus sleepWindowStart fÃ¼r alte Snapshots",
-      "0.33.82": "feat(OC-23): Manueller Override der Einschlafzeit-Quelle (Variante B Backend-Trigger); interaktives Quellen-Panel in Schlafkachel; sleepDate+sleepStartOverridden+sleepStartOverrideSource im Snapshot; State analysis.sleep.startOverride",
-      "0.33.81": "fix(OC-18): Per-Person Schlafkacheln (Ingrid/Robert) leer wegen winStart-Bug - Fallback war 22:00 heute (Zukunft) statt gestern; fix: winStart = sleepWindowOC7.start || _sleepSearchBase (gestern 18:00)",
-      "0.33.80": "fix(OC-7): haus_still-Label im Quellen-Popup korrekt anzeigen (war: '? haus_still'); motion_vib als neue Einschlafzeit-Quelle fuer PIR+Vibration ohne FP2 (Bewegungsmelder + Vibration verfeinert Einschlafzeit analog zu fp2_vib)",
-      "0.33.74": "feat(OC-7): Ausser-Bett-Aktivitaet auf alle Nicht-Schlafzimmer-Sensoren erweitert (rot=du, blau=andere Person); Mehrpersonenhaushalt-Logik mit FP2-Bestaetigung; Snapshot-Timing 23:59:59; Dreiecke groesser+Unicode; Schlaf-Radar 22-23Uhr aus outsideBedEvents",
-      "0.33.73": "fix: OC-15 Batterie-Warnung in Schlafkachel - Filter auf schlaf-relevante Sensoren (Vibration/FP2/Bewegung bed+bad+kueche+flur); Sensor-Name + Ort in Warnung sichtbar",
-      "0.33.72": "fix: OC-15 Homematic LOW_BAT (Unterstrich-Bug - war LOWBAT, korrekt ist LOW_BAT); val=null-Bug behoben - State-Pfad wird gespeichert auch wenn Wert noch nicht gesendet",
-      "0.33.71": "fix: OC-15 Homematic LOWBAT-only (kein OPERATING_VOLTAGE mehr - Spannungswerte ohne Geraetedatenbank nicht konvertierbar); UI zeigt 'OK'/'Niedrig!' statt falsche Prozentwerte",
-      "0.33.70": "feat: OC-15 generische Battery-Discovery fuer alle Adapter (deCONZ, Tuya, Shelly, Z-Wave, HomeKit, mihome, Matter); Multi-Level-Pfadsuche Tiefe 1-3",
-      "0.33.69": "feat: OC-15 Homematic Battery-Discovery (Kanal 0: LOWBAT/BATTERY_STATE/OPERATING_VOLTAGE); Spannungskonvertierung Volt->Prozent (1.5-4.5V Range)",
-      "0.33.68": "feat: OC-15 Battery-UI - Auto-Discovery-Hint + Ladestand im Sensor-Tab; Object-Picker fuer Batterie-State-ID; HANDBUCH.md Batterie-Abschnitt",
-      "0.33.67": "feat: OC-15 Batterie-Discovery (Auto/Alias/Manuell) + Pushover 09:00 bei kritisch; OC-2 Topologie-Matrix jetzt primaer im System-Tab; Battery-Badge in Schlafkachel",
-      "0.33.66": "feat: OC-9 sleepScoreRaw im Badge (>100 sichtbar); OC-14 Vibration-Label als Konfidenz-Booster; OC-5 Sensor-Offline-Schwelle 7 Tage",
-      "0.33.65": "FIX(OC-7): outsideBedEvents jetzt aus Bad/Kuechen-Bewegungsmelder + FP2 kombiniert (exakte Timestamps); Freeze-Supplement fuer retrospektive Ergaenzung",
-      "0.33.53": "OC-7: Bewegungsmelder-Fallback (isBedroomMotion, type=motion+sensorFunction=bed) fuer Einschlaf-/Aufwachzeit; Fallback-Kette FP2â†’Bewegungâ†’Fixfenster; HANDBUCH.md Help.tsx-Texte",
-      "0.33.52": "OC-7: sleepScoreRaw (ungekappter Wert), Sensor-Indikator bei Aufwachzeit, OC-7-Abschnitt in Help.tsx, HANDBUCH.md Tooltips-Inventar",
-      "0.33.51": "OC-7: sleepWindowSource+outsideBedEvents+wakeConfirmed im Snapshot; AURA-Sleepscore; Sensor-Indikator; vorlaefig/final Aufwachzeit; Schlafbalken Farben+Marker; HANDBUCH.md",
-      "0.33.50": "FIX: OC-7 Sleep-Freeze - echte Nacht (>=3h, Aufwachzeit <14Uhr) wird nicht mehr ueberschrieben; Wake-Time-Bug gefixt (|| -> &&)",
-      "0.33.49": "FIX: OC-7 Zeitbalken mit echter Zeitachse (Uhrzeiten); sleepWindowOC7Start/End im Snapshot; Tooltips mit Uhrzeit pro Stage-Block",
-      "0.33.48": "FIX: OC-7 Schlafanalyse-Kachel zeigt jetzt Daten im Live-Modus (HEUTE) - auraSleepData als React-State; fetchData laedt getHistoryData fuer heute",
-      "0.33.47": "DEBUG: OC-7 Diagnose-State analysis.health.saveDailyDebug - zeigt Schlaf-Fenster, Stages-Anzahl und Vibrationsdaten bei jedem stÃ¼ndlichen Save",
-      "0.33.46": "CLEAN: Alle Legacy-Typwerte entfernt (griff/schloss/tur/bewegung/praesenz/licht/schalter etc.); nur noch aktuelle SENSOR_TYPES; Frontend-Keywords durch isBathroomSensor/isKitchenSensor/isFP2Bed ersetzt",
-      "0.33.45": "FIX: Alle Keyword-Fallbacks auf exakte Typ-Vergleiche umgestellt (recorder, topology, automation, main, health.py); hallwayKw nur noch aktiv wenn kein Flur in Sensorliste konfiguriert",
-      "0.31.6": "NEU: Tageszeit-Normalisierung im Aktivitaets-Balkendiagramm (Ansatz B) - heutiger Balken vergleicht nur Events bis zur aktuellen Uhrzeit mit Vortagen; visuelles Kennzeichen (tÃƒÂ¼rkiser Rand)",
-      "0.31.5": "FIX: Fresh Air Stosslueftungs-Erkennung live (processEvents) und Wochenansicht korrekt; freshAirLong Pairing-Logik eingefuegt",
-      "0.31.4": "FIX: Morning Briefing nie erhalten - subscribeStates fuer analysis.triggerBriefing fehlte; Obfuskierung wieder aktiv",
-      "0.31.3": "FIX: Vite outDir korrigiert (admin/ statt src-admin/build/) - ioBroker lud bisher altes Build; Score-Normalisierung verbessert (0=normal, 1=anomal); 62 temp-Dateien entfernt",
-      "0.31.2": {
-        "en": "Fix: processEvents crash when event.name is null (Fresh Air count always 0). Fix: duplicate const block in lib/main.js.",
-        "de": "Fix: processEvents Absturz wenn event.name null ist (Frischluft-ZÃƒÂ¤hler immer 0). Fix: Doppelter const-Block in lib/main.js entfernt."
-      },
-      "0.31.1": "FIX: Fresh Air Live-Pfad nutzt jetzt Sensor-Typ statt Keywords; freshAirLongCount (>=5 Min Stoesslueftung) berechnet und angezeigt",
-      "0.31.0": "Fresh Air nutzt Sensor-Typ statt Keywords; Flur-Raeume-Feld entfernt; Auto-KI-Analyse 08:05+20:00; Briefing-Fix; Score 0.10 behoben",
-      "0.30.75": {
-        "en": "FIX: constÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢let dailyData (build error); Gemini prompt uses aiContext name, no JSON format; status_bericht/antwort JSON keys added; sparkline tooltip with date and icons",
-        "de": "FIX: constÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢let dailyData (Build-Fehler); Gemini nutzt aiContext-Namen, kein JSON-Format; status_bericht/antwort JSON-Keys ergÃƒÆ’Ã‚Â¤nzt; Sparkline-Tooltip mit Datum und Icons"
-      },
-      "0.30.74": {
-        "en": "NEW: Relative activity normalization (personal median=100%); Page-Hinkley drift detection debug kachel; README roadmap updated with UI-display column",
-        "de": "NEU: Relative AktivitÃƒÆ’Ã‚Â¤ts-Normalisierung (persÃƒÆ’Ã‚Â¶nlicher Median=100%); Page-Hinkley Drift-Monitor Debug-Kachel; README Roadmap mit UI-Darstellung-Spalte aktualisiert"
-      },
-      "0.30.73": {
-        "en": "FIX: Sparkline tooltip nightText JSON parsed; first sentence only shown",
-        "de": "FIX: Sparkline-Tooltip nightText JSON-geparst; nur erster Satz wird angezeigt"
-      },
-      "0.30.72": {
-        "en": "FIX: Night color logic order (Unruhig=red before Badgang=orange); sparkline tooltip max-width+wrap; tooltip text shortened",
-        "de": "FIX: Nacht-Farblogik-Reihenfolge (Unruhig=rot vor Badgang=orange); Sparkline-Tooltip max-width+wrap; Tooltip-Text gekÃƒÆ’Ã‚Â¼rzt"
-      },
-      "0.30.71": {
-        "en": "FIX: PWA analysis progress now polls real completion (NIGHT+DAY); sparkline CSS hover tooltip; night color logic unified; real activity timestamp shown",
-        "de": "FIX: PWA Analyse-Fortschritt wartet auf echte Fertigmeldung (NACHT+TAG); Sparkline CSS-Hover-Tooltip; Nacht-Farblogik vereinheitlicht; echte Uhrzeit statt 'gerade eben'"
-      },
-      "0.30.70": {
-        "en": "FIX: Room charts x-axis corrected (newest day right); 7-day KI summary parser handles all JSON formats; PWA shows real time instead of 'gerade eben'; aiSummary array-format stripped",
-        "de": "FIX: Raum-Charts X-Achse korrigiert (neuester Tag rechts); 7-Tage KI-Parser fÃƒÆ’Ã‚Â¼r alle JSON-Formate; PWA zeigt echte Uhrzeit statt 'gerade eben'; aiSummary Array-Format bereinigt"
-      },
-      "0.30.69": {
-        "en": "FIX: SecurityBrain IsolationForest replaces placeholder; Y-axis 0-100% fixed; AURA Monitor version updated",
-        "de": "FIX: SecurityBrain IsolationForest ersetzt Placeholder; Y-Achse 0-100% fest; AURA Monitor Version aktualisiert"
-      },
-      "0.30.68": {
-        "en": "FIX: Activity load formula (48*5 scale); Night IsolationForest personalization; Health anomaly score in state; PWA reads real anomaly; lastNightNormal for person",
-        "de": "FIX: AktivitÃƒÆ’Ã‚Â¤ts-Belastung Formel (48*5); Nacht-IsolationForest personalisiert; Health-Anomalie-Score in State; PWA liest echten Score; lastNightNormal fÃƒÆ’Ã‚Â¼r Person"
-      },
-      "0.30.67": {
-        "en": "FIX: geminiDay/geminiNight JSON parsing restored AI summary; distillNightText reduces night quality to 2-3 words locally; sparkline legend added",
-        "de": "FIX: geminiDay/geminiNight JSON-Parsing stellt KI-Zusammenfassung wieder her; distillNightText kÃƒÆ’Ã‚Â¼rzt Nachttext lokal auf 2-3 WÃƒÆ’Ã‚Â¶rter; Sparkline-Legende ergÃƒÆ’Ã‚Â¤nzt"
-      },
-      "0.30.66": {
-        "en": "FIX: PWA activity metric replaced by anomaly status (UnauffÃƒÆ’Ã‚Â¤llig/AuffÃƒÆ’Ã‚Â¤llig); night quality from geminiNight AI text; 7-day sparkline with correct path and anomaly coloring",
-        "de": "FIX: PWA AktivitÃƒÆ’Ã‚Â¤t ersetzt durch Anomalie-Status (UnauffÃƒÆ’Ã‚Â¤llig/AuffÃƒÆ’Ã‚Â¤llig); NachtqualitÃƒÆ’Ã‚Â¤t aus geminiNight KI-Text; 7-Tage-Sparkline mit korrektem Pfad und Anomalie-Farb-Codierung"
-      },
-      "0.30.65": {
-        "en": "FIX: Unified data sources ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ PWA + Admin now read from same history file; window sensors correctly counted (fenster/haustuer/terrasse/balkon); roomHistory used for bath minutes",
-        "de": "FIX: Einheitliche Datenquelle ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ PWA + Admin lesen aus gleicher History-Datei; Fenstersensoren korrekt erkannt (fenster/haustÃƒÆ’Ã‚Â¼r/terrasse/balkon); Bad-Minuten aus roomHistory"
-      },
-      "0.30.64": {
-        "en": "FIX: PWA uses roomStats for bath minutes, history-file for windows/night; Analyze-button with progress bar; Cloudflare process health-check",
-        "de": "FIX: PWA nutzt roomStats fÃƒÆ’Ã‚Â¼r Bad-Minuten, History-Datei fÃƒÆ’Ã‚Â¼r Fenster/Nacht; Analysieren-Button mit Ladebalken; Cloudflare Prozess-Health-Check"
-      },
-      "0.30.63": {
-        "en": "FIX: PWA metrics from eventHistory (bath visits, window openings, night quality), Cloudflare stable output pipe, Settings state defaults for new fields",
-        "de": "FIX: PWA Metriken aus eventHistory (Bad-Besuche, Fenster-ÃƒÆ’Ã¢â‚¬â€œffnungen, Nacht-QualitÃƒÆ’Ã‚Â¤t), Cloudflare stabiler Output-Pipe, Settings-Defaults fÃƒÆ’Ã‚Â¼r neue Felder"
-      },
-      "0.30.62": {
-        "en": "FIX: PWA token mismatch (real IP, state-based URL), Cloudflare EACCES fix (correct data dir), Admin URL refresh button",
-        "de": "FIX: PWA Token-Mismatch (echte IP, State-basierte URL), Cloudflare EACCES Fix (korrektes Verzeichnis), Admin URL-Aktualisieren-Button"
-      },
-      "0.30.61": {
-        "en": "NEW: Family PWA (mobile at-a-glance app), Cloudflare Tunnel, rich Pushover notifications with sparkline",
-        "de": "NEU: Familien-PWA (mobile Auf-einen-Blick App), Cloudflare Tunnel, erweiterte Pushover-Benachrichtigungen mit Sparkline"
-      },
-      "0.30.55": {
-        "en": "UX: Hallway sensor checkbox in sensor table (replaces keyword input)",
-        "de": "UX: Flur-Sensor Checkbox in Sensor-Tabelle (ersetzt Keyword-Eingabe)"
-      },
-      "0.30.54": {
-        "en": "FEATURE: Filtered hover tooltips (bedroom vs. outside), Configurable hallway rooms, Gait speed from Gait Analysis, Baseline median fix",
-        "de": "FEATURE: Gefilterte Hover-Tooltips (Schlafzimmer vs. auÃƒÆ’Ã…Â¸erhalb), Konfigurierbare Flur-RÃƒÆ’Ã‚Â¤ume, Ganggeschwindigkeit aus Gait Analysis, Baseline-Median-Fix"
-      },
-      "0.30.53": {
-        "en": "CRITICAL FIX: Corrected data extraction for longterm trends (roomHistory, nightEvents, windowOpenings, activity calculation)",
-        "de": "KRITISCHER FIX: Korrigierte Datenextraktion fÃƒÆ’Ã‚Â¼r Langzeit-Trends (roomHistory, nightEvents, windowOpenings, AktivitÃƒÆ’Ã‚Â¤tsberechnung)"
-      },
-      "0.30.52": {
-        "en": "FEATURE: Adaptive night activity split (bedroom vs. outside), Event-count for trends, Briefing debug log",
-        "de": "FEATURE: Adaptive Nacht-AktivitÃƒÆ’Ã‚Â¤t Split (Schlafzimmer vs. auÃƒÆ’Ã…Â¸erhalb), Event-Count fÃƒÆ’Ã‚Â¼r Trends, Briefing Debug-Log"
-      },
-      "0.30.51": {
-        "en": "CRITICAL FIX: History files now save only today's events (not all events), Backend timeout increased to 30s",
-        "de": "KRITISCHER FIX: History-Files speichern jetzt nur heutige Events (nicht alle), Backend Timeout auf 30s erhÃƒÆ’Ã‚Â¶ht"
-      },
-      "0.30.50": {
-        "en": "DEBUG: Add detailed extraction logs to diagnose empty data issue",
-        "de": "DEBUG: Detaillierte Extraktions-Logs zur Diagnose leerer Daten"
-      },
-      "0.30.49": {
-        "en": "FIX: Use native socket.sendTo Promises instead of callback wrappers (fixes timeout issue)",
-        "de": "FIX: Nutze native socket.sendTo Promises statt Callback-Wrapper (behebt Timeout-Problem)"
-      },
-      "0.30.48": {
-        "en": "DEBUG: Add extensive console logging + timeout fixes for longterm trends loading",
-        "de": "DEBUG: Umfangreiche Console-Logs + Timeout-Fixes fÃƒÆ’Ã‚Â¼r Langzeit-Trends-Laden"
-      },
-      "0.30.47": {
-        "en": "NEW: Garmin-Style Longterm Trends (Activity Load, Gait Speed, Night Restlessness, Room Mobility, Hygiene, Ventilation)",
-        "de": "NEU: Garmin-Style Langzeit-Trends (AktivitÃƒÆ’Ã‚Â¤ts-Belastung, Ganggeschwindigkeit, Nacht-Unruhe, Raum-MobilitÃƒÆ’Ã‚Â¤t, Hygiene, LÃƒÆ’Ã‚Â¼ftung)"
-      },
-      "0.30.46": {
-        "en": "FIX: Topology Matrix multi-click (missing backend handler + optimistic update)",
-        "de": "FIX: Topologie-Matrix Mehrfach-Klick (fehlender Backend-Handler + optimistic update)"
-      },
-      "0.30.45": {
-        "en": "UX: Compact Topology Matrix (narrower columns, all rooms visible)",
-        "de": "UX: Kompakte Topologie-Matrix (schmalere Spalten, alle RÃƒÆ’Ã‚Â¤ume sichtbar)"
-      },
-      "0.30.44": {
-        "en": "UX: Full-Width Topology Matrix + Better Scrollbars + Graph-Brain uses current data",
-        "de": "UX: Topologie-Matrix volle Breite + Bessere Scrollbars + Graph-Brain nutzt aktuelle Daten"
-      },
-      "0.30.43": {
-        "en": "Fix: Topology Matrix click bug (state preservation)",
-        "de": "Fix: Topologie-Matrix Klick-Bug (State-Erhaltung)"
-      },
-      "0.30.42": {
-        "en": "Topology Auto-Update on Start + Room Hover Tooltips",
-        "de": "Topologie Auto-Update beim Start + Raum Hover-Tooltips"
-      },
-      "0.30.41": {
-        "en": "Life Sign Alert System + Activity Legend + Timeline UX Cleanup",
-        "de": "Lebenszeichen-Alarmsystem + AktivitÃƒÆ’Ã‚Â¤ts-Legende + Timeline UX Bereinigung"
-      },
-      "0.30.40": {
-        "en": "Adaptive Activity Calculation (Baseline-Relative) + Timeline Visibility Fix",
-        "de": "Adaptive AktivitÃƒÆ’Ã‚Â¤tsberechnung (Baseline-relativ) + Timeline-Sichtbarkeit Fix"
-      },
-      "0.30.39": {
-        "en": "UX: Smart-Split Timeline + Current Time Indicator",
-        "de": "UX: Smart-Split Timeline + Aktuelle-Zeit-Anzeige"
-      },
-      "0.30.38": {
-        "en": "Fix: Python Bridge Message Handler + Callback System",
-        "de": "Fix: Python Bridge Message Handler + Callback-System"
-      },
-      "0.30.37": {
-        "en": "Feature: Intelligent Heatmap with IsolationForest + Time Rules",
-        "de": "Feature: Intelligente Heatmap mit IsolationForest + Zeitregeln"
-      },
-      "0.30.36": {
-        "en": "Feature: Activity Heatmap (7 days ÃƒÆ’Ã¢â‚¬â€ 24 hours)",
-        "de": "Feature: AktivitÃƒÆ’Ã‚Â¤ts-Heatmap (7 Tage ÃƒÆ’Ã¢â‚¬â€ 24 Stunden)"
-      },
-      "0.30.35": {
-        "en": "Fix: Unified activity calculation (Day & Week view)",
-        "de": "Fix: Vereinheitlichte AktivitÃƒÆ’Ã‚Â¤ts-Berechnung (Tag & Woche)"
-      },
-      "0.30.3": {
-        "en": "Phase E: Added Room Integrator & Feature Toggles",
-        "de": "Phase E: Raum-Integrator & Modul-Schalter hinzugefÃƒÆ’Ã‚Â¼gt"
-      },
-      "0.29.12": {
-        "en": "Feature: RL Penalty Auto-Expiration (3 Days)",
-        "de": "Feature: Automatischer Ablauf von Lern-Sperren (3 Tage)"
+    "version": "0.33.104",
+    "news": [
+      {
+        "version": "0.33.104",
+        "date": "2026-04-08",
+        "changes": [
+          "[Fix OC-7] Multi-Person-Motion-Only: sleepWindowEnd aus per-Person-Wakezeiten ableiten (Balken + Dreiecke fuer Haushalte ohne FP2/Garmin)",
+          "[Fix OC-7] Invertiertes sleepWindowStart korrigieren wenn Abendberechnung heutigen Start schreibt"
+        ]
       }
-    },
+    ],
     "titleLang": {
       "en": "NUUKANNI (Cogni-Living)",
       "de": "NUUKANNI (Cogni-Living)"
@@ -358,5 +176,3 @@
   "objects": [],
   "instanceObjects": []
 }
-
-
