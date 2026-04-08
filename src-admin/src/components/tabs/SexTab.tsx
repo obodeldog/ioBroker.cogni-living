@@ -478,15 +478,14 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     const [recalcState, setRecalcState] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
     const [recalcResult, setRecalcResult] = useState<{ updated: number; skipped: number; errors: number; total: number } | null>(null);
 
-    const runRecalc = async () => {
+    const runRecalc = async (force = false) => {
         setRecalcState('running');
         setRecalcResult(null);
         try {
-            const res: any = await socket.sendTo(`${adapterName}.${instance}`, 'recalcIntimacyHistory', {});
+            const res: any = await socket.sendTo(`${adapterName}.${instance}`, 'recalcIntimacyHistory', { force });
             if (res?.success) {
                 setRecalcResult({ updated: res.updated, skipped: res.skipped, errors: res.errors, total: res.total });
                 setRecalcState('done');
-                // Daten neu laden
                 setDayData({});
             } else {
                 setRecalcState('error');
@@ -645,7 +644,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                         <TerminalBox title="ALGORITHMUS" themeType={themeType}>
                             <div style={{ fontSize: '0.68rem', lineHeight: 1.8, color: isDark ? '#666' : '#888' }}>
                                 <div style={{ color: isDark ? '#555' : '#aaa', fontSize: '0.58rem', marginBottom: 4 }}>ERKENNUNGS-SCHWELLEN</div>
-                                <div>• Zeitfenster: <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>16:00 – 02:00 Uhr</span></div>
+                                <div>• Zeitfenster: <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>10:00 – 03:00 Uhr</span> <span style={{color:isDark?'#444':'#bbb'}}>(06-09h: Aufwachen ausgeblendet)</span></div>
                                 <div>• Min. <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>3 konsekutive 15-Min-Slots</span> aktiv</div>
                                 <div>• Peak vib_strength <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>≥ 50</span></div>
                                 <div>• vib_trigger <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>≥ 2</span> / Slot</div>
@@ -676,23 +675,39 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                             <div style={{ fontSize: '0.68rem', color: isDark ? '#888' : '#555', marginBottom: 8 }}>
                                 Einmalig nötig für Tage vor v0.33.105. Berechnet <code>intimacyEvents</code> aus den gespeicherten Rohdaten (<code>eventHistory</code>) aller historischen Dateien. Tage mit bereits erkannten Events werden übersprungen.
                             </div>
-                            <button
-                                onClick={runRecalc}
-                                disabled={recalcState === 'running'}
-                                style={{
-                                    background: recalcState === 'done' ? '#1b5e20' : recalcState === 'error' ? '#b71c1c' : (isDark ? '#1a2e1a' : '#e8f5e9'),
-                                    color: recalcState === 'done' ? '#a5d6a7' : recalcState === 'error' ? '#ef9a9a' : (isDark ? '#81c784' : '#1b5e20'),
-                                    border: `1px solid ${recalcState === 'done' ? '#388e3c' : recalcState === 'error' ? '#c62828' : (isDark ? '#2e7d32' : '#a5d6a7')}`,
-                                    borderRadius: 4, padding: '6px 14px', fontFamily: 'monospace',
-                                    fontSize: '0.72rem', cursor: recalcState === 'running' ? 'wait' : 'pointer',
-                                    fontWeight: 700, letterSpacing: 1,
-                                }}
-                            >
-                                {recalcState === 'idle'    && '▶ RETROAKTIV BERECHNEN'}
-                                {recalcState === 'running' && '⏳ Berechne alle Tage...'}
-                                {recalcState === 'done'    && '✓ ABGESCHLOSSEN'}
-                                {recalcState === 'error'   && '✗ FEHLER — nochmal versuchen'}
-                            </button>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                                <button
+                                    onClick={() => runRecalc(false)}
+                                    disabled={recalcState === 'running'}
+                                    style={{
+                                        background: recalcState === 'done' ? '#1b5e20' : recalcState === 'error' ? '#b71c1c' : (isDark ? '#1a2e1a' : '#e8f5e9'),
+                                        color: recalcState === 'done' ? '#a5d6a7' : recalcState === 'error' ? '#ef9a9a' : (isDark ? '#81c784' : '#1b5e20'),
+                                        border: `1px solid ${recalcState === 'done' ? '#388e3c' : recalcState === 'error' ? '#c62828' : (isDark ? '#2e7d32' : '#a5d6a7')}`,
+                                        borderRadius: 4, padding: '6px 14px', fontFamily: 'monospace',
+                                        fontSize: '0.72rem', cursor: recalcState === 'running' ? 'wait' : 'pointer',
+                                        fontWeight: 700, letterSpacing: 1,
+                                    }}
+                                >
+                                    {recalcState === 'idle'    && '▶ RETROAKTIV BERECHNEN'}
+                                    {recalcState === 'running' && '⏳ Berechne alle Tage...'}
+                                    {recalcState === 'done'    && '✓ ABGESCHLOSSEN'}
+                                    {recalcState === 'error'   && '✗ FEHLER — nochmal versuchen'}
+                                </button>
+                                <button
+                                    onClick={() => runRecalc(true)}
+                                    disabled={recalcState === 'running'}
+                                    style={{
+                                        background: 'transparent',
+                                        color: isDark ? '#666' : '#aaa',
+                                        border: `1px solid ${isDark ? '#333' : '#ddd'}`,
+                                        borderRadius: 4, padding: '6px 10px', fontFamily: 'monospace',
+                                        fontSize: '0.65rem', cursor: recalcState === 'running' ? 'wait' : 'pointer',
+                                    }}
+                                    title="Alle Tage neu berechnen — auch solche mit bereits erkannten Events (nach Algorithmus-Änderungen)"
+                                >
+                                    ↺ ALLES NEU (force)
+                                </button>
+                            </div>
                             {recalcResult && recalcState === 'done' && (
                                 <div style={{ marginTop: 8, fontSize: '0.68rem', color: isDark ? '#81c784' : '#2e7d32' }}>
                                     ✅ {recalcResult.total} Dateien geprüft · <b>{recalcResult.updated}</b> aktualisiert · {recalcResult.skipped} übersprungen

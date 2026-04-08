@@ -2128,12 +2128,12 @@ class CogniLiving extends utils.Adapter {
                     // Alle Vibrations-Events des Tages + Vortag (ab 16:00)
                     // Zeitfenster: gesamter Tag ab 06:00 Uhr (gestern) bis 03:00 Uhr (naechster Tag)
                     // Erfasst morgens, mittags und abends — Sex ist zeitlos!
-                    var _intim6h = new Date(); _intim6h.setHours(6,0,0,0);
-                    if (new Date().getHours() < 6) _intim6h.setDate(_intim6h.getDate()-1);
-                    var _intimEnd3h = new Date(_intim6h); _intimEnd3h.setDate(_intimEnd3h.getDate()+1); _intimEnd3h.setHours(3,0,0,0);
+                    var _intim10h = new Date(); _intim10h.setHours(10,0,0,0); // 06:00-09:59 ausgeblendet: Aufwach-Bewegungen
+                    if (new Date().getHours() < 10) _intim10h.setDate(_intim10h.getDate()-1);
+                    var _intimEnd3h = new Date(_intim10h); _intimEnd3h.setDate(_intimEnd3h.getDate()+1); _intimEnd3h.setHours(3,0,0,0);
                     var _intimEvts = sleepSearchEvents.filter(function(e) {
                         var _ts = e.timestamp||0;
-                        return _ts >= _intim6h.getTime() && _ts <= _intimEnd3h.getTime()
+                        return _ts >= _intim10h.getTime() && _ts <= _intimEnd3h.getTime()
                             && (e.type==='vibration_strength'||e.type==='vibration_trigger')
                             && (e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion));
                     }).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
@@ -2142,8 +2142,8 @@ class CogniLiving extends utils.Adapter {
                     // 15-Min-Slot-Analyse
                     var SLOT_MS = 15*60*1000;
                     var _intimSlots = [];
-                    var _intimWinStart = _intim6h.getTime();
-                    var _intimWinEnd   = _intimEnd3h.getTime(); // 06:00 bis 03:00 naechster Tag (21h Fenster)
+                    var _intimWinStart = _intim10h.getTime();
+                    var _intimWinEnd   = _intimEnd3h.getTime(); // 10:00 bis 03:00 naechster Tag (17h Fenster)
                     for (var _iS=_intimWinStart; _iS<_intimWinEnd; _iS+=SLOT_MS) {
                         var _iE=_iS+SLOT_MS;
                         var _str=_intimVibStr.filter(function(e){return (e.timestamp||0)>=_iS&&(e.timestamp||0)<_iE;});
@@ -2154,7 +2154,7 @@ class CogniLiving extends utils.Adapter {
                         _intimSlots.push({start:_iS,end:_iE,strCnt:_str.length,trigCnt:_trig.length,strMax:_strMax,strAvg:_strAvg});
                     }
                     // Kandidaten: 3+ konsekutive Slots mit trigCnt>=2 UND min 1 strCnt>=1 UND strMax>=50
-                    var MIN_CONSEC=3, MIN_TRIG=2, MIN_PEAK=50;
+                    var MIN_CONSEC=3, MIN_TRIG=2, MIN_PEAK=65; // Schlaf-Vib: 43-61, Sex: 65+
                     var _iCand=[]; var _iRun=[];
                     _intimSlots.forEach(function(sl,idx){
                         var _active=(sl.trigCnt>=MIN_TRIG||sl.strCnt>=1)&&sl.strMax>=MIN_PEAK;
@@ -2831,11 +2831,12 @@ class CogniLiving extends utils.Adapter {
                     try {
                         var _riPath = require('path').join(_riDir, _riF);
                         var _riSnap = JSON.parse(fs.readFileSync(_riPath, 'utf8'));
-                        if (_riSnap.intimacyEvents && _riSnap.intimacyEvents.length > 0) { _riSkipped++; continue; }
+                        var _riForce = (obj.message && obj.message.force === true);
+                        if (!_riForce && _riSnap.intimacyEvents && _riSnap.intimacyEvents.length > 0) { _riSkipped++; continue; }
                         var _riEvts = _riSnap.eventHistory;
                         if (!_riEvts || !Array.isArray(_riEvts) || _riEvts.length === 0) { _riSkipped++; continue; }
                         var _riDate = new Date(_riF.replace('.json','') + 'T12:00:00');
-                        var _riWinStart = new Date(_riDate); _riWinStart.setHours(6,0,0,0);
+                        var _riWinStart = new Date(_riDate); _riWinStart.setHours(10,0,0,0); // 10:00 - morgen ausgeblendet
                         var _riWinEnd = new Date(_riDate); _riWinEnd.setDate(_riWinEnd.getDate()+1); _riWinEnd.setHours(3,0,0,0);
                         var _riVibEvts = _riEvts.filter(function(e) {
                             var ts = e.timestamp||0;
@@ -2853,34 +2854,30 @@ class CogniLiving extends utils.Adapter {
                             var _riTrigCnt = _riSl.filter(function(e){return e.type==='vibration_trigger';}).length;
                             var _riMax = _riStrVals.length>0?Math.max.apply(null,_riStrVals):0;
                             var _riAvg = _riStrVals.length>0?(_riStrVals.reduce(function(a,b){return a+b;},0)/_riStrVals.length):0;
-                            _riSlots.push({start:_riT,strMax:_riMax,strAvg:_riAvg,trigCnt:_riTrigCnt,active:_riMax>=25||_riTrigCnt>=2});
+                            _riSlots.push({start:_riT,strMax:_riMax,strAvg:_riAvg,trigCnt:_riTrigCnt,strCnt:_riStrVals.length});
                         }
-                        var _riEvents = []; var _riInCluster=false; var _riRunSlots=[]; var _riGap=0;
-                        for (var _riS=0; _riS<_riSlots.length; _riS++) {
-                            var _riSl2=_riSlots[_riS];
-                            if (_riSl2.active) {
-                                if (!_riInCluster){_riInCluster=true;_riRunSlots=[];_riGap=0;}
-                                _riRunSlots.push(_riSl2); _riGap=0;
-                            } else if (_riInCluster) {
-                                _riGap++;
-                                if (_riGap<=2){_riRunSlots.push(_riSl2);}
-                                else{
-                                    if(_riRunSlots.filter(function(s){return s.active;}).length>=2){
-                                        var _riDurMin=Math.round(_riRunSlots.length*15);
-                                        if(_riDurMin>=8){
-                                            var _riPeakMax=Math.max.apply(null,_riRunSlots.map(function(s){return s.strMax;}));
-                                            var _riAvgAvg=_riRunSlots.filter(function(s){return s.strAvg>0;}).reduce(function(a,s,i,arr){return a+s.strAvg/arr.length;},0);
-                                            var _riAvgTrig=_riRunSlots.reduce(function(a,s,i,arr){return a+s.trigCnt/arr.length;},0);
-                                            var _riScore=Math.min(100,Math.round(Math.min(40,_riPeakMax*0.4)+Math.min(25,_riAvgAvg*0.25)+Math.min(20,_riDurMin*0.5)+Math.min(15,_riAvgTrig*3)));
-                                            if(_riScore>=30){
-                                                _riEvents.push({start:_riRunSlots[0].start,end:_riRunSlots[_riRunSlots.length-1].start+SLOT_MS_RI,duration:_riDurMin,score:_riScore,type:_riPeakMax>=65?'vaginal':'oral_hand',peakStrength:_riPeakMax,avgStrength:Math.round(_riAvgAvg),avgTrigger:Math.round(_riAvgTrig*10)/10,garminHRMax:null,garminHRAvg:null,slots:_riRunSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
-                                            }
-                                        }
-                                    }
-                                    _riInCluster=false; _riRunSlots=[]; _riGap=0;
-                                }
-                            }
-                        }
+                        // Kandidaten (>= 3 konsekutive Slots mit strMax>=65) — identisch mit Live-Algorithmus
+                        var RI_MIN_CONSEC=3, RI_MIN_TRIG=2, RI_MIN_PEAK=65;
+                        var _riCand=[]; var _riRun=[];
+                        _riSlots.forEach(function(sl){
+                            var _active=(sl.trigCnt>=RI_MIN_TRIG||sl.strCnt>=1)&&sl.strMax>=RI_MIN_PEAK;
+                            if(_active){_riRun.push(sl);}
+                            else{if(_riRun.length>=RI_MIN_CONSEC)_riCand.push(_riRun.slice()); _riRun=[];}
+                        });
+                        if(_riRun.length>=RI_MIN_CONSEC)_riCand.push(_riRun.slice());
+                        var _riEvents = [];
+                        _riCand.forEach(function(run){
+                            var _riDurMin=Math.round(run.length*15);
+                            var _riPeakMax=Math.max.apply(null,run.map(function(s){return s.strMax;}));
+                            var _riAvgTrig=Math.round(run.reduce(function(a,s){return a+s.trigCnt;},0)/run.length);
+                            var _riSStr=Math.min(100,Math.round((_riPeakMax/120)*100));
+                            var _riSDens=Math.min(100,Math.round((_riAvgTrig/10)*100));
+                            var _riSDur=Math.min(100,Math.round((_riDurMin/90)*100));
+                            var _riScore=Math.round(_riSStr*0.5+_riSDens*0.3+_riSDur*0.2);
+                            var _riHighSlots=run.filter(function(s){return s.strMax>=80&&s.strCnt>=5;});
+                            var _riType=_riHighSlots.length>=1?'vaginal':(_riPeakMax>=55?'oral_hand':'intim');
+                            _riEvents.push({start:run[0].start,end:run[run.length-1].start+SLOT_MS_RI,duration:_riDurMin,score:_riScore,type:_riType,peakStrength:_riPeakMax,avgStrength:run.length>0?Math.round(run.reduce(function(a,s){return a+s.strAvg;},0)/run.length):0,avgTrigger:_riAvgTrig,garminHRMax:null,garminHRAvg:null,slots:run.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
+                        });
                         if (_riEvents.length > 0) {
                             _riSnap.intimacyEvents = _riEvents;
                             fs.writeFileSync(_riPath, JSON.stringify(_riSnap, null, 2), 'utf8');
