@@ -1,0 +1,589 @@
+import React, { useState, useEffect } from 'react';
+import { Tooltip as MuiTooltip, IconButton } from '@mui/material';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Typen
+// ─────────────────────────────────────────────────────────────────────────────
+interface IntimacySlot {
+    start: number;
+    strMax: number;
+    strAvg: number;
+    trigCnt: number;
+}
+interface IntimacyEvent {
+    start: number;
+    end: number;
+    duration: number;
+    score: number;
+    type: 'vaginal' | 'oral_hand' | 'intim';
+    peakStrength: number;
+    avgStrength: number;
+    avgTrigger: number;
+    garminHRMax: number | null;
+    garminHRAvg: number | null;
+    slots: IntimacySlot[];
+}
+interface SexTabProps {
+    socket: any;
+    adapterName: string;
+    instance: number;
+    themeType: string;
+    native: Record<string, any>;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hilfsfunktionen
+// ─────────────────────────────────────────────────────────────────────────────
+const fmtTime = (ts: number) => new Date(ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+const fmtDate = (ts: number) => new Date(ts).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+const dateStr  = (d: Date) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+
+// Fun-Kommentare nach Typ + Score
+const getFunComment = (evt: IntimacyEvent): string => {
+    const s = evt.score;
+    const hr = evt.garminHRMax;
+    if (evt.type === 'vaginal') {
+        if (s >= 85) return `🔥 Rekord-Session! Peak-Stärke ${evt.peakStrength}${hr ? ` · HR bis ${hr} bpm` : ''}. Der Sensor ist beeindruckt und leicht überwältigt.`;
+        if (s >= 70) return `💕 Intensive vaginal-Session (${evt.duration} Min). ${hr ? `Garmin sagt: ${hr} bpm Max — ordentlich!` : 'Sensor nickt respektvoll.'}`;
+        return `💗 Schöne Session${hr ? ` · HR: ${hr} bpm` : ''}. Vaginal mit guter Matratzen-Übertragung.`;
+    }
+    if (evt.type === 'oral_hand') {
+        if (s >= 70) return `💜 Oral/Hand — gleichmäßig über ${evt.duration} Min. ${hr && hr > 100 ? `Herzrate ${hr} bpm — auch ohne Penetration kein Sport-Halfday. 😄` : 'Lateral und doch überzeugend.'}`;
+        if (evt.duration >= 60) return `💙 Ausdauer! ${evt.duration} Min Oral/Hand — der Sensor hat mitgezählt (leicht neidisch).`;
+        return `💙 Kurze aber feine Einheit (${evt.duration} Min, oral/hand). Qualität > Quantität!`;
+    }
+    if (s >= 70) return `💜 Intime Aktivität erkannt — ${evt.duration} Min, Score ${s}. ${hr ? `HR: ${hr} bpm.` : 'Typ-Klassifikation: zu diskret für den Sensor.'}`;
+    return `🤍 Intime Aktivität (${evt.duration} Min). Der Sensor hält diskret die Klappe.`;
+};
+
+const getNoActivityComment = (daysSince: number | null): string => {
+    if (daysSince === null) return '😴 Noch keine Daten — Sensor wartet geduldig. Viel Spaß beim Befüllen der Statistik.';
+    if (daysSince === 0)    return '😴 Heute noch keine Aktivität erkannt — der Tag ist aber noch jung!';
+    if (daysSince === 1)    return '💤 Gestern war die letzte Session. Heute: Ruhetag oder Sofa? Der Sensor fragt vorsichtig nach.';
+    if (daysSince <= 3)    return `💤 Letzte Session vor ${daysSince} Tagen. Sensor vermisst die Daten leicht.`;
+    return `😶 ${daysSince} Tage seit der letzten Aktivität. Der Sensor ist neutral — aber er hat Zeit.`;
+};
+
+// Slot-Farbe nach Stärke
+const slotColor = (max: number): string => {
+    if (max >= 90) return '#e91e63';
+    if (max >= 70) return '#c2185b';
+    if (max >= 50) return '#9c27b0';
+    if (max >= 30) return '#7b1fa2';
+    return '#4a148c';
+};
+
+// Typ-Label
+const typeLabel = (type: string): string => {
+    if (type === 'vaginal')   return '♥ Vaginal';
+    if (type === 'oral_hand') return '◐ Oral / Hand';
+    return '⬡ Intim';
+};
+const typeBg = (type: string, isDark: boolean): string => {
+    if (type === 'vaginal')   return isDark ? '#880e4f' : '#fce4ec';
+    if (type === 'oral_hand') return isDark ? '#1a237e' : '#e8eaf6';
+    return isDark ? '#212121' : '#f5f5f5';
+};
+const typeColor = (type: string, isDark: boolean): string => {
+    if (type === 'vaginal')   return isDark ? '#f48fb1' : '#c2185b';
+    if (type === 'oral_hand') return isDark ? '#90caf9' : '#283593';
+    return isDark ? '#888' : '#555';
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TerminalBox (identisch zu HealthTab)
+// ─────────────────────────────────────────────────────────────────────────────
+const TerminalBox = ({ title, children, themeType, helpText, style }: {
+    title: string; children: React.ReactNode; themeType: string; helpText?: string; style?: React.CSSProperties;
+}) => {
+    const isDark = themeType === 'dark';
+    return (
+        <div style={{
+            border: `1px solid ${isDark ? '#444' : '#bbb'}`,
+            backgroundColor: isDark ? '#0a0a0a' : '#ffffff',
+            color: isDark ? '#eee' : '#111',
+            fontFamily: "'Roboto Mono','Courier New',monospace",
+            marginBottom: '20px',
+            boxShadow: isDark ? 'none' : '2px 2px 0px rgba(0,0,0,0.1)',
+            ...(style || {})
+        }}>
+            <div style={{
+                backgroundColor: isDark ? '#1a1a1a' : '#f0f0f0',
+                borderBottom: `1px solid ${isDark ? '#444' : '#bbb'}`,
+                padding: '4px 8px', color: isDark ? '#888' : '#666',
+                fontSize: '0.75rem', fontWeight: 'bold',
+                letterSpacing: '1px', textTransform: 'uppercase',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+            }}>
+                <span>[ {title} ]</span>
+                {helpText && (
+                    <MuiTooltip title={<span style={{ fontSize: '0.75rem', lineHeight: 1.5, display: 'block', maxWidth: 280 }}>{helpText}</span>} placement="top" arrow>
+                        <IconButton size="small" sx={{ p: 0, ml: 0.5, opacity: 0.4, '&:hover': { opacity: 1 }, color: isDark ? '#888' : '#666' }}>
+                            <HelpOutlineIcon sx={{ fontSize: 12 }} />
+                        </IconButton>
+                    </MuiTooltip>
+                )}
+            </div>
+            <div style={{ padding: '12px', flex: 1 }}>{children}</div>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Score-Kreis
+// ─────────────────────────────────────────────────────────────────────────────
+const ScoreCircle = ({ score, isDark }: { score: number; isDark: boolean }) => {
+    const color = score >= 80 ? '#e91e63' : score >= 60 ? '#ab47bc' : '#7b1fa2';
+    return (
+        <div style={{
+            width: 70, height: 70, borderRadius: '50%',
+            border: `3px solid ${color}`, flexShrink: 0,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+        }}>
+            <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color, lineHeight: 1 }}>{score}</span>
+            <span style={{ fontSize: '0.42rem', color: isDark ? '#888' : '#aaa', marginTop: 2 }}>INTIM-SCORE</span>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Intensitäts-Balken (wie OBE-Bar in HealthTab)
+// ─────────────────────────────────────────────────────────────────────────────
+const IntimacyBar = ({ evt, isDark }: { evt: IntimacyEvent; isDark: boolean }) => {
+    // Fenster: 2h vor Event-Start bis 2h nach Event-Ende, min. 4h Breite
+    const rawStart = evt.start - 2 * 3600000;
+    const rawEnd   = evt.end   + 2 * 3600000;
+    const winDur   = Math.max(rawEnd - rawStart, 4 * 3600000);
+    // Auf volle Stunden runden für schöne Achse
+    const winStart = new Date(rawStart); winStart.setMinutes(0, 0, 0);
+    const winStartMs = winStart.getTime();
+    const tickCount = Math.round(winDur / 3600000) + 1;
+    const ticks = Array.from({ length: tickCount }, (_, i) => winStartMs + i * 3600000);
+
+    return (
+        <div>
+            <div style={{ fontSize: '0.55rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>
+                INTENSITÄTS-VERLAUF (15-Min-Slots)
+            </div>
+            <div style={{ position: 'relative', height: 28, background: isDark ? '#111' : '#f0f0f0', borderRadius: 3, overflow: 'hidden' }}>
+                {evt.slots.map((sl, i) => {
+                    const left = ((sl.start - winStartMs) / winDur) * 100;
+                    const width = Math.max(0.5, (15 * 60000 / winDur) * 100);
+                    if (left < -2 || left > 102) return null;
+                    return (
+                        <div key={i} style={{
+                            position: 'absolute', left: `${Math.max(0, left)}%`, width: `${width}%`,
+                            top: 0, height: '100%', background: slotColor(sl.strMax),
+                            opacity: sl.strMax > 0 ? 0.85 : 0.2
+                        }} title={`${fmtTime(sl.start)}: Peak ${sl.strMax}, Trig ${sl.trigCnt}`} />
+                    );
+                })}
+                {/* Start-Markierung */}
+                <div style={{
+                    position: 'absolute',
+                    left: `${Math.max(0, ((evt.start - winStartMs) / winDur) * 100)}%`,
+                    top: 0, width: 2, height: '100%', background: '#f48fb1', opacity: 0.9
+                }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.48rem', color: isDark ? '#444' : '#aaa', marginTop: 2 }}>
+                {ticks.slice(0, 5).map((t, i) => <span key={i}>{fmtTime(t).slice(0,5)}</span>)}
+            </div>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Einzeltag-Kachel
+// ─────────────────────────────────────────────────────────────────────────────
+const SexDayCard = ({ events, dateLabel, themeType, funMode }: {
+    events: IntimacyEvent[]; dateLabel: string; themeType: string; funMode: boolean;
+}) => {
+    const isDark = themeType === 'dark';
+    const dividerColor = isDark ? '#222' : '#eee';
+
+    if (events.length === 0) {
+        return (
+            <TerminalBox title={`SEX — ${dateLabel}`} themeType={themeType}>
+                <div style={{ textAlign: 'center', padding: '16px 8px' }}>
+                    <div style={{ fontSize: '1.6rem', marginBottom: 8, opacity: 0.3 }}>💤</div>
+                    <div style={{ fontSize: '0.85rem', color: isDark ? '#444' : '#ccc', marginBottom: 6 }}>
+                        Keine Aktivität erkannt
+                    </div>
+                    {funMode && (
+                        <div style={{
+                            background: isDark ? '#0d1a0d' : '#f1f8e9', border: `1px solid ${isDark ? '#1b5e20' : '#c8e6c9'}`,
+                            borderRadius: 4, padding: '8px 10px', fontSize: '0.7rem',
+                            color: isDark ? '#81c784' : '#2e7d32', fontStyle: 'italic', marginTop: 8
+                        }}>
+                            {getNoActivityComment(0)}
+                        </div>
+                    )}
+                </div>
+            </TerminalBox>
+        );
+    }
+
+    const evt = events[0]; // primäres Event (höchster Score)
+    return (
+        <TerminalBox title={`SEX — ${dateLabel}`} themeType={themeType}
+            helpText="Erkennt intime Aktivitäten anhand des Vibrationssensors (16:00–02:00 Uhr). Score: Stärke 50% + Dichte 30% + Dauer 20%. Typ-Klassifikation: niedrige Konfidenz. Kein Medizinprodukt.">
+            {/* Score + Meta */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
+                <ScoreCircle score={evt.score} isDark={isDark} />
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.65rem', color: isDark ? '#888' : '#aaa', marginBottom: 3 }}>ERKANNTE AKTIVITÄT</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: 4 }}>
+                        {fmtTime(evt.start)} — {fmtTime(evt.end)}
+                        <span style={{ fontSize: '0.6rem', color: isDark ? '#666' : '#aaa', marginLeft: 8 }}>~{evt.duration} Min</span>
+                    </div>
+                    <div>
+                        <span style={{
+                            display: 'inline-block', padding: '1px 7px', borderRadius: 3,
+                            fontSize: '0.6rem', fontWeight: 'bold', marginRight: 5,
+                            background: typeBg(evt.type, isDark), color: typeColor(evt.type, isDark)
+                        }}>{typeLabel(evt.type)}</span>
+                        <span style={{
+                            display: 'inline-block', padding: '1px 7px', borderRadius: 3,
+                            fontSize: '0.6rem', background: isDark ? '#1b5e20' : '#e8f5e9', color: isDark ? '#a5d6a7' : '#1b5e20'
+                        }}>✓ Bestätigt</span>
+                    </div>
+                    <div style={{ marginTop: 5, fontSize: '0.55rem', color: isDark ? '#555' : '#aaa' }}>
+                        Peak: <span style={{ color: '#ab47bc' }}>{evt.peakStrength}</span> ·
+                        Dichte: <span style={{ color: '#ab47bc' }}>{evt.avgTrigger}/15min</span> ·
+                        {evt.slots.length} Slots aktiv
+                    </div>
+                </div>
+            </div>
+
+            {/* Intensitäts-Balken */}
+            <IntimacyBar evt={evt} isDark={isDark} />
+
+            {/* Mehrere Events an einem Tag */}
+            {events.length > 1 && (
+                <div style={{ fontSize: '0.6rem', color: isDark ? '#666' : '#aaa', marginTop: 6, fontStyle: 'italic' }}>
+                    +{events.length - 1} weitere Session(s) heute
+                </div>
+            )}
+
+            <div style={{ borderTop: `1px dashed ${dividerColor}`, margin: '8px 0' }} />
+
+            {/* Fun-Kommentar */}
+            {funMode && (
+                <div style={{
+                    background: isDark ? '#130d1a' : '#f3e5f5',
+                    border: `1px solid ${isDark ? '#6a1b9a' : '#ce93d8'}`,
+                    borderRadius: 4, padding: '8px 10px', fontSize: '0.72rem',
+                    color: isDark ? '#ce93d8' : '#6a1b9a', fontStyle: 'italic', marginBottom: 8
+                }}>
+                    {getFunComment(evt)}
+                </div>
+            )}
+
+            {/* Garmin HR */}
+            {(evt.garminHRMax !== null || evt.garminHRAvg !== null) ? (
+                <>
+                    <div style={{ fontSize: '0.55rem', color: isDark ? '#555' : '#aaa', marginBottom: 4 }}>⌚ GARMIN HERZFREQUENZ</div>
+                    <div style={{ display: 'flex', gap: 16 }}>
+                        <div>
+                            <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase' }}>Max HR</div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#ef5350' }}>{evt.garminHRMax} bpm</div>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase' }}>Ø HR (Fenster)</div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#ff7043' }}>{evt.garminHRAvg} bpm</div>
+                        </div>
+                    </div>
+                </>
+            ) : (
+                <div style={{ fontSize: '0.55rem', color: isDark ? '#333' : '#ccc' }}>
+                    ⌚ Garmin: kein HR-Signal im Aktivitätsfenster
+                </div>
+            )}
+        </TerminalBox>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7-Tage-History
+// ─────────────────────────────────────────────────────────────────────────────
+const SevenDayHistory = ({ historyDays, themeType, funMode }: {
+    historyDays: Array<{ dateStr: string; label: string; events: IntimacyEvent[] }>;
+    themeType: string; funMode: boolean;
+}) => {
+    const isDark = themeType === 'dark';
+    const withEvents = historyDays.filter(d => d.events.length > 0);
+    const weekCount  = withEvents.length;
+    const avgScore   = weekCount > 0 ? Math.round(withEvents.reduce((a, d) => a + d.events[0].score, 0) / weekCount) : null;
+    const avgDur     = weekCount > 0 ? Math.round(withEvents.reduce((a, d) => a + d.events[0].duration, 0) / weekCount) : null;
+
+    // Letzte Aktivität: wie viele Tage her?
+    let daysSince: number | null = null;
+    for (let i = historyDays.length - 1; i >= 0; i--) {
+        if (historyDays[i].events.length > 0) { daysSince = historyDays.length - 1 - i; break; }
+    }
+
+    return (
+        <TerminalBox title="SEX — 7 TAGE" themeType={themeType}>
+            {/* Tages-Dots */}
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${historyDays.length}, 1fr)`, gap: 6, textAlign: 'center', marginBottom: 12 }}>
+                {historyDays.map((day, i) => {
+                    const hasEvt  = day.events.length > 0;
+                    const isToday = i === historyDays.length - 1;
+                    const evt     = hasEvt ? day.events[0] : null;
+                    const dotColor = !hasEvt ? (isDark ? '#1a1a1a' : '#f0f0f0') :
+                        evt!.type === 'vaginal' ? '#880e4f' : '#4a148c';
+                    const dotBorder = !hasEvt ? `1px dashed ${isDark ? '#2a2a2a' : '#ddd'}` :
+                        evt!.type === 'vaginal' ? '1px solid #c2185b' : '1px solid #7b1fa2';
+                    return (
+                        <div key={i}>
+                            <div style={{ fontSize: '0.52rem', color: isDark ? (isToday ? '#888' : '#444') : (isToday ? '#666' : '#bbb'), marginBottom: 3 }}>
+                                {day.label}
+                            </div>
+                            <div style={{
+                                width: 24, height: 24, borderRadius: '50%',
+                                background: dotColor, border: dotBorder,
+                                margin: '0 auto 3px', display: 'flex',
+                                alignItems: 'center', justifyContent: 'center',
+                                fontSize: '0.7rem'
+                            }}>
+                                {hasEvt ? (evt!.type === 'vaginal' ? '♥' : '💜') : (isToday ? '?' : '—')}
+                            </div>
+                            {hasEvt && (
+                                <>
+                                    <div style={{ fontSize: '0.58rem', color: isDark ? '#ce93d8' : '#7b1fa2', fontWeight: 'bold' }}>{evt!.score}</div>
+                                    <div style={{ fontSize: '0.45rem', color: isDark ? '#555' : '#aaa' }}>{fmtTime(evt!.start).slice(0,5)}</div>
+                                    <div style={{ fontSize: '0.4rem', color: isDark ? '#444' : '#bbb' }}>{evt!.duration} Min</div>
+                                </>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, margin: '8px 0' }} />
+
+            {/* Wochenstatistik */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 10 }}>
+                {[
+                    { lbl: 'DIESE WOCHE', val: weekCount > 0 ? `${weekCount}× bestätigt` : '0 Sessions', col: '#ab47bc' },
+                    { lbl: 'Ø DAUER', val: avgDur !== null ? `~${avgDur} Min` : '—', col: '#ab47bc' },
+                    { lbl: 'Ø SCORE', val: avgScore !== null ? `${avgScore} / 100` : '—', col: '#ab47bc' },
+                    { lbl: 'ZULETZT', val: daysSince !== null ? (daysSince === 0 ? 'heute' : `vor ${daysSince}d`) : '—', col: isDark ? '#888' : '#aaa' }
+                ].map(m => (
+                    <div key={m.lbl}>
+                        <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase', marginBottom: 2 }}>{m.lbl}</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: m.col }}>{m.val}</div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Fun-Wochenkommentar */}
+            {funMode && (
+                <div style={{
+                    background: isDark ? '#130d1a' : '#f3e5f5',
+                    border: `1px solid ${isDark ? '#4a148c' : '#ce93d8'}`,
+                    borderRadius: 4, padding: '8px 10px', fontSize: '0.7rem',
+                    color: isDark ? '#ce93d8' : '#6a1b9a', fontStyle: 'italic'
+                }}>
+                    {weekCount === 0 && '😴 Ruhige Woche. Der Vibrationssensor hat reichlich Schlaf-Phasen analysiert. Kein Vorwurf.'}
+                    {weekCount === 1 && `💜 Eine Session diese Woche — Qualität zählt! Letzte: ${withEvents[0]?.label}, Score ${withEvents[0]?.events[0].score}.`}
+                    {weekCount === 2 && `💕 Zwei Sessions — schöne Frequenz! Ø Score ${avgScore}. Der Sensor ist zufrieden.`}
+                    {weekCount >= 3 && weekCount <= 4 && `🔥 ${weekCount} Sessions diese Woche — aktiv! Ø Score ${avgScore}, Ø ${avgDur} Min. Sensor-Kommentar: beeindruckend.`}
+                    {weekCount >= 5 && `🏆 ${weekCount} Sessions! Der Sensor fragt diskret: Schläft ihr überhaupt? (Ø Score ${avgScore}).`}
+                </div>
+            )}
+        </TerminalBox>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Haupt-Komponente SexTab
+// ─────────────────────────────────────────────────────────────────────────────
+const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeType, native }) => {
+    const isDark = themeType === 'dark';
+    const funMode = native.sexFunMode !== false;
+
+    // Datums-Navigation
+    const [viewDate, setViewDate] = useState<Date>(() => {
+        const d = new Date(); d.setHours(0, 0, 0, 0); return d;
+    });
+
+    // Geladene Daten: { [dateStr]: IntimacyEvent[] }
+    const [dayData, setDayData] = useState<Record<string, IntimacyEvent[]>>({});
+    const [loading, setLoading]  = useState(true);
+
+    const loadDay = async (d: Date) => {
+        const ds = dateStr(d);
+        if (dayData[ds] !== undefined) return;
+        try {
+            const result: any = await socket.sendTo(
+                `${adapterName}.${instance}`, 'getHistoryData', { date: ds, _t: Date.now() }
+            );
+            const evts: IntimacyEvent[] = result?.data?.intimacyEvents ?? [];
+            setDayData(prev => ({ ...prev, [ds]: evts }));
+        } catch {
+            setDayData(prev => ({ ...prev, [ds]: [] }));
+        }
+    };
+
+    // Lade aktuellen Tag + 6 zurückliegende Tage
+    useEffect(() => {
+        setLoading(true);
+        const days: Date[] = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(viewDate); d.setDate(d.getDate() - i); days.push(d);
+        }
+        Promise.all(days.map(loadDay)).finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewDate]);
+
+    const navDay = (delta: number) => {
+        const d = new Date(viewDate); d.setDate(d.getDate() + delta); setViewDate(d);
+    };
+    const isToday = dateStr(viewDate) === dateStr(new Date());
+
+    // 7-Tage-Daten
+    const historyDays = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(viewDate); d.setDate(d.getDate() - (6 - i));
+        const ds = dateStr(d);
+        return { dateStr: ds, label: fmtDate(d.getTime()), events: dayData[ds] ?? [] };
+    });
+
+    const todayDs     = dateStr(viewDate);
+    const todayEvents = dayData[todayDs] ?? [];
+
+    return (
+        <div style={{
+            padding: '20px',
+            fontFamily: "'Roboto Mono','Courier New',monospace",
+            background: isDark ? '#121212' : '#f5f5f5',
+            minHeight: '100vh'
+        }}>
+            {/* Header + Navigation */}
+            <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginBottom: 20, gap: 12
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <IconButton size="small" onClick={() => navDay(-1)} sx={{ color: isDark ? '#888' : '#555' }}>
+                        <ArrowBackIosIcon fontSize="small" />
+                    </IconButton>
+                    <div style={{ fontFamily: 'inherit', fontSize: '0.8rem', color: isDark ? '#888' : '#666', minWidth: 120, textAlign: 'center' }}>
+                        {isToday ? '📅 Heute' : fmtDate(viewDate.getTime())}
+                    </div>
+                    <IconButton size="small" onClick={() => navDay(1)} disabled={isToday} sx={{ color: isDark ? '#888' : '#555', '&.Mui-disabled': { opacity: 0.2 } }}>
+                        <ArrowForwardIosIcon fontSize="small" />
+                    </IconButton>
+                    {!isToday && (
+                        <button onClick={() => setViewDate(() => { const d = new Date(); d.setHours(0,0,0,0); return d; })}
+                            style={{
+                                fontFamily: 'inherit', fontSize: '0.6rem', padding: '2px 8px',
+                                background: 'transparent', border: `1px solid ${isDark ? '#444' : '#bbb'}`,
+                                color: isDark ? '#888' : '#666', cursor: 'pointer', borderRadius: 2
+                            }}>→ Heute</button>
+                    )}
+                </div>
+                <div style={{ fontSize: '0.6rem', color: isDark ? '#333' : '#ccc' }}>
+                    🔒 Daten lokal · keine Cloud
+                </div>
+            </div>
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: 40, color: isDark ? '#444' : '#bbb', fontSize: '0.8rem' }}>
+                    Lade Daten...
+                </div>
+            ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                    {/* Linke Spalte: Aktueller Tag + 7-Tage */}
+                    <div>
+                        <SexDayCard
+                            events={todayEvents}
+                            dateLabel={isToday ? 'Heute' : fmtDate(viewDate.getTime())}
+                            themeType={themeType}
+                            funMode={funMode}
+                        />
+                        <SevenDayHistory historyDays={historyDays} themeType={themeType} funMode={funMode} />
+                    </div>
+
+                    {/* Rechte Spalte: Algorithmus-Info + Hinweis */}
+                    <div>
+                        <TerminalBox title="SENSOR-DETAILS" themeType={themeType}
+                            helpText="Technische Details zur Aktivitätserkennung. Score: Vibrationsstärke 50% + Trigger-Dichte 30% + Dauer 20%. Optionaler Garmin-HR-Boost (+10/+15 Punkte).">
+                            {todayEvents.length > 0 ? (
+                                todayEvents.map((evt, i) => (
+                                    <div key={i} style={{ marginBottom: i < todayEvents.length - 1 ? 12 : 0 }}>
+                                        <div style={{ fontSize: '0.6rem', color: isDark ? '#666' : '#aaa', marginBottom: 4 }}>
+                                            SESSION {i + 1} · {fmtTime(evt.start)}–{fmtTime(evt.end)}
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
+                                            {[
+                                                { lbl: 'PEAK STÄRKE', val: String(evt.peakStrength), col: '#ab47bc' },
+                                                { lbl: 'AVG STÄRKE', val: String(evt.avgStrength), col: '#ab47bc' },
+                                                { lbl: 'AVG TRIGGER', val: String(evt.avgTrigger)+'/Slot', col: '#ab47bc' }
+                                            ].map(m => (
+                                                <div key={m.lbl}>
+                                                    <div style={{ fontSize: '0.48rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase' }}>{m.lbl}</div>
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: m.col }}>{m.val}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {evt.garminHRMax !== null && (
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                                <div>
+                                                    <div style={{ fontSize: '0.48rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase' }}>⌚ MAX HR</div>
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#ef5350' }}>{evt.garminHRMax} bpm</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '0.48rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase' }}>⌚ Ø HR</div>
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#ff7043' }}>{evt.garminHRAvg} bpm</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
+                                <div style={{ fontSize: '0.75rem', color: isDark ? '#333' : '#ccc', textAlign: 'center', padding: '10px 0' }}>
+                                    Keine Session heute
+                                </div>
+                            )}
+                        </TerminalBox>
+
+                        <TerminalBox title="ALGORITHMUS" themeType={themeType}>
+                            <div style={{ fontSize: '0.68rem', lineHeight: 1.8, color: isDark ? '#666' : '#888' }}>
+                                <div style={{ color: isDark ? '#555' : '#aaa', fontSize: '0.58rem', marginBottom: 4 }}>ERKENNUNGS-SCHWELLEN</div>
+                                <div>• Zeitfenster: <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>16:00 – 02:00 Uhr</span></div>
+                                <div>• Min. <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>3 konsekutive 15-Min-Slots</span> aktiv</div>
+                                <div>• Peak vib_strength <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>≥ 50</span></div>
+                                <div>• vib_trigger <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>≥ 2</span> / Slot</div>
+                                <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.58rem' }}>TYP-KLASSIFIKATION (Konfidenz: niedrig)</div>
+                                <div>• Peak ≥80 + ≥5 Str/Slot → <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>vaginal</span></div>
+                                <div>• Peak ≥55, gleichmäßig → <span style={{ color: isDark ? '#90caf9' : '#283593' }}>oral/hand</span></div>
+                                <div>• Default → <span style={{ color: '#888' }}>intim</span></div>
+                                <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6 }}>
+                                    <span style={{ color: isDark ? '#555' : '#aaa', fontSize: '0.58rem' }}>Erw. Sensitivität ~75% · Spezifität ~88%</span>
+                                </div>
+                            </div>
+                        </TerminalBox>
+
+                        <TerminalBox title="DATENSCHUTZ" themeType={themeType}>
+                            <div style={{ fontSize: '0.68rem', lineHeight: 1.8, color: isDark ? '#555' : '#888' }}>
+                                <div>🔒 Alle Daten bleiben <strong style={{ color: isDark ? '#888' : '#555' }}>lokal</strong> auf deinem ioBroker-System</div>
+                                <div>🚫 Keine Übertragung in die Cloud</div>
+                                <div>📁 Gespeichert als tägliche JSON-Datei (History)</div>
+                                <div>⚙️ Deaktivierbar in Einstellungen → Module</div>
+                                <div style={{ marginTop: 6, fontSize: '0.55rem', color: isDark ? '#333' : '#bbb' }}>
+                                    Kein Medizinprodukt · Keine klinische Nutzung
+                                </div>
+                            </div>
+                        </TerminalBox>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default SexTab;

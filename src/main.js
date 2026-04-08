@@ -2126,11 +2126,14 @@ class CogniLiving extends utils.Adapter {
             if (this.config.moduleSex === true) {
                 try {
                     // Alle Vibrations-Events des Tages + Vortag (ab 16:00)
-                    var _intim16h = new Date(); _intim16h.setHours(16,0,0,0);
-                    if (new Date().getHours() < 16) _intim16h.setDate(_intim16h.getDate()-1);
+                    // Zeitfenster: gesamter Tag ab 06:00 Uhr (gestern) bis 03:00 Uhr (naechster Tag)
+                    // Erfasst morgens, mittags und abends — Sex ist zeitlos!
+                    var _intim6h = new Date(); _intim6h.setHours(6,0,0,0);
+                    if (new Date().getHours() < 6) _intim6h.setDate(_intim6h.getDate()-1);
+                    var _intimEnd3h = new Date(_intim6h); _intimEnd3h.setDate(_intimEnd3h.getDate()+1); _intimEnd3h.setHours(3,0,0,0);
                     var _intimEvts = sleepSearchEvents.filter(function(e) {
                         var _ts = e.timestamp||0;
-                        return _ts >= _intim16h.getTime()
+                        return _ts >= _intim6h.getTime() && _ts <= _intimEnd3h.getTime()
                             && (e.type==='vibration_strength'||e.type==='vibration_trigger')
                             && (e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion));
                     }).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
@@ -2139,8 +2142,8 @@ class CogniLiving extends utils.Adapter {
                     // 15-Min-Slot-Analyse
                     var SLOT_MS = 15*60*1000;
                     var _intimSlots = [];
-                    var _intimWinStart = _intim16h.getTime();
-                    var _intimWinEnd   = _intimWinStart + 10*3600000; // 16:00-02:00
+                    var _intimWinStart = _intim6h.getTime();
+                    var _intimWinEnd   = _intimEnd3h.getTime(); // 06:00 bis 03:00 naechster Tag (21h Fenster)
                     for (var _iS=_intimWinStart; _iS<_intimWinEnd; _iS+=SLOT_MS) {
                         var _iE=_iS+SLOT_MS;
                         var _str=_intimVibStr.filter(function(e){return (e.timestamp||0)>=_iS&&(e.timestamp||0)<_iE;});

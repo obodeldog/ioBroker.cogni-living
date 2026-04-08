@@ -544,10 +544,26 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                 <Switch checked={mx} onChange={(e) => this.updateNativeValue('moduleSex', e.target.checked)} />
                             </Grid>
                             {mx && (
-                                <Grid item>
-                                    <Typography variant="caption">Fun-Modus (witzige Kommentare)</Typography>
-                                    <Switch checked={mxFun} onChange={(e) => this.updateNativeValue('sexFunMode', e.target.checked)} />
-                                </Grid>
+                                <>
+                                    <Grid item>
+                                        <Typography variant="caption">Fun-Modus (witzige Kommentare)</Typography>
+                                        <Switch checked={mxFun} onChange={(e) => this.updateNativeValue('sexFunMode', e.target.checked)} />
+                                    </Grid>
+                                    <Grid item xs={12}>
+                                        <Typography variant="caption" sx={{color:'#888', display:'block', mb:0.5}}>
+                                            ⌚ Garmin HR-Datenpunkt (optional) — z.B. <code style={{fontSize:'0.7rem'}}>garmin.0.heartRate.heartRateValues</code>
+                                        </Typography>
+                                        <TextField
+                                            size="small"
+                                            fullWidth
+                                            placeholder="garmin.0.heartRate.heartRateValues"
+                                            value={native.sexGarminHRStateId || ''}
+                                            onChange={(e) => this.updateNativeValue('sexGarminHRStateId', e.target.value)}
+                                            sx={{ fontFamily: 'monospace', maxWidth: 500 }}
+                                            helperText="Leer lassen wenn kein Garmin vorhanden"
+                                        />
+                                    </Grid>
+                                </>
                             )}
                         </Grid>
                     </Paper>
