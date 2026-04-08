@@ -568,6 +568,58 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         </Grid>
                     </Paper>
                 </Grid>
+
+                {/* ZYKLUS-KACHEL */}
+                {(() => {
+                    const mz = native.moduleZyklus === true;
+                    return (
+                        <Grid item xs={12}>
+                            <Paper variant="outlined" sx={{p: 2, border: '1px dashed #f06292', opacity: mz ? 1 : 0.7}}>
+                                <Typography variant="subtitle2" sx={{mb: 1, color: '#f06292', display:'flex', alignItems:'center', gap:1}}>
+                                    🌸 Zyklus-Kachel (Datenschutz-Modul)
+                                </Typography>
+                                <Typography variant="caption" sx={{color:'#888', display:'block', mb:1}}>
+                                    Zyklusverlauf, Eisprung und fruchtbare Tage — berechnet aus dem ersten Blutungstag. Alle Daten bleiben lokal.
+                                </Typography>
+                                <Grid container spacing={2} alignItems="center">
+                                    <Grid item>
+                                        <Typography variant="caption">Zyklus-Kachel aktivieren</Typography>
+                                        <Switch checked={mz} onChange={(e) => this.updateNativeValue('moduleZyklus', e.target.checked)} />
+                                    </Grid>
+                                    {mz && (
+                                        <>
+                                            <Grid item>
+                                                <Typography variant="caption">Zykluslänge (Tage, Standard: 28)</Typography>
+                                                <TextField
+                                                    size="small"
+                                                    type="number"
+                                                    value={native.zyklusLaenge || 28}
+                                                    onChange={(e) => this.updateNativeValue('zyklusLaenge', parseInt(e.target.value) || 28)}
+                                                    sx={{ width: 90, ml: 1 }}
+                                                    inputProps={{ min: 21, max: 45 }}
+                                                />
+                                            </Grid>
+                                            <Grid item xs={12}>
+                                                <Typography variant="caption" sx={{color:'#888', display:'block', mb:0.5}}>
+                                                    📅 Erste Blutungstage (letzten 6 Zyklen, Format: YYYY-MM-DD, kommagetrennt)
+                                                </Typography>
+                                                <TextField
+                                                    size="small"
+                                                    fullWidth
+                                                    placeholder="z.B. 2026-03-10, 2026-02-10, 2026-01-13"
+                                                    value={native.zyklusStartDaten || ''}
+                                                    onChange={(e) => this.updateNativeValue('zyklusStartDaten', e.target.value)}
+                                                    sx={{ fontFamily: 'monospace', maxWidth: 600 }}
+                                                    helperText="Neuester Zyklus zuerst. Aus mehreren Einträgen wird die individuelle Zykluslänge berechnet."
+                                                />
+                                            </Grid>
+                                        </>
+                                    )}
+                                </Grid>
+                            </Paper>
+                        </Grid>
+                    );
+                })()}
             </Grid>
         );
     }

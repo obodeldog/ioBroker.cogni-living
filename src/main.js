@@ -2819,6 +2819,84 @@ class CogniLiving extends utils.Adapter {
                 } else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
             } catch(_pcE) { this.sendTo(obj.from, obj.command, { success: false, error: _pcE.message }, obj.callback); }
         }
+        else if (obj.command === 'recalcIntimacyHistory') {
+            // Retroaktive Intimacy-Berechnung: liest eventHistory aus vorhandenen JSON-Snapshots
+            // und berechnet intimacyEvents neu (fuer Tage ohne das Feature oder ohne Ereignisse)
+            try {
+                var _riDir = require('path').join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                var _riFiles = fs.readdirSync(_riDir).filter(function(f){ return /^\d{4}-\d{2}-\d{2}\.json$/.test(f); }).sort();
+                var _riUpdated = 0; var _riSkipped = 0; var _riErrors = 0;
+                var SLOT_MS_RI = 15*60*1000;
+                for (var _riF of _riFiles) {
+                    try {
+                        var _riPath = require('path').join(_riDir, _riF);
+                        var _riSnap = JSON.parse(fs.readFileSync(_riPath, 'utf8'));
+                        if (_riSnap.intimacyEvents && _riSnap.intimacyEvents.length > 0) { _riSkipped++; continue; }
+                        var _riEvts = _riSnap.eventHistory;
+                        if (!_riEvts || !Array.isArray(_riEvts) || _riEvts.length === 0) { _riSkipped++; continue; }
+                        var _riDate = new Date(_riF.replace('.json','') + 'T12:00:00');
+                        var _riWinStart = new Date(_riDate); _riWinStart.setHours(6,0,0,0);
+                        var _riWinEnd = new Date(_riDate); _riWinEnd.setDate(_riWinEnd.getDate()+1); _riWinEnd.setHours(3,0,0,0);
+                        var _riVibEvts = _riEvts.filter(function(e) {
+                            var ts = e.timestamp||0;
+                            return ts >= _riWinStart.getTime() && ts <= _riWinEnd.getTime()
+                                && (e.type==='vibration_strength'||e.type==='vibration_trigger')
+                                && (e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion));
+                        }).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
+                        if (_riVibEvts.length < 3) { _riSkipped++; continue; }
+                        var _riSlots = [];
+                        var _riSlotStart = _riWinStart.getTime(); var _riSlotEnd = _riWinEnd.getTime();
+                        for (var _riT = _riSlotStart; _riT < _riSlotEnd; _riT += SLOT_MS_RI) {
+                            var _riSl = _riVibEvts.filter(function(e){ return (e.timestamp||0)>=_riT && (e.timestamp||0)<_riT+SLOT_MS_RI; });
+                            if (_riSl.length===0){_riSlots.push({start:_riT,strMax:0,strAvg:0,trigCnt:0,active:false});continue;}
+                            var _riStrVals = _riSl.filter(function(e){return e.type==='vibration_strength';}).map(function(e){return e.value||0;});
+                            var _riTrigCnt = _riSl.filter(function(e){return e.type==='vibration_trigger';}).length;
+                            var _riMax = _riStrVals.length>0?Math.max.apply(null,_riStrVals):0;
+                            var _riAvg = _riStrVals.length>0?(_riStrVals.reduce(function(a,b){return a+b;},0)/_riStrVals.length):0;
+                            _riSlots.push({start:_riT,strMax:_riMax,strAvg:_riAvg,trigCnt:_riTrigCnt,active:_riMax>=25||_riTrigCnt>=2});
+                        }
+                        var _riEvents = []; var _riInCluster=false; var _riRunSlots=[]; var _riGap=0;
+                        for (var _riS=0; _riS<_riSlots.length; _riS++) {
+                            var _riSl2=_riSlots[_riS];
+                            if (_riSl2.active) {
+                                if (!_riInCluster){_riInCluster=true;_riRunSlots=[];_riGap=0;}
+                                _riRunSlots.push(_riSl2); _riGap=0;
+                            } else if (_riInCluster) {
+                                _riGap++;
+                                if (_riGap<=2){_riRunSlots.push(_riSl2);}
+                                else{
+                                    if(_riRunSlots.filter(function(s){return s.active;}).length>=2){
+                                        var _riDurMin=Math.round(_riRunSlots.length*15);
+                                        if(_riDurMin>=8){
+                                            var _riPeakMax=Math.max.apply(null,_riRunSlots.map(function(s){return s.strMax;}));
+                                            var _riAvgAvg=_riRunSlots.filter(function(s){return s.strAvg>0;}).reduce(function(a,s,i,arr){return a+s.strAvg/arr.length;},0);
+                                            var _riAvgTrig=_riRunSlots.reduce(function(a,s,i,arr){return a+s.trigCnt/arr.length;},0);
+                                            var _riScore=Math.min(100,Math.round(Math.min(40,_riPeakMax*0.4)+Math.min(25,_riAvgAvg*0.25)+Math.min(20,_riDurMin*0.5)+Math.min(15,_riAvgTrig*3)));
+                                            if(_riScore>=30){
+                                                _riEvents.push({start:_riRunSlots[0].start,end:_riRunSlots[_riRunSlots.length-1].start+SLOT_MS_RI,duration:_riDurMin,score:_riScore,type:_riPeakMax>=65?'vaginal':'oral_hand',peakStrength:_riPeakMax,avgStrength:Math.round(_riAvgAvg),avgTrigger:Math.round(_riAvgTrig*10)/10,garminHRMax:null,garminHRAvg:null,slots:_riRunSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
+                                            }
+                                        }
+                                    }
+                                    _riInCluster=false; _riRunSlots=[]; _riGap=0;
+                                }
+                            }
+                        }
+                        if (_riEvents.length > 0) {
+                            _riSnap.intimacyEvents = _riEvents;
+                            fs.writeFileSync(_riPath, JSON.stringify(_riSnap, null, 2), 'utf8');
+                            _riUpdated++;
+                            this.log.info('[OC-SEX] retroaktiv: '+_riF+' → '+_riEvents.length+' Event(s) geschrieben');
+                        } else { _riSkipped++; }
+                    } catch(_riFileErr) {
+                        this.log.warn('[OC-SEX] recalc Fehler in '+_riF+': '+_riFileErr.message);
+                        _riErrors++;
+                    }
+                }
+                this.sendTo(obj.from, obj.command, { success: true, updated: _riUpdated, skipped: _riSkipped, errors: _riErrors, total: _riFiles.length }, obj.callback);
+            } catch(_riErr) {
+                this.sendTo(obj.from, obj.command, { success: false, error: _riErr.message }, obj.callback);
+            }
+        }
         }
     }
 

@@ -42,9 +42,77 @@ const fmtDate = (ts: number) => new Date(ts).toLocaleDateString('de-DE', { day: 
 const dateStr  = (d: Date) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 
 // Fun-Kommentare nach Typ + Score
-const getFunComment = (evt: IntimacyEvent): string => {
+// Zyklus-Phase für ein Datum berechnen (aus native config)
+function getZyklusPhaseForDate(date: Date, native: Record<string, any>): { phase: string; tag: number; emoji: string } | null {
+    try {
+        const rawDaten = native.zyklusStartDaten || '';
+        if (!native.moduleZyklus || !rawDaten) return null;
+        const dates = rawDaten.split(',')
+            .map((s: string) => s.trim())
+            .filter((s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s))
+            .map((s: string) => new Date(s + 'T06:00:00'))
+            .filter((d: Date) => !isNaN(d.getTime()) && d <= date)
+            .sort((a: Date, b: Date) => b.getTime() - a.getTime());
+        if (dates.length === 0) return null;
+
+        const allDates = rawDaten.split(',')
+            .map((s: string) => s.trim())
+            .filter((s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s))
+            .map((s: string) => new Date(s + 'T06:00:00'))
+            .filter((d: Date) => !isNaN(d.getTime()))
+            .sort((a: Date, b: Date) => b.getTime() - a.getTime());
+
+        const defaultLen = parseInt(native.zyklusLaenge) || 28;
+        const diffs: number[] = [];
+        for (let i = 0; i < allDates.length - 1; i++) {
+            const diff = Math.round((allDates[i].getTime() - allDates[i + 1].getTime()) / 86400000);
+            if (diff >= 21 && diff <= 45) diffs.push(diff);
+        }
+        const zyklusLen = diffs.length > 0 ? Math.round(diffs.reduce((a: number, b: number) => a + b, 0) / diffs.length) : defaultLen;
+
+        const lastStart = dates[0];
+        const tag = Math.max(1, Math.floor((date.getTime() - lastStart.getTime()) / 86400000) + 1);
+        if (tag > zyklusLen + 7) return null;
+
+        const ovDay = zyklusLen - 14;
+        const fertileStart = Math.max(ovDay - 5, 6);
+        const pmsStart = zyklusLen - 4;
+
+        if (tag <= 5) return { phase: 'menstruation', tag, emoji: '🩸' };
+        if (tag >= pmsStart) return { phase: 'pms', tag, emoji: '😤' };
+        if (tag === ovDay || tag === ovDay + 1) return { phase: 'eisprung', tag, emoji: '🥚' };
+        if (tag >= fertileStart && tag <= ovDay + 1) return { phase: 'fruchtbar', tag, emoji: '🌿' };
+        if (tag > ovDay + 1) return { phase: 'luteal', tag, emoji: '💜' };
+        return { phase: 'follikel', tag, emoji: '📈' };
+    } catch { return null; }
+}
+
+const getFunComment = (evt: IntimacyEvent, native?: Record<string, any>): string => {
     const s = evt.score;
     const hr = evt.garminHRMax;
+    const zyklus = native ? getZyklusPhaseForDate(new Date(evt.start), native) : null;
+
+    // Zyklus-spezifische Kommentare (haben Priorität bei interessanten Phasen)
+    if (zyklus && native?.sexFunMode !== false) {
+        if (zyklus.phase === 'eisprung') {
+            if (evt.type === 'oral_hand') return `🥚 Zyklustag ${zyklus.tag} — Eisprung! Nur Oral/Hand heute? Ihr wisst was ihr tut. 😏 Clever.`;
+            if (evt.type === 'vaginal') return `🥚💕 Zyklustag ${zyklus.tag} — Eisprung + Vaginal. Der Sensor tippt auf Familienplanung (oder Glück). 👶❓`;
+        }
+        if (zyklus.phase === 'fruchtbar') {
+            if (evt.type === 'oral_hand') return `🌿 Fruchtbares Fenster, Tag ${zyklus.tag}. Nur Oral/Hand — bewusster Umgang mit der Biologie. Respekt! 👍`;
+            if (evt.type === 'vaginal') return `🌿 Fruchtbares Fenster! Vaginal-Session an Tag ${zyklus.tag}. Sensor schweigt diskret zu möglichen Konsequenzen. 🍼`;
+        }
+        if (zyklus.phase === 'menstruation') {
+            return `🩸 Zyklustag ${zyklus.tag} — Menstruationsphase. Trotzdem aktiv! Red ist offenbar nur eine Farbe. Respekt. ❤️`;
+        }
+        if (zyklus.phase === 'pms') {
+            return `😤 PMS-Phase (Tag ${zyklus.tag}) — trotzdem intime Aktivität! Hormone konnten euch nicht aufhalten. Stark. 💪`;
+        }
+        if (zyklus.phase === 'luteal') {
+            return `💜 Lutealphase, Tag ${zyklus.tag}. Progesteron dominiert — und ihr trotzdem. Der Sensor ist beeindruckt.${hr ? ` HR: ${hr} bpm.` : ''}`;
+        }
+    }
+
     if (evt.type === 'vaginal') {
         if (s >= 85) return `🔥 Rekord-Session! Peak-Stärke ${evt.peakStrength}${hr ? ` · HR bis ${hr} bpm` : ''}. Der Sensor ist beeindruckt und leicht überwältigt.`;
         if (s >= 70) return `💕 Intensive vaginal-Session (${evt.duration} Min). ${hr ? `Garmin sagt: ${hr} bpm Max — ordentlich!` : 'Sensor nickt respektvoll.'}`;
@@ -198,8 +266,8 @@ const IntimacyBar = ({ evt, isDark }: { evt: IntimacyEvent; isDark: boolean }) =
 // ─────────────────────────────────────────────────────────────────────────────
 // Einzeltag-Kachel
 // ─────────────────────────────────────────────────────────────────────────────
-const SexDayCard = ({ events, dateLabel, themeType, funMode }: {
-    events: IntimacyEvent[]; dateLabel: string; themeType: string; funMode: boolean;
+const SexDayCard = ({ events, dateLabel, themeType, funMode, native }: {
+    events: IntimacyEvent[]; dateLabel: string; themeType: string; funMode: boolean; native?: Record<string, any>;
 }) => {
     const isDark = themeType === 'dark';
     const dividerColor = isDark ? '#222' : '#eee';
@@ -278,7 +346,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode }: {
                     borderRadius: 4, padding: '8px 10px', fontSize: '0.72rem',
                     color: isDark ? '#ce93d8' : '#6a1b9a', fontStyle: 'italic', marginBottom: 8
                 }}>
-                    {getFunComment(evt)}
+                    {getFunComment(evt, native)}
                 </div>
             )}
 
@@ -406,6 +474,28 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     const isDark = themeType === 'dark';
     const funMode = native.sexFunMode !== false;
 
+    // Retroaktive Berechnung State
+    const [recalcState, setRecalcState] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+    const [recalcResult, setRecalcResult] = useState<{ updated: number; skipped: number; errors: number; total: number } | null>(null);
+
+    const runRecalc = async () => {
+        setRecalcState('running');
+        setRecalcResult(null);
+        try {
+            const res: any = await socket.sendTo(`${adapterName}.${instance}`, 'recalcIntimacyHistory', {});
+            if (res?.success) {
+                setRecalcResult({ updated: res.updated, skipped: res.skipped, errors: res.errors, total: res.total });
+                setRecalcState('done');
+                // Daten neu laden
+                setDayData({});
+            } else {
+                setRecalcState('error');
+            }
+        } catch {
+            setRecalcState('error');
+        }
+    };
+
     // Datums-Navigation
     const [viewDate, setViewDate] = useState<Date>(() => {
         const d = new Date(); d.setHours(0, 0, 0, 0); return d;
@@ -504,6 +594,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                             dateLabel={isToday ? 'Heute' : fmtDate(viewDate.getTime())}
                             themeType={themeType}
                             funMode={funMode}
+                            native={native}
                         />
                         <SevenDayHistory historyDays={historyDays} themeType={themeType} funMode={funMode} />
                     </div>
@@ -570,7 +661,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
 
                         <TerminalBox title="DATENSCHUTZ" themeType={themeType}>
                             <div style={{ fontSize: '0.68rem', lineHeight: 1.8, color: isDark ? '#555' : '#888' }}>
-                                <div>🔒 Alle Daten bleiben <strong style={{ color: isDark ? '#888' : '#555' }}>lokal</strong> auf deinem ioBroker-System</div>
+                                <div>🔒 Alle Daten bleiben <strong style={{ color: isDark ? '#888' : '#555' }}>lokal</strong> auf diesem ioBroker-System</div>
                                 <div>🚫 Keine Übertragung in die Cloud</div>
                                 <div>📁 Gespeichert als tägliche JSON-Datei (History)</div>
                                 <div>⚙️ Deaktivierbar in Einstellungen → Module</div>
@@ -578,6 +669,39 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                     Kein Medizinprodukt · Keine klinische Nutzung
                                 </div>
                             </div>
+                        </TerminalBox>
+
+                        {/* Retroaktive Berechnung */}
+                        <TerminalBox title="VERGANGENE DATEN BERECHNEN" themeType={themeType}>
+                            <div style={{ fontSize: '0.68rem', color: isDark ? '#888' : '#555', marginBottom: 8 }}>
+                                Einmalig nötig für Tage vor v0.33.105. Berechnet <code>intimacyEvents</code> aus den gespeicherten Rohdaten (<code>eventHistory</code>) aller historischen Dateien. Tage mit bereits erkannten Events werden übersprungen.
+                            </div>
+                            <button
+                                onClick={runRecalc}
+                                disabled={recalcState === 'running'}
+                                style={{
+                                    background: recalcState === 'done' ? '#1b5e20' : recalcState === 'error' ? '#b71c1c' : (isDark ? '#1a2e1a' : '#e8f5e9'),
+                                    color: recalcState === 'done' ? '#a5d6a7' : recalcState === 'error' ? '#ef9a9a' : (isDark ? '#81c784' : '#1b5e20'),
+                                    border: `1px solid ${recalcState === 'done' ? '#388e3c' : recalcState === 'error' ? '#c62828' : (isDark ? '#2e7d32' : '#a5d6a7')}`,
+                                    borderRadius: 4, padding: '6px 14px', fontFamily: 'monospace',
+                                    fontSize: '0.72rem', cursor: recalcState === 'running' ? 'wait' : 'pointer',
+                                    fontWeight: 700, letterSpacing: 1,
+                                }}
+                            >
+                                {recalcState === 'idle'    && '▶ RETROAKTIV BERECHNEN'}
+                                {recalcState === 'running' && '⏳ Berechne alle Tage...'}
+                                {recalcState === 'done'    && '✓ ABGESCHLOSSEN'}
+                                {recalcState === 'error'   && '✗ FEHLER — nochmal versuchen'}
+                            </button>
+                            {recalcResult && recalcState === 'done' && (
+                                <div style={{ marginTop: 8, fontSize: '0.68rem', color: isDark ? '#81c784' : '#2e7d32' }}>
+                                    ✅ {recalcResult.total} Dateien geprüft · <b>{recalcResult.updated}</b> aktualisiert · {recalcResult.skipped} übersprungen
+                                    {recalcResult.errors > 0 && <span style={{ color: '#ef9a9a' }}> · {recalcResult.errors} Fehler</span>}
+                                    <div style={{ marginTop: 4, color: isDark ? '#555' : '#aaa', fontSize: '0.62rem' }}>
+                                        Seite neu laden, um die aktualisierten Daten zu sehen.
+                                    </div>
+                                </div>
+                            )}
                         </TerminalBox>
                     </div>
                 </div>

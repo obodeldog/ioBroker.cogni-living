@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.106",
+    "version": "0.33.107",
     "news": {
       "0": {
         "version": "0.33.105",
@@ -17,6 +17,9 @@
           "[Fix OC-7] Multi-Person-Motion-Only: sleepWindowEnd aus per-Person-Wakezeiten ableiten (Balken + Dreiecke fuer Haushalte ohne FP2/Garmin)",
           "[Fix OC-7] Invertiertes sleepWindowStart korrigieren wenn Abendberechnung heutigen Start schreibt"
         ]
+      },
+      "0.33.107": {
+        "en": "v0.33.107: Zyklus-Kachel (Phasenband, Prognose, Verlauf), retroaktive Sex-Berechnung, Zyklus-Kontext in Fun-Kommentaren"
       },
       "0.33.106": {
         "en": "v0.33.106: Fix SEX-Kachel Daten-Load (getHistoryData), Zeitfenster 06-03h, Garmin-HR-Settings-Feld"

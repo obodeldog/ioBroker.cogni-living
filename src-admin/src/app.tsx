@@ -10,6 +10,7 @@ import EnergyTab from './components/tabs/EnergyTab';
 import HealthTab from './components/tabs/HealthTab';
 import MedicalTab from './components/tabs/MedicalTab';
 import SexTab from './components/tabs/SexTab';
+import ZyklusTab from './components/tabs/ZyklusTab';
 import Overview from './components/Overview';
 import Help from './components/Help';
 
@@ -63,6 +64,7 @@ class App extends GenericApp<any, AppState> {
         const showEnergy   = native.moduleEnergy   !== false;
         const showComfort  = native.moduleComfort  !== false;
         const showSex      = native.moduleSex      === true; // Datenschutz: default OFF
+        const showZyklus   = native.moduleZyklus   === true; // Datenschutz: default OFF
 
         const cogniTheme = createTheme({
             palette: {
@@ -111,6 +113,7 @@ class App extends GenericApp<any, AppState> {
                                 {showHealth   && <Tab value="health"    label="Gesundheit"  icon={<MonitorHeartIcon />}     iconPosition="start" sx={pillarStyle('#f44336')} />}
                                 <Tab value="medical"   label="Medizinisch"  icon={<MedicalServicesIcon />}  iconPosition="start" sx={pillarStyle('#e91e63')} />
                                 {showSex && <Tab value="sex" label="Sex" icon={<span style={{fontSize:'1rem'}}>🔒</span>} iconPosition="start" sx={pillarStyle('#ab47bc')} />}
+                                {showZyklus && <Tab value="zyklus" label="Zyklus" icon={<span style={{fontSize:'1rem'}}>🌸</span>} iconPosition="start" sx={pillarStyle('#f06292')} />}
                                 <Tab value="system"    label="System"       icon={<SettingsIcon />}         iconPosition="start" />
                                 <Tab value="help"      label="Handbuch"     icon={<MenuBookIcon />}         iconPosition="start" />
                             </Tabs>
@@ -137,6 +140,9 @@ class App extends GenericApp<any, AppState> {
                         )}
                         {showSex && this.state.selectedTab === 'sex' && (
                             <SexTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} themeType={themeType} native={native} />
+                        )}
+                        {showZyklus && this.state.selectedTab === 'zyklus' && (
+                            <ZyklusTab native={native} themeType={themeType} />
                         )}
                         {this.state.selectedTab === 'system'  && <SystemTab native={native} onChange={(attr: string, val: any) => this.updateNativeValue(attr, val)} socket={this.socket} themeType={themeType} theme={this.state.theme} adapterName={this.adapterName} instance={this.instance} />}
                         {this.state.selectedTab === 'help'    && <Help themeType={themeType} />}
