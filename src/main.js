@@ -2153,18 +2153,33 @@ class CogniLiving extends utils.Adapter {
                         var _strAvg=_strVals.length>0?Math.round(_strVals.reduce(function(a,b){return a+b;},0)/_strVals.length):0;
                         _intimSlots.push({start:_iS,end:_iE,strCnt:_str.length,trigCnt:_trig.length,strMax:_strMax,strAvg:_strAvg});
                     }
-                    // Kandidaten: 3+ konsekutive Slots mit trigCnt>=2 UND min 1 strCnt>=1 UND strMax>=50
-                    var MIN_CONSEC=3, MIN_TRIG=2, MIN_PEAK=65; // Schlaf-Vib: 43-61, Sex: 65+
-                    var _iCand=[]; var _iRun=[];
-                    _intimSlots.forEach(function(sl,idx){
-                        var _active=(sl.trigCnt>=MIN_TRIG||sl.strCnt>=1)&&sl.strMax>=MIN_PEAK;
-                        if(_active){_iRun.push(idx);}
+                    // ZWEISTUFIGE KANDIDATEN-ERKENNUNG:
+                    // Stufe A (Vaginal/Hochintensiv): MIN_PEAK=65, 3 konsekutive Slots (45 min)
+                    // Stufe B (Oral-Hand/Moderat):    MIN_PEAK=45, 4 konsekutive Slots (60 min), max 90 min
+                    // Dauer ist der Diskriminator: Aufstehen = <15min, Sex = 15-90min
+                    var _iCand=[];
+                    // Stufe A
+                    var _iRunA=[];
+                    _intimSlots.forEach(function(sl,i){
+                        var _a=(sl.trigCnt>=2||sl.strCnt>=1)&&sl.strMax>=65;
+                        if(_a){_iRunA.push(i);}
+                        else{if(_iRunA.length>=3)_iCand.push({run:_iRunA.slice(),tier:'A'}); _iRunA=[];}
+                    });
+                    if(_iRunA.length>=3)_iCand.push({run:_iRunA.slice(),tier:'A'});
+                    // Stufe B: nur Slots die nicht schon durch A abgedeckt sind
+                    var _iCoveredA=new Set();
+                    _iCand.forEach(function(c){c.run.forEach(function(i){_iCoveredA.add(i);});});
+                    var _iRunB=[];
+                    _intimSlots.forEach(function(sl,i){
+                        if(_iCoveredA.has(i)){if(_iRunB.length>=4&&_iRunB.length<=6)_iCand.push({run:_iRunB.slice(),tier:'B'}); _iRunB=[]; return;}
+                        var _b=(sl.trigCnt>=1||sl.strCnt>=1)&&sl.strMax>=45;
+                        if(_b){_iRunB.push(i);}
                         else{
-                            if(_iRun.length>=MIN_CONSEC) _iCand.push(_iRun.slice());
-                            _iRun=[];
+                            if(_iRunB.length>=4&&_iRunB.length<=6)_iCand.push({run:_iRunB.slice(),tier:'B'});
+                            _iRunB=[];
                         }
                     });
-                    if(_iRun.length>=MIN_CONSEC) _iCand.push(_iRun.slice());
+                    if(_iRunB.length>=4&&_iRunB.length<=6)_iCand.push({run:_iRunB.slice(),tier:'B'});
                     // Für jeden Kandidaten: Score berechnen + Typ schätzen
                     var _garminHRVals = [];
                     if (this.config.sexGarminHRStateId) {
@@ -2176,7 +2191,8 @@ class CogniLiving extends utils.Adapter {
                             }
                         } catch(_hrE){ this.log.debug('[OC-SEX] Garmin HR nicht lesbar: '+_hrE.message); }
                     }
-                    _iCand.forEach(function(run){
+                    _iCand.forEach(function(cObj){
+                        var run=cObj.run||cObj; // compat
                         var _sl0=_intimSlots[run[0]], _slN=_intimSlots[run[run.length-1]];
                         var _evtStart=_sl0.start, _evtEnd=_slN.end;
                         var _durMin=Math.round(run.length*15);
@@ -2191,7 +2207,7 @@ class CogniLiving extends utils.Adapter {
                         var _score=Math.round(_sStr*0.5+_sDens*0.3+_sDur*0.2);
                         // Typ-Schaetzung: vaginal wenn Peak>=80 UND Str-Events pro Slot>=5 in mind. 1 Slot
                         var _highSlots=_runSlots.filter(function(s){return s.strMax>=80&&s.strCnt>=5;});
-                        var _type=_highSlots.length>=1?'vaginal':(_peakMax>=55?'oral_hand':'intim');
+                        var _type=cObj.tier==='B'?'oral_hand':(_highSlots.length>=1?'vaginal':(_peakMax>=55?'oral_hand':'intim'));
                         // Garmin HR im Fenster (optional)
                         var _hrMax=null, _hrAvg=null;
                         if(_garminHRVals.length>0){
@@ -2856,17 +2872,27 @@ class CogniLiving extends utils.Adapter {
                             var _riAvg = _riStrVals.length>0?(_riStrVals.reduce(function(a,b){return a+b;},0)/_riStrVals.length):0;
                             _riSlots.push({start:_riT,strMax:_riMax,strAvg:_riAvg,trigCnt:_riTrigCnt,strCnt:_riStrVals.length});
                         }
-                        // Kandidaten (>= 3 konsekutive Slots mit strMax>=65) — identisch mit Live-Algorithmus
-                        var RI_MIN_CONSEC=3, RI_MIN_TRIG=2, RI_MIN_PEAK=65;
-                        var _riCand=[]; var _riRun=[];
+                        // ZWEISTUFIGE Kandidaten (identisch mit Live)
+                        var _riCand=[];
+                        var _riRunA=[];
                         _riSlots.forEach(function(sl){
-                            var _active=(sl.trigCnt>=RI_MIN_TRIG||sl.strCnt>=1)&&sl.strMax>=RI_MIN_PEAK;
-                            if(_active){_riRun.push(sl);}
-                            else{if(_riRun.length>=RI_MIN_CONSEC)_riCand.push(_riRun.slice()); _riRun=[];}
+                            var _a=(sl.trigCnt>=2||sl.strCnt>=1)&&sl.strMax>=65;
+                            if(_a){_riRunA.push(sl);}
+                            else{if(_riRunA.length>=3)_riCand.push({run:_riRunA.slice(),tier:'A'}); _riRunA=[];}
                         });
-                        if(_riRun.length>=RI_MIN_CONSEC)_riCand.push(_riRun.slice());
+                        if(_riRunA.length>=3)_riCand.push({run:_riRunA.slice(),tier:'A'});
+                        var _riCovA=new Set(); _riCand.forEach(function(c){c.run.forEach(function(s){_riCovA.add(s.start);});});
+                        var _riRunB=[];
+                        _riSlots.forEach(function(sl){
+                            if(_riCovA.has(sl.start)){if(_riRunB.length>=4&&_riRunB.length<=6)_riCand.push({run:_riRunB.slice(),tier:'B'}); _riRunB=[]; return;}
+                            var _b=(sl.trigCnt>=1||sl.strCnt>=1)&&sl.strMax>=45;
+                            if(_b){_riRunB.push(sl);}
+                            else{if(_riRunB.length>=4&&_riRunB.length<=6)_riCand.push({run:_riRunB.slice(),tier:'B'}); _riRunB=[];}
+                        });
+                        if(_riRunB.length>=4&&_riRunB.length<=6)_riCand.push({run:_riRunB.slice(),tier:'B'});
                         var _riEvents = [];
-                        _riCand.forEach(function(run){
+                        _riCand.forEach(function(cObj){
+                            var run=cObj.run||cObj;
                             var _riDurMin=Math.round(run.length*15);
                             var _riPeakMax=Math.max.apply(null,run.map(function(s){return s.strMax;}));
                             var _riAvgTrig=Math.round(run.reduce(function(a,s){return a+s.trigCnt;},0)/run.length);
@@ -2875,7 +2901,7 @@ class CogniLiving extends utils.Adapter {
                             var _riSDur=Math.min(100,Math.round((_riDurMin/90)*100));
                             var _riScore=Math.round(_riSStr*0.5+_riSDens*0.3+_riSDur*0.2);
                             var _riHighSlots=run.filter(function(s){return s.strMax>=80&&s.strCnt>=5;});
-                            var _riType=_riHighSlots.length>=1?'vaginal':(_riPeakMax>=55?'oral_hand':'intim');
+                            var _riType=cObj.tier==='B'?'oral_hand':(_riHighSlots.length>=1?'vaginal':(_riPeakMax>=55?'oral_hand':'intim'));
                             _riEvents.push({start:run[0].start,end:run[run.length-1].start+SLOT_MS_RI,duration:_riDurMin,score:_riScore,type:_riType,peakStrength:_riPeakMax,avgStrength:run.length>0?Math.round(run.reduce(function(a,s){return a+s.strAvg;},0)/run.length):0,avgTrigger:_riAvgTrig,garminHRMax:null,garminHRAvg:null,slots:run.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
                         });
                         if (_riEvents.length > 0) {
