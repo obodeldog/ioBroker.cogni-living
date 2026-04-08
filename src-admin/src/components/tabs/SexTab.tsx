@@ -34,6 +34,34 @@ interface SexTabProps {
     native: Record<string, any>;
 }
 
+/** Manuelle Ground-Truth-Einträge (Einstellungen → JSON) — für Abgleich & spätere Kalibrierung */
+interface SexTrainingLabel {
+    date: string;
+    time?: string;
+    durationMin?: number;
+    type: string;
+}
+
+function parseSexTrainingLabels(raw: unknown): SexTrainingLabel[] {
+    if (raw == null || typeof raw !== 'string' || !String(raw).trim()) return [];
+    try {
+        const j = JSON.parse(String(raw));
+        if (!Array.isArray(j)) return [];
+        return j.filter((x: any) => x && typeof x.date === 'string');
+    } catch {
+        return [];
+    }
+}
+
+function labelMatchesDetection(l: SexTrainingLabel, events: IntimacyEvent[]): boolean {
+    if (!l.time || !/^\d{1,2}:\d{2}$/.test(l.time)) return events.length > 0;
+    const [hh, mm] = l.time.split(':').map(Number);
+    const t0 = new Date(l.date + 'T00:00:00');
+    t0.setHours(hh, mm, 0, 0);
+    const ms = t0.getTime();
+    return events.some((e) => Math.abs(e.start - ms) < 90 * 60000);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Hilfsfunktionen
 // ─────────────────────────────────────────────────────────────────────────────
@@ -478,6 +506,8 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     const [recalcState, setRecalcState] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
     const [recalcResult, setRecalcResult] = useState<{ updated: number; skipped: number; errors: number; total: number } | null>(null);
 
+    const [cacheGen, setCacheGen] = useState(0);
+
     const runRecalc = async (force = false) => {
         setRecalcState('running');
         setRecalcResult(null);
@@ -487,6 +517,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                 setRecalcResult({ updated: res.updated, skipped: res.skipped, errors: res.errors, total: res.total });
                 setRecalcState('done');
                 setDayData({});
+                setCacheGen((g) => g + 1);
             } else {
                 setRecalcState('error');
             }
@@ -518,7 +549,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
         }
     };
 
-    // Lade aktuellen Tag + 6 zurückliegende Tage
+    // Lade aktuellen Tag + 6 zurückliegende Tage (auch nach Recalc via cacheGen)
     useEffect(() => {
         setLoading(true);
         const days: Date[] = [];
@@ -527,7 +558,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
         }
         Promise.all(days.map(loadDay)).finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [viewDate]);
+    }, [viewDate, cacheGen]);
 
     const navDay = (delta: number) => {
         const d = new Date(viewDate); d.setDate(d.getDate() + delta); setViewDate(d);
@@ -543,6 +574,8 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
 
     const todayDs     = dateStr(viewDate);
     const todayEvents = dayData[todayDs] ?? [];
+    const trainingLabels = parseSexTrainingLabels(native.sexTrainingLabels);
+    const labelsInWeek = trainingLabels.filter((l) => historyDays.some((h) => h.dateStr === l.date));
 
     return (
         <div style={{
@@ -596,6 +629,39 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                             native={native}
                         />
                         <SevenDayHistory historyDays={historyDays} themeType={themeType} funMode={funMode} />
+                        {labelsInWeek.length > 0 && (
+                            <TerminalBox title="TRAINING / REFERENZ (manuell)" themeType={themeType}
+                                helpText="Einträge aus den Adapter-Einstellungen (JSON). Dient dem Abgleich mit der Erkennung — kein automatisches neuronales Training.">
+                                <div style={{ fontSize: '0.65rem', color: isDark ? '#888' : '#666', lineHeight: 1.7 }}>
+                                    {labelsInWeek.map((l, i) => {
+                                        const dayEv = dayData[l.date] ?? [];
+                                        const ok = labelMatchesDetection(l, dayEv);
+                                        return (
+                                            <div key={i} style={{
+                                                marginBottom: 6, padding: '6px 8px',
+                                                background: isDark ? '#0d1117' : '#f9f9f9',
+                                                borderLeft: `3px solid ${ok ? '#81c784' : '#ffb74d'}`,
+                                                borderRadius: '0 4px 4px 0'
+                                            }}>
+                                                <span style={{ color: ok ? '#81c784' : '#ffb74d' }}>{ok ? '✓' : '⚠'}</span>{' '}
+                                                <b>{l.date}</b>
+                                                {l.time && ` · ${l.time}`}
+                                                {l.durationMin != null && ` · ~${l.durationMin} Min`}
+                                                {' · '}<span style={{ color: '#ce93d8' }}>{l.type}</span>
+                                                {!ok && (
+                                                    <div style={{ fontSize: '0.58rem', color: isDark ? '#666' : '#999', marginTop: 2 }}>
+                                                        Kein erkanntes Event in ±90 Min — ggf. Recalc (force) oder Schwellen anpassen.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                    <div style={{ fontSize: '0.55rem', color: isDark ? '#444' : '#bbb', marginTop: 6 }}>
+                                        Hinweis: Dient der Dokumentation und Kalibrierung; ein KNN ist dafür nicht nötig (siehe Handbuch).
+                                    </div>
+                                </div>
+                            </TerminalBox>
+                        )}
                     </div>
 
                     {/* Rechte Spalte: Algorithmus-Info + Hinweis */}
@@ -645,12 +711,12 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                             <div style={{ fontSize: '0.68rem', lineHeight: 1.8, color: isDark ? '#666' : '#888' }}>
                                 <div style={{ color: isDark ? '#555' : '#aaa', fontSize: '0.58rem', marginBottom: 4 }}>ERKENNUNGS-SCHWELLEN</div>
                                 <div>• Zeitfenster: <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>10:00 – 03:00 Uhr</span> <span style={{color:isDark?'#444':'#bbb'}}>(06-09h: Aufwachen ausgeblendet)</span></div>
-                                <div>• Min. <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>3 konsekutive 15-Min-Slots</span> aktiv</div>
-                                <div>• Peak vib_strength <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>≥ 50</span></div>
-                                <div>• vib_trigger <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>≥ 2</span> / Slot</div>
-                                <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.58rem' }}>TYP-KLASSIFIKATION (Konfidenz: niedrig)</div>
-                                <div>• Peak ≥80 + ≥5 Str/Slot → <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>vaginal</span></div>
-                                <div>• Peak ≥55, gleichmäßig → <span style={{ color: isDark ? '#90caf9' : '#283593' }}>oral/hand</span></div>
+                                <div>• <b>Tier A</b> (stark): 3×15 Min, Peak ≥65, Trigger/Str wie konfiguriert → eher <span style={{ color: '#f48fb1' }}>vaginal</span></div>
+                                <div>• <b>Tier B</b> (moderat): 4–6×15 Min, Peak ≥45 → <span style={{ color: '#90caf9' }}>oral/hand</span></div>
+                                <div>• Dauer trennt vom kurzen Aufwachen (&lt;45 Min aktive Serie)</div>
+                                <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.58rem' }}>TYP innerhalb des Clusters</div>
+                                <div>• Peak ≥80 + viele Str/Slot → <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>vaginal</span></div>
+                                <div>• Sonst Peak ≥55 oder Tier B → <span style={{ color: isDark ? '#90caf9' : '#283593' }}>oral/hand</span></div>
                                 <div>• Default → <span style={{ color: '#888' }}>intim</span></div>
                                 <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6 }}>
                                     <span style={{ color: isDark ? '#555' : '#aaa', fontSize: '0.58rem' }}>Erw. Sensitivität ~75% · Spezifität ~88%</span>

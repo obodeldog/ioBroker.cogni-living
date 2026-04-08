@@ -563,6 +563,22 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                                             helperText="Leer lassen wenn kein Garmin vorhanden"
                                         />
                                     </Grid>
+                                    <Grid item xs={12}>
+                                        <Typography variant="caption" sx={{color:'#888', display:'block', mb:0.5}}>
+                                            📓 Training / Referenz (JSON) — manuelle Ground-Truth für Abgleich mit der Erkennung
+                                        </Typography>
+                                        <TextField
+                                            size="small"
+                                            fullWidth
+                                            multiline
+                                            minRows={4}
+                                            placeholder={'[\n  {"date":"2026-04-04","time":"20:20","durationMin":40,"type":"oral_hand"},\n  {"date":"2026-04-06","time":"18:20","type":"oral_hand"}\n]'}
+                                            value={native.sexTrainingLabels || ''}
+                                            onChange={(e) => this.updateNativeValue('sexTrainingLabels', e.target.value)}
+                                            sx={{ fontFamily: 'monospace', maxWidth: 700 }}
+                                            helperText="Felder: date (YYYY-MM-DD), optional time (HH:mm), durationMin, type (oral_hand | vaginal | none). Wird im Sex-Tab gegen erkannte Events verglichen — kein automatisches NN-Training."
+                                        />
+                                    </Grid>
                                 </>
                             )}
                         </Grid>

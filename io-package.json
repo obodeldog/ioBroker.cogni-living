@@ -1,8 +1,11 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.109",
+    "version": "0.33.110",
     "news": {
+      "0.33.110": {
+        "en": "v0.33.110: Recalc force schreibt leere intimacyEvents, OC-SEX Logs, Reload nach Recalc, sexTrainingLabels JSON"
+      },
       "0": {
         "version": "0.33.105",
         "date": "2026-04-08",
@@ -190,7 +193,8 @@
         "enabled": false,
         "sensitivity": "medium"
       }
-    }
+    },
+    "sexTrainingLabels": ""
   },
   "objects": [],
   "instanceObjects": []

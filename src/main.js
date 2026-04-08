@@ -2229,6 +2229,8 @@ class CogniLiving extends utils.Adapter {
                     });
                     if(intimacyEvents.length>0){
                         this.log.info('[OC-SEX] '+intimacyEvents.length+' Intimacy-Event(s) erkannt. Scores: '+intimacyEvents.map(function(e){return e.score+'('+e.type+')';}).join(', '));
+                    } else {
+                        this.log.debug('[OC-SEX] daily: 0 Events (Fenster 10h-03h, Tier A/B, moduleSex aktiv)');
                     }
                 } catch(_intimErr) {
                     this.log.warn('[OC-SEX] Fehler bei Intimacy-Detection: '+_intimErr.message);
@@ -2843,6 +2845,8 @@ class CogniLiving extends utils.Adapter {
                 var _riFiles = fs.readdirSync(_riDir).filter(function(f){ return /^\d{4}-\d{2}-\d{2}\.json$/.test(f); }).sort();
                 var _riUpdated = 0; var _riSkipped = 0; var _riErrors = 0;
                 var SLOT_MS_RI = 15*60*1000;
+                var _riForceGlobal = (obj.message && obj.message.force === true);
+                this.log.info('[OC-SEX] recalc start: '+_riFiles.length+' Datei(en), force='+_riForceGlobal);
                 for (var _riF of _riFiles) {
                     try {
                         var _riPath = require('path').join(_riDir, _riF);
@@ -2850,7 +2854,15 @@ class CogniLiving extends utils.Adapter {
                         var _riForce = (obj.message && obj.message.force === true);
                         if (!_riForce && _riSnap.intimacyEvents && _riSnap.intimacyEvents.length > 0) { _riSkipped++; continue; }
                         var _riEvts = _riSnap.eventHistory;
-                        if (!_riEvts || !Array.isArray(_riEvts) || _riEvts.length === 0) { _riSkipped++; continue; }
+                        if (!_riEvts || !Array.isArray(_riEvts) || _riEvts.length === 0) {
+                            if (_riForce) {
+                                _riSnap.intimacyEvents = [];
+                                fs.writeFileSync(_riPath, JSON.stringify(_riSnap, null, 2), 'utf8');
+                                _riUpdated++;
+                                this.log.info('[OC-SEX] recalc '+_riF+': intimacyEvents geleert (kein eventHistory)');
+                            } else { _riSkipped++; }
+                            continue;
+                        }
                         var _riDate = new Date(_riF.replace('.json','') + 'T12:00:00');
                         var _riWinStart = new Date(_riDate); _riWinStart.setHours(10,0,0,0); // 10:00 - morgen ausgeblendet
                         var _riWinEnd = new Date(_riDate); _riWinEnd.setDate(_riWinEnd.getDate()+1); _riWinEnd.setHours(3,0,0,0);
@@ -2860,7 +2872,15 @@ class CogniLiving extends utils.Adapter {
                                 && (e.type==='vibration_strength'||e.type==='vibration_trigger')
                                 && (e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion));
                         }).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
-                        if (_riVibEvts.length < 3) { _riSkipped++; continue; }
+                        if (_riVibEvts.length < 3) {
+                            if (_riForce) {
+                                _riSnap.intimacyEvents = [];
+                                fs.writeFileSync(_riPath, JSON.stringify(_riSnap, null, 2), 'utf8');
+                                _riUpdated++;
+                                this.log.info('[OC-SEX] recalc '+_riF+': geleert (<3 Vibrations-Events im Fenster)');
+                            } else { _riSkipped++; }
+                            continue;
+                        }
                         var _riSlots = [];
                         var _riSlotStart = _riWinStart.getTime(); var _riSlotEnd = _riWinEnd.getTime();
                         for (var _riT = _riSlotStart; _riT < _riSlotEnd; _riT += SLOT_MS_RI) {
@@ -2908,15 +2928,24 @@ class CogniLiving extends utils.Adapter {
                             _riSnap.intimacyEvents = _riEvents;
                             fs.writeFileSync(_riPath, JSON.stringify(_riSnap, null, 2), 'utf8');
                             _riUpdated++;
-                            this.log.info('[OC-SEX] retroaktiv: '+_riF+' → '+_riEvents.length+' Event(s) geschrieben');
-                        } else { _riSkipped++; }
+                            this.log.info('[OC-SEX] recalc '+_riF+': '+_riEvents.length+' Event(s) geschrieben');
+                        } else if (_riForce) {
+                            _riSnap.intimacyEvents = [];
+                            fs.writeFileSync(_riPath, JSON.stringify(_riSnap, null, 2), 'utf8');
+                            _riUpdated++;
+                            this.log.info('[OC-SEX] recalc '+_riF+': 0 Events — leer geschrieben (force)');
+                        } else {
+                            _riSkipped++;
+                        }
                     } catch(_riFileErr) {
                         this.log.warn('[OC-SEX] recalc Fehler in '+_riF+': '+_riFileErr.message);
                         _riErrors++;
                     }
                 }
+                this.log.info('[OC-SEX] recalc fertig: updated='+_riUpdated+' skipped='+_riSkipped+' errors='+_riErrors+' total='+_riFiles.length);
                 this.sendTo(obj.from, obj.command, { success: true, updated: _riUpdated, skipped: _riSkipped, errors: _riErrors, total: _riFiles.length }, obj.callback);
             } catch(_riErr) {
+                this.log.warn('[OC-SEX] recalc abgebrochen: '+_riErr.message);
                 this.sendTo(obj.from, obj.command, { success: false, error: _riErr.message }, obj.callback);
             }
         }
