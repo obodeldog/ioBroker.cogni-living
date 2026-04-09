@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Tooltip as MuiTooltip, IconButton } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import {
+    ComposedChart, AreaChart, Area, Bar, Line, XAxis, YAxis, CartesianGrid,
+    Tooltip as ReTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell
+} from 'recharts';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Typen
@@ -638,6 +642,309 @@ const LabelForm = ({ native, onChange, themeType, dayData }: {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// VibrationChartPanel — Garmin-Style + Aura-Style
+// ─────────────────────────────────────────────────────────────────────────────
+interface VibPoint {
+    ts: number;
+    time: string;
+    strength: number | null;
+    trigger: number | null;
+    smoothed: number | null;
+}
+
+const SLOT_MS = 5 * 60 * 1000;
+
+function buildVibSlots(vibRaw: any[], dayStart: number, livePoints: { ts: number; val: number }[]): VibPoint[] {
+    const numSlots = 288; // 24h / 5min
+    const slots: { maxStr: number; trig: number }[] = Array.from({ length: numSlots }, () => ({ maxStr: 0, trig: 0 }));
+
+    const allEvts = [...(vibRaw || [])];
+    // Merge live points as synthetic vibration_strength events
+    for (const lp of livePoints) {
+        allEvts.push({ type: 'vibration_strength', timestamp: lp.ts, value: lp.val, isVibrationBed: true });
+    }
+
+    for (const e of allEvts) {
+        const t = e.timestamp || 0;
+        if (t < dayStart || t >= dayStart + 24 * 3600 * 1000) continue;
+        const idx = Math.floor((t - dayStart) / SLOT_MS);
+        if (idx < 0 || idx >= numSlots) continue;
+        if (e.type === 'vibration_strength') {
+            slots[idx].maxStr = Math.max(slots[idx].maxStr, Number(e.value) || 0);
+        } else if (e.type === 'vibration_trigger' && (e.value === true || e.value === 1 || e.value === 'true')) {
+            slots[idx].trig++;
+        }
+    }
+
+    // Moving average (7-slot window = 35 min)
+    const points: VibPoint[] = slots.map((sl, i) => {
+        const d = new Date(dayStart + i * SLOT_MS);
+        const timeLabel = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        return {
+            ts: dayStart + i * SLOT_MS,
+            time: timeLabel,
+            strength: sl.maxStr > 0 ? sl.maxStr : null,
+            trigger: sl.trig > 0 ? sl.trig : null,
+            smoothed: null,
+        };
+    });
+
+    const W = 4;
+    for (let i = 0; i < points.length; i++) {
+        const win = points.slice(Math.max(0, i - W), Math.min(points.length, i + W + 1));
+        const vals = win.map(p => p.strength ?? 0);
+        const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+        points[i].smoothed = avg > 0.5 ? Math.round(avg * 10) / 10 : null;
+    }
+    return points;
+}
+
+function zoomSlice(points: VibPoint[], hours: number, dayStart: number, isToday: boolean): VibPoint[] {
+    if (hours >= 24) return points;
+    const windowMs = hours * 3600 * 1000;
+    const anchor = isToday ? Date.now() : dayStart + 24 * 3600 * 1000;
+    const from = anchor - windowMs;
+    return points.filter(p => p.ts >= from && p.ts <= anchor);
+}
+
+interface VibPanelProps {
+    vibRaw: any[];
+    sessions: IntimacyEvent[];
+    calibA: number;
+    calibB: number;
+    isDark: boolean;
+    dayStart: number;
+    isToday: boolean;
+    livePoints: { ts: number; val: number }[];
+    isLive: boolean;
+}
+
+const VibGarmin: React.FC<VibPanelProps & { zoom: number }> = ({ vibRaw, sessions, calibA, calibB, isDark, dayStart, isToday, livePoints, isLive, zoom }) => {
+    const pts = zoomSlice(buildVibSlots(vibRaw, dayStart, livePoints), zoom, dayStart, isToday);
+    const gc = isDark ? '#1e1e1e' : '#f0f0f0';
+    const ax = isDark ? '#444' : '#bbb';
+
+    const sessionAreas = sessions.map((s, i) => {
+        const x1 = pts.find(p => p.ts >= s.start)?.time;
+        const x2 = pts.find(p => p.ts > s.end)?.time ?? pts[pts.length - 1]?.time;
+        if (!x1) return null;
+        return <ReferenceArea key={i} x1={x1} x2={x2} fill="rgba(244,143,177,0.18)" stroke="rgba(244,143,177,0.4)" strokeWidth={1} />;
+    });
+
+    return (
+        <ResponsiveContainer width="100%" height={180}>
+            <ComposedChart data={pts} margin={{ top: 4, right: 24, left: -18, bottom: 0 }} barCategoryGap={1}>
+                <CartesianGrid strokeDasharray="3 6" stroke={gc} vertical={false} />
+                <XAxis dataKey="time" stroke={ax} tick={{ fontSize: 9 }} interval={Math.floor(pts.length / 8)} />
+                <YAxis domain={[0, 120]} stroke={ax} tick={{ fontSize: 9 }} width={34} />
+                <ReTooltip
+                    contentStyle={{ background: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}`, fontSize: '0.65rem', borderRadius: 3 }}
+                    formatter={(val: any, name: string) => [val, name === 'strength' ? 'Stärke' : name === 'trigger' ? 'Trigger' : 'Trend']}
+                    labelStyle={{ color: isDark ? '#888' : '#555' }}
+                />
+                {sessionAreas}
+                <ReferenceLine y={calibA} stroke="#ab47bc" strokeDasharray="4 3" strokeWidth={1.2}
+                    label={{ value: `A=${calibA}`, position: 'insideTopRight', fontSize: 8, fill: '#ab47bc', offset: 2 }} />
+                <ReferenceLine y={calibB} stroke="#42a5f5" strokeDasharray="4 3" strokeWidth={1.2}
+                    label={{ value: `B=${calibB}`, position: 'insideTopRight', fontSize: 8, fill: '#42a5f5', offset: 2 }} />
+                <Bar dataKey="strength" name="strength" radius={[1, 1, 0, 0]} maxBarSize={8} isAnimationActive={false}>
+                    {pts.map((p, i) => (
+                        <Cell key={i} fill={
+                            (p.strength || 0) >= calibA ? '#ab47bc' :
+                            (p.strength || 0) >= calibB ? '#f48fb1' :
+                            (p.strength || 0) > 0 ? (isDark ? '#2d2d2d' : '#e0e0e0') :
+                            'transparent'
+                        } />
+                    ))}
+                </Bar>
+                <Line type="monotone" dataKey="smoothed" name="smoothed" stroke={isDark ? '#546e7a' : '#90a4ae'} strokeWidth={1.5} dot={false} isAnimationActive={false} connectNulls />
+            </ComposedChart>
+        </ResponsiveContainer>
+    );
+};
+
+const VibAura: React.FC<VibPanelProps & { zoom: number }> = ({ vibRaw, sessions, calibA, calibB, dayStart, isToday, livePoints, zoom }) => {
+    const pts = zoomSlice(buildVibSlots(vibRaw, dayStart, livePoints), zoom, dayStart, isToday);
+
+    const sessionAreas = sessions.map((s, i) => {
+        const x1 = pts.find(p => p.ts >= s.start)?.time;
+        const x2 = pts.find(p => p.ts > s.end)?.time ?? pts[pts.length - 1]?.time;
+        if (!x1) return null;
+        return <ReferenceArea key={i} x1={x1} x2={x2} fill="rgba(244,143,177,0.12)" stroke="rgba(244,143,177,0.3)" strokeWidth={1} />;
+    });
+
+    return (
+        <div style={{ background: '#0a0a0a', borderRadius: 4, padding: '8px 0 4px 0' }}>
+            <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={pts} margin={{ top: 4, right: 24, left: -18, bottom: 0 }}>
+                    <defs>
+                        <linearGradient id="vibGradAura" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#ce93d8" stopOpacity={0.7} />
+                            <stop offset="95%" stopColor="#f48fb1" stopOpacity={0.05} />
+                        </linearGradient>
+                        <linearGradient id="vibGradTrig" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#00e5ff" stopOpacity={0.5} />
+                            <stop offset="100%" stopColor="#00e5ff" stopOpacity={0.05} />
+                        </linearGradient>
+                        <filter id="glow">
+                            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                            <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                        </filter>
+                    </defs>
+                    <CartesianGrid strokeDasharray="1 12" stroke="#141414" vertical={false} />
+                    <XAxis dataKey="time" stroke="#2a2a2a" tick={{ fontSize: 9, fill: '#444' }} interval={Math.floor(pts.length / 8)} />
+                    <YAxis domain={[0, 120]} stroke="#2a2a2a" tick={{ fontSize: 9, fill: '#444' }} width={34} />
+                    <ReTooltip
+                        contentStyle={{ background: '#111', border: '1px solid #222', fontSize: '0.65rem', borderRadius: 3 }}
+                        formatter={(val: any, name: string) => [val, name === 'strength' ? 'Stärke' : 'Trigger']}
+                        labelStyle={{ color: '#666' }}
+                    />
+                    {sessionAreas}
+                    {/* Calibration glow lines */}
+                    <ReferenceLine y={calibA} stroke="#ce93d8" strokeDasharray="3 4" strokeWidth={1}
+                        label={{ value: `A=${calibA}`, position: 'insideTopRight', fontSize: 8, fill: '#ce93d8' }} />
+                    <ReferenceLine y={calibB} stroke="#00bcd4" strokeDasharray="3 4" strokeWidth={1}
+                        label={{ value: `B=${calibB}`, position: 'insideTopRight', fontSize: 8, fill: '#00bcd4' }} />
+                    {/* Trigger als kleine Neon-Fläche */}
+                    <Area type="step" dataKey="trigger" name="trigger" fill="url(#vibGradTrig)" stroke="#00e5ff" strokeWidth={0.8}
+                        dot={false} isAnimationActive={false} connectNulls={false} />
+                    {/* Stärke als Haupt-Area */}
+                    <Area type="monotone" dataKey="strength" name="strength" fill="url(#vibGradAura)" stroke="#ce93d8" strokeWidth={1.5}
+                        dot={false} isAnimationActive={false} connectNulls />
+                </AreaChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
+const VibrationChartPanel: React.FC<{
+    vibRaw: any[];
+    sessions: IntimacyEvent[];
+    calibA: number;
+    calibB: number;
+    isDark: boolean;
+    dayStart: number;
+    isToday: boolean;
+    socket: any;
+    strengthId: string | null;
+    trigId: string | null;
+}> = ({ vibRaw, sessions, calibA, calibB, isDark, dayStart, isToday, socket, strengthId, trigId }) => {
+    const [zoom, setZoom] = useState(24);
+    const [livePoints, setLivePoints] = useState<{ ts: number; val: number }[]>([]);
+    const liveRef = useRef<{ ts: number; val: number }[]>([]);
+
+    useEffect(() => {
+        if (!isToday) { setLivePoints([]); liveRef.current = []; return; }
+        if (!strengthId) return;
+
+        const handler = (_id: string, state: any) => {
+            if (!state || state.val === null || state.val === undefined) return;
+            const val = Number(state.val) || 0;
+            if (val <= 0) return;
+            const newPt = { ts: state.ts || Date.now(), val };
+            liveRef.current = [...liveRef.current, newPt].slice(-500);
+            setLivePoints([...liveRef.current]);
+        };
+        try { socket.subscribeState(strengthId, handler); } catch (_) { /* */ }
+        return () => { try { socket.unsubscribeState(strengthId, handler); } catch (_) { /* */ } };
+    }, [isToday, strengthId, socket]);
+
+    const box: React.CSSProperties = {
+        background: isDark ? '#0e0e0e' : '#fff',
+        border: `1px solid ${isDark ? '#1e1e1e' : '#e8e8e8'}`,
+        borderRadius: 4, padding: 12, marginTop: 12,
+        fontFamily: "'Roboto Mono','Courier New',monospace",
+    };
+    const hdr: React.CSSProperties = {
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 8,
+    };
+    const title: React.CSSProperties = {
+        fontSize: '0.58rem', letterSpacing: '0.1em', color: isDark ? '#444' : '#aaa',
+    };
+    const zoomBtns = [6, 12, 24].map(h => (
+        <button key={h} onClick={() => setZoom(h)} style={{
+            background: zoom === h ? (isDark ? '#2a2a2a' : '#e8e8e8') : 'transparent',
+            border: `1px solid ${isDark ? '#333' : '#ddd'}`,
+            color: zoom === h ? (isDark ? '#fff' : '#111') : (isDark ? '#555' : '#aaa'),
+            borderRadius: 3, padding: '1px 7px', fontSize: '0.58rem',
+            cursor: 'pointer', fontFamily: 'inherit',
+        }}>{h}h</button>
+    ));
+    const liveIndicator = isToday ? (
+        <span style={{ fontSize: '0.58rem', color: '#e53935', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#e53935', display: 'inline-block', animation: 'pulse 1.2s infinite' }} />
+            LIVE
+        </span>
+    ) : null;
+    const legend = (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, fontSize: '0.58rem', color: isDark ? '#444' : '#bbb' }}>
+            <span><span style={{ color: '#ab47bc' }}>━</span> ≥ A={calibA} (vaginal)</span>
+            <span><span style={{ color: '#f48fb1' }}>━</span> ≥ B={calibB} (oral/hand)</span>
+            <span><span style={{ color: isDark ? '#2d2d2d' : '#e0e0e0', background: isDark ? '#2d2d2d' : '#e0e0e0', padding: '0 6px' }}>&nbsp;</span> Bewegung</span>
+            <span><span style={{ color: 'rgba(244,143,177,0.6)' }}>░</span> erkannte Session</span>
+        </div>
+    );
+
+    return (
+        <>
+            {/* ── Garmin-Style ── */}
+            <div style={box}>
+                <div style={hdr}>
+                    <span style={title}>[ VIBRATIONSVERLAUF · GARMIN-STYLE ]</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {liveIndicator}
+                        <div style={{ display: 'flex', gap: 3 }}>{zoomBtns}</div>
+                    </div>
+                </div>
+                {vibRaw.length === 0 && livePoints.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: isDark ? '#333' : '#ccc', fontSize: '0.65rem', padding: '20px 0' }}>
+                        Keine Vibrationsdaten für diesen Tag
+                    </div>
+                ) : (
+                    <VibGarmin vibRaw={vibRaw} sessions={sessions} calibA={calibA} calibB={calibB}
+                        isDark={isDark} dayStart={dayStart} isToday={isToday} livePoints={livePoints} isLive zoom={zoom} />
+                )}
+                {legend}
+            </div>
+
+            {/* ── Aura-Style ── */}
+            <div style={{ ...box, background: '#0a0a0a', border: '1px solid #111' }}>
+                <div style={{ ...hdr }}>
+                    <span style={{ ...title, color: '#333' }}>[ VIBRATIONSVERLAUF · AURA-STYLE ]</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {liveIndicator}
+                        <div style={{ display: 'flex', gap: 3 }}>{[6, 12, 24].map(h => (
+                            <button key={h} onClick={() => setZoom(h)} style={{
+                                background: zoom === h ? '#1a1a1a' : 'transparent',
+                                border: '1px solid #222',
+                                color: zoom === h ? '#ccc' : '#333',
+                                borderRadius: 3, padding: '1px 7px', fontSize: '0.58rem',
+                                cursor: 'pointer', fontFamily: 'inherit',
+                            }}>{h}h</button>
+                        ))}</div>
+                    </div>
+                </div>
+                {vibRaw.length === 0 && livePoints.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: '#2a2a2a', fontSize: '0.65rem', padding: '20px 0' }}>
+                        Keine Vibrationsdaten für diesen Tag
+                    </div>
+                ) : (
+                    <VibAura vibRaw={vibRaw} sessions={sessions} calibA={calibA} calibB={calibB}
+                        isDark={true} dayStart={dayStart} isToday={isToday} livePoints={livePoints} isLive zoom={zoom} />
+                )}
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, fontSize: '0.58rem', color: '#333' }}>
+                    <span><span style={{ color: '#ce93d8' }}>━</span> ≥ A={calibA} (vaginal)</span>
+                    <span><span style={{ color: '#00bcd4' }}>━</span> ≥ B={calibB} (oral/hand)</span>
+                    <span><span style={{ color: '#00e5ff' }}>━</span> Trigger</span>
+                    <span><span style={{ color: 'rgba(244,143,177,0.4)' }}>░</span> erkannte Session</span>
+                </div>
+            </div>
+        </>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Haupt-Komponente SexTab
 // ─────────────────────────────────────────────────────────────────────────────
 const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeType, native, onChange }) => {
@@ -658,6 +965,9 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     // Kalibrierungs-Info vom letzten gespeicherten Tag
     const [calibInfo, setCalibInfo] = useState<{ src: string; n: number; calibA: number; calibB: number } | null>(null);
 
+    // Rohe Vibrations-Events für Chart: { [dateStr]: any[] }
+    const [vibRaw, setVibRaw] = useState<Record<string, any[]>>({});
+
     const loadDay = async (d: Date) => {
         const ds = dateStr(d);
         if (dayData[ds] !== undefined) return;
@@ -669,8 +979,15 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
             setDayData(prev => ({ ...prev, [ds]: evts }));
             // Kalibrierungs-Info vom aktuellen (heute/gestern) Tag merken
             if (result?.data?.sexCalibInfo) setCalibInfo(result.data.sexCalibInfo);
+            // Vibrations-Events für Chart extrahieren
+            const vibEvts = (result?.data?.eventHistory || []).filter((e: any) =>
+                (e.type === 'vibration_strength' || e.type === 'vibration_trigger') &&
+                (e.isVibrationBed || e.isFP2Bed)
+            );
+            setVibRaw(prev => ({ ...prev, [ds]: vibEvts }));
         } catch {
             setDayData(prev => ({ ...prev, [ds]: [] }));
+            setVibRaw(prev => ({ ...prev, [dateStr(d)]: [] }));
         }
     };
 
@@ -699,6 +1016,18 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
 
     const todayDs     = dateStr(viewDate);
     const todayEvents = dayData[todayDs] ?? [];
+
+    // Vibrations-Sensor IDs aus native.devices
+    const vibStrengthId: string | null = ((native.devices || []) as any[]).find(
+        (d: any) => (d.type || '').toLowerCase() === 'vibration_strength' && (d.sensorFunction || '') === 'bed'
+    )?.id ?? null;
+    const vibTrigId: string | null = ((native.devices || []) as any[]).find(
+        (d: any) => (d.type || '').toLowerCase() === 'vibration_trigger' && (d.sensorFunction || '') === 'bed'
+    )?.id ?? null;
+
+    const viewDayStart = new Date(viewDate).setHours(0, 0, 0, 0);
+    const activeCalibA = calibInfo?.calibA ?? 50;
+    const activeCalibB = calibInfo?.calibB ?? 30;
 
     return (
         <div style={{
@@ -845,6 +1174,22 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                         </TerminalBox>
                     </div>
                 </div>
+            )}
+
+            {/* ── Vibrationsverlauf ── */}
+            {funMode && (
+                <VibrationChartPanel
+                    vibRaw={vibRaw[todayDs] ?? []}
+                    sessions={todayEvents}
+                    calibA={activeCalibA}
+                    calibB={activeCalibB}
+                    isDark={isDark}
+                    dayStart={viewDayStart}
+                    isToday={isToday}
+                    socket={socket}
+                    strengthId={vibStrengthId}
+                    trigId={vibTrigId}
+                />
             )}
         </div>
     );
