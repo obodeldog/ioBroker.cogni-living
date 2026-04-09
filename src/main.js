@@ -2117,70 +2117,63 @@ class CogniLiving extends utils.Adapter {
             } catch (_calErr) {
                 this.log.warn('[SleepScoreCal] Fehler: ' + _calErr.message);
             }
-            // ═══════════════════════════════════════════════════════════════════
+            // =====================================================================
             // INTIMACY DETECTION (OC-SEX): Vibrations-basierte Aktivitaetserkennung
-            // Erkennt intime Aktivitaeten anhand Vibrationssensor-Cluster (16:00-02:00 Uhr)
+            // Zeitfenster: KEINS - Sex ist zeitlos! Voller sleepSearchEvents-Buffer.
+            // 5-Min-Slots, Pfad A (kurz+intensiv), Pfad B (laenger+moderat)
             // Nur gespeichert wenn moduleSex === true (Datenschutz-Default: off)
-            // ═══════════════════════════════════════════════════════════════════
+            // =====================================================================
             var intimacyEvents = [];
             if (this.config.moduleSex === true) {
                 try {
-                    // Alle Vibrations-Events des Tages + Vortag (ab 16:00)
-                    // Zeitfenster: gesamter Tag ab 06:00 Uhr (gestern) bis 03:00 Uhr (naechster Tag)
-                    // Erfasst morgens, mittags und abends — Sex ist zeitlos!
-                    var _intim10h = new Date(); _intim10h.setHours(10,0,0,0); // 06:00-09:59 ausgeblendet: Aufwach-Bewegungen
-                    if (new Date().getHours() < 10) _intim10h.setDate(_intim10h.getDate()-1);
-                    var _intimEnd3h = new Date(_intim10h); _intimEnd3h.setDate(_intimEnd3h.getDate()+1); _intimEnd3h.setHours(3,0,0,0);
+                    // Kalibrierte oder Standard-Schwellen (aus native config oder Defaults)
+                    var _calibA = (this.config.sexCalibThreshold && Number(this.config.sexCalibThreshold) > 0) ? Math.round(Number(this.config.sexCalibThreshold) * 1.3) : 50;
+                    var _calibB = (this.config.sexCalibThreshold && Number(this.config.sexCalibThreshold) > 0) ? Number(this.config.sexCalibThreshold) : 30;
+                    // Alle Vibrations-Events - kein Zeitfenster (Sex passiert zu jeder Tageszeit)
                     var _intimEvts = sleepSearchEvents.filter(function(e) {
-                        var _ts = e.timestamp||0;
-                        return _ts >= _intim10h.getTime() && _ts <= _intimEnd3h.getTime()
-                            && (e.type==='vibration_strength'||e.type==='vibration_trigger')
+                        return (e.type==='vibration_strength'||e.type==='vibration_trigger')
                             && (e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion));
                     }).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
                     var _intimVibStr  = _intimEvts.filter(function(e){return e.type==='vibration_strength';});
                     var _intimVibTrig = _intimEvts.filter(function(e){return e.type==='vibration_trigger';});
-                    // 15-Min-Slot-Analyse
-                    var SLOT_MS = 15*60*1000;
+                    // 5-Min-Slot-Analyse: dynamisches Fenster von erstem bis letztem Event
+                    var SLOT_MS = 5*60*1000;
                     var _intimSlots = [];
-                    var _intimWinStart = _intim10h.getTime();
-                    var _intimWinEnd   = _intimEnd3h.getTime(); // 10:00 bis 03:00 naechster Tag (17h Fenster)
-                    for (var _iS=_intimWinStart; _iS<_intimWinEnd; _iS+=SLOT_MS) {
-                        var _iE=_iS+SLOT_MS;
-                        var _str=_intimVibStr.filter(function(e){return (e.timestamp||0)>=_iS&&(e.timestamp||0)<_iE;});
-                        var _trig=_intimVibTrig.filter(function(e){return (e.timestamp||0)>=_iS&&(e.timestamp||0)<_iE;});
-                        var _strVals=_str.map(function(e){return Number(e.value)||0;});
-                        var _strMax=_strVals.length>0?Math.max.apply(null,_strVals):0;
-                        var _strAvg=_strVals.length>0?Math.round(_strVals.reduce(function(a,b){return a+b;},0)/_strVals.length):0;
-                        _intimSlots.push({start:_iS,end:_iE,strCnt:_str.length,trigCnt:_trig.length,strMax:_strMax,strAvg:_strAvg});
+                    if (_intimEvts.length >= 4) {
+                        var _tFirst = _intimEvts[0].timestamp||0;
+                        var _tLast  = (_intimEvts[_intimEvts.length-1].timestamp||0) + SLOT_MS;
+                        for (var _iS=_tFirst; _iS<_tLast; _iS+=SLOT_MS) {
+                            var _iE=_iS+SLOT_MS;
+                            var _str=_intimVibStr.filter(function(e){return (e.timestamp||0)>=_iS&&(e.timestamp||0)<_iE;});
+                            var _trig=_intimVibTrig.filter(function(e){return (e.timestamp||0)>=_iS&&(e.timestamp||0)<_iE;});
+                            var _strVals=_str.map(function(e){return Number(e.value)||0;});
+                            var _strMax=_strVals.length>0?Math.max.apply(null,_strVals):0;
+                            var _strAvg=_strVals.length>0?Math.round(_strVals.reduce(function(a,b){return a+b;},0)/_strVals.length):0;
+                            _intimSlots.push({start:_iS,end:_iE,strCnt:_str.length,trigCnt:_trig.length,strMax:_strMax,strAvg:_strAvg});
+                        }
                     }
-                    // ZWEISTUFIGE KANDIDATEN-ERKENNUNG:
-                    // Stufe A (Vaginal/Hochintensiv): MIN_PEAK=65, 3 konsekutive Slots (45 min)
-                    // Stufe B (Oral-Hand/Moderat):    MIN_PEAK=45, 4 konsekutive Slots (60 min), max 90 min
-                    // Dauer ist der Diskriminator: Aufstehen = <15min, Sex = 15-90min
+                    // ZWEISTUFIGE KANDIDATEN-ERKENNUNG (5-Min-Slots):
+                    // Pfad A (kurz+intensiv / Quickie): Peak >= calibA, >= 2 konsekutive Slots (>= 10 min)
+                    // Pfad B (laenger+moderat): Peak >= calibB, >= 6 Slots (>= 30 min), max 24 Slots (120 min)
                     var _iCand=[];
-                    // Stufe A
                     var _iRunA=[];
                     _intimSlots.forEach(function(sl,i){
-                        var _a=(sl.trigCnt>=2||sl.strCnt>=1)&&sl.strMax>=65;
+                        var _a=(sl.trigCnt>=2||sl.strCnt>=1)&&sl.strMax>=_calibA;
                         if(_a){_iRunA.push(i);}
-                        else{if(_iRunA.length>=3)_iCand.push({run:_iRunA.slice(),tier:'A'}); _iRunA=[];}
+                        else{if(_iRunA.length>=2)_iCand.push({run:_iRunA.slice(),tier:'A'}); _iRunA=[];}
                     });
-                    if(_iRunA.length>=3)_iCand.push({run:_iRunA.slice(),tier:'A'});
-                    // Stufe B: nur Slots die nicht schon durch A abgedeckt sind
+                    if(_iRunA.length>=2)_iCand.push({run:_iRunA.slice(),tier:'A'});
                     var _iCoveredA=new Set();
                     _iCand.forEach(function(c){c.run.forEach(function(i){_iCoveredA.add(i);});});
                     var _iRunB=[];
                     _intimSlots.forEach(function(sl,i){
-                        if(_iCoveredA.has(i)){if(_iRunB.length>=4&&_iRunB.length<=6)_iCand.push({run:_iRunB.slice(),tier:'B'}); _iRunB=[]; return;}
-                        var _b=(sl.trigCnt>=1||sl.strCnt>=1)&&sl.strMax>=45;
+                        if(_iCoveredA.has(i)){if(_iRunB.length>=6&&_iRunB.length<=24)_iCand.push({run:_iRunB.slice(),tier:'B'}); _iRunB=[]; return;}
+                        var _b=(sl.trigCnt>=1||sl.strCnt>=1)&&sl.strMax>=_calibB;
                         if(_b){_iRunB.push(i);}
-                        else{
-                            if(_iRunB.length>=4&&_iRunB.length<=6)_iCand.push({run:_iRunB.slice(),tier:'B'});
-                            _iRunB=[];
-                        }
+                        else{if(_iRunB.length>=6&&_iRunB.length<=24)_iCand.push({run:_iRunB.slice(),tier:'B'}); _iRunB=[];}
                     });
-                    if(_iRunB.length>=4&&_iRunB.length<=6)_iCand.push({run:_iRunB.slice(),tier:'B'});
-                    // Für jeden Kandidaten: Score berechnen + Typ schätzen
+                    if(_iRunB.length>=6&&_iRunB.length<=24)_iCand.push({run:_iRunB.slice(),tier:'B'});
+                    // Garmin HR laden (optional)
                     var _garminHRVals = [];
                     if (this.config.sexGarminHRStateId) {
                         try {
@@ -2192,23 +2185,20 @@ class CogniLiving extends utils.Adapter {
                         } catch(_hrE){ this.log.debug('[OC-SEX] Garmin HR nicht lesbar: '+_hrE.message); }
                     }
                     _iCand.forEach(function(cObj){
-                        var run=cObj.run||cObj; // compat
+                        var run=cObj.run||cObj;
                         var _sl0=_intimSlots[run[0]], _slN=_intimSlots[run[run.length-1]];
                         var _evtStart=_sl0.start, _evtEnd=_slN.end;
-                        var _durMin=Math.round(run.length*15);
+                        var _durMin=Math.round(run.length*5); // 5-Min-Slots
                         var _runSlots=run.map(function(i){return _intimSlots[i];});
                         var _peakMax=Math.max.apply(null,_runSlots.map(function(s){return s.strMax;}));
                         var _avgAvg=Math.round(_runSlots.reduce(function(a,s){return a+s.strAvg;},0)/_runSlots.length);
                         var _avgTrig=Math.round(_runSlots.reduce(function(a,s){return a+s.trigCnt;},0)/_runSlots.length);
-                        // Score (0-100): Staerke 50% + Dichte 30% + Dauer 20%
-                        var _sStr=Math.min(100,Math.round((_peakMax/120)*100)); // Peak normiert auf 120
-                        var _sDens=Math.min(100,Math.round((_avgTrig/10)*100)); // Trig-Dichte normiert auf 10
-                        var _sDur=Math.min(100,Math.round((_durMin/90)*100)); // Dauer normiert auf 90 Min
+                        var _sStr=Math.min(100,Math.round((_peakMax/120)*100));
+                        var _sDens=Math.min(100,Math.round((_avgTrig/10)*100));
+                        var _sDur=Math.min(100,Math.round((_durMin/60)*100)); // normiert auf 60 Min
                         var _score=Math.round(_sStr*0.5+_sDens*0.3+_sDur*0.2);
-                        // Typ-Schaetzung: vaginal wenn Peak>=80 UND Str-Events pro Slot>=5 in mind. 1 Slot
-                        var _highSlots=_runSlots.filter(function(s){return s.strMax>=80&&s.strCnt>=5;});
+                        var _highSlots=_runSlots.filter(function(s){return s.strMax>=80&&s.strCnt>=3;});
                         var _type=cObj.tier==='B'?'oral_hand':(_highSlots.length>=1?'vaginal':(_peakMax>=55?'oral_hand':'intim'));
-                        // Garmin HR im Fenster (optional)
                         var _hrMax=null, _hrAvg=null;
                         if(_garminHRVals.length>0){
                             var _hrInWin=_garminHRVals.filter(function(h){
@@ -2220,7 +2210,6 @@ class CogniLiving extends utils.Adapter {
                                 if(_hrVs.length>0){
                                     _hrMax=Math.max.apply(null,_hrVs);
                                     _hrAvg=Math.round(_hrVs.reduce(function(a,b){return a+b;},0)/_hrVs.length);
-                                    // HR-Boost: wenn HR>100 -> +10 Score, +15 wenn vaginal bestätigt
                                     if(_hrMax>100) _score=Math.min(100,_score+(_type==='vaginal'?15:10));
                                 }
                             }
@@ -2228,9 +2217,9 @@ class CogniLiving extends utils.Adapter {
                         intimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:_hrMax,garminHRAvg:_hrAvg,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
                     });
                     if(intimacyEvents.length>0){
-                        this.log.info('[OC-SEX] '+intimacyEvents.length+' Intimacy-Event(s) erkannt. Scores: '+intimacyEvents.map(function(e){return e.score+'('+e.type+')';}).join(', '));
+                        this.log.info('[OC-SEX] '+intimacyEvents.length+' Event(s) erkannt. calibA='+_calibA+' calibB='+_calibB+' Scores: '+intimacyEvents.map(function(e){return e.score+'('+e.type+')';}).join(', '));
                     } else {
-                        this.log.debug('[OC-SEX] daily: 0 Events (Fenster 10h-03h, Tier A/B, moduleSex aktiv)');
+                        this.log.debug('[OC-SEX] daily: 0 Events (calibA='+_calibA+', calibB='+_calibB+', '+_intimEvts.length+' Vib-Events gesamt)');
                     }
                 } catch(_intimErr) {
                     this.log.warn('[OC-SEX] Fehler bei Intimacy-Detection: '+_intimErr.message);
@@ -2836,118 +2825,6 @@ class CogniLiving extends utils.Adapter {
                     this.sendTo(obj.from, obj.command, { success: true, data: _pcSnap }, obj.callback);
                 } else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
             } catch(_pcE) { this.sendTo(obj.from, obj.command, { success: false, error: _pcE.message }, obj.callback); }
-        }
-        else if (obj.command === 'recalcIntimacyHistory') {
-            // Retroaktive Intimacy-Berechnung: liest eventHistory aus vorhandenen JSON-Snapshots
-            // und berechnet intimacyEvents neu (fuer Tage ohne das Feature oder ohne Ereignisse)
-            try {
-                var _riDir = require('path').join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
-                var _riFiles = fs.readdirSync(_riDir).filter(function(f){ return /^\d{4}-\d{2}-\d{2}\.json$/.test(f); }).sort();
-                var _riUpdated = 0; var _riSkipped = 0; var _riErrors = 0;
-                var SLOT_MS_RI = 15*60*1000;
-                var _riForceGlobal = (obj.message && obj.message.force === true);
-                this.log.info('[OC-SEX] recalc start: '+_riFiles.length+' Datei(en), force='+_riForceGlobal);
-                for (var _riF of _riFiles) {
-                    try {
-                        var _riPath = require('path').join(_riDir, _riF);
-                        var _riSnap = JSON.parse(fs.readFileSync(_riPath, 'utf8'));
-                        var _riForce = (obj.message && obj.message.force === true);
-                        if (!_riForce && _riSnap.intimacyEvents && _riSnap.intimacyEvents.length > 0) { _riSkipped++; continue; }
-                        var _riEvts = _riSnap.eventHistory;
-                        if (!_riEvts || !Array.isArray(_riEvts) || _riEvts.length === 0) {
-                            if (_riForce) {
-                                _riSnap.intimacyEvents = [];
-                                fs.writeFileSync(_riPath, JSON.stringify(_riSnap, null, 2), 'utf8');
-                                _riUpdated++;
-                                this.log.info('[OC-SEX] recalc '+_riF+': intimacyEvents geleert (kein eventHistory)');
-                            } else { _riSkipped++; }
-                            continue;
-                        }
-                        var _riDate = new Date(_riF.replace('.json','') + 'T12:00:00');
-                        var _riWinStart = new Date(_riDate); _riWinStart.setHours(10,0,0,0); // 10:00 - morgen ausgeblendet
-                        var _riWinEnd = new Date(_riDate); _riWinEnd.setDate(_riWinEnd.getDate()+1); _riWinEnd.setHours(3,0,0,0);
-                        var _riVibEvts = _riEvts.filter(function(e) {
-                            var ts = e.timestamp||0;
-                            return ts >= _riWinStart.getTime() && ts <= _riWinEnd.getTime()
-                                && (e.type==='vibration_strength'||e.type==='vibration_trigger')
-                                && (e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion));
-                        }).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
-                        if (_riVibEvts.length < 3) {
-                            if (_riForce) {
-                                _riSnap.intimacyEvents = [];
-                                fs.writeFileSync(_riPath, JSON.stringify(_riSnap, null, 2), 'utf8');
-                                _riUpdated++;
-                                this.log.info('[OC-SEX] recalc '+_riF+': geleert (<3 Vibrations-Events im Fenster)');
-                            } else { _riSkipped++; }
-                            continue;
-                        }
-                        var _riSlots = [];
-                        var _riSlotStart = _riWinStart.getTime(); var _riSlotEnd = _riWinEnd.getTime();
-                        for (var _riT = _riSlotStart; _riT < _riSlotEnd; _riT += SLOT_MS_RI) {
-                            var _riSl = _riVibEvts.filter(function(e){ return (e.timestamp||0)>=_riT && (e.timestamp||0)<_riT+SLOT_MS_RI; });
-                            if (_riSl.length===0){_riSlots.push({start:_riT,strMax:0,strAvg:0,trigCnt:0,active:false});continue;}
-                            var _riStrVals = _riSl.filter(function(e){return e.type==='vibration_strength';}).map(function(e){return e.value||0;});
-                            var _riTrigCnt = _riSl.filter(function(e){return e.type==='vibration_trigger';}).length;
-                            var _riMax = _riStrVals.length>0?Math.max.apply(null,_riStrVals):0;
-                            var _riAvg = _riStrVals.length>0?(_riStrVals.reduce(function(a,b){return a+b;},0)/_riStrVals.length):0;
-                            _riSlots.push({start:_riT,strMax:_riMax,strAvg:_riAvg,trigCnt:_riTrigCnt,strCnt:_riStrVals.length});
-                        }
-                        // ZWEISTUFIGE Kandidaten (identisch mit Live)
-                        var _riCand=[];
-                        var _riRunA=[];
-                        _riSlots.forEach(function(sl){
-                            var _a=(sl.trigCnt>=2||sl.strCnt>=1)&&sl.strMax>=65;
-                            if(_a){_riRunA.push(sl);}
-                            else{if(_riRunA.length>=3)_riCand.push({run:_riRunA.slice(),tier:'A'}); _riRunA=[];}
-                        });
-                        if(_riRunA.length>=3)_riCand.push({run:_riRunA.slice(),tier:'A'});
-                        var _riCovA=new Set(); _riCand.forEach(function(c){c.run.forEach(function(s){_riCovA.add(s.start);});});
-                        var _riRunB=[];
-                        _riSlots.forEach(function(sl){
-                            if(_riCovA.has(sl.start)){if(_riRunB.length>=4&&_riRunB.length<=6)_riCand.push({run:_riRunB.slice(),tier:'B'}); _riRunB=[]; return;}
-                            var _b=(sl.trigCnt>=1||sl.strCnt>=1)&&sl.strMax>=45;
-                            if(_b){_riRunB.push(sl);}
-                            else{if(_riRunB.length>=4&&_riRunB.length<=6)_riCand.push({run:_riRunB.slice(),tier:'B'}); _riRunB=[];}
-                        });
-                        if(_riRunB.length>=4&&_riRunB.length<=6)_riCand.push({run:_riRunB.slice(),tier:'B'});
-                        var _riEvents = [];
-                        _riCand.forEach(function(cObj){
-                            var run=cObj.run||cObj;
-                            var _riDurMin=Math.round(run.length*15);
-                            var _riPeakMax=Math.max.apply(null,run.map(function(s){return s.strMax;}));
-                            var _riAvgTrig=Math.round(run.reduce(function(a,s){return a+s.trigCnt;},0)/run.length);
-                            var _riSStr=Math.min(100,Math.round((_riPeakMax/120)*100));
-                            var _riSDens=Math.min(100,Math.round((_riAvgTrig/10)*100));
-                            var _riSDur=Math.min(100,Math.round((_riDurMin/90)*100));
-                            var _riScore=Math.round(_riSStr*0.5+_riSDens*0.3+_riSDur*0.2);
-                            var _riHighSlots=run.filter(function(s){return s.strMax>=80&&s.strCnt>=5;});
-                            var _riType=cObj.tier==='B'?'oral_hand':(_riHighSlots.length>=1?'vaginal':(_riPeakMax>=55?'oral_hand':'intim'));
-                            _riEvents.push({start:run[0].start,end:run[run.length-1].start+SLOT_MS_RI,duration:_riDurMin,score:_riScore,type:_riType,peakStrength:_riPeakMax,avgStrength:run.length>0?Math.round(run.reduce(function(a,s){return a+s.strAvg;},0)/run.length):0,avgTrigger:_riAvgTrig,garminHRMax:null,garminHRAvg:null,slots:run.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
-                        });
-                        if (_riEvents.length > 0) {
-                            _riSnap.intimacyEvents = _riEvents;
-                            fs.writeFileSync(_riPath, JSON.stringify(_riSnap, null, 2), 'utf8');
-                            _riUpdated++;
-                            this.log.info('[OC-SEX] recalc '+_riF+': '+_riEvents.length+' Event(s) geschrieben');
-                        } else if (_riForce) {
-                            _riSnap.intimacyEvents = [];
-                            fs.writeFileSync(_riPath, JSON.stringify(_riSnap, null, 2), 'utf8');
-                            _riUpdated++;
-                            this.log.info('[OC-SEX] recalc '+_riF+': 0 Events — leer geschrieben (force)');
-                        } else {
-                            _riSkipped++;
-                        }
-                    } catch(_riFileErr) {
-                        this.log.warn('[OC-SEX] recalc Fehler in '+_riF+': '+_riFileErr.message);
-                        _riErrors++;
-                    }
-                }
-                this.log.info('[OC-SEX] recalc fertig: updated='+_riUpdated+' skipped='+_riSkipped+' errors='+_riErrors+' total='+_riFiles.length);
-                this.sendTo(obj.from, obj.command, { success: true, updated: _riUpdated, skipped: _riSkipped, errors: _riErrors, total: _riFiles.length }, obj.callback);
-            } catch(_riErr) {
-                this.log.warn('[OC-SEX] recalc abgebrochen: '+_riErr.message);
-                this.sendTo(obj.from, obj.command, { success: false, error: _riErr.message }, obj.callback);
-            }
         }
         }
     }

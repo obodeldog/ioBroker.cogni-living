@@ -1,6 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Tooltip as MuiTooltip } from '@mui/material';
 
+// Hilfsfunktion: Datum als YYYY-MM-DD
+function toDateStr(d: Date): string {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ZYKLUS-TAB — Wissenschaftlich fundiertes Zyklustracking (Knaus-Ogino + adaptiver Durchschnitt)
 // Alle Berechnungen lokal, keine Cloud-Übertragung
@@ -9,6 +14,7 @@ import { Tooltip as MuiTooltip } from '@mui/material';
 interface ZyklusTabProps {
     native: Record<string, any>;
     themeType?: string;
+    onChange: (attr: string, value: any) => void;
 }
 
 // ── Phasen-Definitionen ───────────────────────────────────────────────────────
@@ -322,8 +328,124 @@ const Prognose = ({ lastStart, zyklusLen, isDark }: {
     );
 };
 
+// ── Zyklusdaten-Management ─────────────────────────────────────────────────────
+const ZyklusDatenManager = ({ native, onChange, isDark }: {
+    native: Record<string, any>; onChange: (attr: string, val: any) => void; isDark: boolean;
+}) => {
+    const [newDate, setNewDate] = useState('');
+    const rawDaten = native.zyklusStartDaten || '';
+    const zyklusLaenge = parseInt(native.zyklusLaenge) || 28;
+
+    const dates = parseStartDaten(rawDaten);
+    const dateStrs = dates.map(d => toDateStr(d)).sort((a, b) => b.localeCompare(a));
+
+    const handleAdd = () => {
+        if (!newDate || !/^\d{4}-\d{2}-\d{2}$/.test(newDate)) return;
+        if (dateStrs.includes(newDate)) return;
+        const updated = [...dateStrs, newDate].sort((a, b) => b.localeCompare(a));
+        onChange('zyklusStartDaten', updated.join(', '));
+        setNewDate('');
+    };
+
+    const handleDelete = (ds: string) => {
+        const updated = dateStrs.filter(d => d !== ds);
+        onChange('zyklusStartDaten', updated.join(', '));
+    };
+
+    const inputStyle = {
+        background: isDark ? '#1a1a1a' : '#fff',
+        color: isDark ? '#eee' : '#111',
+        border: `1px solid ${isDark ? '#444' : '#ccc'}`,
+        borderRadius: 3, padding: '4px 8px',
+        fontFamily: 'monospace', fontSize: '0.72rem',
+    };
+
+    return (
+        <TB title="ZYKLUSDATEN VERWALTEN" isDark={isDark} borderColor="#f06292">
+            {/* Zykluslänge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <span style={{ fontSize: '0.68rem', color: isDark ? '#aaa' : '#555' }}>Standard-Zykluslänge:</span>
+                <input type="number" value={zyklusLaenge} min={21} max={45}
+                    onChange={e => onChange('zyklusLaenge', parseInt(e.target.value) || 28)}
+                    style={{ ...inputStyle, width: 60 }} />
+                <span style={{ fontSize: '0.6rem', color: isDark ? '#555' : '#aaa' }}>Tage (adaptiv ab 2 Zyklen)</span>
+            </div>
+
+            {/* Neues Datum hinzufügen */}
+            <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', marginBottom: 4, letterSpacing: 1 }}>
+                ERSTEN BLUTUNGSTAG EINTRAGEN
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14 }}>
+                <input type="date" value={newDate}
+                    onChange={e => setNewDate(e.target.value)}
+                    max={toDateStr(new Date())}
+                    style={{ ...inputStyle, width: 140 }} />
+                <button onClick={handleAdd}
+                    style={{
+                        background: isDark ? '#1a1a2e' : '#fce4ec',
+                        color: isDark ? '#f48fb1' : '#c2185b',
+                        border: `1px solid ${isDark ? '#4a148c' : '#f48fb1'}`,
+                        borderRadius: 4, padding: '5px 14px',
+                        fontFamily: 'monospace', fontSize: '0.72rem',
+                        cursor: 'pointer', fontWeight: 700, letterSpacing: 1,
+                    }}>
+                    🩸 HINZUFÜGEN
+                </button>
+            </div>
+
+            {/* Liste der Zyklusstarts */}
+            <div style={{ fontSize: '0.5rem', color: isDark ? '#444' : '#bbb', marginBottom: 6, letterSpacing: 1 }}>
+                EINGETRAGENE ZYKLUSSTARTS ({dateStrs.length})
+            </div>
+            {dateStrs.length === 0 ? (
+                <div style={{ fontSize: '0.65rem', color: isDark ? '#444' : '#bbb', fontStyle: 'italic' }}>
+                    Noch keine Daten — trage mindestens einen Zyklusstart ein.
+                </div>
+            ) : (
+                <div>
+                    {dateStrs.map((ds, i) => {
+                        const isNewest = i === 0;
+                        const prev = dateStrs[i + 1];
+                        const cycleLen = prev ? Math.round((new Date(ds + 'T06:00:00').getTime() - new Date(prev + 'T06:00:00').getTime()) / 86400000) : null;
+                        return (
+                            <div key={ds} style={{
+                                display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5,
+                                padding: '5px 8px',
+                                background: isDark ? '#0d1117' : '#f9f9f9',
+                                borderLeft: `3px solid ${isNewest ? '#f06292' : (isDark ? '#333' : '#ddd')}`,
+                                borderRadius: '0 4px 4px 0',
+                            }}>
+                                <span style={{ fontSize: '0.7rem', minWidth: 18, color: isDark ? '#f48fb1' : '#e91e63' }}>
+                                    {isNewest ? '▶' : '·'}
+                                </span>
+                                <span style={{ fontSize: '0.72rem', flex: 1, fontFamily: 'monospace', color: isDark ? '#ccc' : '#444' }}>
+                                    <b>{ds}</b>
+                                    {isNewest && <span style={{ fontSize: '0.6rem', color: isDark ? '#888' : '#999', marginLeft: 8 }}>aktuellster</span>}
+                                    {cycleLen !== null && cycleLen >= 21 && cycleLen <= 45 && (
+                                        <span style={{ fontSize: '0.6rem', color: isDark ? '#888' : '#999', marginLeft: 8 }}>
+                                            → {cycleLen}d Zyklus
+                                        </span>
+                                    )}
+                                </span>
+                                <button onClick={() => handleDelete(ds)} style={{
+                                    background: 'transparent', border: 'none',
+                                    color: isDark ? '#555' : '#bbb',
+                                    cursor: 'pointer', fontSize: '0.8rem', padding: '0 4px', lineHeight: 1,
+                                }} title="Löschen">✕</button>
+                            </div>
+                        );
+                    })}
+                    <div style={{ marginTop: 6, fontSize: '0.55rem', color: isDark ? '#333' : '#bbb' }}>
+                        ▶ = laufender Zyklus · Zykluslänge wird ab 2 Einträgen adaptiv berechnet
+                    </div>
+                </div>
+            )}
+        </TB>
+    );
+};
+
 // ── Hauptkomponente ───────────────────────────────────────────────────────────
-export default function ZyklusTab({ native, themeType }: ZyklusTabProps) {
+export default function ZyklusTab({ native, themeType, onChange }: ZyklusTabProps) {
     const isDark = themeType === 'dark';
     const [showWiss, setShowWiss] = useState(false);
 
@@ -352,6 +474,8 @@ export default function ZyklusTab({ native, themeType }: ZyklusTabProps) {
 
     return (
         <div style={{ fontFamily: 'monospace' }}>
+            {/* ZYKLUSDATEN VERWALTEN — oben, immer sichtbar */}
+            <ZyklusDatenManager native={native} onChange={onChange} isDark={isDark} />
 
             {/* HEUTE BLOCK */}
             <TB title="ZYKLUS — HEUTE" isDark={isDark} borderColor="#f06292">

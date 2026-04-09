@@ -139,10 +139,10 @@ class App extends GenericApp<any, AppState> {
                             <MedicalTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} native={native} onChange={(attr: string, val: any) => this.updateNativeValue(attr, val)} />
                         )}
                         {showSex && this.state.selectedTab === 'sex' && (
-                            <SexTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} themeType={themeType} native={native} />
+                            <SexTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} themeType={themeType} native={native} onChange={(attr, val) => this.updateNativeValue(attr, val)} />
                         )}
                         {showZyklus && this.state.selectedTab === 'zyklus' && (
-                            <ZyklusTab native={native} themeType={themeType} />
+                            <ZyklusTab native={native} themeType={themeType} onChange={(attr, val) => this.updateNativeValue(attr, val)} />
                         )}
                         {this.state.selectedTab === 'system'  && <SystemTab native={native} onChange={(attr: string, val: any) => this.updateNativeValue(attr, val)} socket={this.socket} themeType={themeType} theme={this.state.theme} adapterName={this.adapterName} instance={this.instance} />}
                         {this.state.selectedTab === 'help'    && <Help themeType={themeType} />}

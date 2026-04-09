@@ -32,6 +32,7 @@ interface SexTabProps {
     instance: number;
     themeType: string;
     native: Record<string, any>;
+    onChange: (attr: string, value: any) => void;
 }
 
 /** Manuelle Ground-Truth-Einträge (Einstellungen → JSON) — für Abgleich & spätere Kalibrierung */
@@ -59,7 +60,11 @@ function labelMatchesDetection(l: SexTrainingLabel, events: IntimacyEvent[]): bo
     const t0 = new Date(l.date + 'T00:00:00');
     t0.setHours(hh, mm, 0, 0);
     const ms = t0.getTime();
-    return events.some((e) => Math.abs(e.start - ms) < 90 * 60000);
+    return events.some((e) => Math.abs(e.start - ms) < 60 * 60000);
+}
+
+function saveSexLabels(labels: SexTrainingLabel[], onChange: (attr: string, val: any) => void) {
+    onChange('sexTrainingLabels', JSON.stringify(labels, null, 2));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -262,7 +267,7 @@ const IntimacyBar = ({ evt, isDark }: { evt: IntimacyEvent; isDark: boolean }) =
     return (
         <div>
             <div style={{ fontSize: '0.55rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>
-                INTENSITÄTS-VERLAUF (15-Min-Slots)
+                INTENSITÄTS-VERLAUF (5-Min-Slots)
             </div>
             <div style={{ position: 'relative', height: 28, background: isDark ? '#111' : '#f0f0f0', borderRadius: 3, overflow: 'hidden' }}>
                 {evt.slots.map((sl, i) => {
@@ -348,7 +353,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native }: {
                     </div>
                     <div style={{ marginTop: 5, fontSize: '0.55rem', color: isDark ? '#555' : '#aaa' }}>
                         Peak: <span style={{ color: '#ab47bc' }}>{evt.peakStrength}</span> ·
-                        Dichte: <span style={{ color: '#ab47bc' }}>{evt.avgTrigger}/15min</span> ·
+                        Dichte: <span style={{ color: '#ab47bc' }}>{evt.avgTrigger}/5min</span> ·
                         {evt.slots.length} Slots aktiv
                     </div>
                 </div>
@@ -496,35 +501,150 @@ const SevenDayHistory = ({ historyDays, themeType, funMode }: {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Training-Label-Formular
+// ─────────────────────────────────────────────────────────────────────────────
+const LabelForm = ({ native, onChange, themeType, dayData }: {
+    native: Record<string, any>;
+    onChange: (attr: string, val: any) => void;
+    themeType: string;
+    dayData: Record<string, IntimacyEvent[]>;
+}) => {
+    const isDark = themeType === 'dark';
+    const today = dateStr(new Date());
+    const [formDate, setFormDate] = useState(today);
+    const [formTime, setFormTime] = useState('');
+    const [formDuration, setFormDuration] = useState('');
+    const [formType, setFormType] = useState<'vaginal' | 'oral_hand' | 'none'>('oral_hand');
+
+    const labels = parseSexTrainingLabels(native.sexTrainingLabels);
+
+    const handleAdd = () => {
+        if (!formDate) return;
+        const entry: SexTrainingLabel = { date: formDate, type: formType };
+        if (formTime) entry.time = formTime;
+        if (formDuration && parseInt(formDuration) > 0) entry.durationMin = parseInt(formDuration);
+        const updated = [...labels, entry].sort((a, b) => b.date.localeCompare(a.date));
+        saveSexLabels(updated, onChange);
+        setFormTime('');
+        setFormDuration('');
+    };
+
+    const handleDelete = (idx: number) => {
+        const updated = labels.filter((_, i) => i !== idx);
+        saveSexLabels(updated, onChange);
+    };
+
+    const inputStyle = {
+        background: isDark ? '#1a1a1a' : '#fff',
+        color: isDark ? '#eee' : '#111',
+        border: `1px solid ${isDark ? '#444' : '#ccc'}`,
+        borderRadius: 3, padding: '4px 8px',
+        fontFamily: 'monospace', fontSize: '0.72rem',
+    };
+    const selectStyle = { ...inputStyle, cursor: 'pointer' };
+
+    return (
+        <TerminalBox title="SESSION EINTRAGEN" themeType={themeType}
+            helpText="Trage bekannte Sessions manuell ein. Das System lernt daraus die typische Vibrationsstärke deines Sensors (Kalibrierung). Eine Handvoll Einträge reicht für gute Erkennung.">
+            {/* Formular */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end', marginBottom: 12 }}>
+                <div>
+                    <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>DATUM</div>
+                    <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)}
+                        style={{ ...inputStyle, width: 130 }} />
+                </div>
+                <div>
+                    <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>UHRZEIT (ca.)</div>
+                    <input type="time" value={formTime} onChange={e => setFormTime(e.target.value)}
+                        style={{ ...inputStyle, width: 100 }} />
+                </div>
+                <div>
+                    <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>DAUER (Min, opt.)</div>
+                    <input type="number" value={formDuration} onChange={e => setFormDuration(e.target.value)}
+                        min={1} max={180} placeholder="—"
+                        style={{ ...inputStyle, width: 80 }} />
+                </div>
+                <div>
+                    <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>TYP</div>
+                    <select value={formType} onChange={e => setFormType(e.target.value as any)} style={{ ...selectStyle, width: 130 }}>
+                        <option value="vaginal">♥ Vaginal</option>
+                        <option value="oral_hand">◐ Oral / Hand</option>
+                        <option value="none">⬡ Sonstiges</option>
+                    </select>
+                </div>
+                <button onClick={handleAdd}
+                    style={{
+                        background: isDark ? '#1a2e1a' : '#e8f5e9',
+                        color: isDark ? '#81c784' : '#1b5e20',
+                        border: `1px solid ${isDark ? '#2e7d32' : '#a5d6a7'}`,
+                        borderRadius: 4, padding: '5px 14px',
+                        fontFamily: 'monospace', fontSize: '0.72rem',
+                        cursor: 'pointer', fontWeight: 700, letterSpacing: 1,
+                        alignSelf: 'flex-end',
+                    }}>
+                    + SPEICHERN
+                </button>
+            </div>
+
+            {/* Liste der eingetragenen Labels */}
+            {labels.length === 0 ? (
+                <div style={{ fontSize: '0.65rem', color: isDark ? '#444' : '#bbb', fontStyle: 'italic' }}>
+                    Noch keine Einträge — trage 3–5 bekannte Sessions ein, damit der Algorithmus lernen kann.
+                </div>
+            ) : (
+                <div>
+                    <div style={{ fontSize: '0.5rem', color: isDark ? '#444' : '#bbb', marginBottom: 6, letterSpacing: 1 }}>
+                        EINGETRAGENE SESSIONS ({labels.length})
+                    </div>
+                    {labels.map((l, i) => {
+                        const dayEv = dayData[l.date] ?? [];
+                        const ok = labelMatchesDetection(l, dayEv);
+                        const hasData = dayData[l.date] !== undefined;
+                        return (
+                            <div key={i} style={{
+                                display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5,
+                                padding: '5px 8px',
+                                background: isDark ? '#0d1117' : '#f9f9f9',
+                                borderLeft: `3px solid ${hasData ? (ok ? '#81c784' : '#ffb74d') : (isDark ? '#333' : '#ddd')}`,
+                                borderRadius: '0 4px 4px 0',
+                            }}>
+                                <span style={{ fontSize: '0.7rem', minWidth: 18, color: hasData ? (ok ? '#81c784' : '#ffb74d') : (isDark ? '#444' : '#bbb') }}>
+                                    {hasData ? (ok ? '✓' : '⚠') : '·'}
+                                </span>
+                                <span style={{ fontSize: '0.68rem', flex: 1, color: isDark ? '#ccc' : '#444' }}>
+                                    <b>{l.date}</b>
+                                    {l.time && <span style={{ color: isDark ? '#888' : '#999' }}> · {l.time}</span>}
+                                    {l.durationMin != null && <span style={{ color: isDark ? '#888' : '#999' }}> · ~{l.durationMin} Min</span>}
+                                    <span style={{
+                                        marginLeft: 8, padding: '1px 6px', borderRadius: 3, fontSize: '0.58rem',
+                                        background: l.type === 'vaginal' ? (isDark ? '#880e4f' : '#fce4ec') : (isDark ? '#1a237e' : '#e8eaf6'),
+                                        color: l.type === 'vaginal' ? (isDark ? '#f48fb1' : '#c2185b') : (isDark ? '#90caf9' : '#283593'),
+                                    }}>{l.type === 'vaginal' ? '♥ vaginal' : l.type === 'oral_hand' ? '◐ oral/hand' : '⬡ sonstiges'}</span>
+                                </span>
+                                <button onClick={() => handleDelete(i)} style={{
+                                    background: 'transparent', border: 'none', color: isDark ? '#555' : '#bbb',
+                                    cursor: 'pointer', fontSize: '0.8rem', padding: '0 4px', lineHeight: 1,
+                                }} title="Löschen">✕</button>
+                            </div>
+                        );
+                    })}
+                    <div style={{ marginTop: 8, fontSize: '0.55rem', color: isDark ? '#333' : '#bbb' }}>
+                        ✓ = vom Sensor erkannt · ⚠ = nicht erkannt (Sensor ggf. neu kalibrieren) · · = kein Datentag geladen
+                    </div>
+                </div>
+            )}
+        </TerminalBox>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Haupt-Komponente SexTab
 // ─────────────────────────────────────────────────────────────────────────────
-const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeType, native }) => {
+const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeType, native, onChange }) => {
     const isDark = themeType === 'dark';
     const funMode = native.sexFunMode !== false;
 
-    // Retroaktive Berechnung State
-    const [recalcState, setRecalcState] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
-    const [recalcResult, setRecalcResult] = useState<{ updated: number; skipped: number; errors: number; total: number } | null>(null);
-
-    const [cacheGen, setCacheGen] = useState(0);
-
-    const runRecalc = async (force = false) => {
-        setRecalcState('running');
-        setRecalcResult(null);
-        try {
-            const res: any = await socket.sendTo(`${adapterName}.${instance}`, 'recalcIntimacyHistory', { force });
-            if (res?.success) {
-                setRecalcResult({ updated: res.updated, skipped: res.skipped, errors: res.errors, total: res.total });
-                setRecalcState('done');
-                setDayData({});
-                setCacheGen((g) => g + 1);
-            } else {
-                setRecalcState('error');
-            }
-        } catch {
-            setRecalcState('error');
-        }
-    };
+    const [cacheGen] = useState(0);
 
     // Datums-Navigation
     const [viewDate, setViewDate] = useState<Date>(() => {
@@ -574,8 +694,6 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
 
     const todayDs     = dateStr(viewDate);
     const todayEvents = dayData[todayDs] ?? [];
-    const trainingLabels = parseSexTrainingLabels(native.sexTrainingLabels);
-    const labelsInWeek = trainingLabels.filter((l) => historyDays.some((h) => h.dateStr === l.date));
 
     return (
         <div style={{
@@ -619,7 +737,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                 </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                    {/* Linke Spalte: Aktueller Tag + 7-Tage */}
+                    {/* Linke Spalte: Aktueller Tag + 7-Tage + Training-Formular */}
                     <div>
                         <SexDayCard
                             events={todayEvents}
@@ -629,39 +747,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                             native={native}
                         />
                         <SevenDayHistory historyDays={historyDays} themeType={themeType} funMode={funMode} />
-                        {labelsInWeek.length > 0 && (
-                            <TerminalBox title="TRAINING / REFERENZ (manuell)" themeType={themeType}
-                                helpText="Einträge aus den Adapter-Einstellungen (JSON). Dient dem Abgleich mit der Erkennung — kein automatisches neuronales Training.">
-                                <div style={{ fontSize: '0.65rem', color: isDark ? '#888' : '#666', lineHeight: 1.7 }}>
-                                    {labelsInWeek.map((l, i) => {
-                                        const dayEv = dayData[l.date] ?? [];
-                                        const ok = labelMatchesDetection(l, dayEv);
-                                        return (
-                                            <div key={i} style={{
-                                                marginBottom: 6, padding: '6px 8px',
-                                                background: isDark ? '#0d1117' : '#f9f9f9',
-                                                borderLeft: `3px solid ${ok ? '#81c784' : '#ffb74d'}`,
-                                                borderRadius: '0 4px 4px 0'
-                                            }}>
-                                                <span style={{ color: ok ? '#81c784' : '#ffb74d' }}>{ok ? '✓' : '⚠'}</span>{' '}
-                                                <b>{l.date}</b>
-                                                {l.time && ` · ${l.time}`}
-                                                {l.durationMin != null && ` · ~${l.durationMin} Min`}
-                                                {' · '}<span style={{ color: '#ce93d8' }}>{l.type}</span>
-                                                {!ok && (
-                                                    <div style={{ fontSize: '0.58rem', color: isDark ? '#666' : '#999', marginTop: 2 }}>
-                                                        Kein erkanntes Event in ±90 Min — ggf. Recalc (force) oder Schwellen anpassen.
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                    <div style={{ fontSize: '0.55rem', color: isDark ? '#444' : '#bbb', marginTop: 6 }}>
-                                        Hinweis: Dient der Dokumentation und Kalibrierung; ein KNN ist dafür nicht nötig (siehe Handbuch).
-                                    </div>
-                                </div>
-                            </TerminalBox>
-                        )}
+                        <LabelForm native={native} onChange={onChange} themeType={themeType} dayData={dayData} />
                     </div>
 
                     {/* Rechte Spalte: Algorithmus-Info + Hinweis */}
@@ -710,17 +796,17 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                         <TerminalBox title="ALGORITHMUS" themeType={themeType}>
                             <div style={{ fontSize: '0.68rem', lineHeight: 1.8, color: isDark ? '#666' : '#888' }}>
                                 <div style={{ color: isDark ? '#555' : '#aaa', fontSize: '0.58rem', marginBottom: 4 }}>ERKENNUNGS-SCHWELLEN</div>
-                                <div>• Zeitfenster: <span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>10:00 – 03:00 Uhr</span> <span style={{color:isDark?'#444':'#bbb'}}>(06-09h: Aufwachen ausgeblendet)</span></div>
-                                <div>• <b>Tier A</b> (stark): 3×15 Min, Peak ≥65, Trigger/Str wie konfiguriert → eher <span style={{ color: '#f48fb1' }}>vaginal</span></div>
-                                <div>• <b>Tier B</b> (moderat): 4–6×15 Min, Peak ≥45 → <span style={{ color: '#90caf9' }}>oral/hand</span></div>
-                                <div>• Dauer trennt vom kurzen Aufwachen (&lt;45 Min aktive Serie)</div>
-                                <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.58rem' }}>TYP innerhalb des Clusters</div>
+                                <div>• Zeitfenster: <span style={{ color: isDark ? '#81c784' : '#388e3c' }}>kein Limit</span> <span style={{ color: isDark ? '#444' : '#bbb' }}>(ganzer Tag, Sex ist zeitlos)</span></div>
+                                <div>• <b>Pfad A</b> (kurz+intensiv): ≥2×5 Min, Peak ≥<span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>Schwelle A</span> → Quickie / vaginal</div>
+                                <div>• <b>Pfad B</b> (länger+moderat): ≥6×5 Min, Peak ≥<span style={{ color: isDark ? '#90caf9' : '#283593' }}>Schwelle B</span> → oral/hand</div>
+                                <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.58rem' }}>KALIBRIERUNG</div>
+                                <div>• Standard-Schwellen: A=50, B=30 (Vibrationsstärke 0–120)</div>
+                                <div>• Adaptiv: aus eingetragenen Training-Sessions gelernt</div>
+                                <div>• Mehr Sessions eintragen → präzisere Erkennung</div>
+                                <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.58rem' }}>TYP-KLASSIFIKATION</div>
                                 <div>• Peak ≥80 + viele Str/Slot → <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>vaginal</span></div>
-                                <div>• Sonst Peak ≥55 oder Tier B → <span style={{ color: isDark ? '#90caf9' : '#283593' }}>oral/hand</span></div>
+                                <div>• Peak ≥55 oder Pfad B → <span style={{ color: isDark ? '#90caf9' : '#283593' }}>oral/hand</span></div>
                                 <div>• Default → <span style={{ color: '#888' }}>intim</span></div>
-                                <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6 }}>
-                                    <span style={{ color: isDark ? '#555' : '#aaa', fontSize: '0.58rem' }}>Erw. Sensitivität ~75% · Spezifität ~88%</span>
-                                </div>
                             </div>
                         </TerminalBox>
 
@@ -734,55 +820,6 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                     Kein Medizinprodukt · Keine klinische Nutzung
                                 </div>
                             </div>
-                        </TerminalBox>
-
-                        {/* Retroaktive Berechnung */}
-                        <TerminalBox title="VERGANGENE DATEN BERECHNEN" themeType={themeType}>
-                            <div style={{ fontSize: '0.68rem', color: isDark ? '#888' : '#555', marginBottom: 8 }}>
-                                Einmalig nötig für Tage vor v0.33.105. Berechnet <code>intimacyEvents</code> aus den gespeicherten Rohdaten (<code>eventHistory</code>) aller historischen Dateien. Tage mit bereits erkannten Events werden übersprungen.
-                            </div>
-                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                                <button
-                                    onClick={() => runRecalc(false)}
-                                    disabled={recalcState === 'running'}
-                                    style={{
-                                        background: recalcState === 'done' ? '#1b5e20' : recalcState === 'error' ? '#b71c1c' : (isDark ? '#1a2e1a' : '#e8f5e9'),
-                                        color: recalcState === 'done' ? '#a5d6a7' : recalcState === 'error' ? '#ef9a9a' : (isDark ? '#81c784' : '#1b5e20'),
-                                        border: `1px solid ${recalcState === 'done' ? '#388e3c' : recalcState === 'error' ? '#c62828' : (isDark ? '#2e7d32' : '#a5d6a7')}`,
-                                        borderRadius: 4, padding: '6px 14px', fontFamily: 'monospace',
-                                        fontSize: '0.72rem', cursor: recalcState === 'running' ? 'wait' : 'pointer',
-                                        fontWeight: 700, letterSpacing: 1,
-                                    }}
-                                >
-                                    {recalcState === 'idle'    && '▶ RETROAKTIV BERECHNEN'}
-                                    {recalcState === 'running' && '⏳ Berechne alle Tage...'}
-                                    {recalcState === 'done'    && '✓ ABGESCHLOSSEN'}
-                                    {recalcState === 'error'   && '✗ FEHLER — nochmal versuchen'}
-                                </button>
-                                <button
-                                    onClick={() => runRecalc(true)}
-                                    disabled={recalcState === 'running'}
-                                    style={{
-                                        background: 'transparent',
-                                        color: isDark ? '#666' : '#aaa',
-                                        border: `1px solid ${isDark ? '#333' : '#ddd'}`,
-                                        borderRadius: 4, padding: '6px 10px', fontFamily: 'monospace',
-                                        fontSize: '0.65rem', cursor: recalcState === 'running' ? 'wait' : 'pointer',
-                                    }}
-                                    title="Alle Tage neu berechnen — auch solche mit bereits erkannten Events (nach Algorithmus-Änderungen)"
-                                >
-                                    ↺ ALLES NEU (force)
-                                </button>
-                            </div>
-                            {recalcResult && recalcState === 'done' && (
-                                <div style={{ marginTop: 8, fontSize: '0.68rem', color: isDark ? '#81c784' : '#2e7d32' }}>
-                                    ✅ {recalcResult.total} Dateien geprüft · <b>{recalcResult.updated}</b> aktualisiert · {recalcResult.skipped} übersprungen
-                                    {recalcResult.errors > 0 && <span style={{ color: '#ef9a9a' }}> · {recalcResult.errors} Fehler</span>}
-                                    <div style={{ marginTop: 4, color: isDark ? '#555' : '#aaa', fontSize: '0.62rem' }}>
-                                        Seite neu laden, um die aktualisierten Daten zu sehen.
-                                    </div>
-                                </div>
-                            )}
                         </TerminalBox>
                     </div>
                 </div>
