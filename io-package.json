@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.113",
+    "version": "0.33.114",
     "news": {
+            "0.33.114": {
+                "en": "Vibration charts improved: auto-scaled Y-axis, 12h default zoom, 260px height, larger fonts, Aura chart dark-navy background, separate zoom controls per chart",
+                "de": "Vibrations-Charts verbessert: Auto-Y-Achse, 12h Standard-Zoom, 260px Höhe, größere Schriften, Aura-Chart Dunkelblau-Hintergrund, separater Zoom pro Chart"
+            },
             "0.33.113": {
                 "en": "Vibration chart panel in Sex tab: Garmin-style (bars+trend) and Aura-style (neon glow), live sensor subscription, 6h/12h/24h zoom, calibration reference lines",
                 "de": "Vibrationsverlauf-Kacheln im Sex-Tab: Garmin-Style (Balken+Trend) und Aura-Style (Neon-Glow), Live-Sensor-Abo, 6h/12h/24h-Zoom, Kalibrierungs-Schwellen als Referenzlinien"
@@ -208,6 +212,7 @@
   "objects": [],
   "instanceObjects": []
 }
+
 
 
 
