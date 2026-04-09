@@ -1598,7 +1598,74 @@ export default function HealthTab(props: any) {
                                         )}
                                     </div>
                                 </div>
-                                <div style={{textAlign:'center', padding:'8px', background: isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.03)', borderRadius:'6px', color:'#888', fontSize:'0.72rem'}}>
+                                {/* Schlafbalken mit OBE-Dreiecken (auch ohne Schlafphasen) */}
+                                <div style={{marginBottom:'6px'}}>
+                                    {markerItems.above.length > 0 && (
+                                        <div style={{position:'relative', height:'18px'}}>
+                                            {markerItems.above.map(marker => (
+                                                <span key={marker.key} style={{
+                                                    position:'absolute',
+                                                    left: marker.pct + '%',
+                                                    top: marker.lane === 0 ? '3px' : '-9px',
+                                                    color: stageColor[marker.evtType] ?? '#ffb300',
+                                                    fontSize:'14px', fontWeight:'bold',
+                                                    transform:'translateX(-50%)',
+                                                    cursor:'default', lineHeight:'13px'
+                                                }} title={marker.title}>▼</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {markerItems.above.length === 0 && markerItems.below.length > 0 && (
+                                        <div style={{height:'18px'}} />
+                                    )}
+                                    {/* Uniformer Grau-Balken für die gesamte Schlafdauer */}
+                                    <div style={{display:'flex', width:'100%', height:'28px', borderRadius:'4px', overflow:'hidden'}}>
+                                        <div style={{
+                                            flex: 1,
+                                            backgroundColor: isDark ? '#1a1a1a' : '#eeeeee',
+                                            backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 8px)',
+                                        }} title={'Schlaffenster: ' + fmtTime(swStart!) + '–' + fmtTime(swEnd!)} />
+                                    </div>
+                                    {markerItems.below.length > 0 && (
+                                        <div style={{position:'relative', height:'18px'}}>
+                                            {markerItems.below.map(marker => (
+                                                <span key={marker.key} style={{
+                                                    position:'absolute',
+                                                    left: marker.pct + '%',
+                                                    top: marker.lane === 0 ? '2px' : '10px',
+                                                    color: stageColor[marker.evtType] ?? '#e53935',
+                                                    fontSize:'14px', fontWeight:'bold',
+                                                    transform:'translateX(-50%)',
+                                                    cursor:'default', lineHeight:'13px'
+                                                }} title={marker.title}>▲</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {/* Zeitachse */}
+                                    <div style={{position:'relative', height:'14px', marginTop:'3px'}}>
+                                        <span style={{position:'absolute', left:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa'}}>{fmtTime(swStart!)}</span>
+                                        {(() => {
+                                            const totalMs = swEnd! - swStart!;
+                                            const marks: React.ReactNode[] = [];
+                                            const first = new Date(swStart!);
+                                            first.setMinutes(0, 0, 0);
+                                            first.setHours(first.getHours() + 1);
+                                            let t = first.getTime();
+                                            while (t < swEnd! - 900000) {
+                                                const pct = ((t - swStart!) / totalMs) * 100;
+                                                marks.push(
+                                                    <span key={t} style={{position:'absolute', left: pct + '%', fontSize:'0.55rem', color: isDark?'#555':'#bbb', transform:'translateX(-50%)'}}>
+                                                        {fmtTime(t)}
+                                                    </span>
+                                                );
+                                                t += 3600000;
+                                            }
+                                            return marks;
+                                        })()}
+                                        <span style={{position:'absolute', right:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa'}}>{fmtTime(swEnd!)}</span>
+                                    </div>
+                                </div>
+                                <div style={{textAlign:'center', padding:'4px', color:'#888', fontSize:'0.65rem'}}>
                                     {personLabel
                                         ? '📊 Schlafphasen nicht verfügbar — nur Einschlaf- und Aufwachzeit analysiert'
                                         : '📳 Schlafphasen nicht verfügbar — Vibrationsdaten zu alt (tritt auf wenn Adapter tagsüber neu gestartet wird)'}
@@ -2898,7 +2965,7 @@ export default function HealthTab(props: any) {
                                         wakeConf:            pd.wakeConf            ?? 'niedrig',
                                         isNap: false, unusuallyLongSleep: false,
                                         garminDataFresh: null, garminLastSyncAgeH: null,
-                                        outsideBedEvents:       [],
+                                        outsideBedEvents:       pd.outsideBedEvents   ?? [],
                                         wakeConfirmed:          pd.wakeConfirmed          ?? false,
                                         allWakeSources:         pd.allWakeSources         ?? [],
                                         sleepStartSource:       pd.sleepStartSource       ?? 'motion',

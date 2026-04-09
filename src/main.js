@@ -2067,6 +2067,44 @@ class CogniLiving extends utils.Adapter {
                         ? _pBedEvts.filter(function(e){ var ts=e.timestamp||0; return ts>=_pWinS_check && ts<=_pWinE_check; })
                         : _pBedEvts.filter(function(e){ var ts=e.timestamp||0; return ts>=winStart && ts<=_pWinE_check; });
                     var _pBedWasEmpty = _pBedInWin.length === 0;
+                    // Per-Person outsideBedEvents: Ausserhalb-Bett-Aktivitaeten im Schlaffenster (fuer OBE-Dreiecke im Frontend)
+                    var _pObe = [];
+                    var _pObeWinS = _pSleepStart || winStart;
+                    var _pObeWinE = _pWakeTs || Date.now();
+                    if (_pObeWinS < _pObeWinE) {
+                        var _pAllOutSrc = sleepSearchEvents.filter(function(e) {
+                            var ts = e.timestamp||0;
+                            if (ts < _pObeWinS || ts > _pObeWinE) return false;
+                            if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion) return false;
+                            if (e.personTag && e.personTag !== person) return false;
+                            if (!(e.type === 'motion' || e.type === 'presence_radar_bool') || !isActiveValue(e.value)) return false;
+                            return true;
+                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                        var _pObeCluster = null; var _pCGap = 5*60*1000; var _pCAfter = 3*60*1000;
+                        var _pPushCluster = function(c) {
+                            var dur = Math.max(1, Math.round((c.end - c.start) / 60000));
+                            if (c.hasBath) {
+                                _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'bathroom' });
+                                if (c.hasOther) _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'outside' });
+                            } else {
+                                _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'outside' });
+                            }
+                        };
+                        _pAllOutSrc.forEach(function(e) {
+                            var ts = e.timestamp||0;
+                            var _isBath = e.isBathroomSensor || bathroomIds.has(e.id);
+                            if (!_pObeCluster) {
+                                _pObeCluster = { start: ts, end: ts + _pCAfter, hasBath: _isBath, hasOther: !_isBath };
+                            } else if (ts <= _pObeCluster.end + _pCGap) {
+                                _pObeCluster.end = ts + _pCAfter;
+                                if (_isBath) _pObeCluster.hasBath = true; else _pObeCluster.hasOther = true;
+                            } else {
+                                _pPushCluster(_pObeCluster);
+                                _pObeCluster = { start: ts, end: ts + _pCAfter, hasBath: _isBath, hasOther: !_isBath };
+                            }
+                        });
+                        if (_pObeCluster) _pPushCluster(_pObeCluster);
+                    }
                     result[person] = {
                         nightActivityCount: nightActivityCount,
                         wakeTimeMin: wakeTimeMin,
@@ -2081,7 +2119,8 @@ class CogniLiving extends utils.Adapter {
                         allSleepStartSources: _pAllSleepSources,
                         allWakeSources: _pAllWakeSources,
                         wakeConfirmed: _pWakeConfirmed,
-                        bedWasEmpty: _pBedWasEmpty
+                        bedWasEmpty: _pBedWasEmpty,
+                        outsideBedEvents: _pObe
                     };
                 });
                 return result;
