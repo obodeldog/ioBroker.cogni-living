@@ -1,8 +1,12 @@
-﻿{
+{
   "common": {
     "name": "cogni-living",
-    "version": "0.33.111",
+    "version": "0.33.112",
     "news": {
+            "0.33.112": {
+                "en": "Adaptive calibration from training labels (auto-learn vibration thresholds), anomaly baseline fallback, calibration status shown in Sex tab",
+                "de": "Adaptive Kalibrierung aus Training-Sessions (Vibrations-Schwellen automatisch lernen), Anomalie-Baseline als Fallback, Kalibrierungsstatus im Sex-Tab sichtbar"
+            },
       "0.33.111": {"en": "v0.33.111: Sex-Tab UI redesign (training labels form, no time window, 5-min slots, Pfad A+B); Zyklus-Tab date picker; retroactive recalc removed", "de": "v0.33.111: Sex-Tab Neugestaltung (Training-Labels-Formular, kein Zeitfenster, 5-Min-Slots, Pfad A+B); Zyklus-Tab DatePicker; retroaktive Berechnung entfernt"},
       "0.33.110": {
         "en": "v0.33.110: Recalc force schreibt leere intimacyEvents, OC-SEX Logs, Reload nach Recalc, sexTrainingLabels JSON"
@@ -41,7 +45,7 @@
     },
     "desc": {
       "en": "Neuro-Symbolic AI for Home Automation & Health",
-      "de": "Neuro-Symbolische KI fÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼r Hausautomation & Gesundheit"
+      "de": "Neuro-Symbolische KI fÃƒÆ’Ã‚Â¼r Hausautomation & Gesundheit"
     },
     "authors": [
       "Marc Jaeger <mj112@gmx.de>"
@@ -200,4 +204,6 @@
   "objects": [],
   "instanceObjects": []
 }
+
+
 

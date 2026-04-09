@@ -2124,11 +2124,87 @@ class CogniLiving extends utils.Adapter {
             // Nur gespeichert wenn moduleSex === true (Datenschutz-Default: off)
             // =====================================================================
             var intimacyEvents = [];
+            var _calibInfo = { src: 'default', n: 0, calibA: 50, calibB: 30 };
             if (this.config.moduleSex === true) {
                 try {
                     // Kalibrierte oder Standard-Schwellen (aus native config oder Defaults)
-                    var _calibA = (this.config.sexCalibThreshold && Number(this.config.sexCalibThreshold) > 0) ? Math.round(Number(this.config.sexCalibThreshold) * 1.3) : 50;
-                    var _calibB = (this.config.sexCalibThreshold && Number(this.config.sexCalibThreshold) > 0) ? Number(this.config.sexCalibThreshold) : 30;
+                    // --- ADAPTIVE KALIBRIERUNG (OC-SEX) ---
+                    // Prioritaet: 1. Auto aus Training-Labels, 2. Manuell (sexCalibThreshold), 3. Anomalie-Baseline, 4. Defaults
+                    var _calibA = 50, _calibB = 30, _calibSrc = 'default', _calibN = 0;
+                    // 1. Auto-Kalibrierung aus Training-Labels (ab 2 Labels)
+                    try {
+                        var _sexLabelsRaw = this.config.sexTrainingLabels || '';
+                        var _sexLabels = [];
+                        try { var _slP = JSON.parse(_sexLabelsRaw); if (Array.isArray(_slP)) _sexLabels = _slP.filter(function(l){return l&&l.date;}); } catch(_slPE){}
+                        if (_sexLabels.length >= 2) {
+                            var _calHistDir = require('path').join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                            var _sessionPeaks = [];
+                            var SLOT_CAL_MS = 5*60*1000;
+                            for (var _lbl of _sexLabels.slice(0, 7)) {
+                                try {
+                                    var _lPath = require('path').join(_calHistDir, _lbl.date + '.json');
+                                    if (!fs.existsSync(_lPath)) continue;
+                                    var _lSnap = JSON.parse(fs.readFileSync(_lPath, 'utf8'));
+                                    var _lAllEvts = (_lSnap.eventHistory || []).filter(function(e){ return e.type==='vibration_strength' && (e.isVibrationBed||e.isFP2Bed); });
+                                    if (_lAllEvts.length === 0) continue;
+                                    // Zeitfenster: +-45 Min um Label-Zeit, sonst alle Events des Tages
+                                    var _lT0 = null, _lT1 = null;
+                                    if (_lbl.time && /^\d{1,2}:\d{2}$/.test(_lbl.time)) {
+                                        var _lP = _lbl.time.split(':');
+                                        var _lBase = new Date(_lbl.date + 'T00:00:00');
+                                        _lBase.setHours(parseInt(_lP[0]), parseInt(_lP[1]), 0, 0);
+                                        _lT0 = _lBase.getTime() - 45*60000;
+                                        _lT1 = _lBase.getTime() + ((_lbl.durationMin||45) + 15)*60000;
+                                    }
+                                    var _lEvts = _lT0 !== null ? _lAllEvts.filter(function(e){ var t=e.timestamp||0; return t>=_lT0&&t<=_lT1; }) : _lAllEvts;
+                                    if (_lEvts.length === 0) continue;
+                                    // Slot-Peak-Median berechnen
+                                    _lEvts.sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
+                                    var _lFirst = _lEvts[0].timestamp||0, _lLast = (_lEvts[_lEvts.length-1].timestamp||0)+SLOT_CAL_MS;
+                                    var _lSlotPeaks = [];
+                                    for (var _lS=_lFirst; _lS<_lLast; _lS+=SLOT_CAL_MS) {
+                                        var _lSlotVals = _lEvts.filter(function(e){ var t=e.timestamp||0; return t>=_lS&&t<_lS+SLOT_CAL_MS; }).map(function(e){ return Number(e.value)||0; });
+                                        if (_lSlotVals.length > 0) _lSlotPeaks.push(Math.max.apply(null,_lSlotVals));
+                                    }
+                                    if (_lSlotPeaks.length > 0) {
+                                        _lSlotPeaks.sort(function(a,b){return a-b;});
+                                        var _lMedian = _lSlotPeaks[Math.floor(_lSlotPeaks.length/2)];
+                                        _sessionPeaks.push(_lMedian);
+                                    }
+                                } catch(_lE) { this.log.debug('[OC-SEX] Calib-Label: '+_lE.message); }
+                            }
+                            if (_sessionPeaks.length >= 2) {
+                                _sessionPeaks.sort(function(a,b){return a-b;});
+                                var _minPeak = _sessionPeaks[0];
+                                _calibB = Math.max(3, Math.round(_minPeak * 0.7));
+                                _calibA = Math.max(5, Math.round(_minPeak * 1.1));
+                                _calibSrc = 'labels';
+                                _calibN = _sessionPeaks.length;
+                                this.log.info('[OC-SEX] Kalibrierung aus '+_calibN+' Labels: calibA='+_calibA+' calibB='+_calibB+' (Peaks: '+_sessionPeaks.join(',')+')' );
+                            }
+                        }
+                    } catch(_calE) { this.log.debug('[OC-SEX] Kalibrierung Fehler: '+_calE.message); }
+                    // 2. Manuell (sexCalibThreshold) - nur wenn keine Labels
+                    if (_calibSrc === 'default' && this.config.sexCalibThreshold && Number(this.config.sexCalibThreshold) > 0) {
+                        _calibB = Number(this.config.sexCalibThreshold);
+                        _calibA = Math.round(_calibB * 1.3);
+                        _calibSrc = 'manual';
+                    }
+                    // 3. Anomalie-Baseline (relativ zur Nacht-Vibration) - wenn noch kein Wert
+                    if (_calibSrc === 'default') {
+                        var _bsVals = sleepSearchEvents.filter(function(e){ return e.type==='vibration_strength'&&(e.isVibrationBed||e.isFP2Bed); }).map(function(e){ return Number(e.value)||0; }).filter(function(v){ return v>0; });
+                        if (_bsVals.length >= 10) {
+                            _bsVals.sort(function(a,b){return a-b;});
+                            var _bsP75 = _bsVals[Math.floor(_bsVals.length*0.75)];
+                            _calibA = Math.max(5, Math.round(_bsP75 * 2.5));
+                            _calibB = Math.max(3, Math.round(_bsP75 * 1.5));
+                            _calibSrc = 'baseline';
+                            this.log.debug('[OC-SEX] Anomalie-Baseline: P75='+_bsP75+' calibA='+_calibA+' calibB='+_calibB);
+                        }
+                    }
+                    // calibInfo fuer Snapshot
+                    var _calibInfo = { src: _calibSrc, n: _calibN, calibA: _calibA, calibB: _calibB };
+                    // --- ENDE KALIBRIERUNG ---
                     // Alle Vibrations-Events - kein Zeitfenster (Sex passiert zu jeder Tageszeit)
                     var _intimEvts = sleepSearchEvents.filter(function(e) {
                         return (e.type==='vibration_strength'||e.type==='vibration_trigger')
@@ -2322,6 +2398,7 @@ class CogniLiving extends utils.Adapter {
                 sleepWindowSource: sleepWindowSource,
                 outsideBedEvents: outsideBedEvents,
                 intimacyEvents: intimacyEvents,
+                sexCalibInfo: _calibInfo,
                 wakeSource: wakeSource,
                 wakeConf: wakeConf,
                 allWakeSources: allWakeSources,

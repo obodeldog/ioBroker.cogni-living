@@ -655,6 +655,9 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     const [dayData, setDayData] = useState<Record<string, IntimacyEvent[]>>({});
     const [loading, setLoading]  = useState(true);
 
+    // Kalibrierungs-Info vom letzten gespeicherten Tag
+    const [calibInfo, setCalibInfo] = useState<{ src: string; n: number; calibA: number; calibB: number } | null>(null);
+
     const loadDay = async (d: Date) => {
         const ds = dateStr(d);
         if (dayData[ds] !== undefined) return;
@@ -664,6 +667,8 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
             );
             const evts: IntimacyEvent[] = result?.data?.intimacyEvents ?? [];
             setDayData(prev => ({ ...prev, [ds]: evts }));
+            // Kalibrierungs-Info vom aktuellen (heute/gestern) Tag merken
+            if (result?.data?.sexCalibInfo) setCalibInfo(result.data.sexCalibInfo);
         } catch {
             setDayData(prev => ({ ...prev, [ds]: [] }));
         }
@@ -797,12 +802,29 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                             <div style={{ fontSize: '0.68rem', lineHeight: 1.8, color: isDark ? '#666' : '#888' }}>
                                 <div style={{ color: isDark ? '#555' : '#aaa', fontSize: '0.58rem', marginBottom: 4 }}>ERKENNUNGS-SCHWELLEN</div>
                                 <div>• Zeitfenster: <span style={{ color: isDark ? '#81c784' : '#388e3c' }}>kein Limit</span> <span style={{ color: isDark ? '#444' : '#bbb' }}>(ganzer Tag, Sex ist zeitlos)</span></div>
-                                <div>• <b>Pfad A</b> (kurz+intensiv): ≥2×5 Min, Peak ≥<span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>Schwelle A</span> → Quickie / vaginal</div>
-                                <div>• <b>Pfad B</b> (länger+moderat): ≥6×5 Min, Peak ≥<span style={{ color: isDark ? '#90caf9' : '#283593' }}>Schwelle B</span> → oral/hand</div>
+                                <div>• <b>Pfad A</b> (kurz+intensiv): ≥2×5 Min, Peak ≥<span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>{calibInfo ? calibInfo.calibA : 50}</span></div>
+                                <div>• <b>Pfad B</b> (länger+moderat): ≥6×5 Min, Peak ≥<span style={{ color: isDark ? '#90caf9' : '#283593' }}>{calibInfo ? calibInfo.calibB : 30}</span></div>
                                 <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.58rem' }}>KALIBRIERUNG</div>
-                                <div>• Standard-Schwellen: A=50, B=30 (Vibrationsstärke 0–120)</div>
-                                <div>• Adaptiv: aus eingetragenen Training-Sessions gelernt</div>
-                                <div>• Mehr Sessions eintragen → präzisere Erkennung</div>
+                                {calibInfo ? (
+                                    <div style={{
+                                        padding: '5px 8px', borderRadius: 3, marginBottom: 4,
+                                        background: calibInfo.src === 'labels' ? (isDark ? '#1a2e1a' : '#e8f5e9') :
+                                                    calibInfo.src === 'baseline' ? (isDark ? '#1a1a2e' : '#e8eaf6') :
+                                                    calibInfo.src === 'manual' ? (isDark ? '#2e1a1a' : '#fce4ec') :
+                                                    (isDark ? '#1a1a1a' : '#f5f5f5'),
+                                        borderLeft: `3px solid ${calibInfo.src === 'labels' ? '#81c784' : calibInfo.src === 'baseline' ? '#90caf9' : calibInfo.src === 'manual' ? '#f48fb1' : '#666'}`,
+                                    }}>
+                                        {calibInfo.src === 'labels' && <span style={{ color: isDark ? '#81c784' : '#2e7d32' }}>✓ Kalibriert aus {calibInfo.n} Training-Sessions · A={calibInfo.calibA} B={calibInfo.calibB}</span>}
+                                        {calibInfo.src === 'baseline' && <span style={{ color: isDark ? '#90caf9' : '#3949ab' }}>~ Anomalie-Baseline aktiv · A={calibInfo.calibA} B={calibInfo.calibB} <span style={{ opacity: 0.7 }}>(Training-Sessions eintragen für mehr Präzision)</span></span>}
+                                        {calibInfo.src === 'manual' && <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>⚙ Manuell: sexCalibThreshold · A={calibInfo.calibA} B={calibInfo.calibB}</span>}
+                                        {calibInfo.src === 'default' && <span style={{ color: isDark ? '#555' : '#aaa' }}>Standard-Schwellen · A={calibInfo.calibA} B={calibInfo.calibB} <span style={{ opacity: 0.7 }}>(Training-Sessions eintragen)</span></span>}
+                                    </div>
+                                ) : (
+                                    <div style={{ color: isDark ? '#444' : '#bbb', fontSize: '0.62rem' }}>
+                                        — Kalibrierungsdaten noch nicht geladen (erst nach nächstem täglichen Speichern verfügbar)
+                                    </div>
+                                )}
+                                <div>• Mehr Sessions eintragen → präzisere automatische Schwellen</div>
                                 <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.58rem' }}>TYP-KLASSIFIKATION</div>
                                 <div>• Peak ≥80 + viele Str/Slot → <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>vaginal</span></div>
                                 <div>• Peak ≥55 oder Pfad B → <span style={{ color: isDark ? '#90caf9' : '#283593' }}>oral/hand</span></div>
