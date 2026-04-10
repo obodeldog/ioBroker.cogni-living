@@ -1166,7 +1166,7 @@ export default function HealthTab(props: any) {
         const unusuallyLongSleep: boolean = sd?.unusuallyLongSleep ?? false;
         const garminDataFresh: boolean | null = sd?.garminDataFresh ?? null;
         const garminLastSyncAgeH: number | null = sd?.garminLastSyncAgeH ?? null;
-        const outsideBedEvts: {start:number,end:number,duration:number,type:string}[] = sd?.outsideBedEvents ?? [];
+        const outsideBedEvts: {start:number,end:number,duration:number,type:string,confirmed?:boolean}[] = sd?.outsideBedEvents ?? [];
         const wakeConfirmed: boolean = sd?.wakeConfirmed ?? false;
         const sleepDateStr: string | null = sd?.sleepDate ?? (sd?.sleepWindowStart ? (() => {
             const d = new Date((sd.sleepWindowStart as number) - 3 * 3600000);
@@ -1379,7 +1379,7 @@ export default function HealthTab(props: any) {
         const remCount   = stages.filter(s => s.s === 'rem').length;
         const wakeCount  = stages.filter(s => s.s === 'wake').length;
         // Außerhalb-Events strikt auf Schlaf-Fenster clippen (kein Rendering rechts von Aufwachzeit)
-        const clippedOutsideBedEvts: {start:number,end:number,duration:number,type:string}[] = (swStart && swEnd)
+        const clippedOutsideBedEvts: {start:number,end:number,duration:number,type:string,confirmed?:boolean}[] = (swStart && swEnd)
             ? outsideBedEvts
                 .map(e => {
                     const start = Math.max(e.start, swStart);
@@ -1389,24 +1389,29 @@ export default function HealthTab(props: any) {
                         start,
                         end,
                         duration: Math.max(1, Math.round((end - start) / 60000)),
-                        type: e.type
+                        type: e.type,
+                        confirmed: e.confirmed
                     };
                 })
-                .filter((e): e is {start:number,end:number,duration:number,type:string} => !!e)
+                .filter((e): e is {start:number,end:number,duration:number,type:string,confirmed?:boolean} => !!e)
             : outsideBedEvts;
 
-        // Außerhalb-Zeit aus geclippten Events
-        const outsideTotalMin = clippedOutsideBedEvts.reduce((acc, e) => acc + e.duration, 0);
-        const bathMin = clippedOutsideBedEvts.filter(e => e.type === 'bathroom').reduce((acc, e) => acc + e.duration, 0);
+        // Bestätigte vs. unbestätigte (Radar-Aussetzer) Events trennen
+        const confirmedEvts = clippedOutsideBedEvts.filter(e => e.confirmed !== false);
+        const radarDropoutEvts = clippedOutsideBedEvts.filter(e => e.confirmed === false);
+
+        // Außerhalb-Zeit nur aus bestätigten Events
+        const outsideTotalMin = confirmedEvts.reduce((acc, e) => acc + e.duration, 0);
+        const bathMin = confirmedEvts.filter(e => e.type === 'bathroom').reduce((acc, e) => acc + e.duration, 0);
         const toH = (n: number, isMin?: boolean) => {
             const m = isMin ? n : n * 5;
             return (m >= 60 ? Math.floor(m/60) + 'h ' : '') + (m % 60) + 'min';
         };
 
-        // Helper: Farbe für Stage-Slot (mit Außerhalb-Overlay)
+        // Helper: Farbe für Stage-Slot (mit Außerhalb-Overlay; Radar-Aussetzer = kein Overlay)
         const slotColor = (slot: {t:number,s:string}, absMs: number|null) => {
-            if (absMs && clippedOutsideBedEvts.length > 0) {
-                const evt = clippedOutsideBedEvts.find(e => absMs >= e.start && absMs < e.end);
+            if (absMs && confirmedEvts.length > 0) {
+                const evt = confirmedEvts.find(e => absMs >= e.start && absMs < e.end);
                 if (evt) return stageColor[evt.type] ?? stageColor.outside;
             }
             return stageColor[slot.s] ?? '#555';
@@ -1415,7 +1420,10 @@ export default function HealthTab(props: any) {
             const timeStr = absMs ? fmtTime(absMs) + ' — ' : '';
             if (absMs && clippedOutsideBedEvts.length > 0) {
                 const evt = clippedOutsideBedEvts.find(e => absMs >= e.start && absMs < e.end);
-                if (evt) return timeStr + stageLabel[evt.type] + ' (' + evt.duration + ' min)';
+                if (evt) {
+                    const label = evt.confirmed === false ? 'Radar-Aussetzer' : (stageLabel[evt.type] ?? 'Abwesenheit');
+                    return timeStr + label + ' (' + evt.duration + ' min)';
+                }
             }
             return timeStr + (stageLabel[slot.s] || slot.s);
         };
@@ -1435,9 +1443,9 @@ export default function HealthTab(props: any) {
             : (stagesWindowStart ?? swStart ?? null);
         const postStageMs = (lastSlotEndMs && swEnd && lastSlotEndMs < swEnd)
             ? swEnd - lastSlotEndMs : 0;
-        // Marker-Logik: Bad → über Balken (▼), Außerhalb/andere → unter Balken (▲)
+        // Marker-Logik: Bad → über Balken (▼), Außerhalb/andere → unter Balken (▲), Radar-Aussetzer → grau klein (▲)
         const markerItems = (() => {
-            if (!swStart || !swEnd || clippedOutsideBedEvts.length === 0) return { above: [], below: [] };
+            if (!swStart || !swEnd || clippedOutsideBedEvts.length === 0) return { above: [], below: [], dropout: [] };
             const totalMs = swEnd - swStart;
             const minPctGap = 2.2;
             const titleMap: Record<string, string> = {
@@ -1445,7 +1453,7 @@ export default function HealthTab(props: any) {
                 outside:      'Außerhalb',
                 other_person: 'Andere Person aktiv',
             };
-            const assignLanes = (evts: typeof clippedOutsideBedEvts, idxOffset: number) => {
+            const assignLanes = (evts: typeof clippedOutsideBedEvts, idxOffset: number, isDropout = false) => {
                 const lastPctInLane = [-100, -100];
                 return evts.map((evt, i) => {
                     const pct = ((evt.start - swStart!) / totalMs) * 100;
@@ -1454,20 +1462,24 @@ export default function HealthTab(props: any) {
                                : 0;
                     lastPctInLane[lane] = pct;
                     const evtType = evt.type ?? 'outside';
+                    const title = isDropout
+                        ? `Radar-Aussetzer: ${evt.duration} min (kein Außensensor bestätigt)`
+                        : `${titleMap[evtType] ?? 'Abwesenheit'}: ${evt.duration} min`;
                     return {
                         key: `${evt.start}-${evt.end}-${idxOffset + i}`,
                         pct: Math.min(100, Math.max(0, pct)),
                         lane,
                         evtType,
-                        title: `${titleMap[evtType] ?? 'Abwesenheit'}: ${evt.duration} min`
+                        title
                     };
                 }).sort((a, b) => a.pct - b.pct);
             };
-            const aboveEvts = clippedOutsideBedEvts.filter(e => (e.type ?? 'outside') === 'bathroom');
-            const belowEvts = clippedOutsideBedEvts.filter(e => (e.type ?? 'outside') !== 'bathroom');
+            const aboveEvts = confirmedEvts.filter(e => (e.type ?? 'outside') === 'bathroom');
+            const belowEvts = confirmedEvts.filter(e => (e.type ?? 'outside') !== 'bathroom');
             return {
-                above: assignLanes(aboveEvts, 0),
-                below: assignLanes(belowEvts, aboveEvts.length)
+                above:   assignLanes(aboveEvts, 0),
+                below:   assignLanes(belowEvts, aboveEvts.length),
+                dropout: assignLanes(radarDropoutEvts, aboveEvts.length + belowEvts.length, true)
             };
         })();
 
@@ -1626,7 +1638,7 @@ export default function HealthTab(props: any) {
                                             backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 8px)',
                                         }} title={'Schlaffenster: ' + fmtTime(swStart!) + '–' + fmtTime(swEnd!)} />
                                     </div>
-                                    {markerItems.below.length > 0 && (
+                                    {(markerItems.below.length > 0 || markerItems.dropout.length > 0) && (
                                         <div style={{position:'relative', height:'18px'}}>
                                             {markerItems.below.map(marker => (
                                                 <span key={marker.key} style={{
@@ -1637,6 +1649,18 @@ export default function HealthTab(props: any) {
                                                     fontSize:'14px', fontWeight:'bold',
                                                     transform:'translateX(-50%)',
                                                     cursor:'default', lineHeight:'13px'
+                                                }} title={marker.title}>▲</span>
+                                            ))}
+                                            {markerItems.dropout.map(marker => (
+                                                <span key={marker.key} style={{
+                                                    position:'absolute',
+                                                    left: marker.pct + '%',
+                                                    top: marker.lane === 0 ? '5px' : '11px',
+                                                    color: '#888',
+                                                    fontSize:'9px', fontWeight:'normal',
+                                                    transform:'translateX(-50%)',
+                                                    cursor:'default', lineHeight:'10px',
+                                                    opacity: 0.55
                                                 }} title={marker.title}>▲</span>
                                             ))}
                                         </div>
@@ -1970,12 +1994,13 @@ export default function HealthTab(props: any) {
                             ))}
                         </div>
 
-                        {/* Außerhalb-Zeile (wenn vorhanden) */}
-                        {outsideTotalMin > 0 && (
-                            <div style={{display:'flex', gap:'8px', fontSize:'0.7rem', marginBottom:'8px', color: isDark?'#aaa':'#666'}}>
+                        {/* Außerhalb-Zeile (nur bestätigte Events) */}
+                        {(outsideTotalMin > 0 || radarDropoutEvts.length > 0) && (
+                            <div style={{display:'flex', gap:'8px', fontSize:'0.7rem', marginBottom:'8px', color: isDark?'#aaa':'#666', flexWrap:'wrap'}}>
                                 {bathMin > 0 && <span><span style={{color: stageColor.bathroom}}>■</span> Bad: {toH(bathMin, true)}</span>}
-                                {clippedOutsideBedEvts.filter(e => e.type === 'outside').reduce((a,e) => a+e.duration, 0) > 0 && <span><span style={{color: stageColor.outside}}>■</span> Außerhalb: {toH(clippedOutsideBedEvts.filter(e => e.type === 'outside').reduce((a,e) => a+e.duration, 0), true)}</span>}
-                                {clippedOutsideBedEvts.filter(e => e.type === 'other_person').reduce((a,e) => a+e.duration, 0) > 0 && <span><span style={{color: stageColor.other_person}}>■</span> Andere Person: {toH(clippedOutsideBedEvts.filter(e => e.type === 'other_person').reduce((a,e) => a+e.duration, 0), true)}</span>}
+                                {confirmedEvts.filter(e => e.type === 'outside').reduce((a,e) => a+e.duration, 0) > 0 && <span><span style={{color: stageColor.outside}}>■</span> Außerhalb: {toH(confirmedEvts.filter(e => e.type === 'outside').reduce((a,e) => a+e.duration, 0), true)}</span>}
+                                {confirmedEvts.filter(e => e.type === 'other_person').reduce((a,e) => a+e.duration, 0) > 0 && <span><span style={{color: stageColor.other_person}}>■</span> Andere Person: {toH(confirmedEvts.filter(e => e.type === 'other_person').reduce((a,e) => a+e.duration, 0), true)}</span>}
+                                {radarDropoutEvts.length > 0 && <span style={{color:'#888', opacity:0.7}} title={`FP2-Radar hat ${radarDropoutEvts.length}× kurz keine Präsenz erkannt — kein Außensensor bestätigt`}>▲ {radarDropoutEvts.length}× Radar-Aussetzer</span>}
                             </div>
                         )}
 

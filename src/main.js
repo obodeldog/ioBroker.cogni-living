@@ -1488,10 +1488,11 @@ class CogniLiving extends utils.Adapter {
                         _fp2SoloDropoutsIgnored++;
                         return;
                     }
-                    _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: _hasBath ? "bathroom" : "outside" });
+                    // confirmed=true: anderer Raumsensor bestaetigt Abwesenheit; confirmed=false: nur FP2 (Radar-Aussetzer moeglich)
+                    _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: _hasBath ? "bathroom" : "outside", confirmed: _hasBath || _hasAnySensorOutside });
                     if (_hasBath && _hasOtherInFp2) {
                         // FP2-Cluster hat Bad UND andere Aussenraeume -> zweiter Marker (rot) analog Phase-2-Fix v0.33.88
-                        _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: "outside" });
+                        _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: "outside", confirmed: true });
                     }
                 });
                 if (_fp2SoloDropoutsIgnored > 0) {
@@ -1502,19 +1503,19 @@ class CogniLiving extends utils.Adapter {
                     if (!_overlaps) {
                         var _dur = Math.max(1, Math.round((mot.end - mot.start) / 60000));
                         if (mot.hasBath) {
-                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'bathroom' });
+                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'bathroom', confirmed: true });
                             if (mot.hasOther) {
                                 // Cluster hat Bad UND andere Aussenraeume -> zwei Marker (orange + rot)
-                                _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'outside' });
+                                _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'outside', confirmed: true });
                             }
                         } else if (_isMultiPerson) {
                             // Mehrpersonenhaushalt: Aktivitaet nur zuordnen wenn FP2 Bett-leer bestaetigt
                             var _bedEmpty = _hasFP2Bed && _fp2Events.some(function(fp2) {
                                 return mot.start < fp2.end && mot.end > fp2.start;
                             });
-                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: _bedEmpty ? 'outside' : 'other_person' });
+                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: _bedEmpty ? 'outside' : 'other_person', confirmed: true });
                         } else {
-                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'outside' });
+                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'outside', confirmed: true });
                         }
                     }
                 });
@@ -2101,10 +2102,10 @@ class CogniLiving extends utils.Adapter {
                         var _pPushCluster = function(c) {
                             var dur = Math.max(1, Math.round((c.end - c.start) / 60000));
                             if (c.hasBath) {
-                                _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'bathroom' });
-                                if (c.hasOther) _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'outside' });
+                                _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'bathroom', confirmed: true });
+                                if (c.hasOther) _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true });
                             } else {
-                                _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'outside' });
+                                _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true });
                             }
                         };
                         _pAllOutSrc.forEach(function(e) {
@@ -2380,9 +2381,26 @@ class CogniLiving extends utils.Adapter {
                         }
                         intimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:_hrMax,garminHRAvg:_hrAvg,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
                     });
-                    // Kontext-Sensor-IDs aus Sensor-Konfiguration (sensorFunction=bed / bathroom)
+                    // Kontext-Sensor-IDs (sensorFunction-basiert)
                     var _ctxBedIds  = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.id;}));
                     var _ctxBathIds = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bathroom'||d.isBathroomSensor;}).map(function(d){return d.id;}));
+                    // Topologie BFS: Raeume mit Hop<=2 vom Schlafzimmer
+                    var _nearbyRooms = new Set();
+                    try {
+                        var _topoSt = await this.getStateAsync('analysis.topology.structure');
+                        if (_topoSt && _topoSt.val) {
+                            var _topoObj = JSON.parse(_topoSt.val);
+                            var _topoRms = _topoObj.rooms||[], _topoMat = _topoObj.matrix||[];
+                            var _bedRms = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.location;}).filter(Boolean));
+                            _bedRms.forEach(function(bedRoom) {
+                                var _bi=_topoRms.indexOf(bedRoom); if(_bi===-1) return;
+                                var _dist=new Array(_topoRms.length).fill(Infinity); _dist[_bi]=0;
+                                var _q=[_bi];
+                                while(_q.length>0){var _c=_q.shift();if(_dist[_c]>=2)continue;for(var _j=0;_j<_topoRms.length;_j++){if(_topoMat[_c]&&_topoMat[_c][_j]===1&&_dist[_j]===Infinity){_dist[_j]=_dist[_c]+1;_q.push(_j);}}}
+                                _topoRms.forEach(function(rm,idx){if(_dist[idx]>0&&_dist[idx]<=2)_nearbyRooms.add(rm);});
+                            });
+                        }
+                    } catch(_topoE){ /* ignorieren */ }
                     var _extractCtx = function(session, evts) {
                         var _wS=session.start-15*60000, _wE=session.end+30*60000;
                         var _wEvts=evts.filter(function(e){var t=e.timestamp||0;return t>=_wS&&t<=_wE;});
@@ -2398,7 +2416,9 @@ class CogniLiving extends utils.Adapter {
                         var _roomTemp=_tEvts.length>0?(Number(_tEvts[_tEvts.length-1].value)||null):null;
                         var _bathB=evts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||_ctxBathIds.has(e.id))&&e.type==='motion'&&t>=session.start-60*60000&&t<session.start;})?1:0;
                         var _bathA=evts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||_ctxBathIds.has(e.id))&&e.type==='motion'&&t>session.end&&t<=session.end+60*60000;})?1:0;
-                        return {hourSin:_hSin,hourCos:_hCos,lightOn:_lightOn,presenceOn:_presOn,roomTemp:_roomTemp,bathBefore:_bathB,bathAfter:_bathA};
+                        // nearbyRoomMotion: Bewegung in Hop<=2 Raeumen waehrend Session
+                        var _nrM=_nearbyRooms.size>0?evts.some(function(e){var t=e.timestamp||0;return e.type==='motion'&&_nearbyRooms.has(e.location)&&t>=session.start-5*60000&&t<=session.end+5*60000;})?1:0:null;
+                        return {hourSin:_hSin,hourCos:_hCos,lightOn:_lightOn,presenceOn:_presOn,roomTemp:_roomTemp,bathBefore:_bathB,bathAfter:_bathA,nearbyRoomMotion:_nrM};
                     };
                     // Stufe 3: Python-Klassifikator (wenn genug Trainings-Daten vorhanden)
                     var _pyClassInfo = null;
@@ -2432,7 +2452,7 @@ class CogniLiving extends utils.Adapter {
                             }
                         } catch(_pyE) { this.log.debug('[OC-SEX-PY] '+_pyE.message); }
                     }
-                    _calibInfo.pyClassifier = _pyClassInfo ? { trained: _pyClassInfo.trained||false, n: _pyClassInfo.n_samples||0, counts: _pyClassInfo.class_counts||{}, msg: _pyClassInfo.status_msg||'' } : null;
+                    _calibInfo.pyClassifier = _pyClassInfo ? { trained: _pyClassInfo.trained||false, n: _pyClassInfo.n_samples||0, counts: _pyClassInfo.class_counts||{}, msg: _pyClassInfo.status_msg||'', feature_importances: _pyClassInfo.feature_importances||[], loo_accuracy: (_pyClassInfo.loo_accuracy!=null?_pyClassInfo.loo_accuracy:null) } : null;
                     if(intimacyEvents.length>0){
                         this.log.info('[OC-SEX] '+intimacyEvents.length+' Event(s) erkannt. calibA='+_calibA+' calibB='+_calibB+' Scores: '+intimacyEvents.map(function(e){return e.score+'('+e.type+')';}).join(', '));
                     } else {
@@ -3139,9 +3159,26 @@ class CogniLiving extends utils.Adapter {
                 var _raIntimacyEvents=[];
                 _raCand.forEach(function(cObj){var run=cObj.run;var _sl0=_raSlots[run[0]],_slN=_raSlots[run[run.length-1]];var _evtStart=_sl0.start,_evtEnd=_slN.end;var _durMin=Math.round(run.length*5);var _runSlots=run.map(function(i){return _raSlots[i];});var _peakMax=Math.max.apply(null,_runSlots.map(function(s){return s.strMax;}));var _avgAvg=Math.round(_runSlots.reduce(function(a,s){return a+s.strAvg;},0)/_runSlots.length);var _avgTrig=Math.round(_runSlots.reduce(function(a,s){return a+s.trigCnt;},0)/_runSlots.length);var _sStr=Math.min(100,Math.round((_peakMax/120)*100));var _sDens=Math.min(100,Math.round((_avgTrig/10)*100));var _sDur=Math.min(100,Math.round((_durMin/60)*100));var _score=Math.round(_sStr*0.5+_sDens*0.3+_sDur*0.2);var _raVagThr=Math.round(_raCalibA*1.5);var _highSlots=_runSlots.filter(function(s){return s.strMax>=_raVagThr&&s.strCnt>=2;});var _type=cObj.tier==='B'?'oral_hand':(_highSlots.length>=1?'vaginal':(_peakMax>=_raCalibA?'oral_hand':'intim'));_raIntimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:null,garminHRAvg:null,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});});
                 this.log.info('[OC-SEX-RA] '+_raDate+': '+_raIntimacyEvents.length+' Event(s). calibA='+_raCalibA+' calibB='+_raCalibB);
-                // Kontext-Sensor-IDs (sensorFunction-basiert, keine Name-Suche)
+                // Kontext-Sensor-IDs (sensorFunction-basiert)
                 var _raBedIds  = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.id;}));
                 var _raBathIds = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bathroom'||d.isBathroomSensor;}).map(function(d){return d.id;}));
+                // Topologie BFS: Raeume mit Hop<=2 vom Schlafzimmer
+                var _raNearbyRooms = new Set();
+                try {
+                    var _raTopoSt = await this.getStateAsync('analysis.topology.structure');
+                    if (_raTopoSt && _raTopoSt.val) {
+                        var _raTopoObj=JSON.parse(_raTopoSt.val);
+                        var _raTopoRms=_raTopoObj.rooms||[], _raTopoMat=_raTopoObj.matrix||[];
+                        var _raBedRms=new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.location;}).filter(Boolean));
+                        _raBedRms.forEach(function(bedRoom){
+                            var _bi=_raTopoRms.indexOf(bedRoom); if(_bi===-1) return;
+                            var _dist=new Array(_raTopoRms.length).fill(Infinity); _dist[_bi]=0;
+                            var _q=[_bi];
+                            while(_q.length>0){var _c=_q.shift();if(_dist[_c]>=2)continue;for(var _j2=0;_j2<_raTopoRms.length;_j2++){if(_raTopoMat[_c]&&_raTopoMat[_c][_j2]===1&&_dist[_j2]===Infinity){_dist[_j2]=_dist[_c]+1;_q.push(_j2);}}}
+                            _raTopoRms.forEach(function(rm,idx){if(_dist[idx]>0&&_dist[idx]<=2)_raNearbyRooms.add(rm);});
+                        });
+                    }
+                } catch(_raTopoE){ /* ignorieren */ }
                 var _raExtractCtx = function(session, evts) {
                     var _wS=session.start-15*60000, _wE=session.end+30*60000;
                     var _wE2=evts.filter(function(e){var t=e.timestamp||0;return t>=_wS&&t<=_wE;});
@@ -3156,7 +3193,8 @@ class CogniLiving extends utils.Adapter {
                     var _rT=_tE.length>0?(Number(_tE[_tE.length-1].value)||null):null;
                     var _bB=evts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||_raBathIds.has(e.id))&&e.type==='motion'&&t>=session.start-60*60000&&t<session.start;})?1:0;
                     var _bA=evts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||_raBathIds.has(e.id))&&e.type==='motion'&&t>session.end&&t<=session.end+60*60000;})?1:0;
-                    return {hourSin:_hSin,hourCos:_hCos,lightOn:_lOn,presenceOn:_pOn,roomTemp:_rT,bathBefore:_bB,bathAfter:_bA};
+                    var _nrM2=_raNearbyRooms.size>0?evts.some(function(e){var t=e.timestamp||0;return e.type==='motion'&&_raNearbyRooms.has(e.location)&&t>=session.start-5*60000&&t<=session.end+5*60000;})?1:0:null;
+                    return {hourSin:_hSin,hourCos:_hCos,lightOn:_lOn,presenceOn:_pOn,roomTemp:_rT,bathBefore:_bB,bathAfter:_bA,nearbyRoomMotion:_nrM2};
                 };
                 // Stufe 3: Python-Klassifikator
                 var _raPyInfo = null;
@@ -3186,7 +3224,7 @@ class CogniLiving extends utils.Adapter {
                         }
                     } catch(_raPyE){ this.log.debug('[OC-SEX-RA-PY] '+_raPyE.message); }
                 }
-                _raCalibInfo.pyClassifier = _raPyInfo ? {trained:_raPyInfo.trained||false,n:_raPyInfo.n_samples||0,counts:_raPyInfo.class_counts||{},msg:_raPyInfo.status_msg||''} : null;
+                _raCalibInfo.pyClassifier = _raPyInfo ? {trained:_raPyInfo.trained||false,n:_raPyInfo.n_samples||0,counts:_raPyInfo.class_counts||{},msg:_raPyInfo.status_msg||'',feature_importances:_raPyInfo.feature_importances||[],loo_accuracy:(_raPyInfo.loo_accuracy!=null?_raPyInfo.loo_accuracy:null)} : null;
                 _raSnap.intimacyEvents = _raIntimacyEvents;
                 _raSnap.sexCalibInfo = _raCalibInfo;
                 _raSnap.timestamp = Date.now();
