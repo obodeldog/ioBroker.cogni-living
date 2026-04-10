@@ -2235,7 +2235,21 @@ class CogniLiving extends utils.Adapter {
                                         var _lPkMax = _lSlotPeaks[_lSlotPeaks.length-1];
                                         var _lAvgP = Math.round(_lSlotPeaks.reduce(function(a,b){return a+b;},0)/_lSlotPeaks.length);
                                         var _lVarP = Math.round(_lSlotPeaks.reduce(function(a,b){return a+(b-_lAvgP)*(b-_lAvgP);},0)/_lSlotPeaks.length);
-                                        _sexTrainData.push({ peak: _lPkMax, durSlots: _lSlotPeaks.length, avgPeak: _lAvgP, variance: _lVarP, tierB: 0, label: _lTypNorm });
+                                        // Kontext-Features aus Label-JSON EventHistory extrahieren
+                                        var _lCtxEvts = _lSnap.eventHistory || [];
+                                        var _lSessProxy = {start: _lT0||_lFirst, end: _lT1||(_lLast+_lFirst)};
+                                        var _lHrD=new Date(_lSessProxy.start); var _lHF=_lHrD.getHours()+_lHrD.getMinutes()/60;
+                                        var _lHSin=Math.round(Math.sin(2*Math.PI*_lHF/24)*1000)/1000;
+                                        var _lHCos=Math.round(Math.cos(2*Math.PI*_lHF/24)*1000)/1000;
+                                        var _lLitE=_lCtxEvts.filter(function(e){var t=e.timestamp||0;return (e.type==='light'||e.type==='dimmer')&&(typeof _ctxBedIds!=='undefined'?_ctxBedIds.has(e.id):false)&&t>=_lSessProxy.start-15*60000&&t<=_lSessProxy.end+30*60000;});
+                                        var _lLightOn=_lLitE.length>0?(Number(_lLitE[_lLitE.length-1].value)>0?1:0):null;
+                                        var _lPresE=_lCtxEvts.filter(function(e){var t=e.timestamp||0;return e.isFP2Bed&&t>=_lSessProxy.start-15*60000&&t<=_lSessProxy.end+30*60000;});
+                                        var _lPresOn=_lPresE.length>0?(Number(_lPresE[_lPresE.length-1].value)>0?1:0):null;
+                                        var _lTempE=_lCtxEvts.filter(function(e){var t=e.timestamp||0;return (e.type==='temperature'||e.type==='thermostat')&&(typeof _ctxBedIds!=='undefined'?_ctxBedIds.has(e.id):false)&&t>=_lSessProxy.start-15*60000&&t<=_lSessProxy.end+30*60000;});
+                                        var _lRoomT=_lTempE.length>0?(Number(_lTempE[_lTempE.length-1].value)||null):null;
+                                        var _lBathB=_lCtxEvts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||(typeof _ctxBathIds!=='undefined'&&_ctxBathIds.has(e.id)))&&e.type==='motion'&&t>=_lSessProxy.start-60*60000&&t<_lSessProxy.start;})?1:0;
+                                        var _lBathA=_lCtxEvts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||(typeof _ctxBathIds!=='undefined'&&_ctxBathIds.has(e.id)))&&e.type==='motion'&&t>_lSessProxy.end&&t<=_lSessProxy.end+60*60000;})?1:0;
+                                        _sexTrainData.push({ peak: _lPkMax, durSlots: _lSlotPeaks.length, avgPeak: _lAvgP, variance: _lVarP, tierB: 0, label: _lTypNorm, hourSin: _lHSin, hourCos: _lHCos, lightOn: _lLightOn, presenceOn: _lPresOn, roomTemp: _lRoomT, bathBefore: _lBathB, bathAfter: _lBathA });
                                     }
                                 } catch(_lE) { this.log.debug('[OC-SEX] Calib-Label: '+_lE.message); }
                             }
@@ -2366,6 +2380,26 @@ class CogniLiving extends utils.Adapter {
                         }
                         intimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:_hrMax,garminHRAvg:_hrAvg,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
                     });
+                    // Kontext-Sensor-IDs aus Sensor-Konfiguration (sensorFunction=bed / bathroom)
+                    var _ctxBedIds  = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.id;}));
+                    var _ctxBathIds = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bathroom'||d.isBathroomSensor;}).map(function(d){return d.id;}));
+                    var _extractCtx = function(session, evts) {
+                        var _wS=session.start-15*60000, _wE=session.end+30*60000;
+                        var _wEvts=evts.filter(function(e){var t=e.timestamp||0;return t>=_wS&&t<=_wE;});
+                        var _hrD=new Date(session.start);
+                        var _hF=_hrD.getHours()+_hrD.getMinutes()/60;
+                        var _hSin=Math.round(Math.sin(2*Math.PI*_hF/24)*1000)/1000;
+                        var _hCos=Math.round(Math.cos(2*Math.PI*_hF/24)*1000)/1000;
+                        var _lEvts=_wEvts.filter(function(e){return (e.type==='light'||e.type==='dimmer')&&_ctxBedIds.has(e.id);});
+                        var _lightOn=_lEvts.length>0?(Number(_lEvts[_lEvts.length-1].value)>0?1:0):null;
+                        var _pEvts=_wEvts.filter(function(e){return e.isFP2Bed;});
+                        var _presOn=_pEvts.length>0?(Number(_pEvts[_pEvts.length-1].value)>0?1:0):null;
+                        var _tEvts=_wEvts.filter(function(e){return (e.type==='temperature'||e.type==='thermostat')&&_ctxBedIds.has(e.id);});
+                        var _roomTemp=_tEvts.length>0?(Number(_tEvts[_tEvts.length-1].value)||null):null;
+                        var _bathB=evts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||_ctxBathIds.has(e.id))&&e.type==='motion'&&t>=session.start-60*60000&&t<session.start;})?1:0;
+                        var _bathA=evts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||_ctxBathIds.has(e.id))&&e.type==='motion'&&t>session.end&&t<=session.end+60*60000;})?1:0;
+                        return {hourSin:_hSin,hourCos:_hCos,lightOn:_lightOn,presenceOn:_presOn,roomTemp:_roomTemp,bathBefore:_bathB,bathAfter:_bathA};
+                    };
                     // Stufe 3: Python-Klassifikator (wenn genug Trainings-Daten vorhanden)
                     var _pyClassInfo = null;
                     var _sexTD = (typeof _sexTrainData !== 'undefined') ? _sexTrainData : [];
@@ -2376,7 +2410,8 @@ class CogniLiving extends utils.Adapter {
                                 var _strs = _sl.map(function(s){return s.strMax||0;});
                                 var _avg2 = _strs.length>0 ? _strs.reduce(function(a,b){return a+b;},0)/_strs.length : 0;
                                 var _var2 = _strs.length>0 ? _strs.reduce(function(a,b){return a+(b-_avg2)*(b-_avg2);},0)/_strs.length : 0;
-                                return { peak: e.peakStrength, durSlots: _sl.length, avgPeak: Math.round(_avg2), variance: Math.round(_var2), tierB: 0 };
+                                var _ctx2 = _extractCtx(e, sleepSearchEvents);
+                                return Object.assign({ peak: e.peakStrength, durSlots: _sl.length, avgPeak: Math.round(_avg2), variance: Math.round(_var2), tierB: (e.tier==='B'?1:0) }, _ctx2);
                             });
                             var _pyRes = await new Promise(function(resolve, reject) {
                                 var _pyTout = setTimeout(function(){ reject(new Error('timeout')); }, 5000);
@@ -3104,6 +3139,25 @@ class CogniLiving extends utils.Adapter {
                 var _raIntimacyEvents=[];
                 _raCand.forEach(function(cObj){var run=cObj.run;var _sl0=_raSlots[run[0]],_slN=_raSlots[run[run.length-1]];var _evtStart=_sl0.start,_evtEnd=_slN.end;var _durMin=Math.round(run.length*5);var _runSlots=run.map(function(i){return _raSlots[i];});var _peakMax=Math.max.apply(null,_runSlots.map(function(s){return s.strMax;}));var _avgAvg=Math.round(_runSlots.reduce(function(a,s){return a+s.strAvg;},0)/_runSlots.length);var _avgTrig=Math.round(_runSlots.reduce(function(a,s){return a+s.trigCnt;},0)/_runSlots.length);var _sStr=Math.min(100,Math.round((_peakMax/120)*100));var _sDens=Math.min(100,Math.round((_avgTrig/10)*100));var _sDur=Math.min(100,Math.round((_durMin/60)*100));var _score=Math.round(_sStr*0.5+_sDens*0.3+_sDur*0.2);var _raVagThr=Math.round(_raCalibA*1.5);var _highSlots=_runSlots.filter(function(s){return s.strMax>=_raVagThr&&s.strCnt>=2;});var _type=cObj.tier==='B'?'oral_hand':(_highSlots.length>=1?'vaginal':(_peakMax>=_raCalibA?'oral_hand':'intim'));_raIntimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:null,garminHRAvg:null,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});});
                 this.log.info('[OC-SEX-RA] '+_raDate+': '+_raIntimacyEvents.length+' Event(s). calibA='+_raCalibA+' calibB='+_raCalibB);
+                // Kontext-Sensor-IDs (sensorFunction-basiert, keine Name-Suche)
+                var _raBedIds  = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.id;}));
+                var _raBathIds = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bathroom'||d.isBathroomSensor;}).map(function(d){return d.id;}));
+                var _raExtractCtx = function(session, evts) {
+                    var _wS=session.start-15*60000, _wE=session.end+30*60000;
+                    var _wE2=evts.filter(function(e){var t=e.timestamp||0;return t>=_wS&&t<=_wE;});
+                    var _hrD=new Date(session.start); var _hF=_hrD.getHours()+_hrD.getMinutes()/60;
+                    var _hSin=Math.round(Math.sin(2*Math.PI*_hF/24)*1000)/1000;
+                    var _hCos=Math.round(Math.cos(2*Math.PI*_hF/24)*1000)/1000;
+                    var _lE=_wE2.filter(function(e){return (e.type==='light'||e.type==='dimmer')&&_raBedIds.has(e.id);});
+                    var _lOn=_lE.length>0?(Number(_lE[_lE.length-1].value)>0?1:0):null;
+                    var _pE=_wE2.filter(function(e){return e.isFP2Bed;});
+                    var _pOn=_pE.length>0?(Number(_pE[_pE.length-1].value)>0?1:0):null;
+                    var _tE=_wE2.filter(function(e){return (e.type==='temperature'||e.type==='thermostat')&&_raBedIds.has(e.id);});
+                    var _rT=_tE.length>0?(Number(_tE[_tE.length-1].value)||null):null;
+                    var _bB=evts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||_raBathIds.has(e.id))&&e.type==='motion'&&t>=session.start-60*60000&&t<session.start;})?1:0;
+                    var _bA=evts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||_raBathIds.has(e.id))&&e.type==='motion'&&t>session.end&&t<=session.end+60*60000;})?1:0;
+                    return {hourSin:_hSin,hourCos:_hCos,lightOn:_lOn,presenceOn:_pOn,roomTemp:_rT,bathBefore:_bB,bathAfter:_bA};
+                };
                 // Stufe 3: Python-Klassifikator
                 var _raPyInfo = null;
                 if (_raIntimacyEvents.length > 0 && _raSexTrainData.length >= 3) {
@@ -3112,7 +3166,8 @@ class CogniLiving extends utils.Adapter {
                             var _sl=e.slots||[]; var _strs=_sl.map(function(s){return s.strMax||0;});
                             var _avg3=_strs.length>0?_strs.reduce(function(a,b){return a+b;},0)/_strs.length:0;
                             var _var3=_strs.length>0?_strs.reduce(function(a,b){return a+(b-_avg3)*(b-_avg3);},0)/_strs.length:0;
-                            return {peak:e.peakStrength,durSlots:_sl.length,avgPeak:Math.round(_avg3),variance:Math.round(_var3),tierB:0};
+                            var _raCtx=_raExtractCtx(e, _raAllEvts);
+                            return Object.assign({peak:e.peakStrength,durSlots:_sl.length,avgPeak:Math.round(_avg3),variance:Math.round(_var3),tierB:(e.tier==='B'?1:0)},_raCtx);
                         });
                         var _raPyRes = await new Promise(function(resolve,reject){
                             var _raTout=setTimeout(function(){reject(new Error('timeout'));},5000);
@@ -3140,6 +3195,36 @@ class CogniLiving extends utils.Adapter {
             } catch(_raE) {
                 this.log.warn('[OC-SEX-RA] Fehler: '+_raE.message);
                 this.sendTo(obj.from, obj.command, { success: false, error: _raE.message }, obj.callback);
+            }
+        }
+        // getSexMonthSummary: Kompakte Zusammenfassung aller Sessions eines Monats
+        else if (obj.command === 'getSexMonthSummary') {
+            try {
+                const _smMonth = (obj.message && obj.message.month) ? obj.message.month : null;
+                if (!_smMonth || !/^\d{4}-\d{2}$/.test(_smMonth)) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Kein gueltiges YYYY-MM' }, obj.callback); return;
+                }
+                const _smHistDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                const _smSummary = {};
+                const _smYear = parseInt(_smMonth.split('-')[0]);
+                const _smMon  = parseInt(_smMonth.split('-')[1]);
+                const _smDays = new Date(_smYear, _smMon, 0).getDate();
+                for (let _sd = 1; _sd <= _smDays; _sd++) {
+                    const _sdStr = _smYear+'-'+String(_smMon).padStart(2,'0')+'-'+String(_sd).padStart(2,'0');
+                    const _sdPath = path.join(_smHistDir, _sdStr+'.json');
+                    if (fs.existsSync(_sdPath)) {
+                        try {
+                            const _sdSnap = JSON.parse(fs.readFileSync(_sdPath, 'utf8'));
+                            const _sdEvts = (_sdSnap.intimacyEvents || []).map(function(e){
+                                return {type:e.type,duration:e.duration,score:e.score,start:e.start,end:e.end,pyConf:e.pyConf};
+                            });
+                            if (_sdEvts.length > 0) _smSummary[_sdStr] = _sdEvts;
+                        } catch(_sdE) {}
+                    }
+                }
+                this.sendTo(obj.from, obj.command, { success: true, data: _smSummary }, obj.callback);
+            } catch(_smE) {
+                this.sendTo(obj.from, obj.command, { success: false, error: _smE.message }, obj.callback);
             }
         }
         }
