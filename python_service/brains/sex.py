@@ -36,8 +36,9 @@ class SexBrain:
         'light_on',       # 0=aus, 1=an, -1=kein Sensor
         'presence_on',    # 0=leer, 1=jemand da, -1=kein Sensor
         'room_temp_norm', # roomTemp / 30  (-1 wenn unbekannt)
-        'bath_before',    # 1=Bad-Bewegung <60min vorher, 0=nein
-        'bath_after',     # 1=Bad-Bewegung <60min nachher, 0=nein
+        'bath_before',       # 1=Bad-Bewegung <60min vorher, 0=nein
+        'bath_after',        # 1=Bad-Bewegung <60min nachher, 0=nein
+        'nearby_room_motion',# 1=Bewegung in Hop<=2-Raum waehrend Session, 0=nein, -1=keine Topologie
     ]
 
     def __init__(self):
@@ -51,7 +52,7 @@ class SexBrain:
     # Feature-Extraktion (Sentinel -1 fuer fehlende Kontext-Sensoren)
     # ------------------------------------------------------------------
     def _feat(self, s):
-        """12-dimensionaler Feature-Vektor aus Session-Dict."""
+        """13-dimensionaler Feature-Vektor aus Session-Dict."""
         def _v(key, scale=1.0, default=-1.0):
             val = s.get(key)
             return float(val) / scale if val is not None else default
@@ -72,6 +73,7 @@ class SexBrain:
             _v('roomTemp',  30.0),      # normiert
             float(s.get('bathBefore', 0)),
             float(s.get('bathAfter',  0)),
+            _v('nearbyRoomMotion', 1.0),  # 0=ruhig, 1=Bewegung in Nachbarraum, -1=keine Topologie
         ]
 
     # ------------------------------------------------------------------
