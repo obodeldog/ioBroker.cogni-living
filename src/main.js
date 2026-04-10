@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 'use strict';
 
 /*
@@ -393,7 +393,7 @@ class CogniLiving extends utils.Adapter {
     async discoverBatteryStates() {
         var _self = this;
         var devices = this.config.devices || [];
-        // Gï¿½ngige Battery-State-Namen quer durch alle ioBroker-Adapter:
+        // G�ngige Battery-State-Namen quer durch alle ioBroker-Adapter:
         // battery/BATTERY       ? Zigbee, deCONZ, Tuya, mihome, ZHA
         // battery_percentage    ? Tuya, einige BLE-Adapter
         // battery_level/Level   ? HomeKit-Controller, Matter, ESPHome
@@ -447,7 +447,7 @@ class CogniLiving extends utils.Adapter {
                     }
                 } catch(e) {}
             }
-            // 3. Direktsuche ï¿½ bis zu 3 Pfad-Ebenen hoch
+            // 3. Direktsuche � bis zu 3 Pfad-Ebenen hoch
             //    Tiefe 1: adapter.0.device.channel  ? adapter.0.device
             //    Tiefe 2: adapter.0.device.ch.state ? adapter.0.device  (Shelly: Bat.value)
             //    Tiefe 3: adapter.0.Node.ch.sub.st  ? adapter.0.Node   (Z-Wave: params.battery.Battery_Level)
@@ -483,7 +483,7 @@ class CogniLiving extends utils.Adapter {
                         var hmMatchDot   = !hmMatchColon && d.id.match(/^([\w-]+\.\d+\.[^\.]+)\.\d+\./);
                         var hmCh0 = hmMatchColon ? hmMatchColon[1] + ':0' : (hmMatchDot ? hmMatchDot[1] + '.0' : null);
                         if (hmCh0) {
-                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans ï¿½ Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
+                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans � Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
                             for (var _hn = 0; _hn < HM_BATT_NAMES.length; _hn++) {
                                 try {
                                     var cStateHM = await _self.getForeignStateAsync(hmCh0 + '.' + HM_BATT_NAMES[_hn]);
@@ -525,7 +525,7 @@ class CogniLiving extends utils.Adapter {
                     isLow = bst.val; isCritical = bst.val; level = bst.val ? 5 : 80;
                 } else if (typeof bst.val === 'number') {
                     // Nur echte Prozentwerte (0-100) verarbeiten.
-                    // Spannungswerte (< 10) werden bewusst ignoriert ï¿½ ohne Geraete-Datenbank
+                    // Spannungswerte (< 10) werden bewusst ignoriert � ohne Geraete-Datenbank
                     // nicht zuverlaessig konvertierbar (1x CR2032 vs 2x AAA vs 1x 1.5V).
                     if (bst.val >= 0 && bst.val <= 100) {
                         level = bst.val;
@@ -794,6 +794,23 @@ class CogniLiving extends utils.Adapter {
             if (new Date().getHours() < 18) { _sleepSearchBase.setDate(_sleepSearchBase.getDate() - 1); }
             const sleepDate = _sleepSearchBase.getFullYear() + '-' + String(_sleepSearchBase.getMonth()+1).padStart(2,'0') + '-' + String(_sleepSearchBase.getDate()).padStart(2,'0');
             const sleepSearchEvents = this.eventHistory.filter(e => (e.timestamp||0) >= _sleepSearchBase.getTime());
+            // Buffer-Supplement: falls In-Memory-Buffer nach Adapter-Neustart Abend-Events fehlen,
+            // aus gespeichertem JSON des Vortages nachladen (18:00-Fenster schliessen).
+            try {
+                const _bufMin = this.eventHistory.reduce((m, e) => Math.min(m, e.timestamp||Infinity), Infinity);
+                if (_bufMin > _sleepSearchBase.getTime() + 60000) {
+                    const _suppPath = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history', sleepDate + '.json');
+                    if (fs.existsSync(_suppPath)) {
+                        const _suppSnap = JSON.parse(fs.readFileSync(_suppPath, 'utf8'));
+                        const _suppEvts = (_suppSnap.eventHistory || []).filter(e => { const t=e.timestamp||0; return t>=_sleepSearchBase.getTime()&&t<_bufMin; });
+                        if (_suppEvts.length > 0) {
+                            sleepSearchEvents.push(..._suppEvts);
+                            sleepSearchEvents.sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+                            this.log.info('[AURA] sleepSearch: +'+_suppEvts.length+' Events aus '+sleepDate+'.json ergaenzt (Buffer-Gap)');
+                        }
+                    }
+                }
+            } catch(_suppE) { this.log.debug('[AURA] Buffer-Supplement: '+_suppE.message); }
 
             // Raum-Verweildauer heute aus roomHistory berechnen (Minuten pro Raum)
             const roomHistoryData = roomHistory?.val ? JSON.parse(roomHistory.val) : {};
@@ -2941,6 +2958,91 @@ class CogniLiving extends utils.Adapter {
                     this.sendTo(obj.from, obj.command, { success: true, data: _pcSnap }, obj.callback);
                 } else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
             } catch(_pcE) { this.sendTo(obj.from, obj.command, { success: false, error: _pcE.message }, obj.callback); }
+        }
+        else if (obj.command === 'reanalyzeSexDay') {
+            try {
+                const _raDate = (obj.message && obj.message.date) ? obj.message.date : null;
+                if (!_raDate || !/^\d{4}-\d{2}-\d{2}$/.test(_raDate)) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Kein gueltiges Datum' }, obj.callback); return;
+                }
+                if (this.config.moduleSex !== true) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Sex-Modul nicht aktiviert' }, obj.callback); return;
+                }
+                const _raDir = utils.getAbsoluteDefaultDataDir();
+                const _raPath = path.join(_raDir, 'cogni-living', 'history', _raDate + '.json');
+                if (!fs.existsSync(_raPath)) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Keine Daten fuer diesen Tag' }, obj.callback); return;
+                }
+                const _raSnap = JSON.parse(fs.readFileSync(_raPath, 'utf8'));
+                const _raAllEvts = _raSnap.eventHistory || [];
+                // --- KALIBRIERUNG ---
+                var _raCalibA = 50, _raCalibB = 30, _raCalibSrc = 'default', _raCalibN = 0;
+                try {
+                    var _raSexLabels = [];
+                    try { var _raSlP = JSON.parse(this.config.sexTrainingLabels || ''); if (Array.isArray(_raSlP)) _raSexLabels = _raSlP.filter(function(l){return l&&l.date;}); } catch(_rlE){}
+                    if (_raSexLabels.length >= 2) {
+                        var _raCalDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                        var _raSessPeaks = [];
+                        var _raSlotCalMs = 5*60*1000;
+                        for (var _raLbl of _raSexLabels.slice(0, 7)) {
+                            try {
+                                var _raLPath = path.join(_raCalDir, _raLbl.date + '.json');
+                                if (!fs.existsSync(_raLPath)) continue;
+                                var _raLSnap = JSON.parse(fs.readFileSync(_raLPath, 'utf8'));
+                                var _raLAllE = (_raLSnap.eventHistory || []).filter(function(e){ return e.type==='vibration_strength'&&(e.isVibrationBed||e.isFP2Bed); });
+                                if (_raLAllE.length === 0) continue;
+                                var _raLT0 = null, _raLT1 = null;
+                                if (_raLbl.time && /^\d{1,2}:\d{2}$/.test(_raLbl.time)) {
+                                    var _raLP = _raLbl.time.split(':');
+                                    var _raLBase = new Date(_raLbl.date + 'T00:00:00');
+                                    _raLBase.setHours(parseInt(_raLP[0]), parseInt(_raLP[1]), 0, 0);
+                                    _raLT0 = _raLBase.getTime() - 45*60000;
+                                    _raLT1 = _raLBase.getTime() + ((_raLbl.durationMin||45)+15)*60000;
+                                }
+                                var _raLEvts = _raLT0!==null ? _raLAllE.filter(function(e){var t=e.timestamp||0;return t>=_raLT0&&t<=_raLT1;}) : _raLAllE;
+                                if (_raLEvts.length === 0) continue;
+                                _raLEvts.sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
+                                var _raLFirst=_raLEvts[0].timestamp||0, _raLLast=(_raLEvts[_raLEvts.length-1].timestamp||0)+_raSlotCalMs;
+                                var _raLSPeaks=[];
+                                for (var _raLS=_raLFirst; _raLS<_raLLast; _raLS+=_raSlotCalMs) {
+                                    var _raLSVals=_raLEvts.filter(function(e){var t=e.timestamp||0;return t>=_raLS&&t<_raLS+_raSlotCalMs;}).map(function(e){return Number(e.value)||0;});
+                                    if (_raLSVals.length>0) _raLSPeaks.push(Math.max.apply(null,_raLSVals));
+                                }
+                                if (_raLSPeaks.length>0){_raLSPeaks.sort(function(a,b){return a-b;});_raSessPeaks.push(_raLSPeaks[Math.floor(_raLSPeaks.length/2)]);}
+                            } catch(_raLE){ this.log.debug('[OC-SEX-RA] Calib: '+_raLE.message); }
+                        }
+                        if (_raSessPeaks.length>=2){_raSessPeaks.sort(function(a,b){return a-b;});var _raMinP=_raSessPeaks[0];_raCalibB=Math.max(3,Math.round(_raMinP*0.7));_raCalibA=Math.max(5,Math.round(_raMinP*1.1));_raCalibSrc='labels';_raCalibN=_raSessPeaks.length;}
+                    }
+                } catch(_raCalE){ this.log.debug('[OC-SEX-RA] Kalibrierung: '+_raCalE.message); }
+                if (_raCalibSrc==='default'&&this.config.sexCalibThreshold&&Number(this.config.sexCalibThreshold)>0){_raCalibB=Number(this.config.sexCalibThreshold);_raCalibA=Math.round(_raCalibB*1.3);_raCalibSrc='manual';}
+                if (_raCalibSrc==='default'){var _raBsVals=_raAllEvts.filter(function(e){return e.type==='vibration_strength'&&(e.isVibrationBed||e.isFP2Bed);}).map(function(e){return Number(e.value)||0;}).filter(function(v){return v>0;});if(_raBsVals.length>=10){_raBsVals.sort(function(a,b){return a-b;});var _raBsP75=_raBsVals[Math.floor(_raBsVals.length*0.75)];_raCalibA=Math.max(5,Math.round(_raBsP75*2.5));_raCalibB=Math.max(3,Math.round(_raBsP75*1.5));_raCalibSrc='baseline';}}
+                var _raCalibInfo = { src: _raCalibSrc, n: _raCalibN, calibA: _raCalibA, calibB: _raCalibB };
+                // --- SEX-DETEKTION ---
+                var _raIntimEvts=_raAllEvts.filter(function(e){return (e.type==='vibration_strength'||e.type==='vibration_trigger')&&(e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion));}).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
+                var _raVibStr=_raIntimEvts.filter(function(e){return e.type==='vibration_strength';});
+                var _raVibTrig=_raIntimEvts.filter(function(e){return e.type==='vibration_trigger';});
+                var _raSlotMs=5*60*1000;
+                var _raSlots=[];
+                if(_raIntimEvts.length>=4){var _raTFirst=_raIntimEvts[0].timestamp||0,_raTLast=(_raIntimEvts[_raIntimEvts.length-1].timestamp||0)+_raSlotMs;for(var _raIS=_raTFirst;_raIS<_raTLast;_raIS+=_raSlotMs){var _raIE=_raIS+_raSlotMs;var _raStr=_raVibStr.filter(function(e){return (e.timestamp||0)>=_raIS&&(e.timestamp||0)<_raIE;});var _raTrg=_raVibTrig.filter(function(e){return (e.timestamp||0)>=_raIS&&(e.timestamp||0)<_raIE;});var _raSVals=_raStr.map(function(e){return Number(e.value)||0;});var _raSMax=_raSVals.length>0?Math.max.apply(null,_raSVals):0;var _raSAvg=_raSVals.length>0?Math.round(_raSVals.reduce(function(a,b){return a+b;},0)/_raSVals.length):0;_raSlots.push({start:_raIS,end:_raIE,strCnt:_raStr.length,trigCnt:_raTrg.length,strMax:_raSMax,strAvg:_raSAvg});}}
+                var _raCand=[],_raRunA=[];
+                _raSlots.forEach(function(sl,i){var _a=(sl.trigCnt>=2||sl.strCnt>=1)&&sl.strMax>=_raCalibA;if(_a){_raRunA.push(i);}else{if(_raRunA.length>=2)_raCand.push({run:_raRunA.slice(),tier:'A'});_raRunA=[];}});
+                if(_raRunA.length>=2)_raCand.push({run:_raRunA.slice(),tier:'A'});
+                var _raCovA=new Set();_raCand.forEach(function(c){c.run.forEach(function(i){_raCovA.add(i);});});
+                var _raRunB=[];
+                _raSlots.forEach(function(sl,i){if(_raCovA.has(i)){if(_raRunB.length>=6&&_raRunB.length<=24)_raCand.push({run:_raRunB.slice(),tier:'B'});_raRunB=[];return;}var _b=(sl.trigCnt>=1||sl.strCnt>=1)&&sl.strMax>=_raCalibB;if(_b){_raRunB.push(i);}else{if(_raRunB.length>=6&&_raRunB.length<=24)_raCand.push({run:_raRunB.slice(),tier:'B'});_raRunB=[];}});
+                if(_raRunB.length>=6&&_raRunB.length<=24)_raCand.push({run:_raRunB.slice(),tier:'B'});
+                var _raIntimacyEvents=[];
+                _raCand.forEach(function(cObj){var run=cObj.run;var _sl0=_raSlots[run[0]],_slN=_raSlots[run[run.length-1]];var _evtStart=_sl0.start,_evtEnd=_slN.end;var _durMin=Math.round(run.length*5);var _runSlots=run.map(function(i){return _raSlots[i];});var _peakMax=Math.max.apply(null,_runSlots.map(function(s){return s.strMax;}));var _avgAvg=Math.round(_runSlots.reduce(function(a,s){return a+s.strAvg;},0)/_runSlots.length);var _avgTrig=Math.round(_runSlots.reduce(function(a,s){return a+s.trigCnt;},0)/_runSlots.length);var _sStr=Math.min(100,Math.round((_peakMax/120)*100));var _sDens=Math.min(100,Math.round((_avgTrig/10)*100));var _sDur=Math.min(100,Math.round((_durMin/60)*100));var _score=Math.round(_sStr*0.5+_sDens*0.3+_sDur*0.2);var _highSlots=_runSlots.filter(function(s){return s.strMax>=80&&s.strCnt>=3;});var _type=cObj.tier==='B'?'oral_hand':(_highSlots.length>=1?'vaginal':(_peakMax>=55?'oral_hand':'intim'));_raIntimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:null,garminHRAvg:null,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});});
+                this.log.info('[OC-SEX-RA] '+_raDate+': '+_raIntimacyEvents.length+' Event(s). calibA='+_raCalibA+' calibB='+_raCalibB);
+                _raSnap.intimacyEvents = _raIntimacyEvents;
+                _raSnap.sexCalibInfo = _raCalibInfo;
+                _raSnap.timestamp = Date.now();
+                fs.writeFileSync(_raPath, JSON.stringify(_raSnap), 'utf8');
+                this.sendTo(obj.from, obj.command, { success: true, data: _raSnap }, obj.callback);
+            } catch(_raE) {
+                this.log.warn('[OC-SEX-RA] Fehler: '+_raE.message);
+                this.sendTo(obj.from, obj.command, { success: false, error: _raE.message }, obj.callback);
+            }
         }
         }
     }
