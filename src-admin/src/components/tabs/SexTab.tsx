@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Tooltip as MuiTooltip, IconButton } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
@@ -66,6 +66,24 @@ function labelMatchesDetection(l: SexTrainingLabel, events: IntimacyEvent[]): bo
     t0.setHours(hh, mm, 0, 0);
     const ms = t0.getTime();
     return events.some((e) => Math.abs(e.start - ms) < 60 * 60000);
+}
+
+/** Findet das passende manuelle Label für einen Tag + seine Events (±2h Zeitfenster). */
+function findMatchingLabel(dStr: string, events: IntimacyEvent[], labels: SexTrainingLabel[]): SexTrainingLabel | null {
+    const dayLabels = labels.filter(l => l.date === dStr);
+    if (dayLabels.length === 0) return null;
+    if (events.length === 0) return dayLabels[0];
+    for (const lbl of dayLabels) {
+        if (!lbl.time || !/^\d{1,2}:\d{2}$/.test(lbl.time)) continue;
+        const [hh, mm] = lbl.time.split(':').map(Number);
+        const t0 = new Date(dStr + 'T00:00:00');
+        t0.setHours(hh, mm, 0, 0);
+        const ms = t0.getTime();
+        if (events.some(e => Math.abs(e.start - ms) < 2 * 60 * 60000)) return lbl;
+    }
+    // Fallback: ein Label für den Tag → passt zum ersten Event
+    if (dayLabels.length === 1) return dayLabels[0];
+    return null;
 }
 
 function saveSexLabels(labels: SexTrainingLabel[], onChange: (attr: string, val: any) => void) {
@@ -304,8 +322,9 @@ const IntimacyBar = ({ evt, isDark }: { evt: IntimacyEvent; isDark: boolean }) =
 // ─────────────────────────────────────────────────────────────────────────────
 // Einzeltag-Kachel
 // ─────────────────────────────────────────────────────────────────────────────
-const SexDayCard = ({ events, dateLabel, themeType, funMode, native }: {
-    events: IntimacyEvent[]; dateLabel: string; themeType: string; funMode: boolean; native?: Record<string, any>;
+const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, curDateStr }: {
+    events: IntimacyEvent[]; dateLabel: string; themeType: string; funMode: boolean;
+    native?: Record<string, any>; labels?: SexTrainingLabel[]; curDateStr?: string;
 }) => {
     const isDark = themeType === 'dark';
     const dividerColor = isDark ? '#222' : '#eee';
@@ -333,6 +352,14 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native }: {
     }
 
     const evt = events[0]; // primäres Event (höchster Score)
+
+    // Manuelles Label hat Vorrang über Sensor-Erkennung
+    const matchedLabel = (labels && curDateStr) ? findMatchingLabel(curDateStr, events, labels) : null;
+    const effectiveType = (matchedLabel && (matchedLabel.type === 'vaginal' || matchedLabel.type === 'oral_hand'))
+        ? matchedLabel.type as 'vaginal' | 'oral_hand'
+        : evt.type;
+    const isManualOverride = matchedLabel != null && matchedLabel.type !== evt.type;
+
     return (
         <TerminalBox title={`SEX — ${dateLabel}`} themeType={themeType}
             helpText="Erkennt intime Aktivitäten anhand des Vibrationssensors (16:00–02:00 Uhr). Score: Stärke 50% + Dichte 30% + Dauer 20%. Typ-Klassifikation: niedrige Konfidenz. Kein Medizinprodukt.">
@@ -340,26 +367,39 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native }: {
             <div style={{
                 display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10,
                 padding: '8px 12px', borderRadius: 5,
-                background: typeBg(evt.type, isDark),
-                border: `1px solid ${typeColor(evt.type, isDark)}44`,
+                background: typeBg(effectiveType, isDark),
+                border: `1px solid ${typeColor(effectiveType, isDark)}44`,
             }}>
                 <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>
-                    {evt.type === 'vaginal' ? '🔴' : evt.type === 'oral_hand' ? '👄' : '💜'}
+                    {effectiveType === 'vaginal' ? '🔴' : effectiveType === 'oral_hand' ? '👄' : '💜'}
                 </span>
-                <div>
-                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: typeColor(evt.type, isDark) }}>
-                        {evt.type === 'vaginal' ? 'Vaginal' : evt.type === 'oral_hand' ? 'Oral / Hand' : 'Intime Aktivität'}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: typeColor(effectiveType, isDark) }}>
+                        {effectiveType === 'vaginal' ? 'Vaginal' : effectiveType === 'oral_hand' ? 'Oral / Hand' : 'Intime Aktivität'}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: isDark ? '#888' : '#999', marginTop: 1 }}>
                         {fmtTime(evt.start)} – {fmtTime(evt.end)} · ~{evt.duration} Min · Score {evt.score}
                     </div>
+                    {isManualOverride && (
+                        <div style={{ fontSize: '0.6rem', color: isDark ? '#555' : '#bbb', marginTop: 2 }}>
+                            Sensor erkannte: {evt.type === 'vaginal' ? 'Vaginal' : evt.type === 'oral_hand' ? 'Oral/Hand' : 'Intim'}
+                        </div>
+                    )}
                 </div>
                 <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                    <span style={{
-                        fontSize: '0.65rem', padding: '2px 8px', borderRadius: 3,
-                        background: isDark ? '#1b5e20' : '#e8f5e9', color: isDark ? '#a5d6a7' : '#1b5e20',
-                        fontWeight: 'bold', whiteSpace: 'nowrap'
-                    }}>✓ Vom Sensor erkannt</span>
+                    {matchedLabel ? (
+                        <span style={{
+                            fontSize: '0.65rem', padding: '2px 8px', borderRadius: 3,
+                            background: isDark ? '#0d2b3e' : '#e3f2fd', color: isDark ? '#64b5f6' : '#1565c0',
+                            fontWeight: 'bold', whiteSpace: 'nowrap'
+                        }}>✏ Manuell eingetragen</span>
+                    ) : (
+                        <span style={{
+                            fontSize: '0.65rem', padding: '2px 8px', borderRadius: 3,
+                            background: isDark ? '#1b5e20' : '#e8f5e9', color: isDark ? '#a5d6a7' : '#1b5e20',
+                            fontWeight: 'bold', whiteSpace: 'nowrap'
+                        }}>✓ Vom Sensor erkannt</span>
+                    )}
                     {evt.pyConf != null && (
                         <span style={{
                             fontSize: '0.6rem', padding: '1px 6px', borderRadius: 3,
@@ -436,11 +476,150 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native }: {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Monatskalender
+// ─────────────────────────────────────────────────────────────────────────────
+const MONTH_NAMES_DE = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const DOW_SHORT = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+
+const MonthCalendar: React.FC<{
+    month: string;              // 'YYYY-MM'
+    summary: Record<string, Array<{type: string; duration: number; score: number}>>;
+    labels: any[];
+    viewDate: string;
+    onDayClick: (d: string) => void;
+    onMonthChange: (m: string) => void;
+    themeType: string;
+}> = ({ month, summary, labels, viewDate, onDayClick, onMonthChange, themeType }) => {
+    const isDark = themeType === 'dark';
+    const [year, mon] = month.split('-').map(Number);
+
+    const prevMonth = () => {
+        const d = new Date(year, mon - 2, 1);
+        onMonthChange(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+    };
+    const nextMonth = () => {
+        const d = new Date(year, mon, 1);
+        onMonthChange(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+    };
+
+    const daysInMonth  = new Date(year, mon, 0).getDate();
+    const firstDow     = new Date(year, mon - 1, 1).getDay(); // 0=Sun
+    const startOffset  = firstDow === 0 ? 6 : firstDow - 1;  // Monday-first
+    const todayStr     = new Date().toISOString().slice(0, 10);
+
+    const cells: React.ReactNode[] = [];
+
+    // Wochentag-Header
+    DOW_SHORT.forEach(d => (
+        cells.push(
+            <div key={`h-${d}`} style={{
+                textAlign: 'center', fontSize: '0.6rem',
+                color: isDark ? '#444' : '#bbb', fontWeight: 600,
+                paddingBottom: 3,
+            }}>{d}</div>
+        )
+    ));
+
+    // Leere Zellen vor dem 1.
+    for (let i = 0; i < startOffset; i++) cells.push(<div key={`empty-${i}`} />);
+
+    // Tages-Zellen
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr  = `${year}-${String(mon).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const events   = summary[dateStr] || [];
+        const hasLabel = labels.some((l: any) => l.date === dateStr);
+        const isToday  = dateStr === todayStr;
+        const isView   = dateStr === viewDate;
+
+        // Dominanten Typ bestimmen (erster Event)
+        const domType  = events[0]?.type ?? null;
+        const emoji    = domType === 'vaginal' ? '♥' : domType === 'oral_hand' ? '👄' : domType ? '💜' : null;
+
+        cells.push(
+            <div key={dateStr} onClick={() => onDayClick(dateStr)} style={{
+                cursor: 'pointer',
+                borderRadius: 4,
+                padding: '3px 2px',
+                textAlign: 'center',
+                minHeight: 36,
+                background: isView
+                    ? (isDark ? '#1a3a1a' : '#e8f5e9')
+                    : isToday
+                        ? (isDark ? '#1a1a2e' : '#e8eaf6')
+                        : 'transparent',
+                border: isToday
+                    ? `1px solid ${isDark ? '#3949ab' : '#9fa8da'}`
+                    : `1px solid transparent`,
+                transition: 'background 0.15s',
+            }}>
+                <div style={{
+                    fontSize: '0.65rem',
+                    color: isView
+                        ? (isDark ? '#81c784' : '#2e7d32')
+                        : (isDark ? '#555' : '#aaa'),
+                    fontWeight: isToday || isView ? 700 : 400,
+                }}>{d}</div>
+                {emoji && (
+                    <div style={{ fontSize: '0.7rem', lineHeight: 1.1 }}>
+                        {events.length > 1 ? `${emoji}×${events.length}` : emoji}
+                    </div>
+                )}
+                {!emoji && hasLabel && (
+                    <div style={{ fontSize: '0.5rem', color: isDark ? '#333' : '#ddd' }}>✎</div>
+                )}
+            </div>
+        );
+    }
+
+    // Monats-Statistik
+    const monthEventsTotal  = Object.entries(summary).filter(([d]) => d.startsWith(month)).reduce((s,[,e]) => s + e.length, 0);
+    const monthDaysWithSex  = Object.keys(summary).filter(d => d.startsWith(month) && (summary[d]?.length ?? 0) > 0).length;
+
+    return (
+        <TerminalBox title={`SEX — ${MONTH_NAMES_DE[mon-1].toUpperCase()} ${year}`} themeType={themeType}>
+            {/* Navigation */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <button onClick={prevMonth} style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: isDark ? '#555' : '#aaa', fontSize: '0.8rem', padding: '2px 6px',
+                }}>◀</button>
+                <span style={{ fontSize: '0.72rem', color: isDark ? '#555' : '#aaa', letterSpacing: 1 }}>
+                    {monthDaysWithSex > 0
+                        ? `${monthDaysWithSex} Tage · ${monthEventsTotal} Session${monthEventsTotal !== 1 ? 's' : ''}`
+                        : 'Keine Sessions'}
+                </span>
+                <button onClick={nextMonth} style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: isDark ? '#555' : '#aaa', fontSize: '0.8rem', padding: '2px 6px',
+                }}>▶</button>
+            </div>
+
+            {/* Kalender-Grid */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(7, 1fr)',
+                gap: 2,
+            }}>
+                {cells}
+            </div>
+
+            {/* Legende */}
+            <div style={{ display: 'flex', gap: 10, marginTop: 8, fontSize: '0.6rem', color: isDark ? '#444' : '#bbb' }}>
+                <span>♥ vaginal</span>
+                <span>👄 oral/hand</span>
+                <span>💜 intim</span>
+                <span>✎ nur Label</span>
+            </div>
+        </TerminalBox>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 7-Tage-History
 // ─────────────────────────────────────────────────────────────────────────────
-const SevenDayHistory = ({ historyDays, themeType, funMode }: {
+const SevenDayHistory = ({ historyDays, themeType, funMode, labels }: {
     historyDays: Array<{ dateStr: string; label: string; events: IntimacyEvent[] }>;
-    themeType: string; funMode: boolean;
+    themeType: string; funMode: boolean; labels?: SexTrainingLabel[];
 }) => {
     const isDark = themeType === 'dark';
     const withEvents = historyDays.filter(d => d.events.length > 0);
@@ -462,10 +641,15 @@ const SevenDayHistory = ({ historyDays, themeType, funMode }: {
                     const hasEvt  = day.events.length > 0;
                     const isToday = i === historyDays.length - 1;
                     const evt     = hasEvt ? day.events[0] : null;
+                    // Manuelles Label hat Vorrang
+                    const dayLbl = (labels && hasEvt) ? findMatchingLabel(day.dateStr, day.events, labels) : null;
+                    const effType: string = (dayLbl && (dayLbl.type === 'vaginal' || dayLbl.type === 'oral_hand'))
+                        ? dayLbl.type
+                        : (evt?.type ?? 'intim');
                     const dotColor = !hasEvt ? (isDark ? '#1a1a1a' : '#f0f0f0') :
-                        evt!.type === 'vaginal' ? '#880e4f' : '#4a148c';
+                        effType === 'vaginal' ? '#880e4f' : '#4a148c';
                     const dotBorder = !hasEvt ? `1px dashed ${isDark ? '#2a2a2a' : '#ddd'}` :
-                        evt!.type === 'vaginal' ? '1px solid #c2185b' : '1px solid #7b1fa2';
+                        effType === 'vaginal' ? '1px solid #c2185b' : '1px solid #7b1fa2';
                     return (
                         <div key={i}>
                             <div style={{ fontSize: '0.52rem', color: isDark ? (isToday ? '#888' : '#444') : (isToday ? '#666' : '#bbb'), marginBottom: 3 }}>
@@ -478,14 +662,26 @@ const SevenDayHistory = ({ historyDays, themeType, funMode }: {
                                 alignItems: 'center', justifyContent: 'center',
                                 fontSize: '0.7rem'
                             }}>
-                                    {hasEvt ? (evt!.type === 'vaginal' ? '🔴' : evt!.type === 'oral_hand' ? '👄' : '💜') : (isToday ? '?' : '—')}
+                                {hasEvt ? (effType === 'vaginal' ? `
+�
+�
+` : effType === 'oral_hand' ? `
+�
+�
+` : `
+�
+�
+`) : (isToday ? '?' : '-')}
                             </div>
                             {hasEvt && (
                                 <>
                                     <div style={{ fontSize: '0.88rem', color: isDark ? '#ce93d8' : '#7b1fa2', fontWeight: 'bold' }}>{evt!.score}</div>
                                     <div style={{ fontSize: '0.45rem', color: isDark ? '#555' : '#aaa' }}>{fmtTime(evt!.start).slice(0,5)}</div>
-                                    <div style={{ fontSize: '0.45rem', color: typeColor(evt!.type, isDark), fontWeight: 'bold' }}>
-                                        {evt!.type === 'vaginal' ? 'Vaginal' : evt!.type === 'oral_hand' ? 'Oral' : 'Intim'}
+                                    <div style={{ fontSize: '0.45rem', color: typeColor(effType, isDark), fontWeight: 'bold' }}>
+                                        {effType === 'vaginal' ? 'Vaginal' : effType === 'oral_hand' ? 'Oral' : 'Intim'}
+                                        {dayLbl && effType !== evt!.type && <span style={{ color: isDark ? '#555' : '#ccc' }}> 
+✏
+</span>}
                                     </div>
                                 </>
                             )}
@@ -948,6 +1144,9 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     const isDark = themeType === 'dark';
     const funMode = native.sexFunMode !== false;
 
+    // Labels aus native-Konfiguration (für MonthCalendar + LabelForm)
+    const labels = parseSexTrainingLabels(native.sexTrainingLabels);
+
     const [cacheGen] = useState(0);
 
     // Datums-Navigation
@@ -959,10 +1158,18 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     const [dayData, setDayData] = useState<Record<string, IntimacyEvent[]>>({});
     const [loading, setLoading]  = useState(true);
 
+    // Monatskalender
+    const [calMonth, setCalMonth] = useState<string>(() => new Date().toISOString().slice(0, 7));
+    const [monthSummary, setMonthSummary] = useState<Record<string, Array<{type:string;duration:number;score:number}>>>({});
+
     // Kalibrierungs-Info vom letzten gespeicherten Tag
     const [calibInfo, setCalibInfo] = useState<{
         src: string; n: number; calibA: number; calibB: number;
-        pyClassifier?: { trained: boolean; n: number; counts: Record<string,number>; msg: string } | null;
+        pyClassifier?: {
+            trained: boolean; n: number; counts: Record<string,number>; msg: string;
+            feature_importances?: Array<{ name: string; importance: number }>;
+            loo_accuracy?: number | null;
+        } | null;
     } | null>(null);
 
     // Rohe Vibrations-Events für Chart: { [dateStr]: any[] }
@@ -1000,6 +1207,17 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
         setTimeout(() => setReanalyzeMsg(null), 4000);
     };
 
+    const loadMonth = async (m: string) => {
+        try {
+            const result: any = await socket.sendTo(
+                `${adapterName}.${instance}`, 'getSexMonthSummary', { month: m }
+            );
+            if (result?.success && result?.data) {
+                setMonthSummary(prev => ({ ...prev, ...result.data }));
+            }
+        } catch { /* ignorieren */ }
+    };
+
     const loadDay = async (d: Date) => {
         const ds = dateStr(d);
         if (dayData[ds] !== undefined) return;
@@ -1033,6 +1251,9 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
         Promise.all(days.map(loadDay)).finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [viewDate, cacheGen]);
+
+    // Monatsdaten laden wenn calMonth sich ändert
+    useEffect(() => { loadMonth(calMonth); }, [calMonth]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const navDay = (delta: number) => {
         const d = new Date(viewDate); d.setDate(d.getDate() + delta); setViewDate(d);
@@ -1127,8 +1348,19 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                             themeType={themeType}
                             funMode={funMode}
                             native={native}
+                            labels={labels}
+                            curDateStr={dateStr(viewDate)}
                         />
-                        <SevenDayHistory historyDays={historyDays} themeType={themeType} funMode={funMode} />
+                        <SevenDayHistory historyDays={historyDays} themeType={themeType} funMode={funMode} labels={labels} />
+                        <MonthCalendar
+                            month={calMonth}
+                            summary={monthSummary}
+                            labels={labels}
+                            viewDate={dateStr(viewDate)}
+                            onDayClick={(d) => setViewDate(new Date(d + 'T12:00:00'))}
+                            onMonthChange={(m) => { setCalMonth(m); }}
+                            themeType={themeType}
+                        />
                         <LabelForm native={native} onChange={onChange} themeType={themeType} dayData={dayData} />
                     </div>
 
@@ -1209,13 +1441,36 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.88rem' }}>KI-KLASSIFIKATOR (STUFE 3)</div>
                                {calibInfo?.pyClassifier ? (
                                    calibInfo.pyClassifier.trained ? (
-                                       <div style={{ padding: '4px 7px', borderRadius: 3, background: isDark ? '#0d1a2d' : '#e8eaf6', borderLeft: '3px solid #90caf9' }}>
-                                           <span style={{ color: isDark ? '#90caf9' : '#3949ab' }}>
+                                       <div style={{ padding: '6px 7px', borderRadius: 3, background: isDark ? '#0d1a2d' : '#e8eaf6', borderLeft: '3px solid #90caf9' }}>
+                                           <div style={{ color: isDark ? '#90caf9' : '#3949ab', fontWeight: 'bold', marginBottom: 4 }}>
                                                🤖 Aktiv — {calibInfo.pyClassifier.n} Sessions trainiert
                                                {calibInfo.pyClassifier.counts && Object.entries(calibInfo.pyClassifier.counts).length > 0 && (
-                                                   <span style={{ opacity: 0.7 }}> ({Object.entries(calibInfo.pyClassifier.counts).map(([k,v]) => `${k === 'vaginal' ? '♥' : '◐'} ${v}x`).join(', ')})</span>
+                                                   <span style={{ opacity: 0.7, fontWeight: 'normal' }}> ({Object.entries(calibInfo.pyClassifier.counts).map(([k,v]) => `${k === 'vaginal' ? '♥' : '◐'} ${v}x`).join(', ')})</span>
                                                )}
-                                           </span>
+                                           </div>
+                                           {/* LOO-Genauigkeit */}
+                                           {calibInfo.pyClassifier.loo_accuracy != null && (
+                                               <div style={{ fontSize: '0.76rem', color: isDark ? '#64b5f6' : '#1565c0', marginBottom: 4 }}>
+                                                   📊 Leave-One-Out Genauigkeit:{' '}
+                                                   <strong>{Math.round(calibInfo.pyClassifier.loo_accuracy * 100)}%</strong>
+                                                   <span style={{ opacity: 0.6, fontSize: '0.7rem' }}> ({calibInfo.pyClassifier.n} Folds)</span>
+                                               </div>
+                                           )}
+                                           {/* Feature-Importance Top 5 */}
+                                           {calibInfo.pyClassifier.feature_importances && calibInfo.pyClassifier.feature_importances.length > 0 && (
+                                               <div style={{ fontSize: '0.72rem', color: isDark ? '#888' : '#666', marginTop: 2 }}>
+                                                   <div style={{ marginBottom: 3, color: isDark ? '#666' : '#aaa' }}>Wichtigste Merkmale:</div>
+                                                   {calibInfo.pyClassifier.feature_importances.slice(0, 5).map((f, fi) => (
+                                                       <div key={fi} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+                                                           <span style={{ width: 90, flexShrink: 0, color: isDark ? '#90caf9' : '#3949ab' }}>{f.name}</span>
+                                                           <div style={{ flex: 1, height: 5, background: isDark ? '#1a1a2e' : '#ddd', borderRadius: 3, overflow: 'hidden' }}>
+                                                               <div style={{ width: `${Math.round(f.importance * 100)}%`, height: '100%', background: isDark ? '#5c6bc0' : '#7986cb', borderRadius: 3 }} />
+                                                           </div>
+                                                           <span style={{ width: 32, textAlign: 'right', color: isDark ? '#555' : '#bbb' }}>{Math.round(f.importance * 100)}%</span>
+                                                       </div>
+                                                   ))}
+                                               </div>
+                                           )}
                                        </div>
                                    ) : (
                                        <div style={{ padding: '4px 7px', borderRadius: 3, background: isDark ? '#1a1a1a' : '#f5f5f5', borderLeft: '3px solid #555' }}>

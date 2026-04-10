@@ -42,11 +42,13 @@ class SexBrain:
     ]
 
     def __init__(self):
-        self.clf        = None
-        self.is_trained = False
-        self.class_counts = {}
-        self.n_samples  = 0
-        self.status_msg = 'Noch nicht trainiert'
+        self.clf                = None
+        self.is_trained         = False
+        self.class_counts       = {}
+        self.n_samples          = 0
+        self.status_msg         = 'Noch nicht trainiert'
+        self.feature_importances = []
+        self.loo_accuracy       = None
 
     # ------------------------------------------------------------------
     # Feature-Extraktion (Sentinel -1 fuer fehlende Kontext-Sensoren)
@@ -136,10 +138,40 @@ class SexBrain:
         self.clf.fit(X, y)
         self.is_trained = True
 
-        # Wichtigste Features loggen (fuer Debug)
-        imp = sorted(zip(self.FEATURE_NAMES, self.clf.feature_importances_),
-                     key=lambda x: -x[1])
-        top3 = ', '.join(f'{n}={v:.2f}' for n, v in imp[:3])
+        # Feature-Importance berechnen + speichern
+        imp_pairs = sorted(zip(self.FEATURE_NAMES, self.clf.feature_importances_),
+                           key=lambda x: -x[1])
+        self.feature_importances = [
+            {'name': n, 'importance': round(float(v), 4)} for n, v in imp_pairs
+        ]
+        top3 = ', '.join(f'{n}={v:.2f}' for n, v in imp_pairs[:3])
+
+        # Leave-One-Out Genauigkeit (nur bei >=5 Samples sinnvoll)
+        self.loo_accuracy = None
+        if len(X) >= 5:
+            try:
+                from sklearn.model_selection import LeaveOneOut
+                loo    = LeaveOneOut()
+                X_arr  = [self._feat(s) for s in [sp for sp in samples if (sp.get('label') or '').strip().lower() in ('vaginal', 'oral_hand')]]
+                y_arr  = [lbl for lbl in y]
+                n_correct = 0
+                for train_idx, test_idx in loo.split(X_arr):
+                    clf_loo = RandomForestClassifier(
+                        n_estimators=20, max_depth=5,
+                        random_state=42, class_weight='balanced'
+                    )
+                    X_train = [X_arr[i] for i in train_idx]
+                    y_train = [y_arr[i] for i in train_idx]
+                    if len(set(y_train)) < 2:
+                        continue  # LOO-Fold ohne beide Klassen überspringen
+                    clf_loo.fit(X_train, y_train)
+                    pred_loo = clf_loo.predict([X_arr[test_idx[0]]])[0]
+                    if pred_loo == y_arr[test_idx[0]]:
+                        n_correct += 1
+                self.loo_accuracy = round(n_correct / len(X_arr), 3)
+            except Exception:
+                self.loo_accuracy = None
+
         self.status_msg = f'Aktiv — {len(X)} Sessions | Top-Features: {top3}'
         return True, counts, self.status_msg
 
@@ -186,10 +218,12 @@ class SexBrain:
             typ, conf = self.predict(s)
             results.append({'type': typ, 'confidence': conf})
         return {
-            'trained':       trained,
-            'class_counts':  counts,
-            'status_msg':    msg,
-            'n_samples':     self.n_samples,
-            'feature_names': self.FEATURE_NAMES,
+            'trained':              trained,
+            'class_counts':         counts,
+            'status_msg':           msg,
+            'n_samples':            self.n_samples,
+            'feature_names':        self.FEATURE_NAMES,
+            'feature_importances':  getattr(self, 'feature_importances', []),
+            'loo_accuracy':         getattr(self, 'loo_accuracy', None),
             'results':       results,
         }
