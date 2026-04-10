@@ -1,15 +1,15 @@
-{
+﻿{
   "common": {
     "name": "cogni-living",
-    "version": "0.33.118",
+    "version": "0.33.119",
     "news": {
             "0.33.115": {
                 "en": "Vibration chart: removed Aura variant, renamed to VIBRATIONSVERLAUF, LIVE indicator green, trigger markers (cyan), fixed misleading legend + explanatory hint text, detailed hover tooltip with session context",
-                "de": "Vibrations-Chart: Aura-Variante entfernt, umbenannt zu VIBRATIONSVERLAUF, LIVE-Indikator gr�n, Trigger-Markierungen (cyan), irref�hrende Legende korrigiert + Hinweistext, detaillierter Hover-Tooltip mit Session-Kontext"
+                "de": "Vibrations-Chart: Aura-Variante entfernt, umbenannt zu VIBRATIONSVERLAUF, LIVE-Indikator grün, Trigger-Markierungen (cyan), irreführende Legende korrigiert + Hinweistext, detaillierter Hover-Tooltip mit Session-Kontext"
             },
             "0.33.114": {
                 "en": "Vibration charts improved: auto-scaled Y-axis, 12h default zoom, 260px height, larger fonts, Aura chart dark-navy background, separate zoom controls per chart",
-                "de": "Vibrations-Charts verbessert: Auto-Y-Achse, 12h Standard-Zoom, 260px H�he, gr��ere Schriften, Aura-Chart Dunkelblau-Hintergrund, separater Zoom pro Chart"
+                "de": "Vibrations-Charts verbessert: Auto-Y-Achse, 12h Standard-Zoom, 260px Höhe, größere Schriften, Aura-Chart Dunkelblau-Hintergrund, separater Zoom pro Chart"
             },
             "0.33.113": {
                 "en": "Vibration chart panel in Sex tab: Garmin-style (bars+trend) and Aura-style (neon glow), live sensor subscription, 6h/12h/24h zoom, calibration reference lines",
@@ -57,7 +57,7 @@
     },
     "desc": {
       "en": "Neuro-Symbolic AI for Home Automation & Health",
-      "de": "Neuro-Symbolische KI fÃƒÆ’Ã‚Â¼r Hausautomation & Gesundheit"
+      "de": "Neuro-Symbolische KI fÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼r Hausautomation & Gesundheit"
     },
     "authors": [
       "Marc Jaeger <mj112@gmx.de>"
@@ -216,6 +216,7 @@
   "objects": [],
   "instanceObjects": []
 }
+
 
 
 

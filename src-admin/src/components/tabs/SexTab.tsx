@@ -29,6 +29,7 @@ interface IntimacyEvent {
     garminHRMax: number | null;
     garminHRAvg: number | null;
     slots: IntimacySlot[];
+    pyConf?: number; // Python-Klassifikator Konfidenz (0-100), nur wenn Stufe 3 aktiv
 }
 interface SexTabProps {
     socket: any;
@@ -270,7 +271,7 @@ const IntimacyBar = ({ evt, isDark }: { evt: IntimacyEvent; isDark: boolean }) =
 
     return (
         <div>
-            <div style={{ fontSize: '0.55rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>
+            <div style={{ fontSize: '0.83rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>
                 INTENSITÄTS-VERLAUF (5-Min-Slots)
             </div>
             <div style={{ position: 'relative', height: 28, background: isDark ? '#111' : '#f0f0f0', borderRadius: 3, overflow: 'hidden' }}>
@@ -335,27 +336,50 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native }: {
     return (
         <TerminalBox title={`SEX — ${dateLabel}`} themeType={themeType}
             helpText="Erkennt intime Aktivitäten anhand des Vibrationssensors (16:00–02:00 Uhr). Score: Stärke 50% + Dichte 30% + Dauer 20%. Typ-Klassifikation: niedrige Konfidenz. Kein Medizinprodukt.">
+            {/* Typ-Banner — gut sichtbar oben */}
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10,
+                padding: '8px 12px', borderRadius: 5,
+                background: typeBg(evt.type, isDark),
+                border: `1px solid ${typeColor(evt.type, isDark)}44`,
+            }}>
+                <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>
+                    {evt.type === 'vaginal' ? '🔴' : evt.type === 'oral_hand' ? '👄' : '💜'}
+                </span>
+                <div>
+                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: typeColor(evt.type, isDark) }}>
+                        {evt.type === 'vaginal' ? 'Vaginal' : evt.type === 'oral_hand' ? 'Oral / Hand' : 'Intime Aktivität'}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: isDark ? '#888' : '#999', marginTop: 1 }}>
+                        {fmtTime(evt.start)} – {fmtTime(evt.end)} · ~{evt.duration} Min · Score {evt.score}
+                    </div>
+                </div>
+                <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                    <span style={{
+                        fontSize: '0.65rem', padding: '2px 8px', borderRadius: 3,
+                        background: isDark ? '#1b5e20' : '#e8f5e9', color: isDark ? '#a5d6a7' : '#1b5e20',
+                        fontWeight: 'bold', whiteSpace: 'nowrap'
+                    }}>✓ Vom Sensor erkannt</span>
+                    {evt.pyConf != null && (
+                        <span style={{
+                            fontSize: '0.6rem', padding: '1px 6px', borderRadius: 3,
+                            background: isDark ? '#0d1a2d' : '#e8eaf6', color: isDark ? '#90caf9' : '#3949ab',
+                            whiteSpace: 'nowrap'
+                        }}>🤖 KI: {evt.pyConf}% Konfidenz</span>
+                    )}
+                </div>
+            </div>
+
             {/* Score + Meta */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
                 <ScoreCircle score={evt.score} isDark={isDark} />
                 <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.65rem', color: isDark ? '#888' : '#aaa', marginBottom: 3 }}>ERKANNTE AKTIVITÄT</div>
+                    <div style={{ fontSize: '0.8rem', color: isDark ? '#888' : '#aaa', marginBottom: 3 }}>SENSOR-DETAILS</div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: 4 }}>
                         {fmtTime(evt.start)} — {fmtTime(evt.end)}
                         <span style={{ fontSize: '0.6rem', color: isDark ? '#666' : '#aaa', marginLeft: 8 }}>~{evt.duration} Min</span>
                     </div>
-                    <div>
-                        <span style={{
-                            display: 'inline-block', padding: '1px 7px', borderRadius: 3,
-                            fontSize: '0.6rem', fontWeight: 'bold', marginRight: 5,
-                            background: typeBg(evt.type, isDark), color: typeColor(evt.type, isDark)
-                        }}>{typeLabel(evt.type)}</span>
-                        <span style={{
-                            display: 'inline-block', padding: '1px 7px', borderRadius: 3,
-                            fontSize: '0.6rem', background: isDark ? '#1b5e20' : '#e8f5e9', color: isDark ? '#a5d6a7' : '#1b5e20'
-                        }}>✓ Bestätigt</span>
-                    </div>
-                    <div style={{ marginTop: 5, fontSize: '0.55rem', color: isDark ? '#555' : '#aaa' }}>
+                    <div style={{ marginTop: 5, fontSize: '0.83rem', color: isDark ? '#555' : '#aaa' }}>
                         Peak: <span style={{ color: '#ab47bc' }}>{evt.peakStrength}</span> ·
                         Dichte: <span style={{ color: '#ab47bc' }}>{evt.avgTrigger}/5min</span> ·
                         {evt.slots.length} Slots aktiv
@@ -380,7 +404,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native }: {
                 <div style={{
                     background: isDark ? '#130d1a' : '#f3e5f5',
                     border: `1px solid ${isDark ? '#6a1b9a' : '#ce93d8'}`,
-                    borderRadius: 4, padding: '8px 10px', fontSize: '0.72rem',
+                    borderRadius: 4, padding: '8px 10px', fontSize: '0.88rem',
                     color: isDark ? '#ce93d8' : '#6a1b9a', fontStyle: 'italic', marginBottom: 8
                 }}>
                     {getFunComment(evt, native)}
@@ -390,20 +414,20 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native }: {
             {/* Garmin HR */}
             {(evt.garminHRMax !== null || evt.garminHRAvg !== null) ? (
                 <>
-                    <div style={{ fontSize: '0.55rem', color: isDark ? '#555' : '#aaa', marginBottom: 4 }}>⌚ GARMIN HERZFREQUENZ</div>
+                    <div style={{ fontSize: '0.83rem', color: isDark ? '#555' : '#aaa', marginBottom: 4 }}>⌚ GARMIN HERZFREQUENZ</div>
                     <div style={{ display: 'flex', gap: 16 }}>
                         <div>
-                            <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase' }}>Max HR</div>
+                            <div style={{ fontSize: '0.8rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase' }}>Max HR</div>
                             <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#ef5350' }}>{evt.garminHRMax} bpm</div>
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase' }}>Ø HR (Fenster)</div>
+                            <div style={{ fontSize: '0.8rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase' }}>Ø HR (Fenster)</div>
                             <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#ff7043' }}>{evt.garminHRAvg} bpm</div>
                         </div>
                     </div>
                 </>
             ) : (
-                <div style={{ fontSize: '0.55rem', color: isDark ? '#333' : '#ccc' }}>
+                <div style={{ fontSize: '0.83rem', color: isDark ? '#333' : '#ccc' }}>
                     ⌚ Garmin: kein HR-Signal im Aktivitätsfenster
                 </div>
             )}
@@ -454,13 +478,15 @@ const SevenDayHistory = ({ historyDays, themeType, funMode }: {
                                 alignItems: 'center', justifyContent: 'center',
                                 fontSize: '0.7rem'
                             }}>
-                                {hasEvt ? (evt!.type === 'vaginal' ? '♥' : '💜') : (isToday ? '?' : '—')}
+                                    {hasEvt ? (evt!.type === 'vaginal' ? '🔴' : evt!.type === 'oral_hand' ? '👄' : '💜') : (isToday ? '?' : '—')}
                             </div>
                             {hasEvt && (
                                 <>
-                                    <div style={{ fontSize: '0.58rem', color: isDark ? '#ce93d8' : '#7b1fa2', fontWeight: 'bold' }}>{evt!.score}</div>
+                                    <div style={{ fontSize: '0.88rem', color: isDark ? '#ce93d8' : '#7b1fa2', fontWeight: 'bold' }}>{evt!.score}</div>
                                     <div style={{ fontSize: '0.45rem', color: isDark ? '#555' : '#aaa' }}>{fmtTime(evt!.start).slice(0,5)}</div>
-                                    <div style={{ fontSize: '0.4rem', color: isDark ? '#444' : '#bbb' }}>{evt!.duration} Min</div>
+                                    <div style={{ fontSize: '0.45rem', color: typeColor(evt!.type, isDark), fontWeight: 'bold' }}>
+                                        {evt!.type === 'vaginal' ? 'Vaginal' : evt!.type === 'oral_hand' ? 'Oral' : 'Intim'}
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -479,7 +505,7 @@ const SevenDayHistory = ({ historyDays, themeType, funMode }: {
                     { lbl: 'ZULETZT', val: daysSince !== null ? (daysSince === 0 ? 'heute' : `vor ${daysSince}d`) : '—', col: isDark ? '#888' : '#aaa' }
                 ].map(m => (
                     <div key={m.lbl}>
-                        <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase', marginBottom: 2 }}>{m.lbl}</div>
+                        <div style={{ fontSize: '0.8rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase', marginBottom: 2 }}>{m.lbl}</div>
                         <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: m.col }}>{m.val}</div>
                     </div>
                 ))}
@@ -543,7 +569,7 @@ const LabelForm = ({ native, onChange, themeType, dayData }: {
         color: isDark ? '#eee' : '#111',
         border: `1px solid ${isDark ? '#444' : '#ccc'}`,
         borderRadius: 3, padding: '4px 8px',
-        fontFamily: 'monospace', fontSize: '0.72rem',
+        fontFamily: 'monospace', fontSize: '0.88rem',
     };
     const selectStyle = { ...inputStyle, cursor: 'pointer' };
 
@@ -553,23 +579,23 @@ const LabelForm = ({ native, onChange, themeType, dayData }: {
             {/* Formular */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end', marginBottom: 12 }}>
                 <div>
-                    <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>DATUM</div>
+                    <div style={{ fontSize: '0.8rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>DATUM</div>
                     <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)}
                         style={{ ...inputStyle, width: 130 }} />
                 </div>
                 <div>
-                    <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>UHRZEIT (ca.)</div>
+                    <div style={{ fontSize: '0.8rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>UHRZEIT (ca.)</div>
                     <input type="time" value={formTime} onChange={e => setFormTime(e.target.value)}
                         style={{ ...inputStyle, width: 100 }} />
                 </div>
                 <div>
-                    <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>DAUER (Min, opt.)</div>
+                    <div style={{ fontSize: '0.8rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>DAUER (Min, opt.)</div>
                     <input type="number" value={formDuration} onChange={e => setFormDuration(e.target.value)}
                         min={1} max={180} placeholder="—"
                         style={{ ...inputStyle, width: 80 }} />
                 </div>
                 <div>
-                    <div style={{ fontSize: '0.5rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>TYP</div>
+                    <div style={{ fontSize: '0.8rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>TYP</div>
                     <select value={formType} onChange={e => setFormType(e.target.value as any)} style={{ ...selectStyle, width: 130 }}>
                         <option value="vaginal">♥ Vaginal</option>
                         <option value="oral_hand">◐ Oral / Hand</option>
@@ -582,7 +608,7 @@ const LabelForm = ({ native, onChange, themeType, dayData }: {
                         color: isDark ? '#81c784' : '#1b5e20',
                         border: `1px solid ${isDark ? '#2e7d32' : '#a5d6a7'}`,
                         borderRadius: 4, padding: '5px 14px',
-                        fontFamily: 'monospace', fontSize: '0.72rem',
+                        fontFamily: 'monospace', fontSize: '0.88rem',
                         cursor: 'pointer', fontWeight: 700, letterSpacing: 1,
                         alignSelf: 'flex-end',
                     }}>
@@ -592,12 +618,12 @@ const LabelForm = ({ native, onChange, themeType, dayData }: {
 
             {/* Liste der eingetragenen Labels */}
             {labels.length === 0 ? (
-                <div style={{ fontSize: '0.65rem', color: isDark ? '#444' : '#bbb', fontStyle: 'italic' }}>
+                <div style={{ fontSize: '0.8rem', color: isDark ? '#444' : '#bbb', fontStyle: 'italic' }}>
                     Noch keine Einträge — trage 3–5 bekannte Sessions ein, damit der Algorithmus lernen kann.
                 </div>
             ) : (
                 <div>
-                    <div style={{ fontSize: '0.5rem', color: isDark ? '#444' : '#bbb', marginBottom: 6, letterSpacing: 1 }}>
+                    <div style={{ fontSize: '0.8rem', color: isDark ? '#444' : '#bbb', marginBottom: 6, letterSpacing: 1 }}>
                         EINGETRAGENE SESSIONS ({labels.length})
                     </div>
                     {labels.map((l, i) => {
@@ -615,12 +641,12 @@ const LabelForm = ({ native, onChange, themeType, dayData }: {
                                 <span style={{ fontSize: '0.7rem', minWidth: 18, color: hasData ? (ok ? '#81c784' : '#ffb74d') : (isDark ? '#444' : '#bbb') }}>
                                     {hasData ? (ok ? '✓' : '⚠') : '·'}
                                 </span>
-                                <span style={{ fontSize: '0.68rem', flex: 1, color: isDark ? '#ccc' : '#444' }}>
+                                <span style={{ fontSize: '0.83rem', flex: 1, color: isDark ? '#ccc' : '#444' }}>
                                     <b>{l.date}</b>
                                     {l.time && <span style={{ color: isDark ? '#888' : '#999' }}> · {l.time}</span>}
                                     {l.durationMin != null && <span style={{ color: isDark ? '#888' : '#999' }}> · ~{l.durationMin} Min</span>}
                                     <span style={{
-                                        marginLeft: 8, padding: '1px 6px', borderRadius: 3, fontSize: '0.58rem',
+                                        marginLeft: 8, padding: '1px 6px', borderRadius: 3, fontSize: '0.88rem',
                                         background: l.type === 'vaginal' ? (isDark ? '#880e4f' : '#fce4ec') : (isDark ? '#1a237e' : '#e8eaf6'),
                                         color: l.type === 'vaginal' ? (isDark ? '#f48fb1' : '#c2185b') : (isDark ? '#90caf9' : '#283593'),
                                     }}>{l.type === 'vaginal' ? '♥ vaginal' : l.type === 'oral_hand' ? '◐ oral/hand' : '⬡ sonstiges'}</span>
@@ -632,7 +658,7 @@ const LabelForm = ({ native, onChange, themeType, dayData }: {
                             </div>
                         );
                     })}
-                    <div style={{ marginTop: 8, fontSize: '0.55rem', color: isDark ? '#333' : '#bbb' }}>
+                    <div style={{ marginTop: 8, fontSize: '0.83rem', color: isDark ? '#333' : '#bbb' }}>
                         ✓ = vom Sensor erkannt · ⚠ = nicht erkannt (Sensor ggf. neu kalibrieren) · · = kein Datentag geladen
                     </div>
                 </div>
@@ -719,103 +745,97 @@ interface VibPanelProps {
     isLive: boolean;
 }
 
-const VibGarmin: React.FC<VibPanelProps & { zoom: number }> = ({ vibRaw, sessions, calibA, calibB, isDark, dayStart, isToday, livePoints, isLive, zoom }) => {
-    const pts = zoomSlice(buildVibSlots(vibRaw, dayStart, livePoints), zoom, dayStart, isToday);
-    const gc = isDark ? '#1e1e1e' : '#f0f0f0';
-    const ax = isDark ? '#444' : '#bbb';
+// Benutzerdefinierter Tooltip für Vibrations-Chart
+const VibTooltip: React.FC<any> = ({ active, payload, label, calibA, calibB, isDark }) => {
+    if (!active || !payload || !payload.length) return null;
+    const strEntry = payload.find((p: any) => p.dataKey === 'strength');
+    const trigEntry = payload.find((p: any) => p.dataKey === 'triggerMark');
+    const val = strEntry?.value ?? 0;
+    const hasTrig = !!(trigEntry?.value && trigEntry.value > 0);
+
+    let zone = '';
+    let zoneColor = isDark ? '#888' : '#666';
+    let hint = '';
+    if (val >= calibA) {
+        zone = `Intensiv-Zone (≥ A=${calibA})`;
+        zoneColor = '#ab47bc';
+        hint = `Pfad A braucht ≥ 2 aufeinanderfolgende Slots — kein Session-Kriterium für diesen Slot allein`;
+    } else if (val >= calibB) {
+        zone = `Moderat-Zone (≥ B=${calibB})`;
+        zoneColor = '#f48fb1';
+        hint = `Pfad B braucht ≥ 6 aufeinanderfolgende Slots — kein Session-Kriterium für diesen Slot allein`;
+    } else if (val > 0) {
+        zone = `Unter Schwelle B=${calibB}`;
+        zoneColor = isDark ? '#555' : '#999';
+        hint = 'Zu schwache Vibration für Session-Erkennung';
+    }
+
+    return (
+        <div style={{
+            background: isDark ? '#1a1a1a' : '#fff',
+            border: `1px solid ${isDark ? '#333' : '#ddd'}`,
+            borderRadius: 5, padding: '8px 12px', fontSize: '0.78rem',
+            fontFamily: "'Roboto Mono','Courier New',monospace",
+            maxWidth: 280, lineHeight: 1.6,
+        }}>
+            <div style={{ color: isDark ? '#aaa' : '#555', fontWeight: 'bold', marginBottom: 4 }}>⏱ {label}</div>
+            {val > 0 && <div>Stärke: <strong style={{ color: zoneColor }}>{val}</strong> — {zone}</div>}
+            {hasTrig && <div style={{ color: '#00bcd4' }}>▲ Vibrations-Trigger erkannt</div>}
+            {hint && <div style={{ color: isDark ? '#444' : '#bbb', fontSize: '0.68rem', marginTop: 4, borderTop: `1px dashed ${isDark ? '#2a2a2a' : '#eee'}`, paddingTop: 4 }}>{hint}</div>}
+            {!val && !hasTrig && <div style={{ color: isDark ? '#444' : '#bbb' }}>Keine Aktivität</div>}
+        </div>
+    );
+};
+
+const VibGarmin: React.FC<VibPanelProps & { zoom: number }> = ({ vibRaw, sessions, calibA, calibB, isDark, dayStart, isToday, livePoints, zoom }) => {
+    const rawPts = zoomSlice(buildVibSlots(vibRaw, dayStart, livePoints), zoom, dayStart, isToday);
+    const gc = isDark ? '#1e1e1e' : '#eeeeee';
+    const ax = isDark ? '#555' : '#aaa';
+    const maxStr = Math.max(...rawPts.map(p => p.strength ?? 0), calibA + 5);
+    const yMax = Math.ceil(maxStr * 1.2 / 5) * 5;
+    const xInterval = Math.max(Math.floor(rawPts.length / 10), 1);
+    // Trigger-Markierungen: kleiner fester Balken am Boden (5% von yMax)
+    const trigHeight = Math.max(Math.round(yMax * 0.05), 1);
+    const pts = rawPts.map(p => ({ ...p, triggerMark: (p.trigger ?? 0) > 0 ? trigHeight : null }));
 
     const sessionAreas = sessions.map((s, i) => {
         const x1 = pts.find(p => p.ts >= s.start)?.time;
         const x2 = pts.find(p => p.ts > s.end)?.time ?? pts[pts.length - 1]?.time;
         if (!x1) return null;
-        return <ReferenceArea key={i} x1={x1} x2={x2} fill="rgba(244,143,177,0.18)" stroke="rgba(244,143,177,0.4)" strokeWidth={1} />;
+        return <ReferenceArea key={i} x1={x1} x2={x2} fill="rgba(244,143,177,0.22)" stroke="rgba(244,143,177,0.5)" strokeWidth={1} />;
     });
 
     return (
-        <ResponsiveContainer width="100%" height={180}>
-            <ComposedChart data={pts} margin={{ top: 4, right: 24, left: -18, bottom: 0 }} barCategoryGap={1}>
+        <ResponsiveContainer width="100%" height={280}>
+            <ComposedChart data={pts} margin={{ top: 8, right: 32, left: -10, bottom: 4 }} barCategoryGap={0}>
                 <CartesianGrid strokeDasharray="3 6" stroke={gc} vertical={false} />
-                <XAxis dataKey="time" stroke={ax} tick={{ fontSize: 9 }} interval={Math.floor(pts.length / 8)} />
-                <YAxis domain={[0, 120]} stroke={ax} tick={{ fontSize: 9 }} width={34} />
-                <ReTooltip
-                    contentStyle={{ background: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}`, fontSize: '0.65rem', borderRadius: 3 }}
-                    formatter={(val: any, name: string) => [val, name === 'strength' ? 'Stärke' : name === 'trigger' ? 'Trigger' : 'Trend']}
-                    labelStyle={{ color: isDark ? '#888' : '#555' }}
-                />
+                <XAxis dataKey="time" stroke={ax} tick={{ fontSize: 11, fill: isDark ? '#666' : '#999' }} interval={xInterval} />
+                <YAxis domain={[0, yMax]} stroke={ax} tick={{ fontSize: 11, fill: isDark ? '#666' : '#999' }} width={36} />
+                <ReTooltip content={<VibTooltip calibA={calibA} calibB={calibB} isDark={isDark} />} />
                 {sessionAreas}
-                <ReferenceLine y={calibA} stroke="#ab47bc" strokeDasharray="4 3" strokeWidth={1.2}
-                    label={{ value: `A=${calibA}`, position: 'insideTopRight', fontSize: 8, fill: '#ab47bc', offset: 2 }} />
-                <ReferenceLine y={calibB} stroke="#42a5f5" strokeDasharray="4 3" strokeWidth={1.2}
-                    label={{ value: `B=${calibB}`, position: 'insideTopRight', fontSize: 8, fill: '#42a5f5', offset: 2 }} />
-                <Bar dataKey="strength" name="strength" radius={[1, 1, 0, 0]} maxBarSize={8} isAnimationActive={false}>
+                <ReferenceLine y={calibA} stroke="#ab47bc" strokeDasharray="5 3" strokeWidth={1.5}
+                    label={{ value: `Schwelle A = ${calibA}`, position: 'insideTopLeft', fontSize: 10, fill: '#ab47bc', offset: 4 }} />
+                <ReferenceLine y={calibB} stroke="#42a5f5" strokeDasharray="5 3" strokeWidth={1.5}
+                    label={{ value: `Schwelle B = ${calibB}`, position: 'insideBottomLeft', fontSize: 10, fill: '#42a5f5', offset: 4 }} />
+                {/* Trigger-Markierungen (cyan, klein) */}
+                <Bar dataKey="triggerMark" name="triggerMark" radius={[1, 1, 0, 0]} maxBarSize={4} isAnimationActive={false} fill="#00bcd4" opacity={0.7} />
+                {/* Stärke-Balken (farbkodiert nach Intensitäts-Zone) */}
+                <Bar dataKey="strength" name="strength" radius={[2, 2, 0, 0]} maxBarSize={12} isAnimationActive={false}>
                     {pts.map((p, i) => (
                         <Cell key={i} fill={
                             (p.strength || 0) >= calibA ? '#ab47bc' :
                             (p.strength || 0) >= calibB ? '#f48fb1' :
-                            (p.strength || 0) > 0 ? (isDark ? '#2d2d2d' : '#e0e0e0') :
+                            (p.strength || 0) > 0 ? (isDark ? '#383838' : '#d0d0d0') :
                             'transparent'
                         } />
                     ))}
                 </Bar>
-                <Line type="monotone" dataKey="smoothed" name="smoothed" stroke={isDark ? '#546e7a' : '#90a4ae'} strokeWidth={1.5} dot={false} isAnimationActive={false} connectNulls />
+                <Line type="monotone" dataKey="smoothed" name="smoothed" stroke={isDark ? '#607d8b' : '#78909c'} strokeWidth={2} dot={false} isAnimationActive={false} connectNulls />
             </ComposedChart>
         </ResponsiveContainer>
     );
 };
 
-const VibAura: React.FC<VibPanelProps & { zoom: number }> = ({ vibRaw, sessions, calibA, calibB, dayStart, isToday, livePoints, zoom }) => {
-    const pts = zoomSlice(buildVibSlots(vibRaw, dayStart, livePoints), zoom, dayStart, isToday);
-
-    const sessionAreas = sessions.map((s, i) => {
-        const x1 = pts.find(p => p.ts >= s.start)?.time;
-        const x2 = pts.find(p => p.ts > s.end)?.time ?? pts[pts.length - 1]?.time;
-        if (!x1) return null;
-        return <ReferenceArea key={i} x1={x1} x2={x2} fill="rgba(244,143,177,0.12)" stroke="rgba(244,143,177,0.3)" strokeWidth={1} />;
-    });
-
-    return (
-        <div style={{ background: '#0a0a0a', borderRadius: 4, padding: '8px 0 4px 0' }}>
-            <ResponsiveContainer width="100%" height={180}>
-                <AreaChart data={pts} margin={{ top: 4, right: 24, left: -18, bottom: 0 }}>
-                    <defs>
-                        <linearGradient id="vibGradAura" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#ce93d8" stopOpacity={0.7} />
-                            <stop offset="95%" stopColor="#f48fb1" stopOpacity={0.05} />
-                        </linearGradient>
-                        <linearGradient id="vibGradTrig" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#00e5ff" stopOpacity={0.5} />
-                            <stop offset="100%" stopColor="#00e5ff" stopOpacity={0.05} />
-                        </linearGradient>
-                        <filter id="glow">
-                            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                            <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                        </filter>
-                    </defs>
-                    <CartesianGrid strokeDasharray="1 12" stroke="#141414" vertical={false} />
-                    <XAxis dataKey="time" stroke="#2a2a2a" tick={{ fontSize: 9, fill: '#444' }} interval={Math.floor(pts.length / 8)} />
-                    <YAxis domain={[0, 120]} stroke="#2a2a2a" tick={{ fontSize: 9, fill: '#444' }} width={34} />
-                    <ReTooltip
-                        contentStyle={{ background: '#111', border: '1px solid #222', fontSize: '0.65rem', borderRadius: 3 }}
-                        formatter={(val: any, name: string) => [val, name === 'strength' ? 'Stärke' : 'Trigger']}
-                        labelStyle={{ color: '#666' }}
-                    />
-                    {sessionAreas}
-                    {/* Calibration glow lines */}
-                    <ReferenceLine y={calibA} stroke="#ce93d8" strokeDasharray="3 4" strokeWidth={1}
-                        label={{ value: `A=${calibA}`, position: 'insideTopRight', fontSize: 8, fill: '#ce93d8' }} />
-                    <ReferenceLine y={calibB} stroke="#00bcd4" strokeDasharray="3 4" strokeWidth={1}
-                        label={{ value: `B=${calibB}`, position: 'insideTopRight', fontSize: 8, fill: '#00bcd4' }} />
-                    {/* Trigger als kleine Neon-Fläche */}
-                    <Area type="step" dataKey="trigger" name="trigger" fill="url(#vibGradTrig)" stroke="#00e5ff" strokeWidth={0.8}
-                        dot={false} isAnimationActive={false} connectNulls={false} />
-                    {/* Stärke als Haupt-Area */}
-                    <Area type="monotone" dataKey="strength" name="strength" fill="url(#vibGradAura)" stroke="#ce93d8" strokeWidth={1.5}
-                        dot={false} isAnimationActive={false} connectNulls />
-                </AreaChart>
-            </ResponsiveContainer>
-        </div>
-    );
-};
 
 const VibrationChartPanel: React.FC<{
     vibRaw: any[];
@@ -829,7 +849,7 @@ const VibrationChartPanel: React.FC<{
     strengthId: string | null;
     trigId: string | null;
 }> = ({ vibRaw, sessions, calibA, calibB, isDark, dayStart, isToday, socket, strengthId, trigId }) => {
-    const [zoom, setZoom] = useState(24);
+    const [zoom, setZoom] = useState(12);
     const [livePoints, setLivePoints] = useState<{ ts: number; val: number }[]>([]);
     const liveRef = useRef<{ ts: number; val: number }[]>([]);
 
@@ -851,96 +871,73 @@ const VibrationChartPanel: React.FC<{
 
     const box: React.CSSProperties = {
         background: isDark ? '#0e0e0e' : '#fff',
-        border: `1px solid ${isDark ? '#1e1e1e' : '#e8e8e8'}`,
-        borderRadius: 4, padding: 12, marginTop: 12,
+        border: `1px solid ${isDark ? '#222' : '#e0e0e0'}`,
+        borderRadius: 6, padding: '16px 16px 12px', marginTop: 16,
         fontFamily: "'Roboto Mono','Courier New',monospace",
     };
     const hdr: React.CSSProperties = {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 8,
+        marginBottom: 12,
     };
-    const title: React.CSSProperties = {
-        fontSize: '0.58rem', letterSpacing: '0.1em', color: isDark ? '#444' : '#aaa',
+    const titleStyle: React.CSSProperties = {
+        fontSize: '0.75rem', letterSpacing: '0.08em', fontWeight: 600,
+        color: isDark ? '#555' : '#999',
     };
-    const zoomBtns = [6, 12, 24].map(h => (
-        <button key={h} onClick={() => setZoom(h)} style={{
-            background: zoom === h ? (isDark ? '#2a2a2a' : '#e8e8e8') : 'transparent',
-            border: `1px solid ${isDark ? '#333' : '#ddd'}`,
-            color: zoom === h ? (isDark ? '#fff' : '#111') : (isDark ? '#555' : '#aaa'),
-            borderRadius: 3, padding: '1px 7px', fontSize: '0.58rem',
-            cursor: 'pointer', fontFamily: 'inherit',
-        }}>{h}h</button>
-    ));
+    const mkZoomBtns = (active: number, setActive: (h: number) => void, dark: boolean) =>
+        [6, 12, 24].map(h => (
+            <button key={h} onClick={() => setActive(h)} style={{
+                background: active === h ? (dark ? '#2e2e2e' : '#e0e0e0') : 'transparent',
+                border: `1px solid ${dark ? '#333' : '#ddd'}`,
+                color: active === h ? (dark ? '#ddd' : '#111') : (dark ? '#444' : '#aaa'),
+                borderRadius: 3, padding: '3px 10px', fontSize: '0.7rem',
+                cursor: 'pointer', fontFamily: 'inherit',
+            }}>{h}h</button>
+        ));
+
     const liveIndicator = isToday ? (
-        <span style={{ fontSize: '0.58rem', color: '#e53935', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#e53935', display: 'inline-block', animation: 'pulse 1.2s infinite' }} />
+        <span style={{ fontSize: '0.7rem', color: '#43a047', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#43a047', display: 'inline-block' }} />
             LIVE
         </span>
     ) : null;
-    const legend = (
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, fontSize: '0.58rem', color: isDark ? '#444' : '#bbb' }}>
-            <span><span style={{ color: '#ab47bc' }}>━</span> ≥ A={calibA} (vaginal)</span>
-            <span><span style={{ color: '#f48fb1' }}>━</span> ≥ B={calibB} (oral/hand)</span>
-            <span><span style={{ color: isDark ? '#2d2d2d' : '#e0e0e0', background: isDark ? '#2d2d2d' : '#e0e0e0', padding: '0 6px' }}>&nbsp;</span> Bewegung</span>
-            <span><span style={{ color: 'rgba(244,143,177,0.6)' }}>░</span> erkannte Session</span>
-        </div>
-    );
 
     return (
-        <>
-            {/* ── Garmin-Style ── */}
-            <div style={box}>
-                <div style={hdr}>
-                    <span style={title}>[ VIBRATIONSVERLAUF · GARMIN-STYLE ]</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {liveIndicator}
-                        <div style={{ display: 'flex', gap: 3 }}>{zoomBtns}</div>
-                    </div>
-                </div>
-                {vibRaw.length === 0 && livePoints.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: isDark ? '#333' : '#ccc', fontSize: '0.65rem', padding: '20px 0' }}>
-                        Keine Vibrationsdaten für diesen Tag
-                    </div>
-                ) : (
-                    <VibGarmin vibRaw={vibRaw} sessions={sessions} calibA={calibA} calibB={calibB}
-                        isDark={isDark} dayStart={dayStart} isToday={isToday} livePoints={livePoints} isLive zoom={zoom} />
-                )}
-                {legend}
-            </div>
-
-            {/* ── Aura-Style ── */}
-            <div style={{ ...box, background: '#0a0a0a', border: '1px solid #111' }}>
-                <div style={{ ...hdr }}>
-                    <span style={{ ...title, color: '#333' }}>[ VIBRATIONSVERLAUF · AURA-STYLE ]</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {liveIndicator}
-                        <div style={{ display: 'flex', gap: 3 }}>{[6, 12, 24].map(h => (
-                            <button key={h} onClick={() => setZoom(h)} style={{
-                                background: zoom === h ? '#1a1a1a' : 'transparent',
-                                border: '1px solid #222',
-                                color: zoom === h ? '#ccc' : '#333',
-                                borderRadius: 3, padding: '1px 7px', fontSize: '0.58rem',
-                                cursor: 'pointer', fontFamily: 'inherit',
-                            }}>{h}h</button>
-                        ))}</div>
-                    </div>
-                </div>
-                {vibRaw.length === 0 && livePoints.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: '#2a2a2a', fontSize: '0.65rem', padding: '20px 0' }}>
-                        Keine Vibrationsdaten für diesen Tag
-                    </div>
-                ) : (
-                    <VibAura vibRaw={vibRaw} sessions={sessions} calibA={calibA} calibB={calibB}
-                        isDark={true} dayStart={dayStart} isToday={isToday} livePoints={livePoints} isLive zoom={zoom} />
-                )}
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, fontSize: '0.58rem', color: '#333' }}>
-                    <span><span style={{ color: '#ce93d8' }}>━</span> ≥ A={calibA} (vaginal)</span>
-                    <span><span style={{ color: '#00bcd4' }}>━</span> ≥ B={calibB} (oral/hand)</span>
-                    <span><span style={{ color: '#00e5ff' }}>━</span> Trigger</span>
-                    <span><span style={{ color: 'rgba(244,143,177,0.4)' }}>░</span> erkannte Session</span>
+        <div style={box}>
+            <div style={hdr}>
+                <span style={titleStyle}>[ VIBRATIONSVERLAUF ]</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {liveIndicator}
+                    <div style={{ display: 'flex', gap: 4 }}>{mkZoomBtns(zoom, setZoom, isDark)}</div>
                 </div>
             </div>
-        </>
+            {vibRaw.length === 0 && livePoints.length === 0 ? (
+                <div style={{ textAlign: 'center', color: isDark ? '#333' : '#ccc', fontSize: '0.8rem', padding: '40px 0' }}>
+                    Keine Vibrationsdaten für diesen Tag
+                </div>
+            ) : (
+                <VibGarmin vibRaw={vibRaw} sessions={sessions} calibA={calibA} calibB={calibB}
+                    isDark={isDark} dayStart={dayStart} isToday={isToday} livePoints={livePoints} isLive zoom={zoom} />
+            )}
+            {/* Legende */}
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 8, fontSize: '0.7rem', color: isDark ? '#555' : '#aaa' }}>
+                <span><span style={{ color: '#ab47bc' }}>▌</span> Intensiv-Zone (≥ A={calibA})</span>
+                <span><span style={{ color: '#f48fb1' }}>▌</span> Moderat-Zone (≥ B={calibB})</span>
+                <span><span style={{ color: isDark ? '#444' : '#ccc' }}>▌</span> Schwache Bewegung</span>
+                <span><span style={{ color: '#00bcd4' }}>▌</span> Trigger erkannt</span>
+                <span><span style={{ color: 'rgba(244,143,177,0.7)' }}>░</span> Session erkannt</span>
+            </div>
+            {/* Wichtiger Hinweis */}
+            <div style={{
+                marginTop: 8, padding: '6px 10px', borderRadius: 3,
+                background: isDark ? '#111' : '#f9f9f9',
+                border: `1px solid ${isDark ? '#222' : '#eee'}`,
+                fontSize: '0.7rem', color: isDark ? '#444' : '#aaa', lineHeight: 1.6,
+            }}>
+                ⓘ <strong style={{ color: isDark ? '#555' : '#999' }}>Farbe = Rohwert des Sensors pro 5-Min-Slot</strong> — keine Session-Erkennung.
+                Session erkannt = <span style={{ color: 'rgba(244,143,177,0.9)' }}>rosa Hinterlegung</span>.
+                Hover über einen Balken für Details und Kontext.
+            </div>
+        </div>
     );
 };
 
@@ -963,10 +960,45 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     const [loading, setLoading]  = useState(true);
 
     // Kalibrierungs-Info vom letzten gespeicherten Tag
-    const [calibInfo, setCalibInfo] = useState<{ src: string; n: number; calibA: number; calibB: number } | null>(null);
+    const [calibInfo, setCalibInfo] = useState<{
+        src: string; n: number; calibA: number; calibB: number;
+        pyClassifier?: { trained: boolean; n: number; counts: Record<string,number>; msg: string } | null;
+    } | null>(null);
 
     // Rohe Vibrations-Events für Chart: { [dateStr]: any[] }
     const [vibRaw, setVibRaw] = useState<Record<string, any[]>>({});
+
+    // Retroaktive Neu-Analyse
+    const [reanalyzing, setReanalyzing] = useState(false);
+    const [reanalyzeMsg, setReanalyzeMsg] = useState<string | null>(null);
+
+    const reanalyzeDay = async (d: Date) => {
+        const ds = dateStr(d);
+        setReanalyzing(true);
+        setReanalyzeMsg(null);
+        try {
+            const result: any = await socket.sendTo(
+                `${adapterName}.${instance}`, 'reanalyzeSexDay', { date: ds }
+            );
+            if (result?.success && result?.data) {
+                const evts: IntimacyEvent[] = result.data.intimacyEvents ?? [];
+                setDayData(prev => ({ ...prev, [ds]: evts }));
+                if (result.data.sexCalibInfo) setCalibInfo(result.data.sexCalibInfo);
+                const vibEvts = (result.data.eventHistory || []).filter((e: any) =>
+                    (e.type === 'vibration_strength' || e.type === 'vibration_trigger') &&
+                    (e.isVibrationBed || e.isFP2Bed)
+                );
+                setVibRaw(prev => ({ ...prev, [ds]: vibEvts }));
+                setReanalyzeMsg(evts.length > 0 ? `✓ ${evts.length} Session(s) gefunden` : '✓ Keine Session erkannt');
+            } else {
+                setReanalyzeMsg('⚠ ' + (result?.error || 'Fehler'));
+            }
+        } catch (e: any) {
+            setReanalyzeMsg('⚠ ' + (e?.message || 'Fehler'));
+        }
+        setReanalyzing(false);
+        setTimeout(() => setReanalyzeMsg(null), 4000);
+    };
 
     const loadDay = async (d: Date) => {
         const ds = dateStr(d);
@@ -1059,6 +1091,22 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                 color: isDark ? '#888' : '#666', cursor: 'pointer', borderRadius: 2
                             }}>→ Heute</button>
                     )}
+                    <button onClick={() => reanalyzeDay(viewDate)} disabled={reanalyzing}
+                        title="Liest die gespeicherte JSON-Datei erneut ein und führt die Sex-Erkennung auf allen Events des Tages aus — auch Abend-Sessions die bei der Morgen-Analyse fehlten."
+                        style={{
+                            fontFamily: 'inherit', fontSize: '0.6rem', padding: '2px 8px',
+                            background: reanalyzing ? (isDark ? '#111' : '#f5f5f5') : (isDark ? '#0d1a0d' : '#e8f5e9'),
+                            border: `1px solid ${isDark ? '#2e7d32' : '#a5d6a7'}`,
+                            color: isDark ? '#81c784' : '#2e7d32',
+                            cursor: reanalyzing ? 'wait' : 'pointer', borderRadius: 2, opacity: reanalyzing ? 0.5 : 1
+                        }}>
+                        {reanalyzing ? '⟳ ...' : '⟳ Neu analysieren'}
+                    </button>
+                    {reanalyzeMsg && (
+                        <span style={{ fontSize: '0.6rem', color: reanalyzeMsg.startsWith('✓') ? '#81c784' : '#ffb74d', marginLeft: 4 }}>
+                            {reanalyzeMsg}
+                        </span>
+                    )}
                 </div>
                 <div style={{ fontSize: '0.6rem', color: isDark ? '#333' : '#ccc' }}>
                     🔒 Daten lokal · keine Cloud
@@ -1128,46 +1176,67 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                         </TerminalBox>
 
                         <TerminalBox title="ALGORITHMUS" themeType={themeType}>
-                            <div style={{ fontSize: '0.68rem', lineHeight: 1.8, color: isDark ? '#666' : '#888' }}>
-                                <div style={{ color: isDark ? '#555' : '#aaa', fontSize: '0.58rem', marginBottom: 4 }}>ERKENNUNGS-SCHWELLEN</div>
+                            <div style={{ fontSize: '0.83rem', lineHeight: 1.8, color: isDark ? '#666' : '#888' }}>
+                                <div style={{ color: isDark ? '#555' : '#aaa', fontSize: '0.88rem', marginBottom: 4 }}>ERKENNUNGS-SCHWELLEN</div>
                                 <div>• Zeitfenster: <span style={{ color: isDark ? '#81c784' : '#388e3c' }}>kein Limit</span> <span style={{ color: isDark ? '#444' : '#bbb' }}>(ganzer Tag, Sex ist zeitlos)</span></div>
                                 <div>• <b>Pfad A</b> (kurz+intensiv): ≥2×5 Min, Peak ≥<span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>{calibInfo ? calibInfo.calibA : 50}</span></div>
                                 <div>• <b>Pfad B</b> (länger+moderat): ≥6×5 Min, Peak ≥<span style={{ color: isDark ? '#90caf9' : '#283593' }}>{calibInfo ? calibInfo.calibB : 30}</span></div>
-                                <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.58rem' }}>KALIBRIERUNG</div>
+                                <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.88rem' }}>KALIBRIERUNG</div>
                                 {calibInfo ? (
                                     <div style={{
                                         padding: '5px 8px', borderRadius: 3, marginBottom: 4,
-                                        background: calibInfo.src === 'labels' ? (isDark ? '#1a2e1a' : '#e8f5e9') :
+                                        background: (calibInfo.src === 'labels' || calibInfo.src === 'labels_typed') ? (isDark ? '#1a2e1a' : '#e8f5e9') :
                                                     calibInfo.src === 'baseline' ? (isDark ? '#1a1a2e' : '#e8eaf6') :
                                                     calibInfo.src === 'manual' ? (isDark ? '#2e1a1a' : '#fce4ec') :
                                                     (isDark ? '#1a1a1a' : '#f5f5f5'),
-                                        borderLeft: `3px solid ${calibInfo.src === 'labels' ? '#81c784' : calibInfo.src === 'baseline' ? '#90caf9' : calibInfo.src === 'manual' ? '#f48fb1' : '#666'}`,
+                                        borderLeft: `3px solid ${(calibInfo.src === 'labels' || calibInfo.src === 'labels_typed') ? '#81c784' : calibInfo.src === 'baseline' ? '#90caf9' : calibInfo.src === 'manual' ? '#f48fb1' : '#666'}`,
                                     }}>
-                                        {calibInfo.src === 'labels' && <span style={{ color: isDark ? '#81c784' : '#2e7d32' }}>✓ Kalibriert aus {calibInfo.n} Training-Sessions · A={calibInfo.calibA} B={calibInfo.calibB}</span>}
+                                        {(calibInfo.src === 'labels' || calibInfo.src === 'labels_typed') && <span style={{ color: isDark ? '#81c784' : '#2e7d32' }}>✓ {calibInfo.src === 'labels_typed' ? 'Stufe-2-Kalibrierung (per Typ)' : 'Kalibriert'} aus {calibInfo.n} Sessions · A={calibInfo.calibA} B={calibInfo.calibB}</span>}
                                         {calibInfo.src === 'baseline' && <span style={{ color: isDark ? '#90caf9' : '#3949ab' }}>~ Anomalie-Baseline aktiv · A={calibInfo.calibA} B={calibInfo.calibB} <span style={{ opacity: 0.7 }}>(Training-Sessions eintragen für mehr Präzision)</span></span>}
                                         {calibInfo.src === 'manual' && <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>⚙ Manuell: sexCalibThreshold · A={calibInfo.calibA} B={calibInfo.calibB}</span>}
                                         {calibInfo.src === 'default' && <span style={{ color: isDark ? '#555' : '#aaa' }}>Standard-Schwellen · A={calibInfo.calibA} B={calibInfo.calibB} <span style={{ opacity: 0.7 }}>(Training-Sessions eintragen)</span></span>}
                                     </div>
                                 ) : (
-                                    <div style={{ color: isDark ? '#444' : '#bbb', fontSize: '0.62rem' }}>
+                                    <div style={{ color: isDark ? '#444' : '#bbb', fontSize: '0.76rem' }}>
                                         — Kalibrierungsdaten noch nicht geladen (erst nach nächstem täglichen Speichern verfügbar)
                                     </div>
                                 )}
                                 <div>• Mehr Sessions eintragen → präzisere automatische Schwellen</div>
-                                <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.58rem' }}>TYP-KLASSIFIKATION</div>
-                                <div>• Peak ≥80 + viele Str/Slot → <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>vaginal</span></div>
-                                <div>• Peak ≥55 oder Pfad B → <span style={{ color: isDark ? '#90caf9' : '#283593' }}>oral/hand</span></div>
-                                <div>• Default → <span style={{ color: '#888' }}>intim</span></div>
+                               <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.88rem' }}>TYP-KLASSIFIKATION (STUFE 1)</div>
+                               <div>• Peak ≥ calibA×1.5 + Slots → <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>vaginal</span></div>
+                               <div>• Peak ≥ calibA oder Pfad B → <span style={{ color: isDark ? '#90caf9' : '#283593' }}>oral/hand</span></div>
+                               <div>• Default → <span style={{ color: '#888' }}>intim</span></div>
+                               <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.88rem' }}>KI-KLASSIFIKATOR (STUFE 3)</div>
+                               {calibInfo?.pyClassifier ? (
+                                   calibInfo.pyClassifier.trained ? (
+                                       <div style={{ padding: '4px 7px', borderRadius: 3, background: isDark ? '#0d1a2d' : '#e8eaf6', borderLeft: '3px solid #90caf9' }}>
+                                           <span style={{ color: isDark ? '#90caf9' : '#3949ab' }}>
+                                               🤖 Aktiv — {calibInfo.pyClassifier.n} Sessions trainiert
+                                               {calibInfo.pyClassifier.counts && Object.entries(calibInfo.pyClassifier.counts).length > 0 && (
+                                                   <span style={{ opacity: 0.7 }}> ({Object.entries(calibInfo.pyClassifier.counts).map(([k,v]) => `${k === 'vaginal' ? '♥' : '◐'} ${v}x`).join(', ')})</span>
+                                               )}
+                                           </span>
+                                       </div>
+                                   ) : (
+                                       <div style={{ padding: '4px 7px', borderRadius: 3, background: isDark ? '#1a1a1a' : '#f5f5f5', borderLeft: '3px solid #555' }}>
+                                           <span style={{ color: isDark ? '#666' : '#aaa' }}>⏳ Noch nicht aktiv — {calibInfo.pyClassifier.msg}</span>
+                                       </div>
+                                   )
+                               ) : (
+                                   <div style={{ color: isDark ? '#444' : '#bbb', fontSize: '0.76rem' }}>
+                                       — Wird aktiv ab 5 Labels (mind. 2× vaginal + 2× oral)
+                                   </div>
+                               )}
                             </div>
                         </TerminalBox>
 
                         <TerminalBox title="DATENSCHUTZ" themeType={themeType}>
-                            <div style={{ fontSize: '0.68rem', lineHeight: 1.8, color: isDark ? '#555' : '#888' }}>
+                            <div style={{ fontSize: '0.83rem', lineHeight: 1.8, color: isDark ? '#555' : '#888' }}>
                                 <div>🔒 Alle Daten bleiben <strong style={{ color: isDark ? '#888' : '#555' }}>lokal</strong> auf diesem ioBroker-System</div>
                                 <div>🚫 Keine Übertragung in die Cloud</div>
                                 <div>📁 Gespeichert als tägliche JSON-Datei (History)</div>
                                 <div>⚙️ Deaktivierbar in Einstellungen → Module</div>
-                                <div style={{ marginTop: 6, fontSize: '0.55rem', color: isDark ? '#333' : '#bbb' }}>
+                                <div style={{ marginTop: 6, fontSize: '0.83rem', color: isDark ? '#333' : '#bbb' }}>
                                     Kein Medizinprodukt · Keine klinische Nutzung
                                 </div>
                             </div>
@@ -1196,3 +1265,4 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
 };
 
 export default SexTab;
+

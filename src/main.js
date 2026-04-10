@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 'use strict';
 
 /*
@@ -393,7 +393,7 @@ class CogniLiving extends utils.Adapter {
     async discoverBatteryStates() {
         var _self = this;
         var devices = this.config.devices || [];
-        // G�ngige Battery-State-Namen quer durch alle ioBroker-Adapter:
+        // Gï¿½ngige Battery-State-Namen quer durch alle ioBroker-Adapter:
         // battery/BATTERY       ? Zigbee, deCONZ, Tuya, mihome, ZHA
         // battery_percentage    ? Tuya, einige BLE-Adapter
         // battery_level/Level   ? HomeKit-Controller, Matter, ESPHome
@@ -447,7 +447,7 @@ class CogniLiving extends utils.Adapter {
                     }
                 } catch(e) {}
             }
-            // 3. Direktsuche � bis zu 3 Pfad-Ebenen hoch
+            // 3. Direktsuche ï¿½ bis zu 3 Pfad-Ebenen hoch
             //    Tiefe 1: adapter.0.device.channel  ? adapter.0.device
             //    Tiefe 2: adapter.0.device.ch.state ? adapter.0.device  (Shelly: Bat.value)
             //    Tiefe 3: adapter.0.Node.ch.sub.st  ? adapter.0.Node   (Z-Wave: params.battery.Battery_Level)
@@ -483,7 +483,7 @@ class CogniLiving extends utils.Adapter {
                         var hmMatchDot   = !hmMatchColon && d.id.match(/^([\w-]+\.\d+\.[^\.]+)\.\d+\./);
                         var hmCh0 = hmMatchColon ? hmMatchColon[1] + ':0' : (hmMatchDot ? hmMatchDot[1] + '.0' : null);
                         if (hmCh0) {
-                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans � Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
+                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans ï¿½ Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
                             for (var _hn = 0; _hn < HM_BATT_NAMES.length; _hn++) {
                                 try {
                                     var cStateHM = await _self.getForeignStateAsync(hmCh0 + '.' + HM_BATT_NAMES[_hn]);
@@ -525,7 +525,7 @@ class CogniLiving extends utils.Adapter {
                     isLow = bst.val; isCritical = bst.val; level = bst.val ? 5 : 80;
                 } else if (typeof bst.val === 'number') {
                     // Nur echte Prozentwerte (0-100) verarbeiten.
-                    // Spannungswerte (< 10) werden bewusst ignoriert � ohne Geraete-Datenbank
+                    // Spannungswerte (< 10) werden bewusst ignoriert ï¿½ ohne Geraete-Datenbank
                     // nicht zuverlaessig konvertierbar (1x CR2032 vs 2x AAA vs 1x 1.5V).
                     if (bst.val >= 0 && bst.val <= 100) {
                         level = bst.val;
@@ -2194,7 +2194,8 @@ class CogniLiving extends utils.Adapter {
                         try { var _slP = JSON.parse(_sexLabelsRaw); if (Array.isArray(_slP)) _sexLabels = _slP.filter(function(l){return l&&l.date;}); } catch(_slPE){}
                         if (_sexLabels.length >= 2) {
                             var _calHistDir = require('path').join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
-                            var _sessionPeaks = [];
+                            var _sessionPeaks = [], _vaginalPeaks = [], _oralPeaks = [];
+                            var _sexTrainData = []; // Stufe 3: Features fuer Python
                             var SLOT_CAL_MS = 5*60*1000;
                             for (var _lbl of _sexLabels.slice(0, 7)) {
                                 try {
@@ -2226,17 +2227,32 @@ class CogniLiving extends utils.Adapter {
                                         _lSlotPeaks.sort(function(a,b){return a-b;});
                                         var _lMedian = _lSlotPeaks[Math.floor(_lSlotPeaks.length/2)];
                                         _sessionPeaks.push(_lMedian);
+                                        // Stufe 2: nach Typ trennen
+                                        var _lTypNorm = (_lbl.type||'').toLowerCase();
+                                        if (_lTypNorm === 'vaginal') _vaginalPeaks.push(_lMedian);
+                                        else if (_lTypNorm === 'oral_hand') _oralPeaks.push(_lMedian);
+                                        // Stufe 3: Features fuer Python-Klassifikator
+                                        var _lPkMax = _lSlotPeaks[_lSlotPeaks.length-1];
+                                        var _lAvgP = Math.round(_lSlotPeaks.reduce(function(a,b){return a+b;},0)/_lSlotPeaks.length);
+                                        var _lVarP = Math.round(_lSlotPeaks.reduce(function(a,b){return a+(b-_lAvgP)*(b-_lAvgP);},0)/_lSlotPeaks.length);
+                                        _sexTrainData.push({ peak: _lPkMax, durSlots: _lSlotPeaks.length, avgPeak: _lAvgP, variance: _lVarP, tierB: 0, label: _lTypNorm });
                                     }
                                 } catch(_lE) { this.log.debug('[OC-SEX] Calib-Label: '+_lE.message); }
                             }
-                            if (_sessionPeaks.length >= 2) {
+                            // Stufe 2: Typ-spezifische Kalibrierung
+                            if (_vaginalPeaks.length >= 2 && _oralPeaks.length >= 2) {
+                                _vaginalPeaks.sort(function(a,b){return a-b;}); _oralPeaks.sort(function(a,b){return a-b;});
+                                _calibA = Math.max(5, Math.round(_vaginalPeaks[0] * 1.0));
+                                _calibB = Math.max(3, Math.round(_oralPeaks[0] * 0.7));
+                                _calibSrc = 'labels_typed'; _calibN = _sessionPeaks.length;
+                                this.log.info('[OC-SEX] Stufe-2-Kalib: calibA='+_calibA+' (vaginal/'+_vaginalPeaks.length+'x) calibB='+_calibB+' (oral/'+_oralPeaks.length+'x)');
+                            } else if (_sessionPeaks.length >= 2) {
                                 _sessionPeaks.sort(function(a,b){return a-b;});
                                 var _minPeak = _sessionPeaks[0];
                                 _calibB = Math.max(3, Math.round(_minPeak * 0.7));
                                 _calibA = Math.max(5, Math.round(_minPeak * 1.1));
-                                _calibSrc = 'labels';
-                                _calibN = _sessionPeaks.length;
-                                this.log.info('[OC-SEX] Kalibrierung aus '+_calibN+' Labels: calibA='+_calibA+' calibB='+_calibB+' (Peaks: '+_sessionPeaks.join(',')+')' );
+                                _calibSrc = 'labels'; _calibN = _sessionPeaks.length;
+                                this.log.info('[OC-SEX] Kalibrierung aus '+_calibN+' Labels: calibA='+_calibA+' calibB='+_calibB+' (Peaks: '+_sessionPeaks.join(',')+')');
                             }
                         }
                     } catch(_calE) { this.log.debug('[OC-SEX] Kalibrierung Fehler: '+_calE.message); }
@@ -2329,8 +2345,10 @@ class CogniLiving extends utils.Adapter {
                         var _sDens=Math.min(100,Math.round((_avgTrig/10)*100));
                         var _sDur=Math.min(100,Math.round((_durMin/60)*100)); // normiert auf 60 Min
                         var _score=Math.round(_sStr*0.5+_sDens*0.3+_sDur*0.2);
-                        var _highSlots=_runSlots.filter(function(s){return s.strMax>=80&&s.strCnt>=3;});
-                        var _type=cObj.tier==='B'?'oral_hand':(_highSlots.length>=1?'vaginal':(_peakMax>=55?'oral_hand':'intim'));
+                        // Stufe 1: Schwellen relativ zu calibA (statt fest 80/55)
+                        var _vagThresh=Math.round(_calibA*1.5);
+                        var _highSlots=_runSlots.filter(function(s){return s.strMax>=_vagThresh&&s.strCnt>=2;});
+                        var _type=cObj.tier==='B'?'oral_hand':(_highSlots.length>=1?'vaginal':(_peakMax>=_calibA?'oral_hand':'intim'));
                         var _hrMax=null, _hrAvg=null;
                         if(_garminHRVals.length>0){
                             var _hrInWin=_garminHRVals.filter(function(h){
@@ -2348,6 +2366,38 @@ class CogniLiving extends utils.Adapter {
                         }
                         intimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:_hrMax,garminHRAvg:_hrAvg,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
                     });
+                    // Stufe 3: Python-Klassifikator (wenn genug Trainings-Daten vorhanden)
+                    var _pyClassInfo = null;
+                    var _sexTD = (typeof _sexTrainData !== 'undefined') ? _sexTrainData : [];
+                    if (intimacyEvents.length > 0 && _sexTD.length >= 3) {
+                        try {
+                            var _pyPredSess = intimacyEvents.map(function(e) {
+                                var _sl = e.slots || [];
+                                var _strs = _sl.map(function(s){return s.strMax||0;});
+                                var _avg2 = _strs.length>0 ? _strs.reduce(function(a,b){return a+b;},0)/_strs.length : 0;
+                                var _var2 = _strs.length>0 ? _strs.reduce(function(a,b){return a+(b-_avg2)*(b-_avg2);},0)/_strs.length : 0;
+                                return { peak: e.peakStrength, durSlots: _sl.length, avgPeak: Math.round(_avg2), variance: Math.round(_var2), tierB: 0 };
+                            });
+                            var _pyRes = await new Promise(function(resolve, reject) {
+                                var _pyTout = setTimeout(function(){ reject(new Error('timeout')); }, 5000);
+                                pythonBridge.send(this, 'CLASSIFY_SEX_SESSIONS',
+                                    { train: _sexTD, predict: _pyPredSess },
+                                    function(r){ clearTimeout(_pyTout); resolve(r); });
+                            }.bind(this));
+                            if (_pyRes && _pyRes.payload) {
+                                _pyClassInfo = _pyRes.payload;
+                                if (_pyClassInfo.trained && Array.isArray(_pyClassInfo.results)) {
+                                    _pyClassInfo.results.forEach(function(r, i) {
+                                        if (intimacyEvents[i] && r.type && r.confidence >= 0.55) {
+                                            intimacyEvents[i].type = r.type;
+                                            intimacyEvents[i].pyConf = Math.round(r.confidence * 100);
+                                        }
+                                    });
+                                }
+                            }
+                        } catch(_pyE) { this.log.debug('[OC-SEX-PY] '+_pyE.message); }
+                    }
+                    _calibInfo.pyClassifier = _pyClassInfo ? { trained: _pyClassInfo.trained||false, n: _pyClassInfo.n_samples||0, counts: _pyClassInfo.class_counts||{}, msg: _pyClassInfo.status_msg||'' } : null;
                     if(intimacyEvents.length>0){
                         this.log.info('[OC-SEX] '+intimacyEvents.length+' Event(s) erkannt. calibA='+_calibA+' calibB='+_calibB+' Scores: '+intimacyEvents.map(function(e){return e.score+'('+e.type+')';}).join(', '));
                     } else {
@@ -2982,7 +3032,8 @@ class CogniLiving extends utils.Adapter {
                     try { var _raSlP = JSON.parse(this.config.sexTrainingLabels || ''); if (Array.isArray(_raSlP)) _raSexLabels = _raSlP.filter(function(l){return l&&l.date;}); } catch(_rlE){}
                     if (_raSexLabels.length >= 2) {
                         var _raCalDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
-                        var _raSessPeaks = [];
+                        var _raSessPeaks = [], _raVaginalPeaks = [], _raOralPeaks = [];
+                        var _raSexTrainData = [];
                         var _raSlotCalMs = 5*60*1000;
                         for (var _raLbl of _raSexLabels.slice(0, 7)) {
                             try {
@@ -3008,10 +3059,29 @@ class CogniLiving extends utils.Adapter {
                                     var _raLSVals=_raLEvts.filter(function(e){var t=e.timestamp||0;return t>=_raLS&&t<_raLS+_raSlotCalMs;}).map(function(e){return Number(e.value)||0;});
                                     if (_raLSVals.length>0) _raLSPeaks.push(Math.max.apply(null,_raLSVals));
                                 }
-                                if (_raLSPeaks.length>0){_raLSPeaks.sort(function(a,b){return a-b;});_raSessPeaks.push(_raLSPeaks[Math.floor(_raLSPeaks.length/2)]);}
+                                if (_raLSPeaks.length>0){
+                                    _raLSPeaks.sort(function(a,b){return a-b;});
+                                    var _raLMed=_raLSPeaks[Math.floor(_raLSPeaks.length/2)];
+                                    _raSessPeaks.push(_raLMed);
+                                    var _raLTyp=(_raLbl.type||'').toLowerCase();
+                                    if (_raLTyp==='vaginal') _raVaginalPeaks.push(_raLMed);
+                                    else if (_raLTyp==='oral_hand') _raOralPeaks.push(_raLMed);
+                                    var _raLPkMax=_raLSPeaks[_raLSPeaks.length-1];
+                                    var _raLAvgP=Math.round(_raLSPeaks.reduce(function(a,b){return a+b;},0)/_raLSPeaks.length);
+                                    var _raLVarP=Math.round(_raLSPeaks.reduce(function(a,b){return a+(b-_raLAvgP)*(b-_raLAvgP);},0)/_raLSPeaks.length);
+                                    _raSexTrainData.push({peak:_raLPkMax,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP,tierB:0,label:_raLTyp});
+                                }
                             } catch(_raLE){ this.log.debug('[OC-SEX-RA] Calib: '+_raLE.message); }
                         }
-                        if (_raSessPeaks.length>=2){_raSessPeaks.sort(function(a,b){return a-b;});var _raMinP=_raSessPeaks[0];_raCalibB=Math.max(3,Math.round(_raMinP*0.7));_raCalibA=Math.max(5,Math.round(_raMinP*1.1));_raCalibSrc='labels';_raCalibN=_raSessPeaks.length;}
+                        if (_raVaginalPeaks.length>=2&&_raOralPeaks.length>=2){
+                            _raVaginalPeaks.sort(function(a,b){return a-b;}); _raOralPeaks.sort(function(a,b){return a-b;});
+                            _raCalibA=Math.max(5,Math.round(_raVaginalPeaks[0]*1.0)); _raCalibB=Math.max(3,Math.round(_raOralPeaks[0]*0.7));
+                            _raCalibSrc='labels_typed'; _raCalibN=_raSessPeaks.length;
+                        } else if (_raSessPeaks.length>=2){
+                            _raSessPeaks.sort(function(a,b){return a-b;});var _raMinP=_raSessPeaks[0];
+                            _raCalibB=Math.max(3,Math.round(_raMinP*0.7));_raCalibA=Math.max(5,Math.round(_raMinP*1.1));
+                            _raCalibSrc='labels';_raCalibN=_raSessPeaks.length;
+                        }
                     }
                 } catch(_raCalE){ this.log.debug('[OC-SEX-RA] Kalibrierung: '+_raCalE.message); }
                 if (_raCalibSrc==='default'&&this.config.sexCalibThreshold&&Number(this.config.sexCalibThreshold)>0){_raCalibB=Number(this.config.sexCalibThreshold);_raCalibA=Math.round(_raCalibB*1.3);_raCalibSrc='manual';}
@@ -3032,8 +3102,36 @@ class CogniLiving extends utils.Adapter {
                 _raSlots.forEach(function(sl,i){if(_raCovA.has(i)){if(_raRunB.length>=6&&_raRunB.length<=24)_raCand.push({run:_raRunB.slice(),tier:'B'});_raRunB=[];return;}var _b=(sl.trigCnt>=1||sl.strCnt>=1)&&sl.strMax>=_raCalibB;if(_b){_raRunB.push(i);}else{if(_raRunB.length>=6&&_raRunB.length<=24)_raCand.push({run:_raRunB.slice(),tier:'B'});_raRunB=[];}});
                 if(_raRunB.length>=6&&_raRunB.length<=24)_raCand.push({run:_raRunB.slice(),tier:'B'});
                 var _raIntimacyEvents=[];
-                _raCand.forEach(function(cObj){var run=cObj.run;var _sl0=_raSlots[run[0]],_slN=_raSlots[run[run.length-1]];var _evtStart=_sl0.start,_evtEnd=_slN.end;var _durMin=Math.round(run.length*5);var _runSlots=run.map(function(i){return _raSlots[i];});var _peakMax=Math.max.apply(null,_runSlots.map(function(s){return s.strMax;}));var _avgAvg=Math.round(_runSlots.reduce(function(a,s){return a+s.strAvg;},0)/_runSlots.length);var _avgTrig=Math.round(_runSlots.reduce(function(a,s){return a+s.trigCnt;},0)/_runSlots.length);var _sStr=Math.min(100,Math.round((_peakMax/120)*100));var _sDens=Math.min(100,Math.round((_avgTrig/10)*100));var _sDur=Math.min(100,Math.round((_durMin/60)*100));var _score=Math.round(_sStr*0.5+_sDens*0.3+_sDur*0.2);var _highSlots=_runSlots.filter(function(s){return s.strMax>=80&&s.strCnt>=3;});var _type=cObj.tier==='B'?'oral_hand':(_highSlots.length>=1?'vaginal':(_peakMax>=55?'oral_hand':'intim'));_raIntimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:null,garminHRAvg:null,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});});
+                _raCand.forEach(function(cObj){var run=cObj.run;var _sl0=_raSlots[run[0]],_slN=_raSlots[run[run.length-1]];var _evtStart=_sl0.start,_evtEnd=_slN.end;var _durMin=Math.round(run.length*5);var _runSlots=run.map(function(i){return _raSlots[i];});var _peakMax=Math.max.apply(null,_runSlots.map(function(s){return s.strMax;}));var _avgAvg=Math.round(_runSlots.reduce(function(a,s){return a+s.strAvg;},0)/_runSlots.length);var _avgTrig=Math.round(_runSlots.reduce(function(a,s){return a+s.trigCnt;},0)/_runSlots.length);var _sStr=Math.min(100,Math.round((_peakMax/120)*100));var _sDens=Math.min(100,Math.round((_avgTrig/10)*100));var _sDur=Math.min(100,Math.round((_durMin/60)*100));var _score=Math.round(_sStr*0.5+_sDens*0.3+_sDur*0.2);var _raVagThr=Math.round(_raCalibA*1.5);var _highSlots=_runSlots.filter(function(s){return s.strMax>=_raVagThr&&s.strCnt>=2;});var _type=cObj.tier==='B'?'oral_hand':(_highSlots.length>=1?'vaginal':(_peakMax>=_raCalibA?'oral_hand':'intim'));_raIntimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:null,garminHRAvg:null,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});});
                 this.log.info('[OC-SEX-RA] '+_raDate+': '+_raIntimacyEvents.length+' Event(s). calibA='+_raCalibA+' calibB='+_raCalibB);
+                // Stufe 3: Python-Klassifikator
+                var _raPyInfo = null;
+                if (_raIntimacyEvents.length > 0 && _raSexTrainData.length >= 3) {
+                    try {
+                        var _raPyPred = _raIntimacyEvents.map(function(e) {
+                            var _sl=e.slots||[]; var _strs=_sl.map(function(s){return s.strMax||0;});
+                            var _avg3=_strs.length>0?_strs.reduce(function(a,b){return a+b;},0)/_strs.length:0;
+                            var _var3=_strs.length>0?_strs.reduce(function(a,b){return a+(b-_avg3)*(b-_avg3);},0)/_strs.length:0;
+                            return {peak:e.peakStrength,durSlots:_sl.length,avgPeak:Math.round(_avg3),variance:Math.round(_var3),tierB:0};
+                        });
+                        var _raPyRes = await new Promise(function(resolve,reject){
+                            var _raTout=setTimeout(function(){reject(new Error('timeout'));},5000);
+                            pythonBridge.send(this,'CLASSIFY_SEX_SESSIONS',{train:_raSexTrainData,predict:_raPyPred},function(r){clearTimeout(_raTout);resolve(r);});
+                        }.bind(this));
+                        if (_raPyRes&&_raPyRes.payload){
+                            _raPyInfo=_raPyRes.payload;
+                            if (_raPyInfo.trained&&Array.isArray(_raPyInfo.results)){
+                                _raPyInfo.results.forEach(function(r,i){
+                                    if (_raIntimacyEvents[i]&&r.type&&r.confidence>=0.55){
+                                        _raIntimacyEvents[i].type=r.type;
+                                        _raIntimacyEvents[i].pyConf=Math.round(r.confidence*100);
+                                    }
+                                });
+                            }
+                        }
+                    } catch(_raPyE){ this.log.debug('[OC-SEX-RA-PY] '+_raPyE.message); }
+                }
+                _raCalibInfo.pyClassifier = _raPyInfo ? {trained:_raPyInfo.trained||false,n:_raPyInfo.n_samples||0,counts:_raPyInfo.class_counts||{},msg:_raPyInfo.status_msg||''} : null;
                 _raSnap.intimacyEvents = _raIntimacyEvents;
                 _raSnap.sexCalibInfo = _raCalibInfo;
                 _raSnap.timestamp = Date.now();
@@ -3761,6 +3859,11 @@ class CogniLiving extends utils.Adapter {
 
 if (require.main !== module) module.exports = (options) => new CogniLiving(options);
 else new CogniLiving();
+
+
+
+
+
 
 
 

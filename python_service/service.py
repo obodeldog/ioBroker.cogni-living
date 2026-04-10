@@ -26,6 +26,7 @@ try:
     from brains.comfort import ComfortBrain
     from brains.pinn import LightweightPINN
     from brains.tracker import ParticleFilter
+    from brains.sex import SexBrain
     import numpy as np
     LIBS_AVAILABLE = True
 except ImportError as e:
@@ -40,8 +41,10 @@ if LIBS_AVAILABLE:
     comfort_brain = ComfortBrain()
     pinn_brain = LightweightPINN()
     tracker_brain = ParticleFilter()
+    sex_brain = SexBrain()
 else:
     security_brain = None
+    sex_brain = None
 
 def process_message(msg):
     try:
@@ -366,6 +369,19 @@ def process_message(msg):
             device_map = data.get("deviceMap", {}) # Neue Map
             success, top_rules = comfort_brain.train(events, device_map)
             send_result("COMFORT_RESULT", {"patterns": top_rules if success else []})
+
+        # ── STUFE 3: Sex-Klassifikator ──────────────────────────────────────────
+        elif cmd == "CLASSIFY_SEX_SESSIONS":
+            if sex_brain is None:
+                send_result("SEX_CLASSIFIED", {
+                    "trained": False, "class_counts": {}, "n_samples": 0,
+                    "status_msg": "SexBrain nicht geladen", "results": []
+                })
+            else:
+                train_samples    = data.get("train", [])
+                predict_sessions = data.get("predict", [])
+                result = sex_brain.classify_sessions(train_samples, predict_sessions)
+                send_result("SEX_CLASSIFIED", result)
 
     except Exception as e: log(f"Err processing: {e}")
 
