@@ -1306,6 +1306,9 @@ export default function HealthTab(props: any) {
         // Sensor-Indikator für Einschlaf-/Aufwachzeit
         // OC-18 FP2-Label-Fix: nur echte Präsenz-Radare bekommen das "FP2"-Label
         const hasFP2Sensor = nativeDevices.some((d: any) => d.type === 'presence_radar_bool' || d.isFP2Bed === true);
+        const hasVibSensorInstalled = nativeDevices.some((d: any) =>
+            (d.type === 'vibration_trigger' || d.type === 'vibration_strength') && d.sensorFunction === 'bed'
+        );
         const srcInfo: Record<string, {icon:string, label:string}> = {
             garmin:          { icon: '⌚', label: 'Garmin-Uhr' },
             fp2_vib:         { icon: hasFP2Sensor ? '📡' : '🛏️', label: hasFP2Sensor ? 'FP2 + Vibration' : 'Bett-Sensor + Vibration' },
@@ -1488,8 +1491,10 @@ export default function HealthTab(props: any) {
                 helpText={
                     'AURA-Sleepscore: Tief×200 + REM×150 + Leicht×80 − Wach×250 (Anzeige max. 100, Rohwert kann höher sein). Bonus +5 bei 7–9h Schlafdauer.\n' +
                     'Quellen: Diekelmann & Born 2010 (Tiefschlaf), Walker 2017 / Stickgold 2005 (REM), AASM Guidelines (Leichtschlaf), Buysse et al. 1989 PSQI (WASO-Abzug).\n' +
-                    'Einschlafzeit (' + srcDisplay.icon + '): Letzte FP2-Bettbelegung ≥10 Min zwischen 18–03 Uhr.\n' +
+                    'Einschlafzeit (' + srcDisplay.icon + '): Quelle — ' + srcDisplay.label + '. Beste Genauigkeit mit FP2-Radar oder Vibrationssensor am Bett (gap60-Logik: 60 Min Pause zwischen Bett-Events).\n' +
+                    'Schlafphasen (Balken): Nur mit Vibrationssensor am Bett (sensorFunction=bed). Ohne Vibrationssensor: kein Balken, nur Zeiten.\n' +
                     'Aufwachzeit (' + srcDisplay.icon + '): Erste Bettleere ≥15 Min nach 04 Uhr (⟳ vorläufig bis 10:00 Uhr + 1h Bett leer).\n' +
+                    'Außerhalb-Dreiecke (▼): Nur mit FP2-Radar am Bett (Bett-Leer-Erkennung erforderlich).\n' +
                     'Balkenfarben: Dunkelblau=Tief, Hellblau=Leicht, Lila=REM, Gelb=Wach-im-Bett, Bernstein=Bad-Besuch, Orange=Außerhalb.\n' +
                     'Kein Medizinprodukt — für klinische Diagnose Arzt hinzuziehen.'
                 }>
@@ -1655,12 +1660,12 @@ export default function HealthTab(props: any) {
                                                 <span key={marker.key} style={{
                                                     position:'absolute',
                                                     left: marker.pct + '%',
-                                                    top: marker.lane === 0 ? '5px' : '11px',
-                                                    color: '#888',
-                                                    fontSize:'9px', fontWeight:'normal',
+                                                    top: marker.lane === 0 ? '4px' : '11px',
+                                                    color: '#999',
+                                                    fontSize:'11px', fontWeight:'normal',
                                                     transform:'translateX(-50%)',
-                                                    cursor:'default', lineHeight:'10px',
-                                                    opacity: 0.55
+                                                    cursor:'default', lineHeight:'11px',
+                                                    opacity: 0.70
                                                 }} title={marker.title}>▲</span>
                                             ))}
                                         </div>
@@ -1690,9 +1695,11 @@ export default function HealthTab(props: any) {
                                     </div>
                                 </div>
                                 <div style={{textAlign:'center', padding:'4px', color:'#888', fontSize:'0.65rem'}}>
-                                    {personLabel
-                                        ? '📊 Schlafphasen nicht verfügbar — nur Einschlaf- und Aufwachzeit analysiert'
-                                        : '📳 Schlafphasen nicht verfügbar — Vibrationsdaten zu alt (tritt auf wenn Adapter tagsüber neu gestartet wird)'}
+                                    {hasFP2Sensor && !hasVibSensorInstalled
+                                        ? '📡 FP2-Radar aktiv — für Schlafphasen (Tief/Leicht/REM) zusätzlich einen Vibrationssensor am Bett einrichten (Typ: vibration_trigger, Funktion: bed).'
+                                        : personLabel
+                                            ? '📊 Schlafphasen nicht verfügbar — nur Einschlaf- und Aufwachzeit analysiert'
+                                            : '📳 Schlafphasen nicht verfügbar — Vibrationsdaten zu alt (tritt auf wenn Adapter tagsüber neu gestartet wird)'}
                                 </div>
                             </>
                         ) : (
@@ -1882,7 +1889,7 @@ export default function HealthTab(props: any) {
                                 </div>
                             )}
                             {/* Platzhalter damit Balken nicht springt wenn keine above-Marker */}
-                            {swStart && swEnd && markerItems.above.length === 0 && markerItems.below.length > 0 && (
+                            {swStart && swEnd && markerItems.above.length === 0 && (markerItems.below.length > 0 || markerItems.dropout.length > 0) && (
                                 <div style={{height:'18px'}} />
                             )}
 
@@ -1924,8 +1931,8 @@ export default function HealthTab(props: any) {
                                 )}
                             </div>
 
-                            {/* Dreiecks-Marker UNTER Balken: Außerhalb/andere Person rot ▲ (zeigt zum Balken hoch) */}
-                            {swStart && swEnd && markerItems.below.length > 0 && (
+                            {/* Dreiecks-Marker UNTER Balken: Außerhalb rot ▲, Radar-Aussetzer grau ▲ */}
+                            {swStart && swEnd && (markerItems.below.length > 0 || markerItems.dropout.length > 0) && (
                                 <div style={{position:'relative', height:'18px'}}>
                                     {markerItems.below.map(marker => (
                                         <span key={marker.key} style={{
@@ -1936,6 +1943,18 @@ export default function HealthTab(props: any) {
                                             fontSize:'14px', fontWeight:'bold',
                                             transform:'translateX(-50%)',
                                             cursor:'default', lineHeight:'13px'
+                                        }} title={marker.title}>▲</span>
+                                    ))}
+                                    {markerItems.dropout.map(marker => (
+                                        <span key={marker.key} style={{
+                                            position:'absolute',
+                                            left: marker.pct + '%',
+                                            top: marker.lane === 0 ? '4px' : '11px',
+                                            color: '#999',
+                                            fontSize:'11px', fontWeight:'normal',
+                                            transform:'translateX(-50%)',
+                                            cursor:'default', lineHeight:'11px',
+                                            opacity: 0.70
                                         }} title={marker.title}>▲</span>
                                     ))}
                                 </div>

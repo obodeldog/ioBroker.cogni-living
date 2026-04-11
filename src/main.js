@@ -1230,10 +1230,15 @@ class CogniLiving extends utils.Adapter {
                         this.log.info('[FROZEN-Fix] Garmin verschob Start um ' + Math.round(_frozenStartShift / 60000) + ' Min -> Stages neu berechnen');
                     _shouldRecalcStages = true;
                 } else {
-                    sleepStages    = _existingSnap.sleepStages    || [];
-                    sleepScore     = _existingSnap.sleepScore     !== undefined ? _existingSnap.sleepScore     : null;
-                    sleepScoreRaw  = _existingSnap.sleepScoreRaw  !== undefined ? _existingSnap.sleepScoreRaw  : null;
-                    this.log.info('[History] Sleep FROZEN: ' + new Date(_existingSnap.sleepWindowStart).toLocaleTimeString() + '-' + new Date(_existingSnap.sleepWindowEnd).toLocaleTimeString() + ' bedPresMin=' + _existingSnap.bedPresenceMinutes);
+                    if (_sleepFrozenMotionOnly && nightVibrationCount > 0) {
+                        this.log.info('[FROZEN-Vib] MotionOnly-Freeze aufgehoben \u2014 ' + nightVibrationCount + ' Vibrations-Events vorhanden -> Stages neu berechnen');
+                        _shouldRecalcStages = true;
+                    } else {
+                        sleepStages    = _existingSnap.sleepStages    || [];
+                        sleepScore     = _existingSnap.sleepScore     !== undefined ? _existingSnap.sleepScore     : null;
+                        sleepScoreRaw  = _existingSnap.sleepScoreRaw  !== undefined ? _existingSnap.sleepScoreRaw  : null;
+                        this.log.info('[History] Sleep FROZEN: ' + new Date(_existingSnap.sleepWindowStart).toLocaleTimeString() + '-' + new Date(_existingSnap.sleepWindowEnd).toLocaleTimeString() + ' bedPresMin=' + _existingSnap.bedPresenceMinutes);
+                    }
                 }
             } else if (sleepWindowOC7.start && sleepWindowOC7.end) {
                 _shouldRecalcStages = true;
@@ -1921,7 +1926,7 @@ class CogniLiving extends utils.Adapter {
                     // Schlafzimmer-Events ab 18:00 Vortag, um Abend-Zubettgehzeiten zu erfassen
                     var _pSearchFrom = (function(){ var d=new Date(winStart); d.setHours(18,0,0,0); if(d.getTime()>winStart) d.setDate(d.getDate()-1); return d.getTime(); })();
                     var _pBedEvts = sleepSearchEvents.filter(function(e) {
-                        return e.personTag === person && (e.isBedroomMotion || e.isFP2Bed)
+                        return e.personTag === person && (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed)
                             && (e.timestamp||0) >= _pSearchFrom;
                     }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
                     // Schlafbeginn: letztes Abend-Bett-Event vor langem Gap (>=60 Min)
