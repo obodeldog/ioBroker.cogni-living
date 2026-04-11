@@ -276,16 +276,21 @@ const ScoreCircle = ({ score, isDark }: { score: number; isDark: boolean }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Intensitäts-Balken (wie OBE-Bar in HealthTab)
 // ─────────────────────────────────────────────────────────────────────────────
-const IntimacyBar = ({ evt, isDark }: { evt: IntimacyEvent; isDark: boolean }) => {
-    // Fenster: 2h vor Event-Start bis 2h nach Event-Ende, min. 4h Breite
-    const rawStart = evt.start - 2 * 3600000;
-    const rawEnd   = evt.end   + 2 * 3600000;
+const IntimacyBar = ({ events, isDark }: { events: IntimacyEvent[]; isDark: boolean }) => {
+    if (events.length === 0) return null;
+    // Zeitfenster: 2h vor frühestem Start bis 2h nach spätestem Ende, min. 4h Breite
+    const minStart = Math.min(...events.map(e => e.start));
+    const maxEnd   = Math.max(...events.map(e => e.end));
+    const rawStart = minStart - 2 * 3600000;
+    const rawEnd   = maxEnd   + 2 * 3600000;
     const winDur   = Math.max(rawEnd - rawStart, 4 * 3600000);
     // Auf volle Stunden runden für schöne Achse
     const winStart = new Date(rawStart); winStart.setMinutes(0, 0, 0);
     const winStartMs = winStart.getTime();
     const tickCount = Math.round(winDur / 3600000) + 1;
     const ticks = Array.from({ length: tickCount }, (_, i) => winStartMs + i * 3600000);
+    // Alle Slots aller Events zusammenführen
+    const allSlots = events.flatMap(e => e.slots);
 
     return (
         <div>
@@ -293,7 +298,7 @@ const IntimacyBar = ({ evt, isDark }: { evt: IntimacyEvent; isDark: boolean }) =
                 INTENSITÄTS-VERLAUF (5-Min-Slots)
             </div>
             <div style={{ position: 'relative', height: 28, background: isDark ? '#111' : '#f0f0f0', borderRadius: 3, overflow: 'hidden' }}>
-                {evt.slots.map((sl, i) => {
+                {allSlots.map((sl, i) => {
                     const left = ((sl.start - winStartMs) / winDur) * 100;
                     const width = Math.max(0.5, (15 * 60000 / winDur) * 100);
                     if (left < -2 || left > 102) return null;
@@ -305,12 +310,14 @@ const IntimacyBar = ({ evt, isDark }: { evt: IntimacyEvent; isDark: boolean }) =
                         }} title={`${fmtTime(sl.start)}: Peak ${sl.strMax}, Trig ${sl.trigCnt}`} />
                     );
                 })}
-                {/* Start-Markierung */}
-                <div style={{
-                    position: 'absolute',
-                    left: `${Math.max(0, ((evt.start - winStartMs) / winDur) * 100)}%`,
-                    top: 0, width: 2, height: '100%', background: '#f48fb1', opacity: 0.9
-                }} />
+                {/* Start-Markierung für jedes Event */}
+                {events.map((evt, i) => (
+                    <div key={i} style={{
+                        position: 'absolute',
+                        left: `${Math.max(0, ((evt.start - winStartMs) / winDur) * 100)}%`,
+                        top: 0, width: 2, height: '100%', background: '#f48fb1', opacity: 0.9
+                    }} />
+                ))}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.48rem', color: isDark ? '#444' : '#aaa', marginTop: 2 }}>
                 {ticks.slice(0, 5).map((t, i) => <span key={i}>{fmtTime(t).slice(0,5)}</span>)}
@@ -428,7 +435,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
             </div>
 
             {/* Intensitäts-Balken */}
-            <IntimacyBar evt={evt} isDark={isDark} />
+            <IntimacyBar events={events} isDark={isDark} />
 
             {/* Mehrere Events an einem Tag */}
             {events.length > 1 && (
@@ -662,16 +669,7 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels }: {
                                 alignItems: 'center', justifyContent: 'center',
                                 fontSize: '0.7rem'
                             }}>
-                                {hasEvt ? (effType === 'vaginal' ? `
-�
-�
-` : effType === 'oral_hand' ? `
-�
-�
-` : `
-�
-�
-`) : (isToday ? '?' : '-')}
+                                {hasEvt ? (effType === 'vaginal' ? '🔴' : effType === 'oral_hand' ? '👄' : '💜') : (isToday ? '?' : '–')}
                             </div>
                             {hasEvt && (
                                 <>
@@ -679,9 +677,7 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels }: {
                                     <div style={{ fontSize: '0.45rem', color: isDark ? '#555' : '#aaa' }}>{fmtTime(evt!.start).slice(0,5)}</div>
                                     <div style={{ fontSize: '0.45rem', color: typeColor(effType, isDark), fontWeight: 'bold' }}>
                                         {effType === 'vaginal' ? 'Vaginal' : effType === 'oral_hand' ? 'Oral' : 'Intim'}
-                                        {dayLbl && effType !== evt!.type && <span style={{ color: isDark ? '#555' : '#ccc' }}> 
-✏
-</span>}
+                                        {dayLbl && effType !== evt!.type && <span style={{ color: isDark ? '#555' : '#ccc' }}> ✏</span>}
                                     </div>
                                 </>
                             )}
