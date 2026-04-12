@@ -393,7 +393,7 @@ class CogniLiving extends utils.Adapter {
     async discoverBatteryStates() {
         var _self = this;
         var devices = this.config.devices || [];
-        // Gï¿½ngige Battery-State-Namen quer durch alle ioBroker-Adapter:
+        // G�ngige Battery-State-Namen quer durch alle ioBroker-Adapter:
         // battery/BATTERY       ? Zigbee, deCONZ, Tuya, mihome, ZHA
         // battery_percentage    ? Tuya, einige BLE-Adapter
         // battery_level/Level   ? HomeKit-Controller, Matter, ESPHome
@@ -447,7 +447,7 @@ class CogniLiving extends utils.Adapter {
                     }
                 } catch(e) {}
             }
-            // 3. Direktsuche ï¿½ bis zu 3 Pfad-Ebenen hoch
+            // 3. Direktsuche � bis zu 3 Pfad-Ebenen hoch
             //    Tiefe 1: adapter.0.device.channel  ? adapter.0.device
             //    Tiefe 2: adapter.0.device.ch.state ? adapter.0.device  (Shelly: Bat.value)
             //    Tiefe 3: adapter.0.Node.ch.sub.st  ? adapter.0.Node   (Z-Wave: params.battery.Battery_Level)
@@ -483,7 +483,7 @@ class CogniLiving extends utils.Adapter {
                         var hmMatchDot   = !hmMatchColon && d.id.match(/^([\w-]+\.\d+\.[^\.]+)\.\d+\./);
                         var hmCh0 = hmMatchColon ? hmMatchColon[1] + ':0' : (hmMatchDot ? hmMatchDot[1] + '.0' : null);
                         if (hmCh0) {
-                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans ï¿½ Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
+                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans � Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
                             for (var _hn = 0; _hn < HM_BATT_NAMES.length; _hn++) {
                                 try {
                                     var cStateHM = await _self.getForeignStateAsync(hmCh0 + '.' + HM_BATT_NAMES[_hn]);
@@ -525,7 +525,7 @@ class CogniLiving extends utils.Adapter {
                     isLow = bst.val; isCritical = bst.val; level = bst.val ? 5 : 80;
                 } else if (typeof bst.val === 'number') {
                     // Nur echte Prozentwerte (0-100) verarbeiten.
-                    // Spannungswerte (< 10) werden bewusst ignoriert ï¿½ ohne Geraete-Datenbank
+                    // Spannungswerte (< 10) werden bewusst ignoriert � ohne Geraete-Datenbank
                     // nicht zuverlaessig konvertierbar (1x CR2032 vs 2x AAA vs 1x 1.5V).
                     if (bst.val >= 0 && bst.val <= 100) {
                         level = bst.val;
@@ -2448,11 +2448,16 @@ class CogniLiving extends utils.Adapter {
                                 _pyClassInfo = _pyRes.payload;
                                 if (_pyClassInfo.trained && Array.isArray(_pyClassInfo.results)) {
                                     _pyClassInfo.results.forEach(function(r, i) {
-                                        if (intimacyEvents[i] && r.type && r.confidence >= 0.55) {
+                                        if (!intimacyEvents[i]) return;
+                                        if (r.type === 'nullnummer' && r.confidence >= 0.60) {
+                                            this.log.info('[OC-SEX-PY] Session '+i+' als Nullnummer klassifiziert — wird entfernt');
+                                            intimacyEvents[i] = null;
+                                        } else if (r.type && r.type !== 'nullnummer' && r.confidence >= 0.55) {
                                             intimacyEvents[i].type = r.type;
                                             intimacyEvents[i].pyConf = Math.round(r.confidence * 100);
                                         }
-                                    });
+                                    }.bind(this));
+                                    intimacyEvents = intimacyEvents.filter(function(e){ return e !== null; });
                                 }
                             }
                         } catch(_pyE) { this.log.debug('[OC-SEX-PY] '+_pyE.message); }
@@ -3220,11 +3225,16 @@ class CogniLiving extends utils.Adapter {
                             _raPyInfo=_raPyRes.payload;
                             if (_raPyInfo.trained&&Array.isArray(_raPyInfo.results)){
                                 _raPyInfo.results.forEach(function(r,i){
-                                    if (_raIntimacyEvents[i]&&r.type&&r.confidence>=0.55){
+                                    if (!_raIntimacyEvents[i]) return;
+                                    if (r.type==='nullnummer'&&r.confidence>=0.60){
+                                        this.log.info('[OC-SEX-RA-PY] Session '+i+' als Nullnummer klassifiziert — wird entfernt');
+                                        _raIntimacyEvents[i]=null;
+                                    } else if (r.type&&r.type!=='nullnummer'&&r.confidence>=0.55){
                                         _raIntimacyEvents[i].type=r.type;
                                         _raIntimacyEvents[i].pyConf=Math.round(r.confidence*100);
                                     }
-                                });
+                                }.bind(this));
+                                _raIntimacyEvents=_raIntimacyEvents.filter(function(e){return e!==null;});
                             }
                         }
                     } catch(_raPyE){ this.log.debug('[OC-SEX-RA-PY] '+_raPyE.message); }

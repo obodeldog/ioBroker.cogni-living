@@ -201,19 +201,23 @@ const slotColor = (max: number): string => {
 };
 
 // Typ-Label
+// Typ-Label
 const typeLabel = (type: string): string => {
-    if (type === 'vaginal')   return '♥ Vaginal';
-    if (type === 'oral_hand') return '◐ Oral / Hand';
-    return '⬡ Intim';
+    if (type === 'vaginal')    return '\u2665 Vaginal';
+    if (type === 'oral_hand')  return '\ud83d\udc9c Oral / Hand';
+    if (type === 'nullnummer') return '\ud83d\udeab Nullnummer';
+    return '\ud83d\udc9c Intim';
 };
 const typeBg = (type: string, isDark: boolean): string => {
-    if (type === 'vaginal')   return isDark ? '#880e4f' : '#fce4ec';
-    if (type === 'oral_hand') return isDark ? '#1a237e' : '#e8eaf6';
+    if (type === 'vaginal')    return isDark ? '#880e4f' : '#fce4ec';
+    if (type === 'oral_hand')  return isDark ? '#1a237e' : '#e8eaf6';
+    if (type === 'nullnummer') return isDark ? '#1a1a1a' : '#f5f5f5';
     return isDark ? '#212121' : '#f5f5f5';
 };
 const typeColor = (type: string, isDark: boolean): string => {
-    if (type === 'vaginal')   return isDark ? '#f48fb1' : '#c2185b';
-    if (type === 'oral_hand') return isDark ? '#90caf9' : '#283593';
+    if (type === 'vaginal')    return isDark ? '#f48fb1' : '#c2185b';
+    if (type === 'oral_hand')  return isDark ? '#90caf9' : '#283593';
+    if (type === 'nullnummer') return isDark ? '#555' : '#aaa';
     return isDark ? '#888' : '#555';
 };
 
@@ -329,9 +333,10 @@ const IntimacyBar = ({ events, isDark }: { events: IntimacyEvent[]; isDark: bool
 // ─────────────────────────────────────────────────────────────────────────────
 // Einzeltag-Kachel
 // ─────────────────────────────────────────────────────────────────────────────
-const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, curDateStr }: {
+const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, curDateStr, onChange }: {
     events: IntimacyEvent[]; dateLabel: string; themeType: string; funMode: boolean;
     native?: Record<string, any>; labels?: SexTrainingLabel[]; curDateStr?: string;
+    onChange?: (attr: string, val: any) => void;
 }) => {
     const isDark = themeType === 'dark';
     const dividerColor = isDark ? '#222' : '#eee';
@@ -366,6 +371,38 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
         ? matchedLabel.type as 'vaginal' | 'oral_hand'
         : evt.type;
     const isManualOverride = matchedLabel != null && matchedLabel.type !== evt.type;
+
+    // Nullnummer: Diese Session war kein Sex — spezielle Ansicht mit Undo
+    if (matchedLabel?.type === 'nullnummer') {
+        return (
+            <TerminalBox title={`SEX - ${dateLabel}`} themeType={themeType}>
+                <div style={{ textAlign: 'center', padding: '16px 8px' }}>
+                    <div style={{ fontSize: '1.6rem', marginBottom: 8, opacity: 0.35 }}>?</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: isDark ? '#555' : '#aaa', marginBottom: 4 }}>
+                        Nullnummer — Kein Sex
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: isDark ? '#3a3a3a' : '#ccc', marginBottom: 10 }}>
+                        Sensor meldete {fmtTime(evt.start)}{'\u2013'}{fmtTime(evt.end)}: Fehlauslösung erkannt.
+                        Der Algorithmus lernt daraus.
+                    </div>
+                    {onChange && curDateStr && (
+                        <button onClick={() => {
+                            const updated = (labels || []).filter(
+                                l => !(l.date === curDateStr && l.type === 'nullnummer')
+                            );
+                            saveSexLabels(updated, onChange);
+                        }} style={{ fontSize: '0.7rem', padding: '4px 12px', cursor: 'pointer',
+                            background: isDark ? '#1a1a1a' : '#f5f5f5',
+                            color: isDark ? '#888' : '#aaa', border: '1px solid',
+                            borderColor: isDark ? '#333' : '#ddd', borderRadius: 4
+                        }}>
+                            ↩ Rückgängig
+                        </button>
+                    )}
+                </div>
+            </TerminalBox>
+        );
+    }
 
     return (
         <TerminalBox title={`SEX — ${dateLabel}`} themeType={themeType}
@@ -476,6 +513,27 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
             ) : (
                 <div style={{ fontSize: '0.83rem', color: isDark ? '#333' : '#ccc' }}>
                     ⌚ Garmin: kein HR-Signal im Aktivitätsfenster
+                </div>
+            )}
+            {/* Nullnummer-Button: Sensor hatte Fehlausl\u00f6sung */}
+            {!matchedLabel && onChange && curDateStr && (
+                <div style={{ marginTop: 10 }}>
+                    <button onClick={() => {
+                        const h = new Date(evt.start).getHours();
+                        const m = new Date(evt.start).getMinutes();
+                        const t = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+                        const newLbl: SexTrainingLabel = {
+                            date: curDateStr, type: 'nullnummer', time: t, durationMin: evt.duration
+                        };
+                        saveSexLabels([...(labels || []), newLbl], onChange);
+                    }} style={{ width: '100%', fontSize: '0.72rem', padding: '6px 10px', cursor: 'pointer',
+                        background: isDark ? '#1a1a1a' : '#f9f9f9',
+                        color: isDark ? '#666' : '#bbb',
+                        border: '1px dashed', borderColor: isDark ? '#333' : '#ddd',
+                        borderRadius: 4, textAlign: 'left'
+                    }}>
+                        ? Das war kein Sex \u2014 Nullnummer eintragen
+                    </button>
                 </div>
             )}
         </TerminalBox>
@@ -650,12 +708,13 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels }: {
                     const evt     = hasEvt ? day.events[0] : null;
                     // Manuelles Label hat Vorrang
                     const dayLbl = (labels && hasEvt) ? findMatchingLabel(day.dateStr, day.events, labels) : null;
+                    const isNullnummer = dayLbl?.type === 'nullnummer';
                     const effType: string = (dayLbl && (dayLbl.type === 'vaginal' || dayLbl.type === 'oral_hand'))
                         ? dayLbl.type
                         : (evt?.type ?? 'intim');
-                    const dotColor = !hasEvt ? (isDark ? '#1a1a1a' : '#f0f0f0') :
+                    const dotColor = (!hasEvt || isNullnummer) ? (isDark ? '#1a1a1a' : '#f0f0f0') :
                         effType === 'vaginal' ? '#880e4f' : '#4a148c';
-                    const dotBorder = !hasEvt ? `1px dashed ${isDark ? '#2a2a2a' : '#ddd'}` :
+                    const dotBorder = (!hasEvt || isNullnummer) ? ('1px dashed ' + (isDark ? '#2a2a2a' : '#ddd')) :
                         effType === 'vaginal' ? '1px solid #c2185b' : '1px solid #7b1fa2';
                     return (
                         <div key={i}>
@@ -667,19 +726,22 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels }: {
                                 background: dotColor, border: dotBorder,
                                 margin: '0 auto 3px', display: 'flex',
                                 alignItems: 'center', justifyContent: 'center',
-                                fontSize: '0.7rem'
+                                fontSize: '0.7rem', opacity: isNullnummer ? 0.45 : 1
                             }}>
-                                {hasEvt ? (effType === 'vaginal' ? '🔴' : effType === 'oral_hand' ? '👄' : '💜') : (isToday ? '?' : '–')}
+                                {isNullnummer ? '\u26d4' : hasEvt ? (effType === 'vaginal' ? '\u2665\ufe0f' : effType === 'oral_hand' ? '\ud83d\udc9c' : '\ud83d\udc9c') : (isToday ? '\u23f3' : '-')}
                             </div>
-                            {hasEvt && (
+                            {hasEvt && !isNullnummer && (
                                 <>
                                     <div style={{ fontSize: '0.88rem', color: isDark ? '#ce93d8' : '#7b1fa2', fontWeight: 'bold' }}>{evt!.score}</div>
                                     <div style={{ fontSize: '0.45rem', color: isDark ? '#555' : '#aaa' }}>{fmtTime(evt!.start).slice(0,5)}</div>
                                     <div style={{ fontSize: '0.45rem', color: typeColor(effType, isDark), fontWeight: 'bold' }}>
                                         {effType === 'vaginal' ? 'Vaginal' : effType === 'oral_hand' ? 'Oral' : 'Intim'}
-                                        {dayLbl && effType !== evt!.type && <span style={{ color: isDark ? '#555' : '#ccc' }}> ✏</span>}
+                                        {dayLbl && effType !== evt!.type && <span style={{ color: isDark ? '#555' : '#ccc' }}> ?</span>}
                                     </div>
                                 </>
+                            )}
+                            {hasEvt && isNullnummer && (
+                                <div style={{ fontSize: '0.45rem', color: isDark ? '#444' : '#ccc', marginTop: 2 }}>Null-<br />nummer</div>
                             )}
                         </div>
                     );
@@ -1346,6 +1408,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                             native={native}
                             labels={labels}
                             curDateStr={dateStr(viewDate)}
+                            onChange={onChange}
                         />
                         <SevenDayHistory historyDays={historyDays} themeType={themeType} funMode={funMode} labels={labels} />
                         <MonthCalendar

@@ -102,7 +102,7 @@ class SexBrain:
         X, y = [], []
         for s in samples:
             lbl = (s.get('label') or '').strip().lower()
-            if lbl not in ('vaginal', 'oral_hand'):
+            if lbl not in ('vaginal', 'oral_hand', 'nullnummer'):
                 continue
             X.append(self._feat(s))
             y.append(lbl)
@@ -111,21 +111,24 @@ class SexBrain:
         self.class_counts = counts
         self.n_samples    = len(X)
 
-        # Mindest-Anforderungen pruefen
+        # Mindest-Anforderungen pruefen (nur fuer positive Klassen vaginal + oral_hand)
+        pos_counts = {k: v for k, v in counts.items() if k in ('vaginal', 'oral_hand')}
+
         if len(X) < MIN_TOTAL:
             needed = MIN_TOTAL - len(X)
             self.is_trained = False
             self.status_msg = f'Noch {needed} Label(s) benoetigt (mind. {MIN_TOTAL} gesamt)'
             return False, counts, self.status_msg
 
-        if len(counts) < 2:
-            only    = list(counts.keys())[0] if counts else '?'
+        if len(pos_counts) < 2:
+            only    = list(pos_counts.keys())[0] if pos_counts else '?'
             missing = 'oral_hand' if only == 'vaginal' else 'vaginal'
             self.is_trained = False
             self.status_msg = f'Beide Typen benoetigt — mind. {MIN_PER_CLASS}x {missing} fehlt noch'
             return False, counts, self.status_msg
 
-        short = [f'{k}: {v}/{MIN_PER_CLASS}' for k, v in counts.items() if v < MIN_PER_CLASS]
+        # Nullnummer braucht kein Mindest-Count — auch 1 Nullnummer-Sample ist wertvoll
+        short = [f'{k}: {v}/{MIN_PER_CLASS}' for k, v in pos_counts.items() if v < MIN_PER_CLASS]
         if short:
             self.is_trained = False
             self.status_msg = f'Zu wenig Samples: {", ".join(short)}'
@@ -172,7 +175,9 @@ class SexBrain:
             except Exception:
                 self.loo_accuracy = None
 
-        self.status_msg = f'Aktiv — {len(X)} Sessions | Top-Features: {top3}'
+        nn = counts.get('nullnummer', 0)
+        nn_info = f' | {nn}x Nullnummer' if nn > 0 else ''
+        self.status_msg = f'Aktiv — {len(X)} Sessions{nn_info} | Top-Features: {top3}'
         return True, counts, self.status_msg
 
     # ------------------------------------------------------------------
