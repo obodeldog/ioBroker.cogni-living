@@ -3250,7 +3250,7 @@ class CogniLiving extends utils.Adapter {
                 this.sendTo(obj.from, obj.command, { success: false, error: _raE.message }, obj.callback);
             }
         }
-        // reanalyzeAllSexDays: Alle History-Tage neu analysieren (Sex-Modul)
+        // reanalyzeAllSexDays: Gibt Liste aller Tage zurueck - Frontend ruft reanalyzeSexDay sequenziell auf
         else if (obj.command === 'reanalyzeAllSexDays') {
             try {
                 if (this.config.moduleSex !== true) {
@@ -3260,34 +3260,17 @@ class CogniLiving extends utils.Adapter {
                 if (!fs.existsSync(_allDir)) {
                     this.sendTo(obj.from, obj.command, { success: false, error: 'History-Verzeichnis nicht gefunden' }, obj.callback); return;
                 }
+                // Nur Tage mit eventHistory zurueckgeben (nicht leere Dateien)
                 const _allFiles = fs.readdirSync(_allDir).filter(function(f) { return /^\d{4}-\d{2}-\d{2}\.json$/.test(f); }).sort();
-                const _allResults = { processed: 0, sessionsFound: 0, errors: 0, dates: [] };
-                for (var _aFi = 0; _aFi < _allFiles.length; _aFi++) {
-                    var _aDate = _allFiles[_aFi].replace('.json', '');
+                const _allDates = [];
+                for (var _adFi = 0; _adFi < _allFiles.length; _adFi++) {
                     try {
-                        var _aPath = path.join(_allDir, _allFiles[_aFi]);
-                        var _aSnap = JSON.parse(fs.readFileSync(_aPath, 'utf8'));
-                        var _aEvts = _aSnap.eventHistory || [];
-                        if (_aEvts.length === 0) continue;
-                        // Reanalyse mit gleichem Code wie reanalyzeSexDay (inline aufgerufen)
-                        var _aMsgObj = { from: obj.from, command: 'reanalyzeSexDay', message: { date: _aDate }, callback: null };
-                        // Ergebnis sammeln ohne Callback
-                        var _aResult = await new Promise((resolve) => {
-                            var _fakeObj = { from: obj.from, command: 'reanalyzeSexDay', message: { date: _aDate }, callback: function(_, r) { resolve(r); } };
-                            this.onMessage(_fakeObj);
-                        });
-                        _allResults.processed++;
-                        if (_aResult && _aResult.success && _aResult.data && (_aResult.data.intimacyEvents || []).length > 0) {
-                            _allResults.sessionsFound += (_aResult.data.intimacyEvents || []).length;
-                            _allResults.dates.push(_aDate);
-                        }
-                    } catch(_aE) {
-                        _allResults.errors++;
-                        this.log.warn('[ReanalyzeAll] Fehler bei ' + _aDate + ': ' + _aE.message);
-                    }
+                        var _adSnap = JSON.parse(fs.readFileSync(path.join(_allDir, _allFiles[_adFi]), 'utf8'));
+                        if ((_adSnap.eventHistory || []).length > 0) _allDates.push(_allFiles[_adFi].replace('.json', ''));
+                    } catch(e) {}
                 }
-                this.log.info('[ReanalyzeAll] Abgeschlossen: ' + _allResults.processed + ' Tage, ' + _allResults.sessionsFound + ' Sessions, ' + _allResults.errors + ' Fehler.');
-                this.sendTo(obj.from, obj.command, { success: true, data: _allResults }, obj.callback);
+                this.log.info('[ReanalyzeAll] ' + _allDates.length + ' Tage mit Daten gefunden.');
+                this.sendTo(obj.from, obj.command, { success: true, dates: _allDates }, obj.callback);
             } catch(_allE) {
                 this.log.warn('[ReanalyzeAll] Fehler: ' + _allE.message);
                 this.sendTo(obj.from, obj.command, { success: false, error: _allE.message }, obj.callback);
@@ -4040,6 +4023,7 @@ class CogniLiving extends utils.Adapter {
 
 if (require.main !== module) module.exports = (options) => new CogniLiving(options);
 else new CogniLiving();
+
 
 
 

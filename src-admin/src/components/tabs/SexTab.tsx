@@ -1290,22 +1290,41 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
 
     const reanalyzeAllDays = async () => {
         setReanalyzingAll(true);
-        setReanalyzeAllMsg(null);
+        setReanalyzeAllMsg('Lade Tagesliste...');
         try {
-            const result: any = await socket.sendTo(
+            // Schritt 1: Datumsliste vom Backend holen
+            const listResult: any = await socket.sendTo(
                 `${adapterName}.${instance}`, 'reanalyzeAllSexDays', {}
             );
-            if (result?.success && result?.data) {
-                const d = result.data;
-                setReanalyzeAllMsg(`✓ ${d.processed} Tage — ${d.sessionsFound} Sessions gefunden`);
-            } else {
-                setReanalyzeAllMsg('✗ ' + (result?.error || 'Fehler'));
+            if (!listResult?.success || !listResult?.dates) {
+                setReanalyzeAllMsg('✗ ' + (listResult?.error || 'Fehler'));
+                setReanalyzingAll(false);
+                return;
             }
+            const dates: string[] = listResult.dates;
+            let sessionsFound = 0;
+            let errors = 0;
+            // Schritt 2: Jeden Tag einzeln analysieren (sequenziell)
+            for (let i = 0; i < dates.length; i++) {
+                setReanalyzeAllMsg(`${i + 1}/${dates.length} — ${dates[i]}`);
+                try {
+                    const r: any = await socket.sendTo(
+                        `${adapterName}.${instance}`, 'reanalyzeSexDay', { date: dates[i] }
+                    );
+                    if (r?.success && r?.data) {
+                        const evts = r.data.intimacyEvents ?? [];
+                        sessionsFound += evts.length;
+                        if (evts.length > 0) setDayData(prev => ({ ...prev, [dates[i]]: evts }));
+                    } else { errors++; }
+                } catch { errors++; }
+            }
+            const msg = `✓ ${dates.length} Tage — ${sessionsFound} Sessions${errors > 0 ? ` (${errors} Fehler)` : ''}`;
+            setReanalyzeAllMsg(msg);
         } catch (e: any) {
             setReanalyzeAllMsg('✗ ' + (e?.message || 'Fehler'));
         }
         setReanalyzingAll(false);
-        setTimeout(() => setReanalyzeAllMsg(null), 6000);
+        setTimeout(() => setReanalyzeAllMsg(null), 8000);
     };
 
     const loadMonth = async (m: string) => {
