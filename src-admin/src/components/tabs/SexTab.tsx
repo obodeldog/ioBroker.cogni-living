@@ -90,6 +90,21 @@ function saveSexLabels(labels: SexTrainingLabel[], onChange: (attr: string, val:
     onChange('sexTrainingLabels', JSON.stringify(labels, null, 2));
 }
 
+/** Findet ein Label das zu einem spezifischen Event passt (+-1h Zeitfenster). */
+function findLabelForEvent(dStr: string, evt: IntimacyEvent, labels: SexTrainingLabel[]): SexTrainingLabel | null {
+    const dayLabels = labels.filter(l => l.date === dStr);
+    if (dayLabels.length === 0) return null;
+    for (const lbl of dayLabels) {
+        if (!lbl.time || !/^\d{1,2}:\d{2}$/.test(lbl.time)) continue;
+        const [hh, mm] = lbl.time.split(':').map(Number);
+        const t0 = new Date(dStr + 'T00:00:00');
+        t0.setHours(hh, mm, 0, 0);
+        if (Math.abs(t0.getTime() - evt.start) < 60 * 60000) return lbl;
+    }
+    if (dayLabels.length === 1 && !dayLabels[0].time) return dayLabels[0];
+    return null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Hilfsfunktionen
 // ─────────────────────────────────────────────────────────────────────────────
@@ -373,7 +388,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
     const isManualOverride = matchedLabel != null && matchedLabel.type !== evt.type;
 
     // Nullnummer: Diese Session war kein Sex — spezielle Ansicht mit Undo
-    if (matchedLabel?.type === 'nullnummer') {
+    if (curDateStr && findLabelForEvent(curDateStr, evt, labels || [])?.type === 'nullnummer') {
         return (
             <TerminalBox title={`SEX - ${dateLabel}`} themeType={themeType}>
                 <div style={{ textAlign: 'center', padding: '16px 8px' }}>
@@ -387,9 +402,14 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
                     </div>
                     {onChange && curDateStr && (
                         <button onClick={() => {
-                            const updated = (labels || []).filter(
-                                l => !(l.date === curDateStr && l.type === 'nullnummer')
-                            );
+                            if (!onChange || !curDateStr) return;
+                            const evtH = new Date(evt.start).getHours();
+                            const evtM = new Date(evt.start).getMinutes();
+                            const updated = (labels || []).filter(l => {
+                                if (l.date !== curDateStr || l.type !== 'nullnummer' || !l.time) return true;
+                                const [hh,mm] = l.time.split(':').map(Number);
+                                return !(hh === evtH && mm === evtM);
+                            });
                             saveSexLabels(updated, onChange);
                         }} style={{ fontSize: '0.7rem', padding: '4px 12px', cursor: 'pointer',
                             background: isDark ? '#1a1a1a' : '#f5f5f5',
@@ -474,66 +494,65 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
             {/* Intensitäts-Balken */}
             <IntimacyBar events={events} isDark={isDark} />
 
-            {/* Mehrere Events an einem Tag */}
-            {events.length > 1 && (
-                <div style={{ fontSize: '0.6rem', color: isDark ? '#666' : '#aaa', marginTop: 6, fontStyle: 'italic' }}>
-                    +{events.length - 1} weitere Session(s) heute
-                </div>
-            )}
-
-            <div style={{ borderTop: `1px dashed ${dividerColor}`, margin: '8px 0' }} />
-
-            {/* Fun-Kommentar */}
-            {funMode && (
-                <div style={{
-                    background: isDark ? '#130d1a' : '#f3e5f5',
-                    border: `1px solid ${isDark ? '#6a1b9a' : '#ce93d8'}`,
-                    borderRadius: 4, padding: '8px 10px', fontSize: '0.88rem',
-                    color: isDark ? '#ce93d8' : '#6a1b9a', fontStyle: 'italic', marginBottom: 8
-                }}>
-                    {getFunComment(evt, native)}
-                </div>
-            )}
-
-            {/* Garmin HR */}
-            {(evt.garminHRMax !== null || evt.garminHRAvg !== null) ? (
-                <>
-                    <div style={{ fontSize: '0.83rem', color: isDark ? '#555' : '#aaa', marginBottom: 4 }}>⌚ GARMIN HERZFREQUENZ</div>
-                    <div style={{ display: 'flex', gap: 16 }}>
-                        <div>
-                            <div style={{ fontSize: '0.8rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase' }}>Max HR</div>
-                            <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#ef5350' }}>{evt.garminHRMax} bpm</div>
+            {/* Session-Liste: pro Session eigene Nullnummer-Option */}
+            {onChange && curDateStr && (
+                <div style={{ marginTop: 8 }}>
+                    {events.length > 1 && (
+                        <div style={{ fontSize: '0.58rem', color: isDark ? '#555' : '#aaa', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            Alle Sessions dieses Tages
                         </div>
-                        <div>
-                            <div style={{ fontSize: '0.8rem', color: isDark ? '#555' : '#aaa', textTransform: 'uppercase' }}>Ø HR (Fenster)</div>
-                            <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#ff7043' }}>{evt.garminHRAvg} bpm</div>
-                        </div>
-                    </div>
-                </>
-            ) : (
-                <div style={{ fontSize: '0.83rem', color: isDark ? '#333' : '#ccc' }}>
-                    ⌚ Garmin: kein HR-Signal im Aktivitätsfenster
-                </div>
-            )}
-            {/* Nullnummer-Button: Sensor hatte Fehlausl\u00f6sung */}
-            {!matchedLabel && onChange && curDateStr && (
-                <div style={{ marginTop: 10 }}>
-                    <button onClick={() => {
-                        const h = new Date(evt.start).getHours();
-                        const m = new Date(evt.start).getMinutes();
-                        const t = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
-                        const newLbl: SexTrainingLabel = {
-                            date: curDateStr, type: 'nullnummer', time: t, durationMin: evt.duration
-                        };
-                        saveSexLabels([...(labels || []), newLbl], onChange);
-                    }} style={{ width: '100%', fontSize: '0.72rem', padding: '6px 10px', cursor: 'pointer',
-                        background: isDark ? '#1a1a1a' : '#f9f9f9',
-                        color: isDark ? '#666' : '#bbb',
-                        border: '1px dashed', borderColor: isDark ? '#333' : '#ddd',
-                        borderRadius: 4, textAlign: 'left'
-                    }}>
-                        ? Das war kein Sex \u2014 Nullnummer eintragen
-                    </button>
+                    )}
+                    {events.map((e, idx) => {
+                        const eH = new Date(e.start).getHours();
+                        const eM = new Date(e.start).getMinutes();
+                        const eTime = String(eH).padStart(2,'0') + ':' + String(eM).padStart(2,'0');
+                        const evtLabel = findLabelForEvent(curDateStr!, e, labels || []);
+                        const isEvtNull = evtLabel?.type === 'nullnummer';
+                        return (
+                            <div key={idx} style={{
+                                display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5,
+                                padding: '4px 8px', borderRadius: 4,
+                                background: isEvtNull ? (isDark ? '#111' : '#f9f9f9') : 'transparent',
+                                border: '1px solid', borderColor: isEvtNull ? (isDark ? '#222' : '#eee') : 'transparent'
+                            }}>
+                                <div style={{ flex: 1, fontSize: '0.7rem',
+                                    color: isEvtNull ? (isDark ? '#444' : '#ccc') : (isDark ? '#888' : '#666'),
+                                    textDecoration: isEvtNull ? 'line-through' : 'none'
+                                }}>
+                                    {events.length > 1 ? ('Session ' + (idx + 1) + ': ') : ''}{fmtTime(e.start)}{'\u2013'}{fmtTime(e.end)}{' \u00b7 Score '}{e.score}
+                                </div>
+                                {isEvtNull ? (
+                                    <button onClick={() => {
+                                        const updated = (labels || []).filter(l => {
+                                            if (l.date !== curDateStr || l.type !== 'nullnummer' || !l.time) return true;
+                                            const [hh,mm] = l.time.split(':').map(Number);
+                                            return !(hh === eH && mm === eM);
+                                        });
+                                        saveSexLabels(updated, onChange!);
+                                    }} style={{
+                                        fontSize: '0.6rem', padding: '2px 8px', cursor: 'pointer',
+                                        background: 'transparent', borderRadius: 3,
+                                        color: isDark ? '#555' : '#bbb', border: '1px solid',
+                                        borderColor: isDark ? '#333' : '#ddd', whiteSpace: 'nowrap'
+                                    }}>
+                                        \u21a9 Zur\u00fcck
+                                    </button>
+                                ) : (
+                                    <button onClick={() => {
+                                        const newLbl: SexTrainingLabel = { date: curDateStr!, type: 'nullnummer', time: eTime, durationMin: e.duration };
+                                        saveSexLabels([...(labels || []), newLbl], onChange!);
+                                    }} style={{
+                                        fontSize: '0.6rem', padding: '2px 8px', cursor: 'pointer',
+                                        background: isDark ? '#1a1a1a' : '#f9f9f9',
+                                        color: isDark ? '#666' : '#aaa', border: '1px dashed',
+                                        borderColor: isDark ? '#333' : '#ddd', borderRadius: 3, whiteSpace: 'nowrap'
+                                    }}>
+                                        🚫 Nullnummer
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </TerminalBox>
@@ -1233,9 +1252,13 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     // Rohe Vibrations-Events für Chart: { [dateStr]: any[] }
     const [vibRaw, setVibRaw] = useState<Record<string, any[]>>({});
 
-    // Retroaktive Neu-Analyse
+    // Retroaktive Neu-Analyse (Einzeltag)
     const [reanalyzing, setReanalyzing] = useState(false);
     const [reanalyzeMsg, setReanalyzeMsg] = useState<string | null>(null);
+
+    // Alle Tage neu analysieren
+    const [reanalyzingAll, setReanalyzingAll] = useState(false);
+    const [reanalyzeAllMsg, setReanalyzeAllMsg] = useState<string | null>(null);
 
     const reanalyzeDay = async (d: Date) => {
         const ds = dateStr(d);
@@ -1263,6 +1286,26 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
         }
         setReanalyzing(false);
         setTimeout(() => setReanalyzeMsg(null), 4000);
+    };
+
+    const reanalyzeAllDays = async () => {
+        setReanalyzingAll(true);
+        setReanalyzeAllMsg(null);
+        try {
+            const result: any = await socket.sendTo(
+                `${adapterName}.${instance}`, 'reanalyzeAllSexDays', {}
+            );
+            if (result?.success && result?.data) {
+                const d = result.data;
+                setReanalyzeAllMsg(`✓ ${d.processed} Tage — ${d.sessionsFound} Sessions gefunden`);
+            } else {
+                setReanalyzeAllMsg('✗ ' + (result?.error || 'Fehler'));
+            }
+        } catch (e: any) {
+            setReanalyzeAllMsg('✗ ' + (e?.message || 'Fehler'));
+        }
+        setReanalyzingAll(false);
+        setTimeout(() => setReanalyzeAllMsg(null), 6000);
     };
 
     const loadMonth = async (m: string) => {
@@ -1384,6 +1427,22 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                     {reanalyzeMsg && (
                         <span style={{ fontSize: '0.6rem', color: reanalyzeMsg.startsWith('✓') ? '#81c784' : '#ffb74d', marginLeft: 4 }}>
                             {reanalyzeMsg}
+                        </span>
+                    )}
+                    <button onClick={reanalyzeAllDays} disabled={reanalyzingAll || reanalyzing}
+                        title="Analysiert alle gespeicherten Tage neu und aktualisiert die Sex-Erkennung fuer die gesamte History. Kann einige Minuten dauern."
+                        style={{
+                            fontFamily: 'inherit', fontSize: '0.6rem', padding: '2px 8px',
+                            background: reanalyzingAll ? (isDark ? '#111' : '#f5f5f5') : (isDark ? '#1a0d1a' : '#f3e5f5'),
+                            border: `1px solid ${isDark ? '#7b1fa2' : '#ce93d8'}`,
+                            color: isDark ? '#ce93d8' : '#7b1fa2',
+                            cursor: reanalyzingAll ? 'wait' : 'pointer', borderRadius: 2, opacity: reanalyzingAll ? 0.5 : 1, marginLeft: 4
+                        }}>
+                        {reanalyzingAll ? '... ' : ' Alle neu analysieren'}
+                    </button>
+                    {reanalyzeAllMsg && (
+                        <span style={{ fontSize: '0.6rem', color: reanalyzeAllMsg.startsWith('✓') ? '#81c784' : '#ffb74d', marginLeft: 4 }}>
+                            {reanalyzeAllMsg}
                         </span>
                     )}
                 </div>
