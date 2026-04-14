@@ -40,6 +40,16 @@ interface SexTabProps {
     onChange: (attr: string, value: any) => void;
 }
 
+/** Manuell eingetragene Sessions außerhalb des Bettes (sex-manual.json) */
+interface ManualSexEntry {
+    id: string;
+    date: string;
+    time?: string;
+    durationMin?: number;
+    type: 'vaginal' | 'oral_hand' | 'sonstiges';
+    createdAt: number;
+}
+
 /** Manuelle Ground-Truth-Einträge (Einstellungen → JSON) — für Abgleich & spätere Kalibrierung */
 interface SexTrainingLabel {
     date: string;
@@ -568,12 +578,13 @@ const DOW_SHORT = ['Mo','Di','Mi','Do','Fr','Sa','So'];
 const MonthCalendar: React.FC<{
     month: string;              // 'YYYY-MM'
     summary: Record<string, Array<{type: string; duration: number; score: number}>>;
+    manualEntries: ManualSexEntry[];
     labels: any[];
     viewDate: string;
     onDayClick: (d: string) => void;
     onMonthChange: (m: string) => void;
     themeType: string;
-}> = ({ month, summary, labels, viewDate, onDayClick, onMonthChange, themeType }) => {
+}> = ({ month, summary, manualEntries, labels, viewDate, onDayClick, onMonthChange, themeType }) => {
     const isDark = themeType === 'dark';
     const [year, mon] = month.split('-').map(Number);
 
@@ -610,14 +621,18 @@ const MonthCalendar: React.FC<{
     // Tages-Zellen
     for (let d = 1; d <= daysInMonth; d++) {
         const dateStr  = `${year}-${String(mon).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const events   = summary[dateStr] || [];
-        const hasLabel = labels.some((l: any) => l.date === dateStr);
-        const isToday  = dateStr === todayStr;
-        const isView   = dateStr === viewDate;
+        const events      = summary[dateStr] || [];
+        const manualDay   = manualEntries.filter(m => m.date === dateStr);
+        const hasLabel    = labels.some((l: any) => l.date === dateStr);
+        const isToday     = dateStr === todayStr;
+        const isView      = dateStr === viewDate;
 
-        // Dominanten Typ bestimmen (erster Event)
+        // Dominanten Typ bestimmen (erster algorithmischer Event, sonst manuell)
         const domType  = events[0]?.type ?? null;
+        const domManual = manualDay[0]?.type ?? null;
+        // Algorithmisch erkannt: volle Emojis; nur manuell: hohle Variante
         const emoji    = domType === 'vaginal' ? '♥' : domType === 'oral_hand' ? '👄' : domType ? '💜' : null;
+        const emojiManual = !emoji && domManual ? (domManual === 'vaginal' ? '♡' : domManual === 'oral_hand' ? '○' : '◇') : null;
 
         cells.push(
             <div key={dateStr} onClick={() => onDayClick(dateStr)} style={{
@@ -646,9 +661,16 @@ const MonthCalendar: React.FC<{
                 {emoji && (
                     <div style={{ fontSize: '0.7rem', lineHeight: 1.1 }}>
                         {events.length > 1 ? `${emoji}×${events.length}` : emoji}
+                        {manualDay.length > 0 && <span style={{ fontSize: '0.5rem', opacity: 0.6 }}>+m</span>}
                     </div>
                 )}
-                {!emoji && hasLabel && (
+                {emojiManual && (
+                    <div style={{ fontSize: '0.7rem', lineHeight: 1.1, opacity: 0.6 }}
+                         title="Manuell eingetragen (kein Sensor)">
+                        {manualDay.length > 1 ? `${emojiManual}×${manualDay.length}` : emojiManual}
+                    </div>
+                )}
+                {!emoji && !emojiManual && hasLabel && (
                     <div style={{ fontSize: '0.5rem', color: isDark ? '#333' : '#ddd' }}>✎</div>
                 )}
             </div>
@@ -806,11 +828,12 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels }: {
 // ─────────────────────────────────────────────────────────────────────────────
 // Training-Label-Formular
 // ─────────────────────────────────────────────────────────────────────────────
-const LabelForm = ({ native, onChange, themeType, dayData }: {
+const LabelForm = ({ native, onChange, themeType, dayData, loadDay }: {
     native: Record<string, any>;
     onChange: (attr: string, val: any) => void;
     themeType: string;
     dayData: Record<string, IntimacyEvent[]>;
+    loadDay: (d: Date) => Promise<void>;
 }) => {
     const isDark = themeType === 'dark';
     const today = dateStr(new Date());
@@ -820,6 +843,16 @@ const LabelForm = ({ native, onChange, themeType, dayData }: {
     const [formType, setFormType] = useState<'vaginal' | 'oral_hand' | 'none'>('oral_hand');
 
     const labels = parseSexTrainingLabels(native.sexTrainingLabels);
+
+    // Fehlende Daten für Label-Dates außerhalb des 7-Tage-Fensters nachladen
+    useEffect(() => {
+        labels.forEach(l => {
+            if (dayData[l.date] === undefined) {
+                loadDay(new Date(l.date + 'T12:00:00'));
+            }
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [labels.length]);
 
     const handleAdd = () => {
         if (!formDate) return;
@@ -847,8 +880,8 @@ const LabelForm = ({ native, onChange, themeType, dayData }: {
     const selectStyle = { ...inputStyle, cursor: 'pointer' };
 
     return (
-        <TerminalBox title="SESSION EINTRAGEN" themeType={themeType}
-            helpText="Trage bekannte Sessions manuell ein. Das System lernt daraus die typische Vibrationsstärke deines Sensors (Kalibrierung). Eine Handvoll Einträge reicht für gute Erkennung.">
+        <TerminalBox title="SESSION EINTRAGEN (Trainingsdaten)" themeType={themeType}
+            helpText="Trage bekannte Sessions manuell ein. Das System lernt daraus die typische Vibrationsstärke deines Sensors (Kalibrierung). Eine Handvoll Einträge reicht für gute Erkennung. Für die reine Dokumentation ohne Training gibt es die Kachel 'Manuelle Session'.">
             {/* Formular */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end', marginBottom: 12 }}>
                 <div>
@@ -1215,6 +1248,122 @@ const VibrationChartPanel: React.FC<{
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ManualSessionForm — Dokumentation von Sessions außerhalb des Bettes
+// ─────────────────────────────────────────────────────────────────────────────
+const ManualSessionForm: React.FC<{
+    themeType: string;
+    entries: ManualSexEntry[];
+    onAdd: (e: Omit<ManualSexEntry, 'id' | 'createdAt'>) => void;
+    onDelete: (id: string) => void;
+}> = ({ themeType, entries, onAdd, onDelete }) => {
+    const isDark = themeType === 'dark';
+    const today = dateStr(new Date());
+    const [formDate, setFormDate] = useState(today);
+    const [formTime, setFormTime] = useState('');
+    const [formDuration, setFormDuration] = useState('');
+    const [formType, setFormType] = useState<'vaginal' | 'oral_hand' | 'sonstiges'>('oral_hand');
+
+    const inputStyle = {
+        background: isDark ? '#1a1a1a' : '#fff',
+        color: isDark ? '#eee' : '#111',
+        border: `1px solid ${isDark ? '#444' : '#ccc'}`,
+        borderRadius: 3, padding: '4px 8px',
+        fontFamily: 'monospace', fontSize: '0.88rem',
+    };
+
+    const handleAdd = () => {
+        if (!formDate) return;
+        onAdd({
+            date: formDate,
+            type: formType,
+            ...(formTime ? { time: formTime } : {}),
+            ...(formDuration && parseInt(formDuration) > 0 ? { durationMin: parseInt(formDuration) } : {}),
+        });
+        setFormTime('');
+        setFormDuration('');
+    };
+
+    const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date));
+
+    return (
+        <TerminalBox title="MANUELLE SESSION" themeType={themeType}
+            helpText="Trage Sessions ein die außerhalb des Bettes stattfanden (kein Vibrationssensor vorhanden). Diese dienen nur der Dokumentation und beeinflussen das KI-Training NICHT. Im Kalender als hohle Symbole (♡ ○) dargestellt.">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end', marginBottom: 12 }}>
+                <div>
+                    <div style={{ fontSize: '0.6rem', color: isDark ? '#555' : '#aaa', marginBottom: 3, letterSpacing: 1 }}>DATUM</div>
+                    <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)}
+                        style={{ ...inputStyle, width: 130 }} />
+                </div>
+                <div>
+                    <div style={{ fontSize: '0.6rem', color: isDark ? '#555' : '#aaa', marginBottom: 3, letterSpacing: 1 }}>UHRZEIT (ca.)</div>
+                    <input type="time" value={formTime} onChange={e => setFormTime(e.target.value)}
+                        style={{ ...inputStyle, width: 90 }} />
+                </div>
+                <div>
+                    <div style={{ fontSize: '0.6rem', color: isDark ? '#555' : '#aaa', marginBottom: 3, letterSpacing: 1 }}>DAUER (Min, opt.)</div>
+                    <input type="number" value={formDuration} onChange={e => setFormDuration(e.target.value)}
+                        placeholder="–" min={1} max={180}
+                        style={{ ...inputStyle, width: 70 }} />
+                </div>
+                <div>
+                    <div style={{ fontSize: '0.6rem', color: isDark ? '#555' : '#aaa', marginBottom: 3, letterSpacing: 1 }}>TYP</div>
+                    <select value={formType} onChange={e => setFormType(e.target.value as any)}
+                        style={{ ...inputStyle, cursor: 'pointer' }}>
+                        <option value="oral_hand">◐ Oral / Hand</option>
+                        <option value="vaginal">♥ Vaginal</option>
+                        <option value="sonstiges">⬡ Sonstiges</option>
+                    </select>
+                </div>
+                <button onClick={handleAdd} style={{
+                    background: '#4a235a', color: '#f3e5f5', border: '1px solid #7b1fa2',
+                    borderRadius: 4, padding: '5px 14px', cursor: 'pointer', fontSize: '0.88rem',
+                }}>+ Speichern</button>
+            </div>
+            {sorted.length === 0 ? (
+                <div style={{ fontSize: '0.8rem', color: isDark ? '#444' : '#bbb', fontStyle: 'italic' }}>
+                    Noch keine manuellen Einträge.
+                </div>
+            ) : (
+                <div>
+                    <div style={{ fontSize: '0.8rem', color: isDark ? '#444' : '#bbb', marginBottom: 6, letterSpacing: 1 }}>
+                        EINGETRAGENE SESSIONS ({sorted.length})
+                    </div>
+                    {sorted.map(e => (
+                        <div key={e.id} style={{
+                            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5,
+                            padding: '5px 8px',
+                            background: isDark ? '#0d1117' : '#f9f9f9',
+                            borderLeft: `3px solid ${isDark ? '#4a235a' : '#ce93d8'}`,
+                            borderRadius: '0 4px 4px 0',
+                        }}>
+                            <span style={{ fontSize: '0.7rem', minWidth: 18, color: isDark ? '#7b1fa2' : '#9c27b0' }}>◇</span>
+                            <span style={{ fontSize: '0.83rem', flex: 1, color: isDark ? '#ccc' : '#444' }}>
+                                <b>{e.date}</b>
+                                {e.time && <span style={{ color: isDark ? '#888' : '#999' }}> · {e.time}</span>}
+                                {e.durationMin != null && <span style={{ color: isDark ? '#888' : '#999' }}> · ~{e.durationMin} Min</span>}
+                                <span style={{
+                                    marginLeft: 8, padding: '1px 6px', borderRadius: 3, fontSize: '0.88rem',
+                                    background: e.type === 'vaginal' ? (isDark ? '#880e4f' : '#fce4ec') : (isDark ? '#1a237e' : '#e8eaf6'),
+                                    color: e.type === 'vaginal' ? (isDark ? '#f48fb1' : '#c2185b') : (isDark ? '#90caf9' : '#283593'),
+                                }}>{e.type === 'vaginal' ? '♥ vaginal' : e.type === 'oral_hand' ? '◐ oral/hand' : '⬡ sonstiges'}</span>
+                                <span style={{ marginLeft: 6, fontSize: '0.65rem', color: isDark ? '#555' : '#bbb' }}>◇ manuell</span>
+                            </span>
+                            <button onClick={() => onDelete(e.id)} style={{
+                                background: 'transparent', border: 'none', color: isDark ? '#555' : '#bbb',
+                                cursor: 'pointer', fontSize: '0.8rem', padding: '0 4px', lineHeight: 1,
+                            }} title="Löschen">✕</button>
+                        </div>
+                    ))}
+                    <div style={{ marginTop: 8, fontSize: '0.75rem', color: isDark ? '#333' : '#bbb' }}>
+                        ◇ = manuell erfasst · kein Sensor · kein KI-Training · Im Kalender als hohle Symbole (♡ ○)
+                    </div>
+                </div>
+            )}
+        </TerminalBox>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Haupt-Komponente SexTab
 // ─────────────────────────────────────────────────────────────────────────────
 const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeType, native, onChange }) => {
@@ -1259,6 +1408,36 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     // Alle Tage neu analysieren
     const [reanalyzingAll, setReanalyzingAll] = useState(false);
     const [reanalyzeAllMsg, setReanalyzeAllMsg] = useState<string | null>(null);
+
+    // Manuelle Sessions (außerhalb Bett)
+    const [manualEntries, setManualEntries] = useState<ManualSexEntry[]>([]);
+
+    const loadManualEntries = async () => {
+        try {
+            const result: any = await socket.sendTo(
+                `${adapterName}.${instance}`, 'getManualSexSessions', {}
+            );
+            if (result?.success) setManualEntries(result.entries ?? []);
+        } catch { /* ignorieren */ }
+    };
+
+    const handleAddManual = async (entry: Omit<ManualSexEntry, 'id' | 'createdAt'>) => {
+        try {
+            const result: any = await socket.sendTo(
+                `${adapterName}.${instance}`, 'saveManualSexSession', entry
+            );
+            if (result?.success) setManualEntries(result.entries ?? []);
+        } catch { /* ignorieren */ }
+    };
+
+    const handleDeleteManual = async (id: string) => {
+        try {
+            const result: any = await socket.sendTo(
+                `${adapterName}.${instance}`, 'deleteManualSexSession', { id }
+            );
+            if (result?.success) setManualEntries(result.entries ?? []);
+        } catch { /* ignorieren */ }
+    };
 
     const reanalyzeDay = async (d: Date) => {
         const ds = dateStr(d);
@@ -1320,6 +1499,9 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
             }
             const msg = `✓ ${dates.length} Tage — ${sessionsFound} Sessions${errors > 0 ? ` (${errors} Fehler)` : ''}`;
             setReanalyzeAllMsg(msg);
+            // Kalender-Cache leeren und neu laden damit Icons sofort aktuell sind
+            setMonthSummary({});
+            loadMonth(calMonth);
         } catch (e: any) {
             setReanalyzeAllMsg('✗ ' + (e?.message || 'Fehler'));
         }
@@ -1374,6 +1556,9 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
 
     // Monatsdaten laden wenn calMonth sich ändert
     useEffect(() => { loadMonth(calMonth); }, [calMonth]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Manuelle Einträge einmalig laden
+    useEffect(() => { loadManualEntries(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const navDay = (delta: number) => {
         const d = new Date(viewDate); d.setDate(d.getDate() + delta); setViewDate(d);
@@ -1492,13 +1677,20 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                         <MonthCalendar
                             month={calMonth}
                             summary={monthSummary}
+                            manualEntries={manualEntries}
                             labels={labels}
                             viewDate={dateStr(viewDate)}
                             onDayClick={(d) => setViewDate(new Date(d + 'T12:00:00'))}
                             onMonthChange={(m) => { setCalMonth(m); }}
                             themeType={themeType}
                         />
-                        <LabelForm native={native} onChange={onChange} themeType={themeType} dayData={dayData} />
+                        <LabelForm native={native} onChange={onChange} themeType={themeType} dayData={dayData} loadDay={loadDay} />
+                        <ManualSessionForm
+                            themeType={themeType}
+                            entries={manualEntries}
+                            onAdd={handleAddManual}
+                            onDelete={handleDeleteManual}
+                        />
                     </div>
 
                     {/* Rechte Spalte: Algorithmus-Info + Hinweis */}
