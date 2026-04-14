@@ -3306,6 +3306,67 @@ class CogniLiving extends utils.Adapter {
                 this.sendTo(obj.from, obj.command, { success: false, error: _smE.message }, obj.callback);
             }
         }
+        // getManualSexSessions: Liest sex-manual.json
+        else if (obj.command === 'getManualSexSessions') {
+            try {
+                var _msDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                var _msPath = path.join(_msDir, 'sex-manual.json');
+                var _msEntries = [];
+                if (fs.existsSync(_msPath)) {
+                    try { _msEntries = JSON.parse(fs.readFileSync(_msPath, 'utf8')); } catch(_mse) {}
+                }
+                if (!Array.isArray(_msEntries)) _msEntries = [];
+                this.sendTo(obj.from, obj.command, { success: true, entries: _msEntries }, obj.callback);
+            } catch(_msE) {
+                this.sendTo(obj.from, obj.command, { success: false, error: _msE.message }, obj.callback);
+            }
+        }
+        // saveManualSexSession: Fuegt neue manuelle Session zu sex-manual.json hinzu
+        else if (obj.command === 'saveManualSexSession') {
+            try {
+                var _svDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                var _svPath = path.join(_svDir, 'sex-manual.json');
+                var _svEntries = [];
+                if (fs.existsSync(_svPath)) {
+                    try { _svEntries = JSON.parse(fs.readFileSync(_svPath, 'utf8')); } catch(_sve) {}
+                }
+                if (!Array.isArray(_svEntries)) _svEntries = [];
+                var _svNew = {
+                    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                    date: obj.message.date || '',
+                    type: obj.message.type || 'sonstiges',
+                    createdAt: Date.now()
+                };
+                if (obj.message.time) _svNew.time = obj.message.time;
+                if (obj.message.durationMin) _svNew.durationMin = parseInt(obj.message.durationMin) || 0;
+                _svEntries.push(_svNew);
+                _svEntries.sort(function(a, b) { return b.date.localeCompare(a.date); });
+                fs.writeFileSync(_svPath, JSON.stringify(_svEntries), 'utf8');
+                this['log']['info']('[ManualSex] gespeichert: ' + _svNew.date + ' ' + _svNew.type);
+                this.sendTo(obj.from, obj.command, { success: true, entries: _svEntries }, obj.callback);
+            } catch(_svE) {
+                this.sendTo(obj.from, obj.command, { success: false, error: _svE.message }, obj.callback);
+            }
+        }
+        // deleteManualSexSession: Loescht Eintrag aus sex-manual.json per ID
+        else if (obj.command === 'deleteManualSexSession') {
+            try {
+                var _dlDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                var _dlPath = path.join(_dlDir, 'sex-manual.json');
+                var _dlEntries = [];
+                if (fs.existsSync(_dlPath)) {
+                    try { _dlEntries = JSON.parse(fs.readFileSync(_dlPath, 'utf8')); } catch(_dle) {}
+                }
+                if (!Array.isArray(_dlEntries)) _dlEntries = [];
+                var _dlId = obj.message && obj.message.id;
+                _dlEntries = _dlEntries.filter(function(e) { return e.id !== _dlId; });
+                fs.writeFileSync(_dlPath, JSON.stringify(_dlEntries), 'utf8');
+                this['log']['info']('[ManualSex] geloescht: ' + _dlId);
+                this.sendTo(obj.from, obj.command, { success: true, entries: _dlEntries }, obj.callback);
+            } catch(_dlE) {
+                this.sendTo(obj.from, obj.command, { success: false, error: _dlE.message }, obj.callback);
+            }
+        }
         }
     }
 

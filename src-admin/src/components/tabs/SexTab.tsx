@@ -228,21 +228,23 @@ const slotColor = (max: number): string => {
 // Typ-Label
 // Typ-Label
 const typeLabel = (type: string): string => {
-    if (type === 'vaginal')    return '\u2665 Vaginal';
-    if (type === 'oral_hand')  return '\ud83d\udc9c Oral / Hand';
-    if (type === 'nullnummer') return '\ud83d\udeab Nullnummer';
-    return '\ud83d\udc9c Intim';
+    if (type === 'vaginal')    return '♥ Vaginal';
+    if (type === 'oral_hand')  return '💋 Oral / Hand';
+    if (type === 'nullnummer') return '⛔ Nullnummer';
+    return '✨ Intim';
 };
 const typeBg = (type: string, isDark: boolean): string => {
     if (type === 'vaginal')    return isDark ? '#880e4f' : '#fce4ec';
-    if (type === 'oral_hand')  return isDark ? '#1a237e' : '#e8eaf6';
+    if (type === 'oral_hand')  return isDark ? '#1a1a2e' : '#f3e5f5';
     if (type === 'nullnummer') return isDark ? '#1a1a1a' : '#f5f5f5';
+    if (type === 'sonstiges')  return isDark ? '#1a2a1a' : '#f1f8e9';
     return isDark ? '#212121' : '#f5f5f5';
 };
 const typeColor = (type: string, isDark: boolean): string => {
     if (type === 'vaginal')    return isDark ? '#f48fb1' : '#c2185b';
-    if (type === 'oral_hand')  return isDark ? '#90caf9' : '#283593';
+    if (type === 'oral_hand')  return isDark ? '#ce93d8' : '#7b1fa2';
     if (type === 'nullnummer') return isDark ? '#555' : '#aaa';
+    if (type === 'sonstiges')  return isDark ? '#a5d6a7' : '#2e7d32';
     return isDark ? '#888' : '#555';
 };
 
@@ -631,8 +633,8 @@ const MonthCalendar: React.FC<{
         const domType  = events[0]?.type ?? null;
         const domManual = manualDay[0]?.type ?? null;
         // Algorithmisch erkannt: volle Emojis; nur manuell: hohle Variante
-        const emoji    = domType === 'vaginal' ? '♥' : domType === 'oral_hand' ? '👄' : domType ? '💜' : null;
-        const emojiManual = !emoji && domManual ? (domManual === 'vaginal' ? '♡' : domManual === 'oral_hand' ? '○' : '◇') : null;
+        const emoji    = domType === 'vaginal' ? '♥' : domType === 'oral_hand' ? '💋' : domType ? '✨' : null;
+        const emojiManual = !emoji && domManual ? (domManual === 'vaginal' ? '♡' : domManual === 'oral_hand' ? '💋' : '✦') : null;
 
         cells.push(
             <div key={dateStr} onClick={() => onDayClick(dateStr)} style={{
@@ -769,14 +771,14 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels }: {
                                 alignItems: 'center', justifyContent: 'center',
                                 fontSize: '0.7rem', opacity: isNullnummer ? 0.45 : 1
                             }}>
-                                {isNullnummer ? '\u26d4' : hasEvt ? (effType === 'vaginal' ? '\u2665\ufe0f' : effType === 'oral_hand' ? '\ud83d\udc9c' : '\ud83d\udc9c') : (isToday ? '\u23f3' : '-')}
+                                {isNullnummer ? '⛔' : hasEvt ? (effType === 'vaginal' ? '♥' : effType === 'oral_hand' ? '💋' : '✨') : (isToday ? '⏳' : '-')}
                             </div>
                             {hasEvt && !isNullnummer && (
                                 <>
                                     <div style={{ fontSize: '0.88rem', color: isDark ? '#ce93d8' : '#7b1fa2', fontWeight: 'bold' }}>{evt!.score}</div>
                                     <div style={{ fontSize: '0.45rem', color: isDark ? '#555' : '#aaa' }}>{fmtTime(evt!.start).slice(0,5)}</div>
                                     <div style={{ fontSize: '0.45rem', color: typeColor(effType, isDark), fontWeight: 'bold' }}>
-                                        {effType === 'vaginal' ? 'Vaginal' : effType === 'oral_hand' ? 'Oral' : 'Intim'}
+                                        {effType === 'vaginal' ? 'Vaginal' : effType === 'oral_hand' ? 'Oral' : 'Intim ✨'}
                                         {dayLbl && effType !== evt!.type && <span style={{ color: isDark ? '#555' : '#ccc' }}> ?</span>}
                                     </div>
                                 </>
@@ -1253,7 +1255,7 @@ const VibrationChartPanel: React.FC<{
 const ManualSessionForm: React.FC<{
     themeType: string;
     entries: ManualSexEntry[];
-    onAdd: (e: Omit<ManualSexEntry, 'id' | 'createdAt'>) => void;
+    onAdd: (e: Omit<ManualSexEntry, 'id' | 'createdAt'>) => Promise<boolean>;
     onDelete: (id: string) => void;
 }> = ({ themeType, entries, onAdd, onDelete }) => {
     const isDark = themeType === 'dark';
@@ -1271,16 +1273,18 @@ const ManualSessionForm: React.FC<{
         fontFamily: 'monospace', fontSize: '0.88rem',
     };
 
-    const handleAdd = () => {
+    const handleAdd = async () => {
         if (!formDate) return;
-        onAdd({
+        const ok = await onAdd({
             date: formDate,
             type: formType,
             ...(formTime ? { time: formTime } : {}),
             ...(formDuration && parseInt(formDuration) > 0 ? { durationMin: parseInt(formDuration) } : {}),
         });
-        setFormTime('');
-        setFormDuration('');
+        if (ok) {
+            setFormTime('');
+            setFormDuration('');
+        }
     };
 
     const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date));
@@ -1421,13 +1425,14 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
         } catch { /* ignorieren */ }
     };
 
-    const handleAddManual = async (entry: Omit<ManualSexEntry, 'id' | 'createdAt'>) => {
+    const handleAddManual = async (entry: Omit<ManualSexEntry, 'id' | 'createdAt'>): Promise<boolean> => {
         try {
             const result: any = await socket.sendTo(
                 `${adapterName}.${instance}`, 'saveManualSexSession', entry
             );
-            if (result?.success) setManualEntries(result.entries ?? []);
+            if (result?.success) { setManualEntries(result.entries ?? []); return true; }
         } catch { /* ignorieren */ }
+        return false;
     };
 
     const handleDeleteManual = async (id: string) => {
