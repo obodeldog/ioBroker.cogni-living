@@ -1448,14 +1448,15 @@ class CogniLiving extends utils.Adapter {
                     var _isBath = e.isBathroomSensor || _bathDevIds.has(e.id);
                     var _isOther = !_isBath; // Kueche zaehlt hier als anderer Raum (nur fuer outsideBedEvents-Dreieck relevant; isKitchenSensor bleibt fuer andere Algorithmen unveraendert)
                     if (!_curCluster) {
-                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath, hasOther: _isOther };
+                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath, hasOther: _isOther, sensors: [{name: e.name||e.id, location: e.location||''}] };
                     } else if (_ts <= _curCluster.end + CLUSTER_GAP_MS) {
                         _curCluster.end = _ts + AFTER_EVT_MS;
                         if (_isBath) _curCluster.hasBath = true;
                         if (_isOther) _curCluster.hasOther = true;
+                        var _sn = e.name||e.id; if (!_curCluster.sensors.some(function(s){return s.name===_sn;})) _curCluster.sensors.push({name: _sn, location: e.location||''});
                     } else {
                         _motEvents.push(_curCluster);
-                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath, hasOther: _isOther };
+                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath, hasOther: _isOther, sensors: [{name: e.name||e.id, location: e.location||''}] };
                     }
                 });
                 if (_curCluster) _motEvents.push(_curCluster);
@@ -1507,20 +1508,21 @@ class CogniLiving extends utils.Adapter {
                     var _overlaps = _allEvtCandidates.some(function(c) { return mot.start < c.end && mot.end > c.start; });
                     if (!_overlaps) {
                         var _dur = Math.max(1, Math.round((mot.end - mot.start) / 60000));
+                        var _motSensors = mot.sensors || [];
                         if (mot.hasBath) {
-                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'bathroom', confirmed: true });
+                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'bathroom', confirmed: true, sensors: _motSensors });
                             if (mot.hasOther) {
                                 // Cluster hat Bad UND andere Aussenraeume -> zwei Marker (orange + rot)
-                                _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'outside', confirmed: true });
+                                _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'outside', confirmed: true, sensors: _motSensors });
                             }
                         } else if (_isMultiPerson) {
                             // Mehrpersonenhaushalt: Aktivitaet nur zuordnen wenn FP2 Bett-leer bestaetigt
                             var _bedEmpty = _hasFP2Bed && _fp2Events.some(function(fp2) {
                                 return mot.start < fp2.end && mot.end > fp2.start;
                             });
-                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: _bedEmpty ? 'outside' : 'other_person', confirmed: true });
+                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: _bedEmpty ? 'outside' : 'other_person', confirmed: true, sensors: _motSensors });
                         } else {
-                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'outside', confirmed: true });
+                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'outside', confirmed: true, sensors: _motSensors });
                         }
                     }
                 });
@@ -1995,6 +1997,31 @@ class CogniLiving extends utils.Adapter {
                             if (!_phsCommonAfter) { _pSleepStart = _phsTs; _pSleepStartSrc = 'haus_still'; break; }
                         }
                     }
+                    // Vibrations-Verfeinerung per Person: letztes personTagged Vib-Event + >=20min Stille
+                    // Analog zur globalen fp2_vib-Logik: _pSleepStart dient als Anker, Vibration praezisiert Einschlafzeit
+                    var _pVibRefinedTs = null;
+                    if (_pSleepStart && !_pOverrideApplied) {
+                        var _pvRefMax = _pSleepStart + 3 * 3600000;
+                        var _pvRefEvts = sleepSearchEvents.filter(function(e) {
+                            return e.isVibrationBed && e.personTag === person
+                                && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
+                                && (e.timestamp||0) >= _pSleepStart && (e.timestamp||0) <= _pvRefMax;
+                        }).sort(function(a, b) { return (a.timestamp||0) - (b.timestamp||0); });
+                        for (var _pvi = 0; _pvi < _pvRefEvts.length; _pvi++) {
+                            var _pvEvt = _pvRefEvts[_pvi];
+                            var _pvNext = (_pvi < _pvRefEvts.length - 1) ? (_pvRefEvts[_pvi + 1].timestamp||0) : Date.now();
+                            var _pvGap = (_pvNext - (_pvEvt.timestamp||0)) / 60000;
+                            if (_pvGap >= 20) {
+                                _pVibRefinedTs = _pvEvt.timestamp||0;
+                                _self.log.debug('[Per-Person Vib] ' + person + ': ' + new Date(_pVibRefinedTs).toISOString());
+                                break;
+                            }
+                        }
+                        if (_pVibRefinedTs) {
+                            _pSleepStart = _pVibRefinedTs;
+                            _pSleepStartSrc = 'vib_refined';
+                        }
+                    }
                     // Fallback: Person hatte Bett-Events aber keinen Einschlafzeitpunkt (z.B. vor winStart eingeschlafen)
                     if (!_pSleepStart && _pBedEvts.length > 0) { _pSleepStart = winStart; }
                     // Andere-Raum-Events (nicht Bett, nicht Bad, nicht andere Person) nach 04:00, max 12:00
@@ -2070,6 +2097,7 @@ class CogniLiving extends utils.Adapter {
                     }
                     // allSleepStartSources pro Person (fuer Tooltip im Frontend)
                     var _pAllSleepSources = [
+                        { source: 'vib_refined',  ts: _pSleepStartSrc === 'vib_refined'  ? _pSleepStart : null },
                         { source: 'gap60',        ts: _pSleepStartSrc === 'gap60'        ? _pSleepStart : null },
                         { source: 'last_outside', ts: _pSleepStartSrc === 'last_outside' ? _pSleepStart : null },
                         { source: 'haus_still',   ts: _pSleepStartSrc === 'haus_still'   ? _pSleepStart : null },
@@ -2107,23 +2135,24 @@ class CogniLiving extends utils.Adapter {
                         var _pPushCluster = function(c) {
                             var dur = Math.max(1, Math.round((c.end - c.start) / 60000));
                             if (c.hasBath) {
-                                _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'bathroom', confirmed: true });
-                                if (c.hasOther) _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true });
+                                _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'bathroom', confirmed: true, sensors: c.sensors||[] });
+                                if (c.hasOther) _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true, sensors: c.sensors||[] });
                             } else {
-                                _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true });
+                                _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true, sensors: c.sensors||[] });
                             }
                         };
                         _pAllOutSrc.forEach(function(e) {
                             var ts = e.timestamp||0;
                             var _isBath = e.isBathroomSensor || bathroomIds.has(e.id);
                             if (!_pObeCluster) {
-                                _pObeCluster = { start: ts, end: ts + _pCAfter, hasBath: _isBath, hasOther: !_isBath };
+                                _pObeCluster = { start: ts, end: ts + _pCAfter, hasBath: _isBath, hasOther: !_isBath, sensors: [{name: e.name||e.id, location: e.location||''}] };
                             } else if (ts <= _pObeCluster.end + _pCGap) {
                                 _pObeCluster.end = ts + _pCAfter;
                                 if (_isBath) _pObeCluster.hasBath = true; else _pObeCluster.hasOther = true;
+                                var _pSn = e.name||e.id; if (!_pObeCluster.sensors.some(function(s){return s.name===_pSn;})) _pObeCluster.sensors.push({name: _pSn, location: e.location||''});
                             } else {
                                 _pPushCluster(_pObeCluster);
-                                _pObeCluster = { start: ts, end: ts + _pCAfter, hasBath: _isBath, hasOther: !_isBath };
+                                _pObeCluster = { start: ts, end: ts + _pCAfter, hasBath: _isBath, hasOther: !_isBath, sensors: [{name: e.name||e.id, location: e.location||''}] };
                             }
                         });
                         if (_pObeCluster) _pPushCluster(_pObeCluster);
@@ -3035,7 +3064,7 @@ class CogniLiving extends utils.Adapter {
         else if (obj.command === 'setPersonSleepStartOverride') {
             try {
                 var _povMsg = obj.message || {};
-                var _povAllowed = ['gap60','last_outside','haus_still','winstart','motion','other'];
+                var _povAllowed = ['vib_refined','gap60','last_outside','haus_still','winstart','motion','other'];
                 if (!_povMsg.person || !_povMsg.date || !_povMsg.source || !_povMsg.ts
                     || _povAllowed.indexOf(_povMsg.source) < 0) {
                     this.sendTo(obj.from, obj.command, { success: false, error: 'Ungueltige Per-Person Override-Daten' }, obj.callback); return;

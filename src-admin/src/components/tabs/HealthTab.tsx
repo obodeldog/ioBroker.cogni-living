@@ -1166,7 +1166,7 @@ export default function HealthTab(props: any) {
         const unusuallyLongSleep: boolean = sd?.unusuallyLongSleep ?? false;
         const garminDataFresh: boolean | null = sd?.garminDataFresh ?? null;
         const garminLastSyncAgeH: number | null = sd?.garminLastSyncAgeH ?? null;
-        const outsideBedEvts: {start:number,end:number,duration:number,type:string,confirmed?:boolean}[] = sd?.outsideBedEvents ?? [];
+        const outsideBedEvts: {start:number,end:number,duration:number,type:string,confirmed?:boolean,sensors?:{name:string,location:string}[]}[] = sd?.outsideBedEvents ?? [];
         const wakeConfirmed: boolean = sd?.wakeConfirmed ?? false;
         const sleepDateStr: string | null = sd?.sleepDate ?? (sd?.sleepWindowStart ? (() => {
             const d = new Date((sd.sleepWindowStart as number) - 3 * 3600000);
@@ -1317,11 +1317,12 @@ export default function HealthTab(props: any) {
             other:           { icon: '🚶', label: 'Anderer Raum' },
             motion:          { icon: '🚶', label: 'Schlafzimmer-Bewegungsmelder' },
             motion_vib:      { icon: '🚶', label: 'Bewegungsmelder + Vibration' },
+            vib_refined:     { icon: '📳', label: 'Letzte Bettbewegung (Vibration)' },
             haus_still:      { icon: '🏠', label: 'Haus-wird-still' },
             vibration:       { icon: '📳', label: 'Vibrationssensor (↑ Konfidenz)' },
             vibration_alone: { icon: '📳', label: 'Vibrationssensor allein' },
             fixed:           { icon: '⏱', label: 'Fallback 20:00 Uhr' },
-            gap60:           { icon: '🛏️', label: 'Bett-Gap (60 Min)' },
+            gap60:           { icon: '🛏️', label: 'Letzte Bettbewegung' },
             last_outside:    { icon: '🚶', label: 'Letzte Außenaktiv.' },
             winstart:        { icon: '⏱', label: 'Fenster-Start (Fallback)' },
             override:        { icon: '✏️', label: 'Manuell überschrieben' },
@@ -1382,7 +1383,7 @@ export default function HealthTab(props: any) {
         const remCount   = stages.filter(s => s.s === 'rem').length;
         const wakeCount  = stages.filter(s => s.s === 'wake').length;
         // Außerhalb-Events strikt auf Schlaf-Fenster clippen (kein Rendering rechts von Aufwachzeit)
-        const clippedOutsideBedEvts: {start:number,end:number,duration:number,type:string,confirmed?:boolean}[] = (swStart && swEnd)
+        const clippedOutsideBedEvts: {start:number,end:number,duration:number,type:string,confirmed?:boolean,sensors?:{name:string,location:string}[]}[] = (swStart && swEnd)
             ? outsideBedEvts
                 .map(e => {
                     const start = Math.max(e.start, swStart);
@@ -1393,10 +1394,11 @@ export default function HealthTab(props: any) {
                         end,
                         duration: Math.max(1, Math.round((end - start) / 60000)),
                         type: e.type,
-                        confirmed: e.confirmed
+                        confirmed: e.confirmed,
+                        sensors: e.sensors
                     };
                 })
-                .filter((e): e is {start:number,end:number,duration:number,type:string,confirmed?:boolean} => !!e)
+                .filter((e): e is {start:number,end:number,duration:number,type:string,confirmed?:boolean,sensors?:{name:string,location:string}[]} => !!e)
             : outsideBedEvts;
 
         // Bestätigte vs. unbestätigte (Radar-Aussetzer) Events trennen
@@ -1465,9 +1467,12 @@ export default function HealthTab(props: any) {
                                : 0;
                     lastPctInLane[lane] = pct;
                     const evtType = evt.type ?? 'outside';
+                    const sensorStr = (evt.sensors && evt.sensors.length > 0)
+                        ? '\n' + evt.sensors.map(s => `  · ${s.name}${s.location ? ' (' + s.location + ')' : ''}`).join('\n')
+                        : '';
                     const title = isDropout
-                        ? `Radar-Aussetzer: ${evt.duration} min (kein Außensensor bestätigt)`
-                        : `${titleMap[evtType] ?? 'Abwesenheit'}: ${evt.duration} min`;
+                        ? `Radar-Aussetzer: ${evt.duration} min (kein Außensensor bestätigt)${sensorStr}`
+                        : `${titleMap[evtType] ?? 'Abwesenheit'}: ${evt.duration} min${sensorStr}`;
                     return {
                         key: `${evt.start}-${evt.end}-${idxOffset + i}`,
                         pct: Math.min(100, Math.max(0, pct)),
@@ -1491,7 +1496,7 @@ export default function HealthTab(props: any) {
                 helpText={
                     'AURA-Sleepscore: Tief×200 + REM×150 + Leicht×80 − Wach×250 (Anzeige max. 100, Rohwert kann höher sein). Bonus +5 bei 7–9h Schlafdauer.\n' +
                     'Quellen: Diekelmann & Born 2010 (Tiefschlaf), Walker 2017 / Stickgold 2005 (REM), AASM Guidelines (Leichtschlaf), Buysse et al. 1989 PSQI (WASO-Abzug).\n' +
-                    'Einschlafzeit (' + srcDisplay.icon + '): Quelle — ' + srcDisplay.label + '. Beste Genauigkeit mit FP2-Radar oder Vibrationssensor am Bett (gap60-Logik: 60 Min Pause zwischen Bett-Events).\n' +
+                    'Einschlafzeit (' + srcDisplay.icon + '): Quelle — ' + srcDisplay.label + '. Beste Genauigkeit mit Vibrationssensor am Bett (📳 Letzte Bettbewegung: letztes Vib-Event + 20 Min Stille) oder FP2-Radar.\n' +
                     'Schlafphasen (Balken): Nur mit Vibrationssensor am Bett (sensorFunction=bed). Ohne Vibrationssensor: kein Balken, nur Zeiten.\n' +
                     'Aufwachzeit (' + srcDisplay.icon + '): Erste Bettleere ≥15 Min nach 04 Uhr (⟳ vorläufig bis 10:00 Uhr + 1h Bett leer).\n' +
                     'Außerhalb-Dreiecke (▼): Nur mit FP2-Radar am Bett (Bett-Leer-Erkennung erforderlich).\n' +
