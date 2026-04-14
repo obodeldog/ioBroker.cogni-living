@@ -228,10 +228,10 @@ const slotColor = (max: number): string => {
 // Typ-Label
 // Typ-Label
 const typeLabel = (type: string): string => {
-    if (type === 'vaginal')    return '♥ Vaginal';
+    if (type === 'vaginal')    return '🌹 Vaginal';
     if (type === 'oral_hand')  return '💋 Oral / Hand';
     if (type === 'nullnummer') return '⛔ Nullnummer';
-    return '✨ Intim';
+    return '✦ Intim';
 };
 const typeBg = (type: string, isDark: boolean): string => {
     if (type === 'vaginal')    return isDark ? '#880e4f' : '#fce4ec';
@@ -447,7 +447,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
                 border: `1px solid ${typeColor(effectiveType, isDark)}44`,
             }}>
                 <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>
-                    {effectiveType === 'vaginal' ? '🔴' : effectiveType === 'oral_hand' ? '👄' : '💜'}
+                    {effectiveType === 'vaginal' ? '🌹' : effectiveType === 'oral_hand' ? '💋' : '✦'}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '1rem', fontWeight: 'bold', color: typeColor(effectiveType, isDark) }}>
@@ -633,8 +633,8 @@ const MonthCalendar: React.FC<{
         const domType  = events[0]?.type ?? null;
         const domManual = manualDay[0]?.type ?? null;
         // Algorithmisch erkannt: volle Emojis; nur manuell: hohle Variante
-        const emoji    = domType === 'vaginal' ? '♥' : domType === 'oral_hand' ? '💋' : domType ? '✨' : null;
-        const emojiManual = !emoji && domManual ? (domManual === 'vaginal' ? '♡' : domManual === 'oral_hand' ? '💋' : '✦') : null;
+        const emoji    = domType === 'vaginal' ? '🌹' : domType === 'oral_hand' ? '💋' : domType ? '✦' : null;
+        const emojiManual = !emoji && domManual ? (domManual === 'vaginal' ? '🌷' : domManual === 'oral_hand' ? '💋' : '✦') : null;
 
         cells.push(
             <div key={dateStr} onClick={() => onDayClick(dateStr)} style={{
@@ -713,7 +713,7 @@ const MonthCalendar: React.FC<{
 
             {/* Legende */}
             <div style={{ display: 'flex', gap: 10, marginTop: 8, fontSize: '0.6rem', color: isDark ? '#444' : '#bbb' }}>
-                <span>♥ vaginal</span>
+                <span>🌹 vaginal</span>
                 <span>👄 oral/hand</span>
                 <span>💜 intim</span>
                 <span>✎ nur Label</span>
@@ -771,7 +771,7 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels }: {
                                 alignItems: 'center', justifyContent: 'center',
                                 fontSize: '0.7rem', opacity: isNullnummer ? 0.45 : 1
                             }}>
-                                {isNullnummer ? '⛔' : hasEvt ? (effType === 'vaginal' ? '♥' : effType === 'oral_hand' ? '💋' : '✨') : (isToday ? '⏳' : '-')}
+                                {isNullnummer ? '⛔' : hasEvt ? (effType === 'vaginal' ? '🌹' : effType === 'oral_hand' ? '💋' : '✦') : (isToday ? '⏳' : '-')}
                             </div>
                             {hasEvt && !isNullnummer && (
                                 <>
@@ -905,9 +905,9 @@ const LabelForm = ({ native, onChange, themeType, dayData, loadDay }: {
                 <div>
                     <div style={{ fontSize: '0.8rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>TYP</div>
                     <select value={formType} onChange={e => setFormType(e.target.value as any)} style={{ ...selectStyle, width: 130 }}>
-                        <option value="vaginal">♥ Vaginal</option>
-                        <option value="oral_hand">◐ Oral / Hand</option>
-                        <option value="none">⬡ Sonstiges</option>
+                        <option value="vaginal">🌹 Vaginal</option>
+                        <option value="oral_hand">💋 Oral / Hand</option>
+                        <option value="none">✦ Sonstiges</option>
                     </select>
                 </div>
                 <button onClick={handleAdd}
@@ -955,9 +955,9 @@ const LabelForm = ({ native, onChange, themeType, dayData, loadDay }: {
                                     {l.durationMin != null && <span style={{ color: isDark ? '#888' : '#999' }}> · ~{l.durationMin} Min</span>}
                                     <span style={{
                                         marginLeft: 8, padding: '1px 6px', borderRadius: 3, fontSize: '0.88rem',
-                                        background: l.type === 'vaginal' ? (isDark ? '#880e4f' : '#fce4ec') : (isDark ? '#1a237e' : '#e8eaf6'),
-                                        color: l.type === 'vaginal' ? (isDark ? '#f48fb1' : '#c2185b') : (isDark ? '#90caf9' : '#283593'),
-                                    }}>{l.type === 'vaginal' ? '♥ vaginal' : l.type === 'oral_hand' ? '◐ oral/hand' : '⬡ sonstiges'}</span>
+                                        background: typeBg(l.type, isDark),
+                                        color: typeColor(l.type, isDark),
+                                    }}>{ l.type === 'vaginal' ? '🌹 vaginal' : l.type === 'oral_hand' ? '💋 oral/hand' : l.type === 'nullnummer' ? '⛔ nullnummer' : '✦ sonstiges'}</span>
                                 </span>
                                 <button onClick={() => handleDelete(i)} style={{
                                     background: 'transparent', border: 'none', color: isDark ? '#555' : '#bbb',
@@ -1313,9 +1313,9 @@ const ManualSessionForm: React.FC<{
                     <div style={{ fontSize: '0.6rem', color: isDark ? '#555' : '#aaa', marginBottom: 3, letterSpacing: 1 }}>TYP</div>
                     <select value={formType} onChange={e => setFormType(e.target.value as any)}
                         style={{ ...inputStyle, cursor: 'pointer' }}>
-                        <option value="oral_hand">◐ Oral / Hand</option>
-                        <option value="vaginal">♥ Vaginal</option>
-                        <option value="sonstiges">⬡ Sonstiges</option>
+                        <option value="oral_hand">💋 Oral / Hand</option>
+                        <option value="vaginal">🌹 Vaginal</option>
+                        <option value="sonstiges">✦ Sonstiges</option>
                     </select>
                 </div>
                 <button onClick={handleAdd} style={{
@@ -1347,9 +1347,9 @@ const ManualSessionForm: React.FC<{
                                 {e.durationMin != null && <span style={{ color: isDark ? '#888' : '#999' }}> · ~{e.durationMin} Min</span>}
                                 <span style={{
                                     marginLeft: 8, padding: '1px 6px', borderRadius: 3, fontSize: '0.88rem',
-                                    background: e.type === 'vaginal' ? (isDark ? '#880e4f' : '#fce4ec') : (isDark ? '#1a237e' : '#e8eaf6'),
-                                    color: e.type === 'vaginal' ? (isDark ? '#f48fb1' : '#c2185b') : (isDark ? '#90caf9' : '#283593'),
-                                }}>{e.type === 'vaginal' ? '♥ vaginal' : e.type === 'oral_hand' ? '◐ oral/hand' : '⬡ sonstiges'}</span>
+                                    background: typeBg(e.type, isDark),
+                                    color: typeColor(e.type, isDark),
+                                }}>{ e.type === 'vaginal' ? '🌹 vaginal' : e.type === 'oral_hand' ? '💋 oral/hand' : '✦ sonstiges'}</span>
                                 <span style={{ marginLeft: 6, fontSize: '0.65rem', color: isDark ? '#555' : '#bbb' }}>◇ manuell</span>
                             </span>
                             <button onClick={() => onDelete(e.id)} style={{
