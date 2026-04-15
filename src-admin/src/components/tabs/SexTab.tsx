@@ -231,7 +231,7 @@ const typeLabel = (type: string): string => {
     if (type === 'vaginal')    return '🌹 Vaginal';
     if (type === 'oral_hand')  return '💋 Oral / Hand';
     if (type === 'nullnummer') return '⛔ Nullnummer';
-    return '✨ Intim';
+    return '❓ Nicht klassifiziert';
 };
 const typeBg = (type: string, isDark: boolean): string => {
     if (type === 'vaginal')    return isDark ? '#880e4f' : '#fce4ec';
@@ -360,10 +360,11 @@ const IntimacyBar = ({ events, isDark }: { events: IntimacyEvent[]; isDark: bool
 // ─────────────────────────────────────────────────────────────────────────────
 // Einzeltag-Kachel
 // ─────────────────────────────────────────────────────────────────────────────
-const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, curDateStr, onChange }: {
+const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, curDateStr, onChange, onNullnummerSet }: {
     events: IntimacyEvent[]; dateLabel: string; themeType: string; funMode: boolean;
     native?: Record<string, any>; labels?: SexTrainingLabel[]; curDateStr?: string;
     onChange?: (attr: string, val: any) => void;
+    onNullnummerSet?: (date: string) => void;
 }) => {
     const isDark = themeType === 'dark';
     const dividerColor = isDark ? '#222' : '#eee';
@@ -451,7 +452,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '1rem', fontWeight: 'bold', color: typeColor(effectiveType, isDark) }}>
-                        {effectiveType === 'vaginal' ? 'Vaginal' : effectiveType === 'oral_hand' ? 'Oral / Hand' : 'Intime Aktivität'}
+                        {effectiveType === 'vaginal' ? 'Vaginal' : effectiveType === 'oral_hand' ? 'Oral / Hand' : 'Nicht klassifiziert'}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: isDark ? '#888' : '#999', marginTop: 1 }}>
                         {fmtTime(evt.start)} – {fmtTime(evt.end)} · ~{evt.duration} Min · Score {evt.score}
@@ -553,6 +554,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
                                     <button onClick={() => {
                                         const newLbl: SexTrainingLabel = { date: curDateStr!, type: 'nullnummer', time: eTime, durationMin: e.duration };
                                         saveSexLabels([...(labels || []), newLbl], onChange!);
+                                        onNullnummerSet?.(curDateStr!);
                                     }} style={{
                                         fontSize: '0.6rem', padding: '2px 8px', cursor: 'pointer',
                                         background: isDark ? '#1a1a1a' : '#f9f9f9',
@@ -638,8 +640,8 @@ const MonthCalendar: React.FC<{
         // Trainings-Label überschreibt Roh-Algorithmus-Typ (oral↔vaginal-Override)
         const _labelOverride = labels.find((l: any) => l.date === dateStr && (l.type === 'vaginal' || l.type === 'oral_hand'));
         const effectiveDomType = isNullnummerDay ? null : (_labelOverride?.type ?? domType);
-        const emoji    = effectiveDomType === 'vaginal' ? '🌹' : effectiveDomType === 'oral_hand' ? '💋' : effectiveDomType ? '✨' : null;
-        const emojiManual = (isNullnummerDay || !emoji) && domManual ? (domManual === 'vaginal' ? '🌷' : domManual === 'oral_hand' ? '💋' : '✨') : null;
+        const emoji    = effectiveDomType === 'vaginal' ? '🌹' : effectiveDomType === 'oral_hand' ? '💋' : effectiveDomType ? '❓' : null;
+        const emojiManual = (isNullnummerDay || !emoji) && domManual ? (domManual === 'vaginal' ? '🌷' : domManual === 'oral_hand' ? '💋' : '❓') : null;
 
         cells.push(
             <div key={dateStr} onClick={() => onDayClick(dateStr)} style={{
@@ -666,7 +668,8 @@ const MonthCalendar: React.FC<{
                     fontWeight: isToday || isView ? 700 : 400,
                 }}>{d}</div>
                 {emoji && (
-                    <div style={{ fontSize: '0.7rem', lineHeight: 1.1 }}>
+                    <div style={{ fontSize: '0.7rem', lineHeight: 1.1 }}
+                         title={events.length > 1 ? `${events.length} erkannte Fragmente (Sensor teilte Session auf)` : undefined}>
                         {events.length > 1 ? `${emoji}×${events.length}` : emoji}
                         {manualDay.length > 0 && <span style={{ fontSize: '0.5rem', opacity: 0.6 }}>+m</span>}
                     </div>
@@ -677,16 +680,18 @@ const MonthCalendar: React.FC<{
                         {manualDay.length > 1 ? `${emojiManual}×${manualDay.length}` : emojiManual}
                     </div>
                 )}
-                {!emoji && !emojiManual && hasLabel && (
-                    <div style={{ fontSize: '0.5rem', color: isDark ? '#333' : '#ddd' }}>✎</div>
-                )}
+
             </div>
         );
     }
 
     // Monats-Statistik
     const monthEventsTotal  = Object.entries(summary).filter(([d]) => d.startsWith(month)).reduce((s,[,e]) => s + e.length, 0);
-    const monthDaysWithSex  = Object.keys(summary).filter(d => d.startsWith(month) && (summary[d]?.length ?? 0) > 0).length;
+    const monthDaysWithSex  = Object.keys(summary).filter(d =>
+        d.startsWith(month) &&
+        (summary[d]?.length ?? 0) > 0 &&
+        !labels.some((l: any) => l.date === d && l.type === 'nullnummer')
+    ).length;
 
     return (
         <TerminalBox title={`SEX — ${MONTH_NAMES_DE[mon-1].toUpperCase()} ${year}`} themeType={themeType}>
@@ -721,14 +726,13 @@ const MonthCalendar: React.FC<{
                 <div style={{ display: 'flex', gap: 10, marginBottom: 2 }}>
                     <span style={{ opacity: 1   }}>🌹 vaginal</span>
                     <span style={{ opacity: 1   }}>💋 oral/hand</span>
-                    <span style={{ opacity: 1   }}>✨ intim</span>
-                    <span style={{ opacity: 1   }}>✎ Label</span>
-                    <span style={{ color: isDark ? '#666' : '#999' }}>← Sensor erkannt</span>
+                    <span style={{ opacity: 1   }}>❓ n.klass.</span>
+                    <span style={{ color: isDark ? '#666' : '#999' }}>← Sensor erkannt (volle Farbe)</span>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
                     <span style={{ opacity: 0.6 }}>🌷 vaginal</span>
                     <span style={{ opacity: 0.6 }}>💋 oral/hand</span>
-                    <span style={{ opacity: 0.6 }}>✨ intim</span>
+                    <span style={{ opacity: 0.6 }}>❓ n.klass.</span>
                     <span style={{ color: isDark ? '#666' : '#999' }}>← nur manuell (blass)</span>
                 </div>
             </div>
@@ -809,8 +813,8 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels, manualEntrie
                                 alignItems: 'center', justifyContent: 'center',
                                 fontSize: '0.7rem', opacity: (isNullnummer && !hasManual) ? 0.45 : 1
                             }}>
-                                {isNullnummer && hasManual ? (manualType === 'vaginal' ? '🌷' : manualType === 'oral_hand' ? '💋' : '✨') : isNullnummer ? '—' : hasEvt ? (effType === 'vaginal' ? '🌹' : effType === 'oral_hand' ? '💋' : '✨') : (isToday ? '⏳' : '-')}
-                                {!isNullnummer && hasManual && <span style={{ fontSize: '0.35rem', opacity: 0.5, lineHeight: 1 }}>+m</span>}
+                                {isNullnummer && hasManual ? (manualType === 'vaginal' ? '🌷' : manualType === 'oral_hand' ? '💋' : '❓') : isNullnummer ? '—' : hasEvt ? (effType === 'vaginal' ? '🌹' : effType === 'oral_hand' ? '💋' : '❓') : (isToday ? '⏳' : '-')}
+                                {!isNullnummer && hasManual && <span style={{ fontSize: '0.45rem', opacity: 0.75, lineHeight: 1 }} title="Zusätzlich manueller Eintrag">+m</span>}
                             </div>
                             {hasEvt && !isNullnummer && (
                                 <>
@@ -927,7 +931,7 @@ const LabelForm = ({ native, onChange, themeType, dayData, loadDay }: {
     const selectStyle = { ...inputStyle, cursor: 'pointer' };
 
     return (
-        <TerminalBox title="SESSION EINTRAGEN (Trainingsdaten)" themeType={themeType}
+        <TerminalBox title="SESSION EINTRAGEN (für Sensor-Training)" themeType={themeType}
             helpText="Trage bekannte Sessions manuell ein. Das System lernt daraus die typische Vibrationsstärke deines Sensors (Kalibrierung). Eine Handvoll Einträge reicht für gute Erkennung. Für die reine Dokumentation ohne Training gibt es die Kachel 'Manuelle Session'.">
             {/* Formular */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end', marginBottom: 12 }}>
@@ -1461,6 +1465,14 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     // Manuelle Sessions (außerhalb Bett)
     const [manualEntries, setManualEntries] = useState<ManualSexEntry[]>([]);
 
+    const handleNullnummerSet = async (date: string) => {
+        try {
+            await socket.sendTo(`${adapterName}.${instance}`, 'clearIntimacyEventsForDay', { date });
+            // Day-Daten neu laden damit die Kachel den leeren Zustand zeigt
+            await loadDay(new Date(date + 'T12:00:00'));
+        } catch (_nse) { /* ignore */ }
+    };
+
     const loadManualEntries = async () => {
         try {
             const result: any = await socket.sendTo(
@@ -1722,6 +1734,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                             labels={labels}
                             curDateStr={dateStr(viewDate)}
                             onChange={onChange}
+                            onNullnummerSet={handleNullnummerSet}
                         />
                         <SevenDayHistory historyDays={historyDays} themeType={themeType} funMode={funMode} labels={labels} manualEntries={manualEntries} />
                         <MonthCalendar

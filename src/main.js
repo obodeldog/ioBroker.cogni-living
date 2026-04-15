@@ -3338,6 +3338,13 @@ class CogniLiving extends utils.Adapter {
                     } catch(_raPyE){ this.log.debug('[OC-SEX-RA-PY] '+_raPyE.message); }
                 }
                 _raCalibInfo.pyClassifier = _raPyInfo ? {trained:_raPyInfo.trained||false,n:_raPyInfo.n_samples||0,counts:_raPyInfo.class_counts||{},msg:_raPyInfo.status_msg||'',feature_importances:_raPyInfo.feature_importances||[],loo_accuracy:(_raPyInfo.loo_accuracy!=null?_raPyInfo.loo_accuracy:null)} : null;
+                // Nullnummer-Override: Wenn der Tag manuell als Nullnummer gelabelt wurde, niemals Sensor-Events ueberschreiben
+                var _raNullCheck = [];
+                try { _raNullCheck = JSON.parse(this.config.sexTrainingLabels || '[]'); } catch(_rnE) {}
+                if (Array.isArray(_raNullCheck) && _raNullCheck.some(function(l){ return l && l.date === _raDate && l.type === 'nullnummer'; })) {
+                    this.log.info('[OC-SEX-RA] ' + _raDate + ': Nullnummer-Label aktiv - intimacyEvents geleert (kein Ueberschreiben durch Reanalyse)');
+                    _raIntimacyEvents = [];
+                }
                 _raSnap.intimacyEvents = _raIntimacyEvents;
                 _raSnap.sexCalibInfo = _raCalibInfo;
                 _raSnap.timestamp = Date.now();
@@ -3463,6 +3470,29 @@ class CogniLiving extends utils.Adapter {
                 this.sendTo(obj.from, obj.command, { success: true, entries: _dlEntries }, obj.callback);
             } catch(_dlE) {
                 this.sendTo(obj.from, obj.command, { success: false, error: _dlE.message }, obj.callback);
+            }
+        }
+        // clearIntimacyEventsForDay: Loescht intimacyEvents aus dem Tages-JSON (nach Nullnummer-Label setzen)
+        else if (obj.command === 'clearIntimacyEventsForDay') {
+            try {
+                var _clDate = obj.message && obj.message.date;
+                if (!_clDate || !/^\d{4}-\d{2}-\d{2}$/.test(_clDate)) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Kein gueltiges Datum' }, obj.callback); return;
+                }
+                var _clDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                var _clPath = path.join(_clDir, _clDate + '.json');
+                if (!fs.existsSync(_clPath)) {
+                    this.sendTo(obj.from, obj.command, { success: true, cleared: false }, obj.callback); return;
+                }
+                var _clSnap = JSON.parse(fs.readFileSync(_clPath, 'utf8'));
+                var _clPrev = (_clSnap.intimacyEvents || []).length;
+                _clSnap.intimacyEvents = [];
+                fs.writeFileSync(_clPath, JSON.stringify(_clSnap), 'utf8');
+                this.log.info('[OC-SEX] clearIntimacyEventsForDay(' + _clDate + '): ' + _clPrev + ' Events geloescht');
+                this.sendTo(obj.from, obj.command, { success: true, cleared: true, prevCount: _clPrev }, obj.callback);
+            } catch(_clE) {
+                this.log.warn('[OC-SEX] clearIntimacyEventsForDay Fehler: ' + _clE.message);
+                this.sendTo(obj.from, obj.command, { success: false, error: _clE.message }, obj.callback);
             }
         }
         }

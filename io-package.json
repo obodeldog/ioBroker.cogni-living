@@ -1,221 +1,229 @@
 ﻿{
-    "common": {
-        "name": "cogni-living",
-        "version": "0.33.141",
-        "news": {
-            "0": {
-                "version": "0.33.105",
-                "date": "2026-04-08",
-                "changes": [
-                    "[Feature OC-SEX] SEX-Kachel: Vibrations-basierte Erkennung intimer Aktivitaeten (Datenschutz-Flag, Fun-Mode, optionale Garmin-HR-Integration)"
-                ]
-            },
-            "1": {
-                "version": "0.33.104",
-                "date": "2026-04-08",
-                "changes": [
-                    "[Fix OC-7] Multi-Person-Motion-Only: sleepWindowEnd aus per-Person-Wakezeiten ableiten (Balken + Dreiecke fuer Haushalte ohne FP2/Garmin)",
-                    "[Fix OC-7] Invertiertes sleepWindowStart korrigieren wenn Abendberechnung heutigen Start schreibt"
-                ]
-            },
-            "0.33.115": {
-                "en": "Vibration chart: removed Aura variant, renamed to VIBRATIONSVERLAUF, LIVE indicator green, trigger markers (cyan), fixed misleading legend + explanatory hint text, detailed hover tooltip with session context",
-                "de": "Vibrations-Chart: Aura-Variante entfernt, umbenannt zu VIBRATIONSVERLAUF, LIVE-Indikator grÃ¼n, Trigger-Markierungen (cyan), irrefÃ¼hrende Legende korrigiert + Hinweistext, detaillierter Hover-Tooltip mit Session-Kontext"
-            },
-            "0.33.114": {
-                "en": "Vibration charts improved: auto-scaled Y-axis, 12h default zoom, 260px height, larger fonts, Aura chart dark-navy background, separate zoom controls per chart",
-                "de": "Vibrations-Charts verbessert: Auto-Y-Achse, 12h Standard-Zoom, 260px HÃ¶he, grÃ¶ÃŸere Schriften, Aura-Chart Dunkelblau-Hintergrund, separater Zoom pro Chart"
-            },
-            "0.33.113": {
-                "en": "Vibration chart panel in Sex tab: Garmin-style (bars+trend) and Aura-style (neon glow), live sensor subscription, 6h/12h/24h zoom, calibration reference lines",
-                "de": "Vibrationsverlauf-Kacheln im Sex-Tab: Garmin-Style (Balken+Trend) und Aura-Style (Neon-Glow), Live-Sensor-Abo, 6h/12h/24h-Zoom, Kalibrierungs-Schwellen als Referenzlinien"
-            },
-            "0.33.112": {
-                "en": "Adaptive calibration from training labels (auto-learn vibration thresholds), anomaly baseline fallback, calibration status shown in Sex tab",
-                "de": "Adaptive Kalibrierung aus Training-Sessions (Vibrations-Schwellen automatisch lernen), Anomalie-Baseline als Fallback, Kalibrierungsstatus im Sex-Tab sichtbar"
-            },
-            "0.33.111": {
-                "en": "v0.33.111: Sex-Tab UI redesign (training labels form, no time window, 5-min slots, Pfad A+B); Zyklus-Tab date picker; retroactive recalc removed",
-                "de": "v0.33.111: Sex-Tab Neugestaltung (Training-Labels-Formular, kein Zeitfenster, 5-Min-Slots, Pfad A+B); Zyklus-Tab DatePicker; retroaktive Berechnung entfernt"
-            },
-            "0.33.110": {
-                "en": "v0.33.110: Recalc force schreibt leere intimacyEvents, OC-SEX Logs, Reload nach Recalc, sexTrainingLabels JSON"
-            },
-            "0.33.109": {
-                "en": "v0.33.109: Zweistufiger Sex-Algorithmus: TierA=65peak/45min, TierB=45peak/60-90min"
-            },
-            "0.33.108": {
-                "en": "v0.33.108: Sex-Algorithmus-Fix: Zeitfenster 10h, MIN_PEAK 65, retroaktiv force-Neuberechnung"
-            },
-            "0.33.107": {
-                "en": "v0.33.107: Zyklus-Kachel (Phasenband, Prognose, Verlauf), retroaktive Sex-Berechnung, Zyklus-Kontext in Fun-Kommentaren"
-            },
-            "0.33.106": {
-                "en": "v0.33.106: Fix SEX-Kachel Daten-Load (getHistoryData), Zeitfenster 06-03h, Garmin-HR-Settings-Feld"
-            }
-        },
-        "titleLang": {
-            "en": "NUUKANNI (Cogni-Living)",
-            "de": "NUUKANNI (Cogni-Living)"
-        },
-        "desc": {
-            "en": "Neuro-Symbolic AI for Home Automation & Health",
-            "de": "Neuro-Symbolische KI fÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼r Hausautomation & Gesundheit"
-        },
-        "authors": [
-            "Marc Jaeger <mj112@gmx.de>"
-        ],
-        "keywords": [
-            "ai",
-            "behavior",
-            "health",
-            "smart home"
-        ],
-        "licenseInformation": {
-            "type": "free",
-            "license": "MIT"
-        },
-        "platform": "Javascript/Node.js",
-        "icon": "cogni-living.png",
-        "extIcon": "https://raw.githubusercontent.com/obodeldog/ioBroker.cogni-living/main/admin/cogni-living.png",
-        "readme": "https://github.com/obodeldog/ioBroker.cogni-living/blob/main/README.md",
-        "loglevel": "info",
-        "mode": "daemon",
-        "type": "iot-systems",
-        "compact": true,
-        "connectionType": "local",
-        "dataSource": "push",
-        "materialize": true,
-        "dependencies": [
-            {
-                "js-controller": ">=6.0.11"
-            }
-        ],
-        "globalDependencies": [
-            {
-                "admin": ">=7.0.23"
-            }
-        ]
-    },
-    "native": {
-        "moduleHealth": true,
-        "moduleSecurity": true,
-        "moduleEnergy": true,
-        "moduleComfort": true,
-        "devices": [],
-        "presenceDevices": [],
-        "outdoorSensorId": "",
-        "geminiApiKey": "",
-        "licenseKey": "",
-        "analysisInterval": 15,
-        "aiPersona": "generic",
-        "livingContext": "",
-        "minDaysForBaseline": 7,
-        "inactivityMonitoringEnabled": false,
-        "inactivityThresholdHours": 12,
-        "notifyTelegramEnabled": false,
-        "notifyTelegramInstance": "",
-        "notifyTelegramRecipient": "",
-        "notifyPushoverEnabled": false,
-        "notifyPushoverInstance": "",
-        "notifyPushoverRecipient": "",
-        "notifyEmailEnabled": false,
-        "notifyEmailInstance": "",
-        "notifyEmailRecipient": "",
-        "notifyWhatsappEnabled": false,
-        "notifyWhatsappInstance": "",
-        "notifyWhatsappRecipient": "",
-        "notifySignalEnabled": false,
-        "notifySignalInstance": "",
-        "notifySignalRecipient": "",
-        "ltmStbWindowDays": 14,
-        "ltmLtbWindowDays": 60,
-        "ltmDriftCheckIntervalHours": 24,
-        "briefingEnabled": false,
-        "briefingTime": "08:00",
-        "weeklyBriefingEnabled": false,
-        "weeklyBriefingTime": "09:00",
-        "useWeather": false,
-        "weatherInstance": "",
-        "useCalendar": false,
-        "calendarInstance": "",
-        "calendarProfileMatching": false,
-        "infrasoundEnabled": false,
-        "infrasoundSensorId": "",
-        "infrasoundThreshold": 0.04,
-        "infrasoundArmingId": "",
-        "infrasoundEntryDelay": 0,
-        "pwaEnabled": false,
-        "pwaPort": 8095,
-        "familyShareToken": "",
-        "cloudflareEnabled": false,
-        "garminSleepScoreStateId": "garmin.0.dailysleep.dailySleepDTO.sleepScores.overall.value",
-        "garminSleepStartStateId": "garmin.0.dailysleep.dailySleepDTO.sleepStartTimestampGMT",
-        "garminSleepEndStateId": "garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT",
-        "garminDeepSleepStateId": "garmin.0.dailysleep.dailySleepDTO.deepSleepSeconds",
-        "garminLightSleepStateId": "garmin.0.dailysleep.dailySleepDTO.lightSleepSeconds",
-        "garminRemSleepStateId": "garmin.0.dailysleep.dailySleepDTO.remSleepSeconds",
-        "garminLastSyncStateId": "",
-        "healthProfiles": {
-            "fallRisk": {
-                "enabled": false,
-                "sensitivity": "medium"
-            },
-            "dementia": {
-                "enabled": false,
-                "sensitivity": "medium"
-            },
-            "frailty": {
-                "enabled": false,
-                "sensitivity": "medium"
-            },
-            "depression": {
-                "enabled": false,
-                "sensitivity": "medium"
-            },
-            "diabetes2": {
-                "enabled": false,
-                "sensitivity": "medium"
-            },
-            "sleepDisorder": {
-                "enabled": false,
-                "sensitivity": "medium"
-            },
-            "cardiovascular": {
-                "enabled": false,
-                "sensitivity": "medium"
-            },
-            "parkinson": {
-                "enabled": false,
-                "sensitivity": "medium"
-            },
-            "copd": {
-                "enabled": false,
-                "sensitivity": "medium"
-            },
-            "socialIsolation": {
-                "enabled": false,
-                "sensitivity": "medium"
-            },
-            "epilepsy": {
-                "enabled": false,
-                "sensitivity": "medium"
-            },
-            "diabetes1": {
-                "enabled": false,
-                "sensitivity": "medium"
-            },
-            "longCovid": {
-                "enabled": false,
-                "sensitivity": "medium"
-            },
-            "bipolar": {
-                "enabled": false,
-                "sensitivity": "medium"
-            }
-        },
-        "sexTrainingLabels": ""
-    },
-    "objects": [],
-    "instanceObjects": []
+    "common":  {
+                   "name":  "cogni-living",
+                   "version":  "0.33.142",
+                   "news":  {
+                                "0":  {
+                                          "version":  "0.33.105",
+                                          "date":  "2026-04-08",
+                                          "changes":  [
+                                                          "[Feature OC-SEX] SEX-Kachel: Vibrations-basierte Erkennung intimer Aktivitaeten (Datenschutz-Flag, Fun-Mode, optionale Garmin-HR-Integration)"
+                                                      ]
+                                      },
+                                "1":  {
+                                          "version":  "0.33.104",
+                                          "date":  "2026-04-08",
+                                          "changes":  [
+                                                          "[Fix OC-7] Multi-Person-Motion-Only: sleepWindowEnd aus per-Person-Wakezeiten ableiten (Balken + Dreiecke fuer Haushalte ohne FP2/Garmin)",
+                                                          "[Fix OC-7] Invertiertes sleepWindowStart korrigieren wenn Abendberechnung heutigen Start schreibt"
+                                                      ]
+                                      },
+                                "0.33.115":  {
+                                                 "en":  "Vibration chart: removed Aura variant, renamed to VIBRATIONSVERLAUF, LIVE indicator green, trigger markers (cyan), fixed misleading legend + explanatory hint text, detailed hover tooltip with session context",
+                                                 "de":  "Vibrations-Chart: Aura-Variante entfernt, umbenannt zu VIBRATIONSVERLAUF, LIVE-Indikator grÃ¼n, Trigger-Markierungen (cyan), irrefÃ¼hrende Legende korrigiert + Hinweistext, detaillierter Hover-Tooltip mit Session-Kontext"
+                                             },
+                                "0.33.114":  {
+                                                 "en":  "Vibration charts improved: auto-scaled Y-axis, 12h default zoom, 260px height, larger fonts, Aura chart dark-navy background, separate zoom controls per chart",
+                                                 "de":  "Vibrations-Charts verbessert: Auto-Y-Achse, 12h Standard-Zoom, 260px HÃ¶he, grÃ¶ÃŸere Schriften, Aura-Chart Dunkelblau-Hintergrund, separater Zoom pro Chart"
+                                             },
+                                "0.33.113":  {
+                                                 "en":  "Vibration chart panel in Sex tab: Garmin-style (bars+trend) and Aura-style (neon glow), live sensor subscription, 6h/12h/24h zoom, calibration reference lines",
+                                                 "de":  "Vibrationsverlauf-Kacheln im Sex-Tab: Garmin-Style (Balken+Trend) und Aura-Style (Neon-Glow), Live-Sensor-Abo, 6h/12h/24h-Zoom, Kalibrierungs-Schwellen als Referenzlinien"
+                                             },
+                                "0.33.112":  {
+                                                 "en":  "Adaptive calibration from training labels (auto-learn vibration thresholds), anomaly baseline fallback, calibration status shown in Sex tab",
+                                                 "de":  "Adaptive Kalibrierung aus Training-Sessions (Vibrations-Schwellen automatisch lernen), Anomalie-Baseline als Fallback, Kalibrierungsstatus im Sex-Tab sichtbar"
+                                             },
+                                "0.33.111":  {
+                                                 "en":  "v0.33.111: Sex-Tab UI redesign (training labels form, no time window, 5-min slots, Pfad A+B); Zyklus-Tab date picker; retroactive recalc removed",
+                                                 "de":  "v0.33.111: Sex-Tab Neugestaltung (Training-Labels-Formular, kein Zeitfenster, 5-Min-Slots, Pfad A+B); Zyklus-Tab DatePicker; retroaktive Berechnung entfernt"
+                                             },
+                                "0.33.110":  {
+                                                 "en":  "v0.33.110: Recalc force schreibt leere intimacyEvents, OC-SEX Logs, Reload nach Recalc, sexTrainingLabels JSON"
+                                             },
+                                "0.33.109":  {
+                                                 "en":  "v0.33.109: Zweistufiger Sex-Algorithmus: TierA=65peak/45min, TierB=45peak/60-90min"
+                                             },
+                                "0.33.108":  {
+                                                 "en":  "v0.33.108: Sex-Algorithmus-Fix: Zeitfenster 10h, MIN_PEAK 65, retroaktiv force-Neuberechnung"
+                                             },
+                                "0.33.107":  {
+                                                 "en":  "v0.33.107: Zyklus-Kachel (Phasenband, Prognose, Verlauf), retroaktive Sex-Berechnung, Zyklus-Kontext in Fun-Kommentaren"
+                                             },
+                                "0.33.106":  {
+                                                 "en":  "v0.33.106: Fix SEX-Kachel Daten-Load (getHistoryData), Zeitfenster 06-03h, Garmin-HR-Settings-Feld"
+                                             }
+                            },
+                   "titleLang":  {
+                                     "en":  "NUUKANNI (Cogni-Living)",
+                                     "de":  "NUUKANNI (Cogni-Living)"
+                                 },
+                   "desc":  {
+                                "en":  "Neuro-Symbolic AI for Home Automation \u0026 Health",
+                                "de":  "Neuro-Symbolische KI fÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼r Hausautomation \u0026 Gesundheit"
+                            },
+                   "authors":  [
+                                   "Marc Jaeger \u003cmj112@gmx.de\u003e"
+                               ],
+                   "keywords":  [
+                                    "ai",
+                                    "behavior",
+                                    "health",
+                                    "smart home"
+                                ],
+                   "licenseInformation":  {
+                                              "type":  "free",
+                                              "license":  "MIT"
+                                          },
+                   "platform":  "Javascript/Node.js",
+                   "icon":  "cogni-living.png",
+                   "extIcon":  "https://raw.githubusercontent.com/obodeldog/ioBroker.cogni-living/main/admin/cogni-living.png",
+                   "readme":  "https://github.com/obodeldog/ioBroker.cogni-living/blob/main/README.md",
+                   "loglevel":  "info",
+                   "mode":  "daemon",
+                   "type":  "iot-systems",
+                   "compact":  true,
+                   "connectionType":  "local",
+                   "dataSource":  "push",
+                   "materialize":  true,
+                   "dependencies":  [
+                                        {
+                                            "js-controller":  "\u003e=6.0.11"
+                                        }
+                                    ],
+                   "globalDependencies":  [
+                                              {
+                                                  "admin":  "\u003e=7.0.23"
+                                              }
+                                          ]
+               },
+    "native":  {
+                   "moduleHealth":  true,
+                   "moduleSecurity":  true,
+                   "moduleEnergy":  true,
+                   "moduleComfort":  true,
+                   "devices":  [
+
+                               ],
+                   "presenceDevices":  [
+
+                                       ],
+                   "outdoorSensorId":  "",
+                   "geminiApiKey":  "",
+                   "licenseKey":  "",
+                   "analysisInterval":  15,
+                   "aiPersona":  "generic",
+                   "livingContext":  "",
+                   "minDaysForBaseline":  7,
+                   "inactivityMonitoringEnabled":  false,
+                   "inactivityThresholdHours":  12,
+                   "notifyTelegramEnabled":  false,
+                   "notifyTelegramInstance":  "",
+                   "notifyTelegramRecipient":  "",
+                   "notifyPushoverEnabled":  false,
+                   "notifyPushoverInstance":  "",
+                   "notifyPushoverRecipient":  "",
+                   "notifyEmailEnabled":  false,
+                   "notifyEmailInstance":  "",
+                   "notifyEmailRecipient":  "",
+                   "notifyWhatsappEnabled":  false,
+                   "notifyWhatsappInstance":  "",
+                   "notifyWhatsappRecipient":  "",
+                   "notifySignalEnabled":  false,
+                   "notifySignalInstance":  "",
+                   "notifySignalRecipient":  "",
+                   "ltmStbWindowDays":  14,
+                   "ltmLtbWindowDays":  60,
+                   "ltmDriftCheckIntervalHours":  24,
+                   "briefingEnabled":  false,
+                   "briefingTime":  "08:00",
+                   "weeklyBriefingEnabled":  false,
+                   "weeklyBriefingTime":  "09:00",
+                   "useWeather":  false,
+                   "weatherInstance":  "",
+                   "useCalendar":  false,
+                   "calendarInstance":  "",
+                   "calendarProfileMatching":  false,
+                   "infrasoundEnabled":  false,
+                   "infrasoundSensorId":  "",
+                   "infrasoundThreshold":  0.04,
+                   "infrasoundArmingId":  "",
+                   "infrasoundEntryDelay":  0,
+                   "pwaEnabled":  false,
+                   "pwaPort":  8095,
+                   "familyShareToken":  "",
+                   "cloudflareEnabled":  false,
+                   "garminSleepScoreStateId":  "garmin.0.dailysleep.dailySleepDTO.sleepScores.overall.value",
+                   "garminSleepStartStateId":  "garmin.0.dailysleep.dailySleepDTO.sleepStartTimestampGMT",
+                   "garminSleepEndStateId":  "garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT",
+                   "garminDeepSleepStateId":  "garmin.0.dailysleep.dailySleepDTO.deepSleepSeconds",
+                   "garminLightSleepStateId":  "garmin.0.dailysleep.dailySleepDTO.lightSleepSeconds",
+                   "garminRemSleepStateId":  "garmin.0.dailysleep.dailySleepDTO.remSleepSeconds",
+                   "garminLastSyncStateId":  "",
+                   "healthProfiles":  {
+                                          "fallRisk":  {
+                                                           "enabled":  false,
+                                                           "sensitivity":  "medium"
+                                                       },
+                                          "dementia":  {
+                                                           "enabled":  false,
+                                                           "sensitivity":  "medium"
+                                                       },
+                                          "frailty":  {
+                                                          "enabled":  false,
+                                                          "sensitivity":  "medium"
+                                                      },
+                                          "depression":  {
+                                                             "enabled":  false,
+                                                             "sensitivity":  "medium"
+                                                         },
+                                          "diabetes2":  {
+                                                            "enabled":  false,
+                                                            "sensitivity":  "medium"
+                                                        },
+                                          "sleepDisorder":  {
+                                                                "enabled":  false,
+                                                                "sensitivity":  "medium"
+                                                            },
+                                          "cardiovascular":  {
+                                                                 "enabled":  false,
+                                                                 "sensitivity":  "medium"
+                                                             },
+                                          "parkinson":  {
+                                                            "enabled":  false,
+                                                            "sensitivity":  "medium"
+                                                        },
+                                          "copd":  {
+                                                       "enabled":  false,
+                                                       "sensitivity":  "medium"
+                                                   },
+                                          "socialIsolation":  {
+                                                                  "enabled":  false,
+                                                                  "sensitivity":  "medium"
+                                                              },
+                                          "epilepsy":  {
+                                                           "enabled":  false,
+                                                           "sensitivity":  "medium"
+                                                       },
+                                          "diabetes1":  {
+                                                            "enabled":  false,
+                                                            "sensitivity":  "medium"
+                                                        },
+                                          "longCovid":  {
+                                                            "enabled":  false,
+                                                            "sensitivity":  "medium"
+                                                        },
+                                          "bipolar":  {
+                                                          "enabled":  false,
+                                                          "sensitivity":  "medium"
+                                                      }
+                                      },
+                   "sexTrainingLabels":  ""
+               },
+    "objects":  [
+
+                ],
+    "instanceObjects":  [
+
+                        ]
 }
