@@ -635,7 +635,10 @@ const MonthCalendar: React.FC<{
         const isNullnummerDay = labels.some((l: any) => l.date === dateStr && l.type === 'nullnummer');
         const domManual = manualDay[0]?.type ?? null;
         // Algorithmisch erkannt: volle Emojis; nur manuell: hohle Variante
-        const emoji    = isNullnummerDay ? null : (domType === 'vaginal' ? '🌹' : domType === 'oral_hand' ? '💋' : domType ? '✨' : null);
+        // Trainings-Label überschreibt Roh-Algorithmus-Typ (oral↔vaginal-Override)
+        const _labelOverride = labels.find((l: any) => l.date === dateStr && (l.type === 'vaginal' || l.type === 'oral_hand'));
+        const effectiveDomType = isNullnummerDay ? null : (_labelOverride?.type ?? domType);
+        const emoji    = effectiveDomType === 'vaginal' ? '🌹' : effectiveDomType === 'oral_hand' ? '💋' : effectiveDomType ? '✨' : null;
         const emojiManual = (isNullnummerDay || !emoji) && domManual ? (domManual === 'vaginal' ? '🌷' : domManual === 'oral_hand' ? '💋' : '✨') : null;
 
         cells.push(
@@ -714,11 +717,20 @@ const MonthCalendar: React.FC<{
             </div>
 
             {/* Legende */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 8, fontSize: '0.6rem', color: isDark ? '#444' : '#bbb' }}>
-                <span>🌹 vaginal</span>
-                <span>💋 oral/hand</span>
-                <span>✨ intim</span>
-                <span>🌷 nur manuell</span>
+            <div style={{ marginTop: 8, fontSize: '0.6rem', color: isDark ? '#444' : '#bbb' }}>
+                <div style={{ display: 'flex', gap: 10, marginBottom: 2 }}>
+                    <span style={{ opacity: 1   }}>🌹 vaginal</span>
+                    <span style={{ opacity: 1   }}>💋 oral/hand</span>
+                    <span style={{ opacity: 1   }}>✨ intim</span>
+                    <span style={{ opacity: 1   }}>✎ Label</span>
+                    <span style={{ color: isDark ? '#666' : '#999' }}>← Sensor erkannt</span>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                    <span style={{ opacity: 0.6 }}>🌷 vaginal</span>
+                    <span style={{ opacity: 0.6 }}>💋 oral/hand</span>
+                    <span style={{ opacity: 0.6 }}>✨ intim</span>
+                    <span style={{ color: isDark ? '#666' : '#999' }}>← nur manuell (blass)</span>
+                </div>
             </div>
         </TerminalBox>
     );
@@ -779,8 +791,11 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels, manualEntrie
                         ? dayLbl.type
                         : (evt?.type ?? 'intim');
                     const dotColor = (!hasEvt || (isNullnummer && !hasManual)) ? (isDark ? '#1a1a1a' : '#f0f0f0') :
+                        (isNullnummer && hasManual) ? (manualType === 'vaginal' ? '#880e4f' : '#4a148c') :
                         effType === 'vaginal' ? '#880e4f' : '#4a148c';
                     const dotBorder = (!hasEvt || (isNullnummer && !hasManual)) ? ('1px dashed ' + (isDark ? '#2a2a2a' : '#ddd')) :
+                        (isNullnummer && hasManual) ? (manualType === 'vaginal' ? '1px solid #c2185b' : '1px solid #7b1fa2') :
+                        effType === 'vaginal' ? '1px solid #c2185b' : '1px solid #7b1fa2';
                         effType === 'vaginal' ? '1px solid #c2185b' : '1px solid #7b1fa2';
                     return (
                         <div key={i}>
@@ -795,8 +810,9 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels, manualEntrie
                                 fontSize: '0.7rem', opacity: (isNullnummer && !hasManual) ? 0.45 : 1
                             }}>
                                 {isNullnummer && hasManual ? (manualType === 'vaginal' ? '🌷' : manualType === 'oral_hand' ? '💋' : '✨') : isNullnummer ? '—' : hasEvt ? (effType === 'vaginal' ? '🌹' : effType === 'oral_hand' ? '💋' : '✨') : (isToday ? '⏳' : '-')}
+                                {!isNullnummer && hasManual && <span style={{ fontSize: '0.35rem', opacity: 0.5, lineHeight: 1 }}>+m</span>}
                             </div>
-                            {hasEvt && (!isNullnummer || hasManual) && (
+                            {hasEvt && !isNullnummer && (
                                 <>
                                     <div style={{ fontSize: '0.88rem', color: isDark ? '#ce93d8' : '#7b1fa2', fontWeight: 'bold' }}>{evt!.score}</div>
                                     <div style={{ fontSize: '0.45rem', color: isDark ? '#555' : '#aaa' }}>{fmtTime(evt!.start).slice(0,5)}</div>
