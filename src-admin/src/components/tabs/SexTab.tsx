@@ -631,10 +631,12 @@ const MonthCalendar: React.FC<{
 
         // Dominanten Typ bestimmen (erster algorithmischer Event, sonst manuell)
         const domType  = events[0]?.type ?? null;
+        // Nullnummer-Label unterdrückt algorithmischen Icon (manueller Eintrag bleibt)
+        const isNullnummerDay = labels.some((l: any) => l.date === dateStr && l.type === 'nullnummer');
         const domManual = manualDay[0]?.type ?? null;
         // Algorithmisch erkannt: volle Emojis; nur manuell: hohle Variante
-        const emoji    = domType === 'vaginal' ? '🌹' : domType === 'oral_hand' ? '💋' : domType ? '✨' : null;
-        const emojiManual = !emoji && domManual ? (domManual === 'vaginal' ? '🌷' : domManual === 'oral_hand' ? '💋' : '✨') : null;
+        const emoji    = isNullnummerDay ? null : (domType === 'vaginal' ? '🌹' : domType === 'oral_hand' ? '💋' : domType ? '✨' : null);
+        const emojiManual = (isNullnummerDay || !emoji) && domManual ? (domManual === 'vaginal' ? '🌷' : domManual === 'oral_hand' ? '💋' : '✨') : null;
 
         cells.push(
             <div key={dateStr} onClick={() => onDayClick(dateStr)} style={{
@@ -725,13 +727,31 @@ const MonthCalendar: React.FC<{
 // ─────────────────────────────────────────────────────────────────────────────
 // 7-Tage-History
 // ─────────────────────────────────────────────────────────────────────────────
-const SevenDayHistory = ({ historyDays, themeType, funMode, labels }: {
+const SevenDayHistory = ({ historyDays, themeType, funMode, labels, manualEntries = [] }: {
     historyDays: Array<{ dateStr: string; label: string; events: IntimacyEvent[] }>;
-    themeType: string; funMode: boolean; labels?: SexTrainingLabel[];
+    themeType: string; funMode: boolean; labels?: SexTrainingLabel[]; manualEntries?: ManualSexEntry[];
 }) => {
     const isDark = themeType === 'dark';
-    const withEvents = historyDays.filter(d => d.events.length > 0);
-    const weekCount  = withEvents.length;
+    // Nullnummer-Tage: vom Sensor erkannt aber explizit als "kein Sex" markiert.
+    // Werden NICHT als Session gezählt. Tage mit manuellem Eintrag zählen dagegen.
+    const isNullnummerFn = (dateStr: string, evts: IntimacyEvent[]) => {
+        if (!labels || evts.length === 0) return false;
+        const lbl = evts.length > 0 ? labels.find((l: any) => {
+            const evtDate = new Date(evts[0].start).toISOString().slice(0,10);
+            return l.date === dateStr && l.type === 'nullnummer';
+        }) : undefined;
+        return !!lbl;
+    };
+    const withEvents = historyDays.filter(d => {
+        if (d.events.length === 0) return false;
+        if (isNullnummerFn(d.dateStr, d.events)) return false;
+        return true;
+    });
+    // Manuelle Sessions ohne Sensor-Event (zusätzlich zu withEvents)
+    const manualOnlyDays = (manualEntries || []).filter(m =>
+        !historyDays.some(d => d.dateStr === m.date && d.events.length > 0 && !isNullnummerFn(d.dateStr, d.events))
+    );
+    const weekCount = withEvents.length + manualOnlyDays.length;
     const avgScore   = weekCount > 0 ? Math.round(withEvents.reduce((a, d) => a + d.events[0].score, 0) / weekCount) : null;
     const avgDur     = weekCount > 0 ? Math.round(withEvents.reduce((a, d) => a + d.events[0].duration, 0) / weekCount) : null;
 
@@ -747,6 +767,9 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels }: {
             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${historyDays.length}, 1fr)`, gap: 6, textAlign: 'center', marginBottom: 12 }}>
                 {historyDays.map((day, i) => {
                     const hasEvt  = day.events.length > 0;
+                    const manualForDay = (manualEntries || []).filter(m => m.date === day.dateStr);
+                    const hasManual = manualForDay.length > 0;
+                    const manualType = manualForDay[0]?.type ?? null;
                     const isToday = i === historyDays.length - 1;
                     const evt     = hasEvt ? day.events[0] : null;
                     // Manuelles Label hat Vorrang
@@ -755,9 +778,9 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels }: {
                     const effType: string = (dayLbl && (dayLbl.type === 'vaginal' || dayLbl.type === 'oral_hand'))
                         ? dayLbl.type
                         : (evt?.type ?? 'intim');
-                    const dotColor = (!hasEvt || isNullnummer) ? (isDark ? '#1a1a1a' : '#f0f0f0') :
+                    const dotColor = (!hasEvt || (isNullnummer && !hasManual)) ? (isDark ? '#1a1a1a' : '#f0f0f0') :
                         effType === 'vaginal' ? '#880e4f' : '#4a148c';
-                    const dotBorder = (!hasEvt || isNullnummer) ? ('1px dashed ' + (isDark ? '#2a2a2a' : '#ddd')) :
+                    const dotBorder = (!hasEvt || (isNullnummer && !hasManual)) ? ('1px dashed ' + (isDark ? '#2a2a2a' : '#ddd')) :
                         effType === 'vaginal' ? '1px solid #c2185b' : '1px solid #7b1fa2';
                     return (
                         <div key={i}>
@@ -769,11 +792,11 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels }: {
                                 background: dotColor, border: dotBorder,
                                 margin: '0 auto 3px', display: 'flex',
                                 alignItems: 'center', justifyContent: 'center',
-                                fontSize: '0.7rem', opacity: isNullnummer ? 0.45 : 1
+                                fontSize: '0.7rem', opacity: (isNullnummer && !hasManual) ? 0.45 : 1
                             }}>
-                                {isNullnummer ? '⛔' : hasEvt ? (effType === 'vaginal' ? '🌹' : effType === 'oral_hand' ? '💋' : '✨') : (isToday ? '⏳' : '-')}
+                                {isNullnummer && hasManual ? (manualType === 'vaginal' ? '🌷' : manualType === 'oral_hand' ? '💋' : '✨') : isNullnummer ? '—' : hasEvt ? (effType === 'vaginal' ? '🌹' : effType === 'oral_hand' ? '💋' : '✨') : (isToday ? '⏳' : '-')}
                             </div>
-                            {hasEvt && !isNullnummer && (
+                            {hasEvt && (!isNullnummer || hasManual) && (
                                 <>
                                     <div style={{ fontSize: '0.88rem', color: isDark ? '#ce93d8' : '#7b1fa2', fontWeight: 'bold' }}>{evt!.score}</div>
                                     <div style={{ fontSize: '0.45rem', color: isDark ? '#555' : '#aaa' }}>{fmtTime(evt!.start).slice(0,5)}</div>
@@ -783,8 +806,14 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels }: {
                                     </div>
                                 </>
                             )}
-                            {hasEvt && isNullnummer && (
+                            {hasEvt && isNullnummer && !hasManual && (
                                 <div style={{ fontSize: '0.45rem', color: isDark ? '#444' : '#ccc', marginTop: 2 }}>Null-<br />nummer</div>
+                            )}
+                            {hasManual && isNullnummer && (
+                                <div style={{ fontSize: '0.45rem', color: typeColor(manualType || 'intim', isDark), fontWeight: 'bold', marginTop: 2 }}>
+                                    {manualType === 'vaginal' ? 'Vaginal' : manualType === 'oral_hand' ? 'Oral' : '✨'}
+                                    <br/><span style={{color: isDark ? '#555' : '#bbb'}}>manuell</span>
+                                </div>
                             )}
                         </div>
                     );
@@ -1678,7 +1707,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                             curDateStr={dateStr(viewDate)}
                             onChange={onChange}
                         />
-                        <SevenDayHistory historyDays={historyDays} themeType={themeType} funMode={funMode} labels={labels} />
+                        <SevenDayHistory historyDays={historyDays} themeType={themeType} funMode={funMode} labels={labels} manualEntries={manualEntries} />
                         <MonthCalendar
                             month={calMonth}
                             summary={monthSummary}
