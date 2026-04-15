@@ -2553,6 +2553,23 @@ class CogniLiving extends utils.Adapter {
                     this.log.warn('[OC-SEX] Fehler bei Intimacy-Detection: '+_intimErr.message);
                 }
             }
+            // OC-SEX Dedup: Verhindert dass Events vom Vorabend (sleepSearch ab 18:00 gestern)
+            // doppelt in heute UND gestern gespeichert werden. Wenn ein erkanntes Event
+            // bereits in der gestrigen JSON-Datei steht, wird es aus dem heutigen Snapshot gefiltern.
+            try {
+                var _ddPrev = new Date(); _ddPrev.setDate(_ddPrev.getDate() - 1);
+                var _ddPrevStr = _ddPrev.getFullYear() + '-' + String(_ddPrev.getMonth()+1).padStart(2,'0') + '-' + String(_ddPrev.getDate()).padStart(2,'0');
+                var _ddPrevPath = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history', _ddPrevStr + '.json');
+                if (fs.existsSync(_ddPrevPath) && intimacyEvents.length > 0) {
+                    var _ddPrevSnap = JSON.parse(fs.readFileSync(_ddPrevPath, 'utf8'));
+                    var _ddPrevStarts = new Set((_ddPrevSnap.intimacyEvents || []).map(function(e) { return e.start; }));
+                    var _ddBefore = intimacyEvents.length;
+                    intimacyEvents = intimacyEvents.filter(function(e) { return !_ddPrevStarts.has(e.start); });
+                    if (intimacyEvents.length < _ddBefore) {
+                        this.log.info('[OC-SEX] Dedup: ' + (_ddBefore - intimacyEvents.length) + ' doppeltes Event(s) aus ' + _ddPrevStr + '.json gefiltert (Event gehoert zum Vortag)');
+                    }
+                }
+            } catch(_ddE) { this.log.debug('[OC-SEX] Dedup-Fehler: ' + _ddE.message); }
 
                         const snapshot = {
                 date: dateStr,
