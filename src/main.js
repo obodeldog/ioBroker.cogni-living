@@ -152,6 +152,8 @@ class CogniLiving extends utils.Adapter {
         });
         await this.setObjectNotExistsAsync('analysis.sleep.startOverride', { type: 'state', common: { name: 'Sleep Start Override (OC-23) - JSON', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
         await this.setObjectNotExistsAsync('analysis.sleep.personStartOverrides', { type: 'state', common: { name: 'Per-Person Sleep Start Overrides (JSON)', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.sleep.wakeOverride', { type: 'state', common: { name: 'Wake Override (JSON)', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.sleep.personWakeOverrides', { type: 'state', common: { name: 'Per-Person Wake Overrides (JSON)', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorBatteryStatus', { type: 'state', common: { name: 'Sensor Battery Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorStatus', { type: 'state', common: { name: 'Sensor Health Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.currentPersonCount', { type: 'state', common: { name: 'Aktuelle Personenanzahl im Haus', type: 'number', role: 'value', unit: 'Personen', read: true, write: false, def: 1, desc: 'Geschaetzte Personenanzahl (Config-Baseline + raeumliche Heuristik + FP2)' }, native: {} });
@@ -1073,19 +1075,50 @@ class CogniLiving extends utils.Adapter {
                 }
             }
 
+            // --- Globale Einschlafzeit: Letzter Aussenort (last_outside) ---
+            // Fallback wenn keine Bett-/Bewegungssensoren ausschlaggebend waren
+            var lastOutsideSleepStartTs = null;
+            if (!_fp2RawStart && !sleepWindowHausStill.start && !motionVibSleepStartTs && !sleepWindowMotion.start) {
+                var _loExtEvts = sleepSearchEvents.filter(function(e) {
+                    if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion || e.isBathroomSensor) return false;
+                    var hr = new Date(e.timestamp||0).getHours();
+                    return (hr >= 18 || hr < 2) && isActiveValue(e.value);
+                }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                for (var _logi = _loExtEvts.length - 1; _logi >= 0; _logi--) {
+                    var _loTs = _loExtEvts[_logi].timestamp||0;
+                    var _loHasNext = _loExtEvts.some(function(e) {
+                        return (e.timestamp||0) > _loTs && (e.timestamp||0) <= _loTs + 30*60*1000;
+                    });
+                    if (!_loHasNext) {
+                        var _loBedsAfter = sleepSearchEvents.filter(function(e) {
+                            return (e.isFP2Bed || e.isBedroomMotion) && (e.timestamp||0) > _loTs && isActiveValue(e.value);
+                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                        if (_loBedsAfter.length > 0) {
+                            lastOutsideSleepStartTs = _loBedsAfter[0].timestamp||0;
+                            this.log.debug('[SleepStart] last_outside: ' + new Date(lastOutsideSleepStartTs).toISOString());
+                            break;
+                        }
+                    }
+                }
+            }
+
             // allSleepStartSources + sleepStartSource bestimmen
             var _fixedSleepStartTs = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr
             var allSleepStartSources = [
-                { source: 'garmin',     ts: garminSleepStartTs },
-                { source: 'fp2_vib',   ts: vibRefinedSleepStartTs },
-                { source: 'fp2',       ts: _fp2RawStart },
-                { source: 'motion_vib', ts: motionVibSleepStartTs },
-                { source: 'haus_still', ts: sleepWindowHausStill.start || null },
-                { source: 'motion',    ts: sleepWindowMotion.start || null },
-                { source: 'fixed',     ts: _fixedSleepStartTs }
+                { source: 'garmin',       ts: garminSleepStartTs },
+                { source: 'fp2_vib',      ts: vibRefinedSleepStartTs },
+                { source: 'fp2',          ts: _fp2RawStart },
+                { source: 'motion_vib',   ts: motionVibSleepStartTs },
+                { source: 'last_outside', ts: lastOutsideSleepStartTs },
+                { source: 'haus_still',   ts: sleepWindowHausStill.start || null },
+                { source: 'motion',       ts: sleepWindowMotion.start || null },
+                { source: 'fixed',        ts: _fixedSleepStartTs }
             ];
             var sleepStartSource = _fp2RawStart ? 'fp2'
-                : (sleepWindowHausStill.start ? 'haus_still' : (motionVibSleepStartTs ? 'motion_vib' : (sleepWindowMotion.start ? 'motion' : 'fixed')));
+                : (motionVibSleepStartTs ? 'motion_vib'
+                : (lastOutsideSleepStartTs ? 'last_outside'
+                : (sleepWindowHausStill.start ? 'haus_still'
+                : (sleepWindowMotion.start ? 'motion' : 'fixed'))));
 
             // OC-23: Manueller Override der Einschlafzeit-Quelle
             var _overrideApplied = false;
@@ -1118,6 +1151,16 @@ class CogniLiving extends utils.Adapter {
                     if (_povParsed && typeof _povParsed === 'object') _personOverrides = _povParsed;
                 }
             } catch(_povErr) { this.log.warn('[Per-Person Override] Lesefehler: ' + _povErr.message); }
+
+            // Per-Person Wake-Overrides lesen (analog Einschlaf-Overrides)
+            var _personWakeOverrides = {};
+            try {
+                var _pwovRaw = (await this.getStateAsync('analysis.sleep.personWakeOverrides'))?.val;
+                if (_pwovRaw && _pwovRaw !== 'null') {
+                    var _pwovParsed = JSON.parse(_pwovRaw);
+                    if (_pwovParsed && typeof _pwovParsed === 'object') _personWakeOverrides = _pwovParsed;
+                }
+            } catch(_pwovErr) { this.log.warn('[Per-Person Wake-Override] Lesefehler: ' + _pwovErr.message); }
 
             // Priorit+?tskette anwenden (nur wenn nicht frozen)
             if (!_overrideApplied) {
@@ -1711,6 +1754,21 @@ class CogniLiving extends utils.Adapter {
                 wakeConf   = 'niedrig';
             }
 
+            // OC-WakeOv: Manueller Override der Aufwachzeit (global)
+            var _wakeOverrideApplied = false;
+            try {
+                var _wovRaw = (await this.getStateAsync('analysis.sleep.wakeOverride'))?.val;
+                if (_wovRaw && _wovRaw !== 'null') {
+                    var _wov = JSON.parse(_wovRaw);
+                    if (_wov && _wov.date === sleepDate && _wov.ts) {
+                        sleepWindowOC7.end = _wov.ts;
+                        wakeSource = _wov.source || 'override';
+                        _wakeOverrideApplied = true;
+                        this.log.info('[WakeOv] Override aktiv: ' + wakeSource + ' = ' + new Date(_wov.ts).toISOString());
+                    }
+                }
+            } catch(_wovE) { this.log.warn('[WakeOv] Fehler: ' + _wovE.message); }
+
             // --- Garmin-Validierung (optional) --------------------------------------------
             // Liest den Garmin-Sleep-Score wenn konfiguriert ? graceful fallback
             var garminScore = null;
@@ -2131,6 +2189,16 @@ class CogniLiving extends utils.Adapter {
                             _self.log.info('[Per-Person FROZEN] ' + person + ': Aufwachzeit eingefroren auf ' + new Date(_pWakeTs).toLocaleTimeString());
                         }
                     }
+                    // Per-Person Wake-Override
+                    var _pWakeOverrideApplied = false;
+                    var _pWovEntry = _personWakeOverrides && _personWakeOverrides[person] ? _personWakeOverrides[person] : null;
+                    if (_pWovEntry && _pWovEntry.date === sleepDate && _pWovEntry.ts) {
+                        _pWakeTs = _pWovEntry.ts;
+                        _pWakeSrc = _pWovEntry.source || 'override';
+                        _pWakeOverrideApplied = true;
+                        _self.log.info('[WakeOv-Person] ' + person + ': ' + _pWakeSrc + ' = ' + new Date(_pWakeTs).toISOString());
+                    }
+
                     // Per-Person Override (OC-neu-C): manuelle Einschlafzeit-Korrektur
                     var _pOvEntry = _personOverrides && _personOverrides[person] ? _personOverrides[person] : null;
                     var _pOverrideApplied = false;
@@ -2155,10 +2223,11 @@ class CogniLiving extends utils.Adapter {
                         { source: 'haus_still',   ts: _pSleepStartSrc === 'haus_still'   ? _pSleepStart : null },
                         { source: 'winstart',     ts: _pBedEvts.length > 0 ? winStart : null }
                     ];
-                    // allWakeSources pro Person
+                    // allWakeSources pro Person (alle kandidaten, override als aktive Quelle)
                     var _pAllWakeSources = [
-                        { source: 'other',  ts: _pWakeSrc === 'other'  ? _pWakeTs : null },
-                        { source: 'motion', ts: _pWakeSrc === 'motion' ? _pWakeTs : null }
+                        { source: 'other',    ts: (_pWakeSrc === 'other'    || _pWakeSrc === 'override') ? _pWakeTs : null },
+                        { source: 'motion',   ts:  _pWakeSrc === 'motion'   ? _pWakeTs : null },
+                        { source: 'override', ts:  _pWakeOverrideApplied    ? _pWakeTs : null }
                     ];
                     // wakeConfirmed: nach 10:00 und mindestens 1h seit Aufwachzeit
                     var _pWakeConfirmed = !!(_pWakeTs && new Date().getHours() >= 10 && (Date.now() - _pWakeTs) >= 3600000);
@@ -2223,6 +2292,7 @@ class CogniLiving extends utils.Adapter {
                         allSleepStartSources: _pAllSleepSources,
                         allWakeSources: _pAllWakeSources,
                         wakeConfirmed: _pWakeConfirmed,
+                        wakeOverridden: _pWakeOverrideApplied,
                         bedWasEmpty: _pBedWasEmpty,
                         outsideBedEvents: _pObe
                     };
@@ -2365,7 +2435,7 @@ class CogniLiving extends utils.Adapter {
                     }
                     // 3. Anomalie-Baseline (relativ zur Nacht-Vibration) - wenn noch kein Wert
                     if (_calibSrc === 'default') {
-                        var _bsVals = sleepSearchEvents.filter(function(e){ return e.type==='vibration_strength'&&(e.isVibrationBed||e.isFP2Bed); }).map(function(e){ return Number(e.value)||0; }).filter(function(v){ return v>0; });
+                        var _bsVals = sleepSearchEvents.filter(function(e){ return e.type==='vibration_strength'&&(e.isVibrationBed||e.isFP2Bed)&&((e.timestamp||0)>=_sexDayStart); }).map(function(e){ return Number(e.value)||0; }).filter(function(v){ return v>0; });
                         if (_bsVals.length >= 10) {
                             _bsVals.sort(function(a,b){return a-b;});
                             var _bsP75 = _bsVals[Math.floor(_bsVals.length*0.75)];
@@ -2378,10 +2448,12 @@ class CogniLiving extends utils.Adapter {
                     // calibInfo fuer Snapshot
                     var _calibInfo = { src: _calibSrc, n: _calibN, calibA: _calibA, calibB: _calibB };
                     // --- ENDE KALIBRIERUNG ---
-                    // Alle Vibrations-Events - kein Zeitfenster (Sex passiert zu jeder Tageszeit)
+                    // Alle Vibrations-Events ab Mitternacht des aktuellen Tages (Kalender-Tag-Logik)
+                    var _sexDayStart = new Date(dateStr + 'T00:00:00').getTime();
                     var _intimEvts = sleepSearchEvents.filter(function(e) {
                         return (e.type==='vibration_strength'||e.type==='vibration_trigger')
-                            && (e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion));
+                            && (e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion))
+                            && (e.timestamp||0) >= _sexDayStart;
                     }).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
                     var _intimVibStr  = _intimEvts.filter(function(e){return e.type==='vibration_strength';});
                     var _intimVibTrig = _intimEvts.filter(function(e){return e.type==='vibration_trigger';});
@@ -2677,6 +2749,7 @@ class CogniLiving extends utils.Adapter {
                 sleepDate: sleepDate,
                 sleepStartOverridden: _overrideApplied,
                 sleepStartOverrideSource: _overrideApplied ? sleepStartSource : null,
+                wakeOverridden: _wakeOverrideApplied,
                 bedWasEmpty: bedWasEmpty
             };
 
@@ -3099,7 +3172,7 @@ class CogniLiving extends utils.Adapter {
         else if (obj.command === 'setSleepStartOverride') {
             try {
                 var _ovMsg = obj.message || {};
-                var _allowedOvSrc = ['garmin','fp2_vib','fp2','motion_vib','haus_still','motion','fixed'];
+                var _allowedOvSrc = ['garmin','fp2_vib','fp2','motion_vib','last_outside','gap60','haus_still','motion','fixed'];
                 if (!_ovMsg.date || !_ovMsg.source || !_ovMsg.ts || _allowedOvSrc.indexOf(_ovMsg.source) < 0) {
                     this.sendTo(obj.from, obj.command, { success: false, error: 'Ungueltige Override-Daten' }, obj.callback); return;
                 }
@@ -3171,6 +3244,69 @@ class CogniLiving extends utils.Adapter {
                     this.sendTo(obj.from, obj.command, { success: true, data: _pcSnap }, obj.callback);
                 } else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
             } catch(_pcE) { this.sendTo(obj.from, obj.command, { success: false, error: _pcE.message }, obj.callback); }
+        }
+        else if (obj.command === 'setWakeOverride') {
+            try {
+                var _wovMsg = obj.message || {};
+                var _wovAllowed = ['garmin','fp2_vib','fp2','fp2_other','motion_vib','last_outside','haus_still','motion','vibration_alone','other','fixed','override'];
+                if (!_wovMsg.date || !_wovMsg.source || !_wovMsg.ts || _wovAllowed.indexOf(_wovMsg.source) < 0) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Ungueltige Wake-Override-Daten' }, obj.callback); return;
+                }
+                var _wovPayload = { date: _wovMsg.date, source: _wovMsg.source, ts: _wovMsg.ts, setBy: 'ui', setAt: Date.now() };
+                await this.setStateAsync('analysis.sleep.wakeOverride', { val: JSON.stringify(_wovPayload), ack: true });
+                await this.saveDailyHistory(_wovPayload);
+                var _wovDataDir = utils.getAbsoluteDefaultDataDir();
+                var _wovNow = new Date();
+                var _wovPath = require('path').join(_wovDataDir, 'cogni-living', 'history', _wovNow.getFullYear() + '-' + String(_wovNow.getMonth()+1).padStart(2,'0') + '-' + String(_wovNow.getDate()).padStart(2,'0') + '.json');
+                if (fs.existsSync(_wovPath)) { var _wovSnap = JSON.parse(fs.readFileSync(_wovPath, 'utf8')); this.sendTo(obj.from, obj.command, { success: true, data: _wovSnap }, obj.callback); }
+                else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_wovE) { this.sendTo(obj.from, obj.command, { success: false, error: _wovE.message }, obj.callback); }
+        }
+        else if (obj.command === 'clearWakeOverride') {
+            try {
+                await this.setStateAsync('analysis.sleep.wakeOverride', { val: 'null', ack: true });
+                await this.saveDailyHistory();
+                var _cwovDir = utils.getAbsoluteDefaultDataDir();
+                var _cwovNow = new Date();
+                var _cwovPath = require('path').join(_cwovDir, 'cogni-living', 'history', _cwovNow.getFullYear() + '-' + String(_cwovNow.getMonth()+1).padStart(2,'0') + '-' + String(_cwovNow.getDate()).padStart(2,'0') + '.json');
+                if (fs.existsSync(_cwovPath)) { var _cwovSnap = JSON.parse(fs.readFileSync(_cwovPath, 'utf8')); this.sendTo(obj.from, obj.command, { success: true, data: _cwovSnap }, obj.callback); }
+                else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_cwovE) { this.sendTo(obj.from, obj.command, { success: false, error: _cwovE.message }, obj.callback); }
+        }
+        else if (obj.command === 'setPersonWakeOverride') {
+            try {
+                var _pwovMsg = obj.message || {};
+                var _pwovAllowed = ['other','motion','override'];
+                if (!_pwovMsg.person || !_pwovMsg.date || !_pwovMsg.source || !_pwovMsg.ts || _pwovAllowed.indexOf(_pwovMsg.source) < 0) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Ungueltige Per-Person Wake-Override-Daten' }, obj.callback); return;
+                }
+                var _pwovRawOld = (await this.getStateAsync('analysis.sleep.personWakeOverrides'))?.val;
+                var _pwovAll = (_pwovRawOld && _pwovRawOld !== 'null') ? JSON.parse(_pwovRawOld) : {};
+                _pwovAll[_pwovMsg.person] = { date: _pwovMsg.date, source: _pwovMsg.source, ts: _pwovMsg.ts, setBy: 'ui', setAt: Date.now() };
+                await this.setStateAsync('analysis.sleep.personWakeOverrides', { val: JSON.stringify(_pwovAll), ack: true });
+                await this.saveDailyHistory();
+                var _pwovDir = utils.getAbsoluteDefaultDataDir();
+                var _pwovNow = new Date();
+                var _pwovPath = require('path').join(_pwovDir, 'cogni-living', 'history', _pwovNow.getFullYear() + '-' + String(_pwovNow.getMonth()+1).padStart(2,'0') + '-' + String(_pwovNow.getDate()).padStart(2,'0') + '.json');
+                if (fs.existsSync(_pwovPath)) { var _pwovSnap = JSON.parse(fs.readFileSync(_pwovPath, 'utf8')); this.sendTo(obj.from, obj.command, { success: true, data: _pwovSnap }, obj.callback); }
+                else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_pwovE) { this.sendTo(obj.from, obj.command, { success: false, error: _pwovE.message }, obj.callback); }
+        }
+        else if (obj.command === 'clearPersonWakeOverride') {
+            try {
+                var _cpwovMsg = obj.message || {};
+                if (!_cpwovMsg.person) { this.sendTo(obj.from, obj.command, { success: false, error: 'person fehlt' }, obj.callback); return; }
+                var _cpwovRaw = (await this.getStateAsync('analysis.sleep.personWakeOverrides'))?.val;
+                var _cpwovAll = (_cpwovRaw && _cpwovRaw !== 'null') ? JSON.parse(_cpwovRaw) : {};
+                delete _cpwovAll[_cpwovMsg.person];
+                await this.setStateAsync('analysis.sleep.personWakeOverrides', { val: JSON.stringify(_cpwovAll), ack: true });
+                await this.saveDailyHistory();
+                var _cpwovDir = utils.getAbsoluteDefaultDataDir();
+                var _cpwovNow = new Date();
+                var _cpwovPath = require('path').join(_cpwovDir, 'cogni-living', 'history', _cpwovNow.getFullYear() + '-' + String(_cpwovNow.getMonth()+1).padStart(2,'0') + '-' + String(_cpwovNow.getDate()).padStart(2,'0') + '.json');
+                if (fs.existsSync(_cpwovPath)) { var _cpwovSnap = JSON.parse(fs.readFileSync(_cpwovPath, 'utf8')); this.sendTo(obj.from, obj.command, { success: true, data: _cpwovSnap }, obj.callback); }
+                else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_cpwovE) { this.sendTo(obj.from, obj.command, { success: false, error: _cpwovE.message }, obj.callback); }
         }
         else if (obj.command === 'reanalyzeSexDay') {
             try {
@@ -3251,7 +3387,8 @@ class CogniLiving extends utils.Adapter {
                 if (_raCalibSrc==='default'){var _raBsVals=_raAllEvts.filter(function(e){return e.type==='vibration_strength'&&(e.isVibrationBed||e.isFP2Bed);}).map(function(e){return Number(e.value)||0;}).filter(function(v){return v>0;});if(_raBsVals.length>=10){_raBsVals.sort(function(a,b){return a-b;});var _raBsP75=_raBsVals[Math.floor(_raBsVals.length*0.75)];_raCalibA=Math.max(5,Math.round(_raBsP75*2.5));_raCalibB=Math.max(3,Math.round(_raBsP75*1.5));_raCalibSrc='baseline';}}
                 var _raCalibInfo = { src: _raCalibSrc, n: _raCalibN, calibA: _raCalibA, calibB: _raCalibB };
                 // --- SEX-DETEKTION ---
-                var _raIntimEvts=_raAllEvts.filter(function(e){return (e.type==='vibration_strength'||e.type==='vibration_trigger')&&(e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion));}).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
+                var _raDayStart = new Date(_raDate + 'T00:00:00').getTime();
+                var _raIntimEvts=_raAllEvts.filter(function(e){return (e.type==='vibration_strength'||e.type==='vibration_trigger')&&(e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion))&&((e.timestamp||0)>=_raDayStart);}).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
                 var _raVibStr=_raIntimEvts.filter(function(e){return e.type==='vibration_strength';});
                 var _raVibTrig=_raIntimEvts.filter(function(e){return e.type==='vibration_trigger';});
                 var _raSlotMs=5*60*1000;
