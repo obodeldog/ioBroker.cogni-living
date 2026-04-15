@@ -169,6 +169,10 @@ export default function HealthTab(props: any) {
     const [overrideLoading, setOverrideLoading] = useState(false);
     const [personOverridePanelOpen, setPersonOverridePanelOpen] = useState<string|null>(null);
     const [personOverrideLoading, setPersonOverrideLoading] = useState(false);
+    const [overrideWakePanelOpen, setOverrideWakePanelOpen] = useState(false);
+    const [overrideWakeLoading, setOverrideWakeLoading] = useState(false);
+    const [personOverrideWakePanelOpen, setPersonOverrideWakePanelOpen] = useState<string|null>(null);
+    const [personOverrideWakeLoading, setPersonOverrideWakeLoading] = useState(false);
     const [personHistoryData, setPersonHistoryData] = useState<Record<string, any>>({});
     const [sensorBatteryStatus, setSensorBatteryStatus] = useState<{sensors: {id:string, level:number|null, isLow:boolean, isCritical:boolean, source:string}[]} | null>(null);
     const [nativeDevices, setNativeDevices] = useState<any[]>([]);
@@ -1166,7 +1170,7 @@ export default function HealthTab(props: any) {
         const unusuallyLongSleep: boolean = sd?.unusuallyLongSleep ?? false;
         const garminDataFresh: boolean | null = sd?.garminDataFresh ?? null;
         const garminLastSyncAgeH: number | null = sd?.garminLastSyncAgeH ?? null;
-        const outsideBedEvts: {start:number,end:number,duration:number,type:string,confirmed?:boolean,sensors?:{name:string,location:string}[]}[] = sd?.outsideBedEvents ?? [];
+        const outsideBedEvts: {start:number,end:number,duration:number,type:string,confirmed?:boolean,sensors?:{name:string,location:string,isBathroomSensor?:boolean,timestamp?:number}[]}[] = sd?.outsideBedEvents ?? [];
         const wakeConfirmed: boolean = sd?.wakeConfirmed ?? false;
         const sleepDateStr: string | null = sd?.sleepDate ?? (sd?.sleepWindowStart ? (() => {
             const d = new Date((sd.sleepWindowStart as number) - 3 * 3600000);
@@ -1220,6 +1224,58 @@ export default function HealthTab(props: any) {
                 }
             }
         };
+        const handleSetWakeOverride = async (source: string, ts: number) => {
+            if (!sleepDateStr) return;
+            if (personLabel) {
+                setPersonOverrideWakeLoading(true);
+                try {
+                    const result: any = await socket.sendTo(adapterName + '.' + instance, 'setPersonWakeOverride', {
+                        person: personLabel, date: sleepDateStr, source, ts, setBy: 'ui', setAt: Date.now()
+                    });
+                    if (result?.data?.personData) setPersonHistoryData(result.data.personData);
+                } finally {
+                    setPersonOverrideWakeLoading(false);
+                    setPersonOverrideWakePanelOpen(null);
+                }
+            } else {
+                setOverrideWakeLoading(true);
+                try {
+                    const result: any = await socket.sendTo(adapterName + '.' + instance, 'setWakeOverride', {
+                        date: sleepDateStr, source, ts, setBy: 'ui', setAt: Date.now()
+                    });
+                    if (result?.data) setAuraSleepData({ ...result.data });
+                } finally {
+                    setOverrideWakeLoading(false);
+                    setOverrideWakePanelOpen(false);
+                }
+            }
+        };
+        const handleClearWakeOverride = async () => {
+            if (personLabel) {
+                setPersonOverrideWakeLoading(true);
+                try {
+                    const result: any = await socket.sendTo(adapterName + '.' + instance, 'clearPersonWakeOverride', { person: personLabel });
+                    if (result?.data?.personData) setPersonHistoryData(result.data.personData);
+                } finally {
+                    setPersonOverrideWakeLoading(false);
+                }
+            } else {
+                setOverrideWakeLoading(true);
+                try {
+                    const result: any = await socket.sendTo(adapterName + '.' + instance, 'clearWakeOverride', {});
+                    if (result?.data) setAuraSleepData({ ...result.data });
+                } finally {
+                    setOverrideWakeLoading(false);
+                }
+            }
+        };
+        const isOverrideWakeLoading = personLabel ? personOverrideWakeLoading : overrideWakeLoading;
+        const isOverrideWakePanelOpen = personLabel ? (personOverrideWakePanelOpen === personLabel) : overrideWakePanelOpen;
+        const setIsOverrideWakePanelOpen = personLabel
+            ? (v: boolean) => setPersonOverrideWakePanelOpen(v ? personLabel : null)
+            : (v: boolean) => setOverrideWakePanelOpen(v);
+        const wakeOverridden: boolean = sd?.wakeOverridden ?? false;
+
         const isOverrideLoading = personLabel ? personOverrideLoading : overrideLoading;
         const isOverridePanelOpen = personLabel ? (personOverridePanelOpen === personLabel) : overridePanelOpen;
         const setIsOverridePanelOpen = personLabel
@@ -1303,28 +1359,33 @@ export default function HealthTab(props: any) {
             bathroom: 'Bad-Besuch', outside: 'Außerhalb', other_person: 'Andere Person'
         };
 
-        // Sensor-Indikator für Einschlaf-/Aufwachzeit
-        // OC-18 FP2-Label-Fix: nur echte Präsenz-Radare bekommen das "FP2"-Label
-        const hasFP2Sensor = nativeDevices.some((d: any) => d.type === 'presence_radar_bool' || d.isFP2Bed === true);
-        const hasVibSensorInstalled = nativeDevices.some((d: any) =>
-            (d.type === 'vibration_trigger' || d.type === 'vibration_strength') && d.sensorFunction === 'bed'
-        );
+        // Sensor-Verfügbarkeit: für Per-Person nach personTag filtern, sonst alle
+        const _devPool = personLabel
+            ? nativeDevices.filter((d: any) => d.personTag === personLabel)
+            : nativeDevices;
+        const hasRadarBed   = _devPool.some((d: any) => d.type === 'presence_radar_bool' && d.sensorFunction === 'bed');
+        const hasVibBed     = _devPool.some((d: any) =>
+            (d.type === 'vibration_trigger' || d.type === 'vibration_strength') && d.sensorFunction === 'bed');
+        const hasMotionBed  = _devPool.some((d: any) => d.type === 'motion' && d.sensorFunction === 'bed');
+        // Legacy-Aliases für Stellen die hasFP2Sensor / hasVibSensorInstalled noch verwenden
+        const hasFP2Sensor  = hasRadarBed;
+        const hasVibSensorInstalled = hasVibBed;
         const srcInfo: Record<string, {icon:string, label:string}> = {
-            garmin:          { icon: '⌚', label: 'Garmin-Uhr' },
-            fp2_vib:         { icon: hasFP2Sensor ? '📡' : '🛏️', label: hasFP2Sensor ? 'FP2 + Vibration' : 'Bett-Sensor + Vibration' },
-            fp2:             { icon: hasFP2Sensor ? '📡' : '🛏️', label: hasFP2Sensor ? 'FP2-Sensor' : 'Bett-Bewegungsmelder' },
-            fp2_other:       { icon: hasFP2Sensor ? '📡' : '🛏️', label: hasFP2Sensor ? 'FP2 + Anderer Raum' : 'Bett-Sensor + Anderer Raum' },
+            garmin:          { icon: '⌚', label: 'Smartwatch (Garmin, Fitbit…)' },
+            fp2_vib:         { icon: '📡', label: 'Radar + Vibration' },
+            fp2:             { icon: '📡', label: 'Radar (Präsenz-Sensor)' },
+            fp2_other:       { icon: '📡', label: 'Radar + anderer Raum' },
             other:           { icon: '🚶', label: 'Anderer Raum' },
             motion:          { icon: '🚶', label: 'Schlafzimmer-Bewegungsmelder' },
             motion_vib:      { icon: '🚶', label: 'Bewegungsmelder + Vibration' },
-            vib_refined:     { icon: '📳', label: 'Letzte Bettbewegung (Vibration)' },
-            haus_still:      { icon: '🏠', label: 'Haus-wird-still' },
+            vib_refined:     { icon: '📳', label: 'Matratze wurde ruhig' },
+            haus_still:      { icon: '🏠', label: 'Alle Räume wurden ruhig' },
             vibration:       { icon: '📳', label: 'Vibrationssensor (↑ Konfidenz)' },
             vibration_alone: { icon: '📳', label: 'Vibrationssensor allein' },
             fixed:           { icon: '⏱', label: 'Fallback 20:00 Uhr' },
-            gap60:           { icon: '🛏️', label: 'Letzte Bettbewegung' },
-            last_outside:    { icon: '🚶', label: 'Letzte Außenaktiv.' },
-            winstart:        { icon: '⏱', label: 'Fenster-Start (Fallback)' },
+            gap60:           { icon: '🛏️', label: 'Schlafzimmer: Aktivitätspause' },
+            last_outside:    { icon: '🚶', label: 'Letzter Weg ins Schlafzimmer' },
+            winstart:        { icon: '⏱', label: 'Schätzwert (Fallback)' },
             override:        { icon: '✏️', label: 'Manuell überschrieben' },
         };
         const srcDisplay  = srcInfo[sleepStartSource] ?? srcInfo.fixed;
@@ -1467,9 +1528,20 @@ export default function HealthTab(props: any) {
                                : 0;
                     lastPctInLane[lane] = pct;
                     const evtType = evt.type ?? 'outside';
-                    const sensorStr = (evt.sensors && evt.sensors.length > 0)
-                        ? '\n' + evt.sensors.map(s => `  · ${s.name}${s.location ? ' (' + s.location + ')' : ''}`).join('\n')
-                        : '';
+                    const allSensors = evt.sensors ?? [];
+                    const hasSensorTypeInfo = allSensors.some(s => s.isBathroomSensor !== undefined);
+                    // Für orange (bathroom): nur Bad-Sensoren; für rot (outside): nur Nicht-Bad-Sensoren
+                    // Fallback auf ungefiltert wenn noch kein isBathroomSensor-Flag (Altdaten)
+                    const filteredSensors = isDropout || !hasSensorTypeInfo ? allSensors
+                        : evtType === 'bathroom'
+                            ? allSensors.filter(s => s.isBathroomSensor === true)
+                            : allSensors.filter(s => !s.isBathroomSensor);
+                    const sensorStr = filteredSensors.length > 0
+                        ? '\n' + filteredSensors.map(s => {
+                            const timeStr = s.timestamp ? (' um ' + fmtTime(s.timestamp)) : '';
+                            return `  · ${s.name}${s.location ? ' (' + s.location + ')' : ''}${timeStr}`;
+                          }).join('\n')
+                        : (allSensors.length > 0 ? '\n  (Sensordetails werden nach Update verfügbar)' : '');
                     const title = isDropout
                         ? `Radar-Aussetzer: ${evt.duration} min (kein Außensensor bestätigt)${sensorStr}`
                         : `${titleMap[evtType] ?? 'Abwesenheit'}: ${evt.duration} min${sensorStr}`;
@@ -1563,15 +1635,20 @@ export default function HealthTab(props: any) {
                                                     const info = srcInfo[ss.source] ?? { icon: '?', label: ss.source };
                                                     const isActive = ss.source === sleepStartSource;
                                                     const hasTs = !!ss.ts;
+                                                    const noSensor = !hasTs && (
+                                                        ((ss.source === 'fp2_vib' || ss.source === 'fp2' || ss.source === 'fp2_other') && !hasRadarBed) ||
+                                                        ((ss.source === 'motion_vib') && !hasMotionBed && !hasRadarBed) ||
+                                                        ((ss.source === 'vib_refined' || ss.source === 'motion_vib') && !hasVibBed)
+                                                    );
                                                     return (
                                                         <div key={ss.source} style={{
                                                             display:'flex', alignItems:'center', justifyContent:'space-between',
                                                             padding:'2px 4px', marginBottom:'2px', borderRadius:'3px',
-                                                            opacity: hasTs ? 1 : 0.4,
+                                                            opacity: hasTs ? 1 : (noSensor ? 0.25 : 0.4),
                                                             background: isActive ? (isDark?'#1b5e20':'#c8e6c9') : 'transparent'
                                                         }}>
                                                             <span style={{fontSize:'0.6rem', color: isDark?'#ddd':'#333'}}>
-                                                                {info.icon} {info.label}: {ss.ts ? fmtTime(ss.ts) : '—'}
+                                                                {info.icon} {info.label}: {hasTs ? fmtTime(ss.ts) : (noSensor ? '⚠️ kein Sensor' : '—')}
                                                                 {isActive ? ' ✓' : ''}
                                                             </span>
                                                             {hasTs && !isActive && sleepDateStr && (
@@ -1612,10 +1689,62 @@ export default function HealthTab(props: any) {
                                         <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
                                             {wakeDisplay.icon} {wakeDisplay.label}
                                         </div>
+                                        {wakeOverridden && (
+                                            <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
+                                        )}
                                         {allWakeSourcesArr.length > 0 && (
-                                            <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor:'help', opacity:0.7}}
-                                                title={devWakeTooltip}>
-                                                ⚙ Quellen
+                                            <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: isOverrideWakeLoading ? 'wait' : 'pointer', opacity:0.8,
+                                                         display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
+                                                title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufwachzeit-Quelle manuell wählen'}
+                                                onClick={() => { if (!isOverrideWakeLoading) setIsOverrideWakePanelOpen(!isOverrideWakePanelOpen); }}>
+                                                {isOverrideWakeLoading ? '⏳' : '⌚'} Quellen {isOverrideWakePanelOpen ? '▴' : '▾'}
+                                            </div>
+                                        )}
+                                        {isOverrideWakePanelOpen && !isOverrideWakeLoading && allWakeSourcesArr.length > 0 && (
+                                            <div style={{marginTop:'4px', background: isDark?'#1a2a2a':'#e0f7fa',
+                                                         border:'1px solid ' + (isDark?'#00838f':'#80deea'),
+                                                         borderRadius:'6px', padding:'6px 8px', minWidth:'200px',
+                                                         boxShadow:'0 4px 12px rgba(0,0,0,0.3)', textAlign:'left'}}>
+                                                <div style={{fontSize:'0.55rem', color: isDark?'#aaa':'#555', marginBottom:'4px', fontWeight:'bold'}}>
+                                                    Aufwachzeit-Quelle wählen:
+                                                </div>
+                                                {allWakeSourcesArr.map(ws => {
+                                                    const wInfo = srcInfo[ws.source] ?? { icon: '?', label: ws.source };
+                                                    const wIsActive = ws.source === wakeSource;
+                                                    const wHasTs = !!ws.ts;
+                                                    return (
+                                                        <div key={ws.source} style={{
+                                                            display:'flex', alignItems:'center', justifyContent:'space-between',
+                                                            padding:'2px 4px', marginBottom:'2px', borderRadius:'3px',
+                                                            opacity: wHasTs ? 1 : 0.4,
+                                                            background: wIsActive ? (isDark?'#004d5e':'#b2ebf2') : 'transparent'
+                                                        }}>
+                                                            <span style={{fontSize:'0.6rem', color: isDark?'#ddd':'#333'}}>
+                                                                {wInfo.icon} {wInfo.label}: {ws.ts ? fmtTime(ws.ts) : '—'}
+                                                                {wIsActive ? ' ✓' : ''}
+                                                            </span>
+                                                            {wHasTs && !wIsActive && sleepDateStr && (
+                                                                <button
+                                                                    onClick={() => handleSetWakeOverride(ws.source, ws.ts!)}
+                                                                    style={{fontSize:'0.5rem', padding:'1px 6px', cursor:'pointer',
+                                                                           background:'#1565c0', color:'#fff', border:'none',
+                                                                           borderRadius:'3px', marginLeft:'6px', flexShrink:0}}>
+                                                                    Wählen
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                                {wakeOverridden && (
+                                                    <div style={{marginTop:'4px', borderTop:'1px solid ' + (isDark?'#444':'#ccc'), paddingTop:'4px'}}>
+                                                        <button onClick={handleClearWakeOverride}
+                                                            style={{fontSize:'0.5rem', padding:'2px 8px', cursor:'pointer',
+                                                                   background:'#b71c1c', color:'#fff', border:'none',
+                                                                   borderRadius:'3px', width:'100%'}}>
+                                                            ✏ Override zurücksetzen
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -1867,11 +1996,64 @@ export default function HealthTab(props: any) {
                                         : `Vorläufig via ${wakeDisplay.label}: Wird bestätigt wenn nach 10:00 Uhr ≥1h kein Bett belegt`}>
                                     {wakeDisplay.icon} {wakeConfirmed ? 'bestätigt' : 'vorläufig'}
                                 </div>
-                                {/* DEV-ONLY: Quellen-Tooltip alle 8 Wake-Sensoren — später entfernen */}
-                                <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor:'help', opacity:0.7}}
-                                    title={devWakeTooltip}>
-                                    ⚙ Quellen
-                                </div>
+                                {wakeOverridden && (
+                                    <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
+                                )}
+                                {allWakeSourcesArr.length > 0 && (
+                                    <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: isOverrideWakeLoading ? 'wait' : 'pointer', opacity:0.8,
+                                                 display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
+                                        title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufwachzeit-Quelle manuell wählen'}
+                                        onClick={() => { if (!isOverrideWakeLoading) setIsOverrideWakePanelOpen(!isOverrideWakePanelOpen); }}>
+                                        {isOverrideWakeLoading ? '⏳' : '⌚'} Quellen {isOverrideWakePanelOpen ? '▴' : '▾'}
+                                    </div>
+                                )}
+                                {isOverrideWakePanelOpen && !isOverrideWakeLoading && allWakeSourcesArr.length > 0 && (
+                                    <div style={{marginTop:'4px', background: isDark?'#1a2a2a':'#e0f7fa',
+                                                 border:'1px solid ' + (isDark?'#00838f':'#80deea'),
+                                                 borderRadius:'6px', padding:'6px 8px', minWidth:'200px',
+                                                 boxShadow:'0 4px 12px rgba(0,0,0,0.3)', textAlign:'left'}}>
+                                        <div style={{fontSize:'0.55rem', color: isDark?'#aaa':'#555', marginBottom:'4px', fontWeight:'bold'}}>
+                                            Aufwachzeit-Quelle wählen:
+                                        </div>
+                                        {allWakeSourcesArr.map(ws => {
+                                            const wInfo = srcInfo[ws.source] ?? { icon: '?', label: ws.source };
+                                            const wIsActive = ws.source === wakeSource;
+                                            const wHasTs = !!ws.ts;
+                                            return (
+                                                <div key={ws.source} style={{
+                                                    display:'flex', alignItems:'center', justifyContent:'space-between',
+                                                    padding:'2px 4px', marginBottom:'2px', borderRadius:'3px',
+                                                    opacity: wHasTs ? 1 : 0.4,
+                                                    background: wIsActive ? (isDark?'#004d5e':'#b2ebf2') : 'transparent'
+                                                }}>
+                                                    <span style={{fontSize:'0.6rem', color: isDark?'#ddd':'#333'}}>
+                                                        {wInfo.icon} {wInfo.label}: {ws.ts ? fmtTime(ws.ts) : '—'}
+                                                        {wIsActive ? ' ✓' : ''}
+                                                    </span>
+                                                    {wHasTs && !wIsActive && sleepDateStr && (
+                                                        <button
+                                                            onClick={() => handleSetWakeOverride(ws.source, ws.ts!)}
+                                                            style={{fontSize:'0.5rem', padding:'1px 6px', cursor:'pointer',
+                                                                   background:'#1565c0', color:'#fff', border:'none',
+                                                                   borderRadius:'3px', marginLeft:'6px', flexShrink:0}}>
+                                                            Wählen
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                        {wakeOverridden && (
+                                            <div style={{marginTop:'4px', borderTop:'1px solid ' + (isDark?'#444':'#ccc'), paddingTop:'4px'}}>
+                                                <button onClick={handleClearWakeOverride}
+                                                    style={{fontSize:'0.5rem', padding:'2px 8px', cursor:'pointer',
+                                                           background:'#b71c1c', color:'#fff', border:'none',
+                                                           borderRadius:'3px', width:'100%'}}>
+                                                    ✏ Override zurücksetzen
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -3022,6 +3204,7 @@ export default function HealthTab(props: any) {
                                         sleepDate:              auraSleepData?.sleepDate   ?? null,
                                         sleepStartOverridden:   pd.sleepStartOverridden   ?? false,
                                         sleepStartOverrideSource: pd.sleepStartOverridden ? pd.sleepStartSource : null,
+                                        wakeOverridden:         pd.wakeOverridden         ?? false,
                                         bedWasEmpty:            pd.bedWasEmpty            ?? false,
                                     };
                                     return <React.Fragment key={pName}>{renderSleepScoreCard(overrideData, pName)}</React.Fragment>;

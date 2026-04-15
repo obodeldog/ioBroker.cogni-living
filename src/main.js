@@ -1491,15 +1491,15 @@ class CogniLiving extends utils.Adapter {
                     var _isBath = e.isBathroomSensor || _bathDevIds.has(e.id);
                     var _isOther = !_isBath; // Kueche zaehlt hier als anderer Raum (nur fuer outsideBedEvents-Dreieck relevant; isKitchenSensor bleibt fuer andere Algorithmen unveraendert)
                     if (!_curCluster) {
-                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath, hasOther: _isOther, sensors: [{name: e.name||e.id, location: e.location||''}] };
+                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath, hasOther: _isOther, sensors: [{name: e.name||e.id, location: e.location||'', isBathroomSensor: _isBath, timestamp: _ts}] };
                     } else if (_ts <= _curCluster.end + CLUSTER_GAP_MS) {
                         _curCluster.end = _ts + AFTER_EVT_MS;
                         if (_isBath) _curCluster.hasBath = true;
                         if (_isOther) _curCluster.hasOther = true;
-                        var _sn = e.name||e.id; if (!_curCluster.sensors.some(function(s){return s.name===_sn;})) _curCluster.sensors.push({name: _sn, location: e.location||''});
+                        var _sn = e.name||e.id; if (!_curCluster.sensors.some(function(s){return s.name===_sn;})) _curCluster.sensors.push({name: _sn, location: e.location||'', isBathroomSensor: _isBath, timestamp: _ts});
                     } else {
                         _motEvents.push(_curCluster);
-                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath, hasOther: _isOther, sensors: [{name: e.name||e.id, location: e.location||''}] };
+                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath, hasOther: _isOther, sensors: [{name: e.name||e.id, location: e.location||'', isBathroomSensor: _isBath, timestamp: _ts}] };
                     }
                 });
                 if (_curCluster) _motEvents.push(_curCluster);
@@ -2266,14 +2266,14 @@ class CogniLiving extends utils.Adapter {
                             var ts = e.timestamp||0;
                             var _isBath = e.isBathroomSensor || bathroomIds.has(e.id);
                             if (!_pObeCluster) {
-                                _pObeCluster = { start: ts, end: ts + _pCAfter, hasBath: _isBath, hasOther: !_isBath, sensors: [{name: e.name||e.id, location: e.location||''}] };
+                                _pObeCluster = { start: ts, end: ts + _pCAfter, hasBath: _isBath, hasOther: !_isBath, sensors: [{name: e.name||e.id, location: e.location||'', isBathroomSensor: _isBath, timestamp: ts}] };
                             } else if (ts <= _pObeCluster.end + _pCGap) {
                                 _pObeCluster.end = ts + _pCAfter;
                                 if (_isBath) _pObeCluster.hasBath = true; else _pObeCluster.hasOther = true;
-                                var _pSn = e.name||e.id; if (!_pObeCluster.sensors.some(function(s){return s.name===_pSn;})) _pObeCluster.sensors.push({name: _pSn, location: e.location||''});
+                                var _pSn = e.name||e.id; if (!_pObeCluster.sensors.some(function(s){return s.name===_pSn;})) _pObeCluster.sensors.push({name: _pSn, location: e.location||'', isBathroomSensor: _isBath, timestamp: ts});
                             } else {
                                 _pPushCluster(_pObeCluster);
-                                _pObeCluster = { start: ts, end: ts + _pCAfter, hasBath: _isBath, hasOther: !_isBath, sensors: [{name: e.name||e.id, location: e.location||''}] };
+                                _pObeCluster = { start: ts, end: ts + _pCAfter, hasBath: _isBath, hasOther: !_isBath, sensors: [{name: e.name||e.id, location: e.location||'', isBathroomSensor: _isBath, timestamp: ts}] };
                             }
                         });
                         if (_pObeCluster) _pPushCluster(_pObeCluster);
