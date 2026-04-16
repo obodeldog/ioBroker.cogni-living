@@ -1214,7 +1214,6 @@ class CogniLiving extends utils.Adapter {
             } else {
                 // Frozen: bestehende Quellen-Daten ++bernehmen, Garmin-Override trotzdem erlauben
                 sleepStartSource = _existingSnap.sleepStartSource || sleepStartSource;
-                if (_existingSnap.allSleepStartSources) allSleepStartSources = _existingSnap.allSleepStartSources;
                 if (garminSleepStartTs) {
                     sleepWindowCalc.start = garminSleepStartTs;
                     sleepStartSource = 'garmin';
