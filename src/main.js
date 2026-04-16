@@ -963,11 +963,8 @@ class CogniLiving extends utils.Adapter {
                 return { start: sleepStartTs, end: wakeTs };
             })();
 
-            // "Haus-wird-still" Einschlafzeit fuer PIR-only (OC-7 Erweiterung):
-            // Zuverlaessiger als Schlafzimmer-Stille: Schlafzimmer-PIR feuert auch im Schlaf,
-            // aber Kueche/Wohnzimmer/Flur bleiben nachts dauerhaft ruhig.
-            // Algorithmus: letztes Bett-Event im 18:00-02:00 Fenster nach dem alle Gemeinschafts-
-            // bereiche >= 30 Min still bleiben = Einschlafkandidat.
+            // "Haus-wird-still": erstes anderer-Raum-Event vor >=60 Min Stille.
+            // Kein Schlafzimmer-Bewegungsmelder noetig -- funktioniert fuer Single & Multi.
             const sleepWindowHausStill = (function() {
                 var _hsCommon = sleepSearchEvents
                     .filter(function(e) {
@@ -976,21 +973,13 @@ class CogniLiving extends utils.Adapter {
                             && isActiveValue(e.value);
                     })
                     .sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                var _hsBedEvts = sleepSearchEvents
-                    .filter(function(e) { return e.isBedroomMotion && isActiveValue(e.value); })
-                    .sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                if (_hsBedEvts.length === 0 || _hsCommon.length === 0) return { start: null, end: null };
+                if (_hsCommon.length === 0) return { start: null, end: null };
+                var _hsEnd = _sleepSearchBase.getTime() + 10 * 3600000;
                 var _hsSleepTs = null;
-                for (var _hsi = _hsBedEvts.length - 1; _hsi >= 0; _hsi--) {
-                    var _hsE = _hsBedEvts[_hsi];
-                    var _hsHr = new Date(_hsE.timestamp||0).getHours();
-                    if (!(_hsHr >= 18 || _hsHr < 2)) continue;
-                    var _hsCandTs = _hsE.timestamp||0;
-                    var _hsCommonAfterIds = new Set(_hsCommon.filter(function(ce) {
-                        return (ce.timestamp||0) > _hsCandTs && (ce.timestamp||0) <= _hsCandTs + 30*60*1000;
-                    }).map(function(ce) { return ce.id || ce.sensorId || ''; }));
-                    var _hasCommonAfter = _hsCommonAfterIds.size >= 2;
-                    if (!_hasCommonAfter) { _hsSleepTs = _hsCandTs; break; }
+                for (var _hsi = 0; _hsi < _hsCommon.length; _hsi++) {
+                    var _hsCandTs = _hsCommon[_hsi].timestamp||0;
+                    var _hsNextTs = (_hsi < _hsCommon.length - 1) ? (_hsCommon[_hsi+1].timestamp||0) : _hsEnd;
+                    if (_hsNextTs - _hsCandTs >= 60*60*1000) { _hsSleepTs = _hsCandTs; break; }
                 }
                 return { start: _hsSleepTs, end: null };
             })();
