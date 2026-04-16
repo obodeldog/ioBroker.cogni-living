@@ -1031,21 +1031,21 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_gse) { this.log.debug('[SleepStart] Garmin nicht lesbar: ' + _gse.message); }
 
-            // Vibrations-Verfeinerung: letztes Vib-Event mit ???20min Stille danach (innerhalb FP2+3h)
+            // Vibrations-Verfeinerung: erstes Vib-Event mit >=20min Stille danach (FORWARD, innerhalb FP2+3h)
             if (_fp2RawStart) {
                 var _vibRefMax = _fp2RawStart + 3 * 3600000;
                 var _vibRefEvts = sleepSearchEvents.filter(function(e) {
                     return e.isVibrationBed && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
                         && (e.timestamp||0) >= _fp2RawStart && (e.timestamp||0) <= _vibRefMax;
                 }).sort(function(a, b) { return (a.timestamp||0) - (b.timestamp||0); });
-                if (_vibRefEvts.length >= 2) {
-                    for (var _vsi = _vibRefEvts.length - 1; _vsi >= 0; _vsi--) {
+                if (_vibRefEvts.length >= 1) {
+                    for (var _vsi = 0; _vsi < _vibRefEvts.length; _vsi++) {
                         var _vsEvt = _vibRefEvts[_vsi];
-                        var _vsNext = (_vsi < _vibRefEvts.length - 1) ? (_vibRefEvts[_vsi + 1].timestamp||0) : Date.now();
+                        var _vsNext = (_vsi < _vibRefEvts.length - 1) ? (_vibRefEvts[_vsi + 1].timestamp||0) : _vibRefMax;
                         var _vsGap = (_vsNext - (_vsEvt.timestamp||0)) / 60000;
                         if (_vsGap >= 20) {
                             vibRefinedSleepStartTs = _vsEvt.timestamp||0;
-                            this.log.debug('[SleepStart] Vib-Verfeinerung: ' + new Date(vibRefinedSleepStartTs).toISOString());
+                            this.log.debug('[SleepStart] Vib-Verfeinerung (forward): ' + new Date(vibRefinedSleepStartTs).toISOString());
                             break;
                         }
                     }
@@ -1061,15 +1061,15 @@ class CogniLiving extends utils.Adapter {
                     return e.isVibrationBed && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
                         && (e.timestamp||0) >= sleepWindowMotion.start && (e.timestamp||0) <= _mvRefMax;
                 }).sort(function(a, b) { return (a.timestamp||0) - (b.timestamp||0); });
-                if (_mvRefEvts.length >= 2) {
-                    for (var _mvi = _mvRefEvts.length - 1; _mvi >= 0; _mvi--) {
+                if (_mvRefEvts.length >= 1) {
+                    for (var _mvi = 0; _mvi < _mvRefEvts.length; _mvi++) {
                         var _mvEvt = _mvRefEvts[_mvi];
-                        var _mvNext = (_mvi < _mvRefEvts.length - 1) ? (_mvRefEvts[_mvi + 1].timestamp||0) : Date.now();
+                        var _mvNext = (_mvi < _mvRefEvts.length - 1) ? (_mvRefEvts[_mvi + 1].timestamp||0) : _mvRefMax;
                         var _mvGap = (_mvNext - (_mvEvt.timestamp||0)) / 60000;
                         if (_mvGap >= 20) {
-                        motionVibSleepStartTs = _mvEvt.timestamp||0;
-                        this.log.debug('[SleepStart] Motion+Vib-Verfeinerung: ' + new Date(motionVibSleepStartTs).toISOString());
-                        break;
+                            motionVibSleepStartTs = _mvEvt.timestamp||0;
+                            this.log.debug('[SleepStart] Motion+Vib-Verfeinerung (forward): ' + new Date(motionVibSleepStartTs).toISOString());
+                            break;
                         }
                     }
                 }
@@ -1108,14 +1108,15 @@ class CogniLiving extends utils.Adapter {
             // vib_refined: letztes Vib-Event mit >=20 Min Stille (ohne FP2-Anforderung)
             var _globalVibRefinedTs = null;
             (function() {
+                var _gvrEnd = _sleepSearchBase.getTime() + 10 * 3600000; // 04:00 als Fenster-Ende
                 var _vEve = sleepSearchEvents.filter(function(e) {
                     if (!e.isVibrationBed || !(isActiveValue(e.value) || toPersonCount(e.value) > 0)) return false;
                     var hr = new Date(e.timestamp||0).getHours();
                     return hr >= 21 || hr < 4;
                 }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                for (var _vi = _vEve.length - 1; _vi >= 0; _vi--) {
+                for (var _vi = 0; _vi < _vEve.length; _vi++) {
                     var _vTs = _vEve[_vi].timestamp||0;
-                    var _vNext = (_vi < _vEve.length-1) ? (_vEve[_vi+1].timestamp||0) : Date.now();
+                    var _vNext = (_vi < _vEve.length-1) ? (_vEve[_vi+1].timestamp||0) : _gvrEnd;
                     if ((_vNext - _vTs) / 60000 >= 20) { _globalVibRefinedTs = _vTs; break; }
                 }
             })();
@@ -2040,7 +2041,7 @@ class CogniLiving extends utils.Adapter {
                         }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
                         for (var _ri = 0; _ri < _evts.length; _ri++) {
                             var _rEvt = _evts[_ri];
-                            var _rNext = (_ri < _evts.length-1) ? (_evts[_ri+1].timestamp||0) : Date.now();
+                            var _rNext = (_ri < _evts.length-1) ? (_evts[_ri+1].timestamp||0) : _max;
                             if ((_rNext - (_rEvt.timestamp||0)) / 60000 >= 20) return _rEvt.timestamp||0;
                         }
                         return null;
