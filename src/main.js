@@ -903,6 +903,7 @@ class CogniLiving extends utils.Adapter {
                 // Aufwachzeit: erstes Mal nach Schlafbeginn dass Bett >= 15 Min leer war nach 04:00
                 var wakeTs = null;
                 var emptyStart = null;
+                var _firstEmpty = null;
                 for (var _wi = 0; _wi < bedEvts.length; _wi++) {
                     var _we = bedEvts[_wi];
                     if ((_we.timestamp||0) < sleepStartTs) continue;
@@ -912,12 +913,12 @@ class CogniLiving extends utils.Adapter {
                         if (!emptyStart) emptyStart = _we.timestamp||0;
                     } else if (_wv && emptyStart) {
                         var _wdur = ((_we.timestamp||0) - emptyStart) / 60000;
-                        if (_wdur >= 15) { wakeTs = emptyStart + _wdur * 60000; emptyStart = null; break; }
+                        if (_wdur >= 15) { _firstEmpty = emptyStart; wakeTs = emptyStart + _wdur * 60000; emptyStart = null; break; }
                         emptyStart = null;
                     }
                 }
-                if (emptyStart) { var _wdur2 = (Date.now() - emptyStart) / 60000; if (_wdur2 >= 15) wakeTs = Date.now(); }
-                return { start: sleepStartTs, end: wakeTs };
+                if (emptyStart) { var _wdur2 = (Date.now() - emptyStart) / 60000; if (_wdur2 >= 15) { _firstEmpty = emptyStart; wakeTs = Date.now(); } }
+                return { start: sleepStartTs, end: wakeTs, firstEmpty: _firstEmpty };
             })();
 
             // OC-4 Guard: Schlaffenster nur speichern wenn genuegend FP2-Bettzeit-Daten vorhanden.
@@ -1228,7 +1229,7 @@ class CogniLiving extends utils.Adapter {
                         })();
 
             // FP2-Roh-Aufwachzeit vor Garmin-Override sichern (fuer allWakeSources)
-            var _fp2RawWakeTs = sleepWindowCalc.end || null;
+            var _fp2RawWakeTs = sleepWindowCalc.firstEmpty || null;  // FP2-Abgangzeit vor Garmin-Override
 
             // [FROZEN-Fix] Garmin-Wake vorab lesen damit Stage-Berechnung korrektes Fenster-Ende hat.
             // Garmin-Wake wird normalerweise erst nach Stage-Calc gesetzt (Reihenfolge-Bug) - hier vorab.
@@ -1559,7 +1560,7 @@ class CogniLiving extends utils.Adapter {
                 var _vibWakeSearch = sleepSearchEvents.filter(function(e) {
                     return e.isVibrationBed && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
                         && (e.timestamp||0) >= fp2WakeTs - 30*60*1000
-                        && (e.timestamp||0) <= fp2WakeTs + 5*60*1000;
+                        && (e.timestamp||0) <= fp2WakeTs;  // nur Events VOR Abgang
                 });
                 if (_vibWakeSearch.length > 0) vibWakeConfirm = true;
             }
@@ -1581,49 +1582,21 @@ class CogniLiving extends utils.Adapter {
                     && (e.timestamp||0) >= _wakeMinSleepTs
                     && (e.timestamp||0) <= _wakeHardCapMs;
             }).sort(function(a,b) { return (a.timestamp||0) - (b.timestamp||0); });
+            // Forward-Scan: erste andere-Raum-Bewegung nach 04:00 und Mindestschlaf
             if (_otherRoomEvts.length > 0) {
-                // OC-19: "Letzte Abfahrt ohne Rueckkehr" - kein fixer Zeitwert
-                // Zeitfenster-basiert (2-Min-Puffer fuer PIR-Nachlaufzeit, keine Flankenerkennung)
-                var _rtbBedRaw = sleepSearchEvents.filter(function(e) {
-                    return (e.isBedroomMotion || e.isFP2Bed)
-                        && (e.timestamp||0) >= _4amMs
-                        && (e.timestamp||0) <= _wakeHardCapMs;
-                }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                // Sustained-Filter: kurze Tages-SZ-Eintraege (nach 10:00, isoliert) kein Bett-Return
-                var _rtbBedEvts = _rtbBedRaw.filter(function(e, idx) {
-                    if (e.isFP2Bed) return true;
-                    var _eTs = e.timestamp||0;
-                    if (new Date(_eTs).getHours() < 10) return true;
-                    var _prev = idx > 0 ? (_rtbBedRaw[idx-1].timestamp||0) : 0;
-                    var _next = idx < _rtbBedRaw.length - 1 ? (_rtbBedRaw[idx+1].timestamp||0) : Infinity;
-                    return (_eTs - _prev <= 15*60*1000) || (_next - _eTs <= 15*60*1000);
-                });
-                var _rtbCi = 0;
-                while (_rtbCi < _otherRoomEvts.length) {
-                    var _rtbDep = _otherRoomEvts[_rtbCi].timestamp || 0;
-                    var _rtbRet = null;
-                    for (var _rtbBi = 0; _rtbBi < _rtbBedEvts.length; _rtbBi++) {
-                        if ((_rtbBedEvts[_rtbBi].timestamp||0) > _rtbDep + 2*60*1000) {
-                            _rtbRet = _rtbBedEvts[_rtbBi]; break;
-                        }
-                    }
-                    if (!_rtbRet) { otherRoomWakeTs = _rtbDep; break; }
-                    var _rtbRetTs = _rtbRet.timestamp || 0;
-                    var _rtbNi = -1;
-                    for (var _rtbJ = _rtbCi + 1; _rtbJ < _otherRoomEvts.length; _rtbJ++) {
-                        if ((_otherRoomEvts[_rtbJ].timestamp||0) > _rtbRetTs + 2*60*1000) {
-                            _rtbNi = _rtbJ; break;
-                        }
-                    }
-                    if (_rtbNi === -1) { otherRoomWakeTs = null; break; }
-                    _rtbCi = _rtbNi;
-                }
+                otherRoomWakeTs = _otherRoomEvts[0].timestamp || null;
             }
 
-            // fp2OtherWakeTs: nur bei echtem FP2-Praesenzradar (sleepWindowSource === fp2), OC-18 FP2-Label-Fix
+            // fp2OtherWakeTs: erste andere-Raum-Bewegung nach FP2-Abgang (Forward-Scan, max. +60 Min)
             var fp2OtherWakeTs = null;
-            if (sleepWindowSource === 'fp2' && fp2WakeTs && otherRoomWakeTs && Math.abs(otherRoomWakeTs - fp2WakeTs) <= 15*60*1000) {
-                fp2OtherWakeTs = Math.min(fp2WakeTs, otherRoomWakeTs);
+            if (sleepWindowSource === 'fp2' && fp2WakeTs) {
+                var _fp2OtherEvts = sleepSearchEvents.filter(function(e) {
+                    return !e.isFP2Bed && !e.isVibrationBed && !e.isBathroomSensor && !e.isBedroomMotion
+                        && (e.type === 'motion' || e.type === 'presence_radar_bool')
+                        && (e.timestamp||0) >= fp2WakeTs
+                        && (e.timestamp||0) <= fp2WakeTs + 60*60*1000;
+                }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                if (_fp2OtherEvts.length > 0) fp2OtherWakeTs = _fp2OtherEvts[0].timestamp || null;
             }
 
             // vibAloneWakeTs: letztes Vib-Event mit >=45 Min Stille danach
