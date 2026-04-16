@@ -946,9 +946,9 @@ class CogniLiving extends utils.Adapter {
                     var _mse = motEvts[_msi];
                     var _mhr = new Date(_mse.timestamp||0).getHours();
                     if (!(_mhr >= 18 || _mhr < 3)) continue;
-                    var _nextMotTs = (_msi < motEvts.length - 1) ? (motEvts[_msi+1].timestamp||0) : Date.now();
+                    var _nextMotTs = (_msi < motEvts.length - 1) ? (motEvts[_msi+1].timestamp||0) : (_sleepSearchBase.getTime() + 10*3600000);
                     var _motGap = (_nextMotTs - (_mse.timestamp||0)) / 60000;
-                    if (_motGap >= 45) sleepStartTs = _mse.timestamp||0;  // letztes solches Event gewinnt
+                    if (_motGap >= 30) sleepStartTs = _mse.timestamp||0;  // letztes solches Event gewinnt
                 }
                 if (!sleepStartTs) return { start: null, end: null };
                 // Aufwachzeit: erste Bewegung nach 04:00 die mindestens 3h nach Einschlafzeit liegt
@@ -1120,17 +1120,18 @@ class CogniLiving extends utils.Adapter {
                     if ((_vNext - _vTs) / 60000 >= 20) { _globalVibRefinedTs = _vTs; break; }
                 }
             })();
-            // gap60: letztes Bett-Event vor 60-Min-Pause
+            // gap60: erstes Vib/FP2-Event das von >=60 Min Stille gefolgt wird (Forward-Scan)
             var _globalGap60Ts = null;
             (function() {
+                var _g60End = _sleepSearchBase.getTime() + 10 * 3600000; // 04:00 Uhr
                 var _gEvts = sleepSearchEvents.filter(function(e) {
-                    if (!e.isFP2Bed && !e.isVibrationBed && !e.isBedroomMotion) return false;
+                    if (!e.isFP2Bed && !e.isVibrationBed) return false;
                     var hr = new Date(e.timestamp||0).getHours();
                     return hr >= 21 || hr < 4;
                 }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                for (var _gi = _gEvts.length - 1; _gi >= 0; _gi--) {
+                for (var _gi = 0; _gi < _gEvts.length; _gi++) {
                     var _gTs = _gEvts[_gi].timestamp||0;
-                    var _gNext = (_gi < _gEvts.length-1) ? (_gEvts[_gi+1].timestamp||0) : Date.now();
+                    var _gNext = (_gi < _gEvts.length - 1) ? (_gEvts[_gi+1].timestamp||0) : _g60End;
                     if (_gNext - _gTs >= 60*60*1000) { _globalGap60Ts = _gTs; break; }
                 }
             })();
@@ -1145,7 +1146,6 @@ class CogniLiving extends utils.Adapter {
                 { source: 'haus_still',   ts: sleepWindowHausStill.start || null },
                 { source: 'motion',       ts: sleepWindowMotion.start || null },
                 { source: 'fixed',        ts: _fixedSleepStartTs },
-                { source: 'winstart',     ts: _fixedSleepStartTs }
             ];
             var sleepStartSource = _fp2RawStart ? 'fp2'
                 : (motionVibSleepStartTs ? 'motion_vib'
@@ -2025,7 +2025,16 @@ class CogniLiving extends utils.Adapter {
                     var _pCandMotVib = _pCandMotAnchor ? _pVibRefine(_pCandMotAnchor) : null;
                     var _pCandAllAnchor = _pFindGapAnchor(function(){ return true; }, 60*60*1000);
                     var _pCandVibRefined = _pCandAllAnchor ? _pVibRefine(_pCandAllAnchor) : null;
-                    var _pCandGap60 = _pCandAllAnchor || null;
+                    var _pCandGap60 = (function() {
+                        var _pg60End = _sleepSearchBase.getTime() + 10 * 3600000;
+                        var _pgEvts = _pBedEvts.filter(function(e){ return e.isVibrationBed || e.isFP2Bed; });
+                        for (var _pgi = 0; _pgi < _pgEvts.length; _pgi++) {
+                            var _pgTs = _pgEvts[_pgi].timestamp||0;
+                            var _pgNext = (_pgi < _pgEvts.length - 1) ? (_pgEvts[_pgi+1].timestamp||0) : _pg60End;
+                            if (_pgNext - _pgTs >= 60*60*1000) return _pgTs;
+                        }
+                        return null;
+                    })();
                     var _pCandLastOutside = null; // computed inline in last_outside block below
                     var _pCandHausStill = null;   // computed inline in haus_still block below
 
@@ -2256,7 +2265,6 @@ class CogniLiving extends utils.Adapter {
                         { source: 'gap60',        ts: _pCandGap60 },
                         { source: 'last_outside', ts: _pCandLastOutside },
                         { source: 'haus_still',   ts: _pCandHausStill },
-                        { source: 'winstart',     ts: _pBedEvts.length > 0 ? winStart : null }
                     ];
                     // allWakeSources pro Person (alle kandidaten, override als aktive Quelle)
                     var _pAllWakeSources = [
