@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Tooltip as MuiTooltip, IconButton } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
@@ -305,22 +305,30 @@ const ScoreCircle = ({ score, isDark }: { score: number; isDark: boolean }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Intensitäts-Balken (wie OBE-Bar in HealthTab)
+// Intensitäts-Balken — festes 24h-Fenster 00:00–23:59
 // ─────────────────────────────────────────────────────────────────────────────
-const IntimacyBar = ({ events, isDark }: { events: IntimacyEvent[]; isDark: boolean }) => {
-    if (events.length === 0) return null;
-    // Zeitfenster: 2h vor frühestem Start bis 2h nach spätestem Ende, min. 4h Breite
-    const minStart = Math.min(...events.map(e => e.start));
-    const maxEnd   = Math.max(...events.map(e => e.end));
-    const rawStart = minStart - 2 * 3600000;
-    const rawEnd   = maxEnd   + 2 * 3600000;
-    const winDur   = Math.max(rawEnd - rawStart, 4 * 3600000);
-    // Auf volle Stunden runden für schöne Achse
-    const winStart = new Date(rawStart); winStart.setMinutes(0, 0, 0);
-    const winStartMs = winStart.getTime();
-    const tickCount = Math.round(winDur / 3600000) + 1;
-    const ticks = Array.from({ length: tickCount }, (_, i) => winStartMs + i * 3600000);
-    // Alle Slots aller Events zusammenführen
+const IntimacyBar = ({ events, isDark, dayDateStr, isToday }: {
+    events: IntimacyEvent[];
+    isDark: boolean;
+    dayDateStr?: string;   // "YYYY-MM-DD" des angezeigten Tages
+    isToday?: boolean;
+}) => {
+    if (events.length === 0 && !dayDateStr) return null;
+
+    // Festes 24h-Fenster: 00:00 bis 23:59:59 des Tages
+    const refDate = dayDateStr ?? (events.length > 0
+        ? new Date(events[0].start).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10));
+    const winStartMs = new Date(refDate + 'T00:00:00').getTime();
+    const winDur     = 24 * 3600000; // exakt 24h
+
+    // Jetzt-Linie (nur bei heute relevant)
+    const nowMs   = Date.now();
+    const nowPct  = Math.min(100, Math.max(0, (nowMs - winStartMs) / winDur * 100));
+
+    // 9 Ticks alle 3h: 00:00, 03:00, ..., 21:00, 24:00 → mit space-between exakt auf Balkenbreite ausgerichtet
+    const ticks = Array.from({ length: 9 }, (_, i) => winStartMs + i * 3 * 3600000);
+
     const allSlots = events.flatMap(e => e.slots);
 
     return (
@@ -329,29 +337,49 @@ const IntimacyBar = ({ events, isDark }: { events: IntimacyEvent[]; isDark: bool
                 INTENSITÄTS-VERLAUF (5-Min-Slots)
             </div>
             <div style={{ position: 'relative', height: 28, background: isDark ? '#111' : '#f0f0f0', borderRadius: 3, overflow: 'hidden' }}>
+                {/* Vibrations-Slots */}
                 {allSlots.map((sl, i) => {
-                    const left = ((sl.start - winStartMs) / winDur) * 100;
-                    const width = Math.max(0.5, (15 * 60000 / winDur) * 100);
-                    if (left < -2 || left > 102) return null;
+                    const left  = (sl.start - winStartMs) / winDur * 100;
+                    const width = Math.max(0.3, (5 * 60000 / winDur) * 100);
+                    if (left < -1 || left > 101) return null;
                     return (
                         <div key={i} style={{
                             position: 'absolute', left: `${Math.max(0, left)}%`, width: `${width}%`,
                             top: 0, height: '100%', background: slotColor(sl.strMax),
-                            opacity: sl.strMax > 0 ? 0.85 : 0.2
+                            opacity: sl.strMax > 0 ? 0.85 : 0.2,
                         }} title={`${fmtTime(sl.start)}: Peak ${sl.strMax}, Trig ${sl.trigCnt}`} />
                     );
                 })}
-                {/* Start-Markierung für jedes Event */}
+                {/* Session-Start-Markierungen */}
                 {events.map((evt, i) => (
                     <div key={i} style={{
                         position: 'absolute',
-                        left: `${Math.max(0, ((evt.start - winStartMs) / winDur) * 100)}%`,
-                        top: 0, width: 2, height: '100%', background: '#f48fb1', opacity: 0.9
-                    }} />
+                        left: `${Math.max(0, (evt.start - winStartMs) / winDur * 100)}%`,
+                        top: 0, width: 2, height: '100%', background: '#f48fb1', opacity: 0.9,
+                    }} title={`Session ${i + 1}: ${fmtTime(evt.start)}`} />
                 ))}
+                {/* Zukunft: Schraffur wenn heute, grau wenn vergangener Tag */}
+                {isToday && nowPct < 100 && (
+                    <div style={{
+                        position: 'absolute', left: `${nowPct}%`, width: `${100 - nowPct}%`,
+                        top: 0, height: '100%', pointerEvents: 'none',
+                        background: isDark
+                            ? 'repeating-linear-gradient(-45deg, rgba(30,30,30,0.9), rgba(30,30,30,0.9) 2px, rgba(50,50,50,0.4) 2px, rgba(50,50,50,0.4) 6px)'
+                            : 'repeating-linear-gradient(-45deg, rgba(220,220,220,0.8), rgba(220,220,220,0.8) 2px, rgba(240,240,240,0.3) 2px, rgba(240,240,240,0.3) 6px)',
+                    }} />
+                )}
+                {/* Jetzt-Linie */}
+                {isToday && (
+                    <div style={{
+                        position: 'absolute', left: `${nowPct}%`, top: 0,
+                        width: 1, height: '100%',
+                        background: isDark ? '#555' : '#bbb', opacity: 0.9,
+                    }} title={`Jetzt: ${fmtTime(nowMs)}`} />
+                )}
             </div>
+            {/* Zeitachse: 00:00, 03:00, ..., 21:00, 24:00 — 9 Ticks exakt aligned */}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.48rem', color: isDark ? '#444' : '#aaa', marginTop: 2 }}>
-                {ticks.slice(0, 5).map((t, i) => <span key={i}>{fmtTime(t).slice(0,5)}</span>)}
+                {ticks.map((t, i) => <span key={i}>{i === 8 ? '24:00' : fmtTime(t).slice(0, 5)}</span>)}
             </div>
         </div>
     );
@@ -369,10 +397,12 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
     const isDark = themeType === 'dark';
     const dividerColor = isDark ? '#222' : '#eee';
 
+    const isCardToday = curDateStr === dateStr(new Date());
+
     if (events.length === 0) {
         return (
             <TerminalBox title={`SEX — ${dateLabel}`} themeType={themeType}>
-                <div style={{ textAlign: 'center', padding: '16px 8px' }}>
+                <div style={{ textAlign: 'center', padding: '12px 8px 8px' }}>
                     <div style={{ fontSize: '1.6rem', marginBottom: 8, opacity: 0.3 }}>💤</div>
                     <div style={{ fontSize: '0.85rem', color: isDark ? '#444' : '#ccc', marginBottom: 6 }}>
                         Keine Aktivität erkannt
@@ -387,6 +417,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
                         </div>
                     )}
                 </div>
+                <IntimacyBar events={[]} isDark={isDark} dayDateStr={curDateStr} isToday={isCardToday} />
             </TerminalBox>
         );
     }
@@ -505,7 +536,12 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
             </div>
 
             {/* Intensitäts-Balken */}
-            <IntimacyBar events={events} isDark={isDark} />
+            <IntimacyBar
+                events={events}
+                isDark={isDark}
+                dayDateStr={curDateStr}
+                isToday={curDateStr === dateStr(new Date())}
+            />
 
             {/* Session-Liste: pro Session eigene Nullnummer-Option */}
             {onChange && curDateStr && (
@@ -1727,7 +1763,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                     <div>
                         <SexDayCard
                             events={todayEvents}
-                            dateLabel={isToday ? 'Heute' : fmtDate(viewDate.getTime())}
+                            dateLabel={isToday ? `Heute · ${fmtDate(viewDate.getTime())}` : fmtDate(viewDate.getTime())}
                             themeType={themeType}
                             funMode={funMode}
                             native={native}
@@ -1800,81 +1836,171 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                         </TerminalBox>
 
                         <TerminalBox title="ALGORITHMUS" themeType={themeType}>
-                            <div style={{ fontSize: '0.83rem', lineHeight: 1.8, color: isDark ? '#666' : '#888' }}>
-                                <div style={{ color: isDark ? '#555' : '#aaa', fontSize: '0.88rem', marginBottom: 4 }}>ERKENNUNGS-SCHWELLEN</div>
-                                <div>• Zeitfenster: <span style={{ color: isDark ? '#81c784' : '#388e3c' }}>kein Limit</span> <span style={{ color: isDark ? '#444' : '#bbb' }}>(ganzer Tag, Sex ist zeitlos)</span></div>
-                                <div>• <b>Pfad A</b> (kurz+intensiv): ≥2×5 Min, Peak ≥<span style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>{calibInfo ? calibInfo.calibA : 50}</span></div>
-                                <div>• <b>Pfad B</b> (länger+moderat): ≥6×5 Min, Peak ≥<span style={{ color: isDark ? '#90caf9' : '#283593' }}>{calibInfo ? calibInfo.calibB : 30}</span></div>
-                                <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.88rem' }}>KALIBRIERUNG</div>
-                                {calibInfo ? (
-                                    <div style={{
-                                        padding: '5px 8px', borderRadius: 3, marginBottom: 4,
-                                        background: (calibInfo.src === 'labels' || calibInfo.src === 'labels_typed') ? (isDark ? '#1a2e1a' : '#e8f5e9') :
-                                                    calibInfo.src === 'baseline' ? (isDark ? '#1a1a2e' : '#e8eaf6') :
-                                                    calibInfo.src === 'manual' ? (isDark ? '#2e1a1a' : '#fce4ec') :
-                                                    (isDark ? '#1a1a1a' : '#f5f5f5'),
-                                        borderLeft: `3px solid ${(calibInfo.src === 'labels' || calibInfo.src === 'labels_typed') ? '#81c784' : calibInfo.src === 'baseline' ? '#90caf9' : calibInfo.src === 'manual' ? '#f48fb1' : '#666'}`,
-                                    }}>
-                                        {(calibInfo.src === 'labels' || calibInfo.src === 'labels_typed') && <span style={{ color: isDark ? '#81c784' : '#2e7d32' }}>✓ {calibInfo.src === 'labels_typed' ? 'Stufe-2-Kalibrierung (per Typ)' : 'Kalibriert'} aus {calibInfo.n} Sessions · A={calibInfo.calibA} B={calibInfo.calibB}</span>}
-                                        {calibInfo.src === 'baseline' && <span style={{ color: isDark ? '#90caf9' : '#3949ab' }}>~ Anomalie-Baseline aktiv · A={calibInfo.calibA} B={calibInfo.calibB} <span style={{ opacity: 0.7 }}>(Training-Sessions eintragen für mehr Präzision)</span></span>}
-                                        {calibInfo.src === 'manual' && <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>⚙ Manuell: sexCalibThreshold · A={calibInfo.calibA} B={calibInfo.calibB}</span>}
-                                        {calibInfo.src === 'default' && <span style={{ color: isDark ? '#555' : '#aaa' }}>Standard-Schwellen · A={calibInfo.calibA} B={calibInfo.calibB} <span style={{ opacity: 0.7 }}>(Training-Sessions eintragen)</span></span>}
+                            {(() => {
+                                const isCalibrated = calibInfo && (calibInfo.src === 'labels' || calibInfo.src === 'labels_typed' || calibInfo.src === 'baseline' || calibInfo.src === 'manual');
+                                const isTypedCalib = calibInfo && (calibInfo.src === 'labels' || calibInfo.src === 'labels_typed');
+                                const rfActive = !!(calibInfo?.pyClassifier?.trained);
+                                const rfInfo = calibInfo?.pyClassifier;
+                                const vaginalThresh = Math.round(activeCalibA * 1.5);
+                                const sepStyle: React.CSSProperties = { borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 8, paddingTop: 6 };
+                                const hdrStyle = (active: boolean): React.CSSProperties => ({
+                                    color: active ? (isDark ? '#81c784' : '#388e3c') : (isDark ? '#555' : '#aaa'),
+                                    fontSize: '0.82rem', fontWeight: 600, marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                });
+                                const checkBadge = (active: boolean) => (
+                                    <span style={{
+                                        fontSize: '0.7rem', padding: '1px 5px', borderRadius: 3,
+                                        background: active ? (isDark ? '#1a2e1a' : '#e8f5e9') : (isDark ? '#1a1a1a' : '#f0f0f0'),
+                                        color: active ? (isDark ? '#81c784' : '#2e7d32') : (isDark ? '#444' : '#bbb'),
+                                        fontWeight: 'bold'
+                                    }}>{active ? '✓ AKTIV' : '— INAKTIV'}</span>
+                                );
+                                const miniBar = (val: number, max: number, color: string) => (
+                                    <div style={{ flex: 1, height: 6, background: isDark ? '#1a1a1a' : '#e0e0e0', borderRadius: 3, overflow: 'hidden' }}>
+                                        <div style={{ width: `${Math.min(100, Math.round((val / max) * 100))}%`, height: '100%', background: color, borderRadius: 3 }} />
                                     </div>
-                                ) : (
-                                    <div style={{ color: isDark ? '#444' : '#bbb', fontSize: '0.76rem' }}>
-                                        — Kalibrierungsdaten noch nicht geladen (erst nach nächstem täglichen Speichern verfügbar)
+                                );
+                                return (
+                                    <div style={{ fontSize: '0.8rem', lineHeight: 1.7, color: isDark ? '#666' : '#888' }}>
+
+                                        {/* ── STUFE 1: SESSION-ERKENNUNG ── */}
+                                        <div style={hdrStyle(true)}>
+                                            <span>STUFE 1: SESSION-ERKENNUNG</span>
+                                            {checkBadge(true)}
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: isDark ? '#555' : '#999', marginBottom: 3, fontStyle: 'italic' }}>
+                                            Sensor-Vibrationen werden in 5-Min-Blöcken gezählt. Zwei Erkennungspfade:
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                            <span style={{ width: 56, flexShrink: 0, color: isDark ? '#ab47bc' : '#7b1fa2', fontWeight: 600, fontSize: '0.75rem' }}>Pfad A</span>
+                                            <span style={{ fontSize: '0.74rem', color: isDark ? '#555' : '#999' }}>kurz+intensiv: ≥2 Blöcke, Peak ≥</span>
+                                            <strong style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>{activeCalibA}</strong>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                                            <span style={{ width: 56, flexShrink: 0, color: isDark ? '#90caf9' : '#283593', fontWeight: 600, fontSize: '0.75rem' }}>Pfad B</span>
+                                            <span style={{ fontSize: '0.74rem', color: isDark ? '#555' : '#999' }}>länger+moderat: ≥6 Blöcke, Peak ≥</span>
+                                            <strong style={{ color: isDark ? '#90caf9' : '#283593' }}>{activeCalibB}</strong>
+                                        </div>
+
+                                        {/* ── KALIBRIERUNG ── */}
+                                        <div style={sepStyle} />
+                                        <div style={hdrStyle(!!isCalibrated)}>
+                                            <span>KALIBRIERUNG</span>
+                                            {checkBadge(!!isTypedCalib)}
+                                        </div>
+                                        {calibInfo ? (
+                                            <div style={{
+                                                padding: '5px 8px', borderRadius: 3, marginBottom: 4,
+                                                background: isTypedCalib ? (isDark ? '#1a2e1a' : '#e8f5e9') :
+                                                            calibInfo.src === 'baseline' ? (isDark ? '#1a1a2e' : '#e8eaf6') :
+                                                            calibInfo.src === 'manual' ? (isDark ? '#2e1a1a' : '#fce4ec') :
+                                                            (isDark ? '#1a1a1a' : '#f5f5f5'),
+                                                borderLeft: `3px solid ${isTypedCalib ? '#81c784' : calibInfo.src === 'baseline' ? '#90caf9' : calibInfo.src === 'manual' ? '#f48fb1' : '#666'}`,
+                                                fontSize: '0.76rem'
+                                            }}>
+                                                {isTypedCalib && <span style={{ color: isDark ? '#81c784' : '#2e7d32' }}>✓ {calibInfo.src === 'labels_typed' ? 'Typ-spezifisch' : 'Aus'} {calibInfo.n} Sessions · Schwelle A={calibInfo.calibA} · B={calibInfo.calibB}</span>}
+                                                {calibInfo.src === 'baseline' && <span style={{ color: isDark ? '#90caf9' : '#3949ab' }}>~ Anomalie-Baseline · A={calibInfo.calibA} · B={calibInfo.calibB} <span style={{ opacity: 0.7 }}>(mehr Sessions = mehr Präzision)</span></span>}
+                                                {calibInfo.src === 'manual' && <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>⚙ Manuell konfiguriert · A={calibInfo.calibA} · B={calibInfo.calibB}</span>}
+                                                {calibInfo.src === 'default' && <span style={{ color: isDark ? '#555' : '#aaa' }}>Standard-Schwellen · A={calibInfo.calibA} · B={calibInfo.calibB} <span style={{ opacity: 0.7 }}>(Sessions eintragen!)</span></span>}
+                                            </div>
+                                        ) : (
+                                            <div style={{ color: isDark ? '#444' : '#bbb', fontSize: '0.74rem', marginBottom: 4 }}>
+                                                — noch nicht geladen (nach nächstem täglichen Speichern verfügbar)
+                                            </div>
+                                        )}
+
+                                        {/* ── STUFE 2: TYP-KLASSIFIKATION ── */}
+                                        <div style={sepStyle} />
+                                        <div style={hdrStyle(!!isCalibrated)}>
+                                            <span>STUFE 2: TYP-KLASSIFIKATION</span>
+                                            {checkBadge(!!isCalibrated)}
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: isDark ? '#555' : '#999', marginBottom: 5, fontStyle: 'italic' }}>
+                                            Regelbasiert: Vergleicht die Sensor-Intensität mit gelernten Schwellen.
+                                        </div>
+                                        {/* calibA Balken */}
+                                        <div style={{ marginBottom: 4 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                                <span style={{ width: 80, flexShrink: 0, fontSize: '0.72rem', color: isDark ? '#f48fb1' : '#c2185b' }}>🌹 Vaginal</span>
+                                                {miniBar(activeCalibA, 100, isDark ? '#ad1457' : '#f48fb1')}
+                                                <span style={{ width: 36, textAlign: 'right', fontSize: '0.72rem', color: isDark ? '#555' : '#bbb' }}>Peak≥{vaginalThresh}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <span style={{ width: 80, flexShrink: 0, fontSize: '0.72rem', color: isDark ? '#90caf9' : '#283593' }}>💋 Oral/Hand</span>
+                                                {miniBar(activeCalibB, 100, isDark ? '#1565c0' : '#90caf9')}
+                                                <span style={{ width: 36, textAlign: 'right', fontSize: '0.72rem', color: isDark ? '#555' : '#bbb' }}>Peak≥{activeCalibA}</span>
+                                            </div>
+                                        </div>
+                                        <div style={{ fontSize: '0.7rem', color: isDark ? '#444' : '#bbb', lineHeight: 1.6 }}>
+                                            <div>• Peak ≥ <strong style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>{vaginalThresh}</strong> + ≥3 Slots → <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>vaginal</span></div>
+                                            <div>• Peak ≥ <strong style={{ color: isDark ? '#90caf9' : '#283593' }}>{activeCalibA}</strong> oder Pfad B → <span style={{ color: isDark ? '#90caf9' : '#283593' }}>oral/hand</span></div>
+                                            <div>• Sonst → <span style={{ color: '#888' }}>❓ nicht klassifiziert</span></div>
+                                        </div>
+
+                                        {/* ── STUFE 3: KI-KLASSIFIKATOR ── */}
+                                        <div style={sepStyle} />
+                                        <div style={hdrStyle(rfActive)}>
+                                            <span>STUFE 3: KI-KLASSIFIKATOR (RF)</span>
+                                            {checkBadge(rfActive)}
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: isDark ? '#555' : '#999', marginBottom: 5, fontStyle: 'italic' }}>
+                                            Random Forest: Lernt aus deinen Labels und verfeinert die Ergebnisse von Stufe 2.
+                                        </div>
+                                        {rfInfo ? (
+                                            rfInfo.trained ? (
+                                                <div style={{ padding: '6px 8px', borderRadius: 3, background: isDark ? '#0d1a0d' : '#e8f5e9', borderLeft: '3px solid #81c784' }}>
+                                                    <div style={{ color: isDark ? '#81c784' : '#2e7d32', fontWeight: 600, fontSize: '0.76rem', marginBottom: 6 }}>
+                                                        🤖 {rfInfo.n} Sessions im Modell
+                                                        {rfInfo.counts && (
+                                                            <span style={{ fontWeight: 'normal', opacity: 0.8 }}> · {Object.entries(rfInfo.counts).filter(([k]) => k !== 'nullnummer').map(([k, v]) => `${k === 'vaginal' ? '🌹' : '💋'} ${v}×`).join(' ')}</span>
+                                                        )}
+                                                    </div>
+                                                    {rfInfo.loo_accuracy != null && (
+                                                        <div style={{ marginBottom: 6 }}>
+                                                            <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#999', marginBottom: 2 }}>Selbst-Test-Genauigkeit (Leave-One-Out):</div>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                                {miniBar(Math.round(rfInfo.loo_accuracy * 100), 100, rfInfo.loo_accuracy >= 0.8 ? '#81c784' : rfInfo.loo_accuracy >= 0.6 ? '#ffb74d' : '#ef5350')}
+                                                                <strong style={{ color: rfInfo.loo_accuracy >= 0.8 ? (isDark ? '#81c784' : '#2e7d32') : rfInfo.loo_accuracy >= 0.6 ? '#f57c00' : '#c62828', fontSize: '0.8rem' }}>
+                                                                    {Math.round(rfInfo.loo_accuracy * 100)}%
+                                                                </strong>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {rfInfo.feature_importances && rfInfo.feature_importances.length > 0 && (
+                                                        <div>
+                                                            <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#999', marginBottom: 4 }}>Welche Merkmale entscheiden? (höher = wichtiger):</div>
+                                                            {rfInfo.feature_importances.map((f, fi) => (
+                                                                <div key={fi} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+                                                                    <span style={{ width: 84, flexShrink: 0, fontSize: '0.68rem', color: isDark ? '#90caf9' : '#3949ab' }}>{f.name}</span>
+                                                                    <div style={{ flex: 1, height: 7, background: isDark ? '#1a1a2e' : '#ddd', borderRadius: 3, overflow: 'hidden' }}>
+                                                                        <div style={{ width: `${Math.round(f.importance * 100)}%`, height: '100%', background: isDark ? '#5c6bc0' : '#7986cb', borderRadius: 3 }} />
+                                                                    </div>
+                                                                    <span style={{ width: 28, textAlign: 'right', fontSize: '0.68rem', color: isDark ? '#555' : '#bbb' }}>{Math.round(f.importance * 100)}%</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div style={{ padding: '5px 8px', borderRadius: 3, background: isDark ? '#1a1a1a' : '#f5f5f5', borderLeft: '3px solid #555', fontSize: '0.75rem' }}>
+                                                    <div style={{ color: isDark ? '#666' : '#888', marginBottom: 3 }}>⏳ Noch nicht aktiv</div>
+                                                    <div style={{ color: isDark ? '#888' : '#555' }}>{rfInfo.msg}</div>
+                                                    {rfInfo.counts && (
+                                                        <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#aaa', marginTop: 3 }}>
+                                                            Vorhanden: {Object.entries(rfInfo.counts).filter(([k]) => k !== 'nullnummer').map(([k, v]) => `${k === 'vaginal' ? '🌹' : '💋'} ${v}×`).join(', ') || '—'}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        ) : (
+                                            <div style={{ padding: '5px 8px', borderRadius: 3, background: isDark ? '#1a1a1a' : '#f5f5f5', borderLeft: '3px solid #444', fontSize: '0.74rem', color: isDark ? '#555' : '#aaa' }}>
+                                                ⏳ Benötigt Labels mit Sensor-Treffer (mind. je 2× 🌹 vaginal + 2× 💋 oral/hand)
+                                            </div>
+                                        )}
+
                                     </div>
-                                )}
-                                <div>• Mehr Sessions eintragen → präzisere automatische Schwellen</div>
-                               <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.88rem' }}>TYP-KLASSIFIKATION (STUFE 1)</div>
-                               <div>• Peak ≥ calibA×1.5 + Slots → <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>vaginal</span></div>
-                               <div>• Peak ≥ calibA oder Pfad B → <span style={{ color: isDark ? '#90caf9' : '#283593' }}>oral/hand</span></div>
-                               <div>• Default → <span style={{ color: '#888' }}>intim</span></div>
-                               <div style={{ borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 6, paddingTop: 6, color: isDark ? '#555' : '#aaa', fontSize: '0.88rem' }}>KI-KLASSIFIKATOR (STUFE 3)</div>
-                               {calibInfo?.pyClassifier ? (
-                                   calibInfo.pyClassifier.trained ? (
-                                       <div style={{ padding: '6px 7px', borderRadius: 3, background: isDark ? '#0d1a2d' : '#e8eaf6', borderLeft: '3px solid #90caf9' }}>
-                                           <div style={{ color: isDark ? '#90caf9' : '#3949ab', fontWeight: 'bold', marginBottom: 4 }}>
-                                               🤖 Aktiv — {calibInfo.pyClassifier.n} Sessions trainiert
-                                               {calibInfo.pyClassifier.counts && Object.entries(calibInfo.pyClassifier.counts).length > 0 && (
-                                                   <span style={{ opacity: 0.7, fontWeight: 'normal' }}> ({Object.entries(calibInfo.pyClassifier.counts).map(([k,v]) => `${k === 'vaginal' ? '♥' : '◐'} ${v}x`).join(', ')})</span>
-                                               )}
-                                           </div>
-                                           {/* LOO-Genauigkeit */}
-                                           {calibInfo.pyClassifier.loo_accuracy != null && (
-                                               <div style={{ fontSize: '0.76rem', color: isDark ? '#64b5f6' : '#1565c0', marginBottom: 4 }}>
-                                                   📊 Leave-One-Out Genauigkeit:{' '}
-                                                   <strong>{Math.round(calibInfo.pyClassifier.loo_accuracy * 100)}%</strong>
-                                                   <span style={{ opacity: 0.6, fontSize: '0.7rem' }}> ({calibInfo.pyClassifier.n} Folds)</span>
-                                               </div>
-                                           )}
-                                           {/* Feature-Importance Top 5 */}
-                                           {calibInfo.pyClassifier.feature_importances && calibInfo.pyClassifier.feature_importances.length > 0 && (
-                                               <div style={{ fontSize: '0.72rem', color: isDark ? '#888' : '#666', marginTop: 2 }}>
-                                                   <div style={{ marginBottom: 3, color: isDark ? '#666' : '#aaa' }}>Wichtigste Merkmale:</div>
-                                                   {calibInfo.pyClassifier.feature_importances.slice(0, 5).map((f, fi) => (
-                                                       <div key={fi} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
-                                                           <span style={{ width: 90, flexShrink: 0, color: isDark ? '#90caf9' : '#3949ab' }}>{f.name}</span>
-                                                           <div style={{ flex: 1, height: 5, background: isDark ? '#1a1a2e' : '#ddd', borderRadius: 3, overflow: 'hidden' }}>
-                                                               <div style={{ width: `${Math.round(f.importance * 100)}%`, height: '100%', background: isDark ? '#5c6bc0' : '#7986cb', borderRadius: 3 }} />
-                                                           </div>
-                                                           <span style={{ width: 32, textAlign: 'right', color: isDark ? '#555' : '#bbb' }}>{Math.round(f.importance * 100)}%</span>
-                                                       </div>
-                                                   ))}
-                                               </div>
-                                           )}
-                                       </div>
-                                   ) : (
-                                       <div style={{ padding: '4px 7px', borderRadius: 3, background: isDark ? '#1a1a1a' : '#f5f5f5', borderLeft: '3px solid #555' }}>
-                                           <span style={{ color: isDark ? '#666' : '#aaa' }}>⏳ Noch nicht aktiv — {calibInfo.pyClassifier.msg}</span>
-                                       </div>
-                                   )
-                               ) : (
-                                   <div style={{ color: isDark ? '#444' : '#bbb', fontSize: '0.76rem' }}>
-                                       — Wird aktiv ab 5 Labels (mind. 2× vaginal + 2× oral)
-                                   </div>
-                               )}
-                            </div>
+                                );
+                            })()}
                         </TerminalBox>
 
                         <TerminalBox title="DATENSCHUTZ" themeType={themeType}>
