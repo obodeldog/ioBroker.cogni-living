@@ -1227,6 +1227,9 @@ class CogniLiving extends utils.Adapter {
                             return { start: _fs, end: _fe };
                         })();
 
+            // FP2-Roh-Aufwachzeit vor Garmin-Override sichern (fuer allWakeSources)
+            var _fp2RawWakeTs = sleepWindowCalc.end || null;
+
             // [FROZEN-Fix] Garmin-Wake vorab lesen damit Stage-Berechnung korrektes Fenster-Ende hat.
             // Garmin-Wake wird normalerweise erst nach Stage-Calc gesetzt (Reihenfolge-Bug) - hier vorab.
             if (sleepWindowOC7.start && !_sleepFrozen) {
@@ -1530,7 +1533,7 @@ class CogniLiving extends utils.Adapter {
             // Priorit+?tskette (absteigend): Garmin ??? FP2+Vib ??? FP2 ??? Motion ??? Fixed
             // Garmin sleepEndTimestampGMT ++berstimmt alle anderen Quellen wenn plausibel (03-14 Uhr)
             var garminWakeTs = null;
-            var fp2WakeTs    = sleepWindowOC7.end || null;  // aktueller Wert = FP2/motion/fixed
+            var fp2WakeTs    = _fp2RawWakeTs || null;  // FP2-Rohwert (vor Garmin-Override)
             var _garminWakeId = (this.config.garminSleepEndStateId || '').trim()
                 || 'garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT';
             try {
@@ -1850,7 +1853,7 @@ class CogniLiving extends utils.Adapter {
                     sleepWindowOC7End:    sleepWindowOC7.end    ? new Date(sleepWindowOC7.end).toISOString()    : null,
                     sleepStagesCount: sleepStages.length,
                     sleepScore: sleepScore,
-                    oc4GuardFired: (bedPresenceMinutes < 180 && sleepWindowCalc.start === null && fp2BedEventsTotal > 0),
+                    oc4GuardFired: (bedPresenceMinutes < 180 && sleepWindowCalc.start === null && sleepSearchEvents.filter(function(e){ return e.isFP2Bed; }).length > 0),
                 };
                 await this.setStateAsync('analysis.health.saveDailyDebug', { val: JSON.stringify(_debugObj), ack: true });
                 this.log.info('[OC-7 Debug] stages=' + sleepStages.length + ' windowOC7=' + (_debugObj.sleepWindowOC7Start || 'NULL') + ' bedPresMin=' + bedPresenceMinutes + ' vibBedEvts=' + _debugObj.vibrationBedEventsTotal);
@@ -2006,6 +2009,45 @@ class CogniLiving extends utils.Adapter {
                     // Prioritaet: fp2_vib > fp2 > motion_vib > vib_refined > gap60 > last_outside > haus_still > winstart
                     // Jede Methode nutzt nur personTagged Events (e.personTag === person)
                     var _pSleepStart = null; var _pSleepStartSrc = 'winstart';
+                    // Bett-Events dieser Person ab 18:00 Vortag (FP2 + Vibration + Motion)
+                    var _pEve = _pBedEvts.filter(function(e) {
+                        var hr = new Date(e.timestamp||0).getHours();
+                        return hr >= 21 || hr < 2;
+                    });
+
+                    // Hilfsfunktion: Vib-Verfeinerung ab einem Anker-Timestamp
+                    // Sucht letztes Vib-Event + >=20 Min Stille innerhalb Anker+3h
+                    var _pVibRefine = function(anchorTs) {
+                        var _max = anchorTs + 3 * 3600000;
+                        var _evts = sleepSearchEvents.filter(function(e) {
+                            return e.isVibrationBed && e.personTag === person
+                                && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
+                                && (e.timestamp||0) >= anchorTs && (e.timestamp||0) <= _max;
+                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                        for (var _ri = 0; _ri < _evts.length; _ri++) {
+                            var _rEvt = _evts[_ri];
+                            var _rNext = (_ri < _evts.length-1) ? (_evts[_ri+1].timestamp||0) : _max;
+                            if ((_rNext - (_rEvt.timestamp||0)) / 60000 >= 20) return _rEvt.timestamp||0;
+                        }
+                        return null;
+                    };
+
+                    // Hilfsfunktion: letztes Bett-Event eines Typs vor langem Gap
+                    var _pFindGapAnchor = function(evtFilter, gapMs) {
+                        var _filtered = _pEve.filter(evtFilter);
+                        for (var _gi = _filtered.length - 1; _gi >= 0; _gi--) {
+                            var _gTs = _filtered[_gi].timestamp||0;
+                            var _gNext = null;
+                            for (var _gn = 0; _gn < _pBedEvts.length; _gn++) {
+                                if ((_pBedEvts[_gn].timestamp||0) > _gTs) { _gNext = _pBedEvts[_gn].timestamp||0; break; }
+                            }
+                            var _gNextTs = _gNext !== null ? _gNext : Infinity;
+                            if (_gNextTs - _gTs > gapMs) return _gTs;
+                        }
+                        return null;
+                    };
+
+
                     // Pre-compute ALL candidates independently for complete allSleepStartSources
                     var _pCandFp2Anchor = _pFindGapAnchor(function(e){ return e.isFP2Bed; }, 60*60*1000);
                     var _pCandFp2Vib = _pCandFp2Anchor ? _pVibRefine(_pCandFp2Anchor) : null;
@@ -2026,44 +2068,6 @@ class CogniLiving extends utils.Adapter {
                     })();
                     var _pCandLastOutside = null; // computed inline in last_outside block below
                     var _pCandHausStill = null;   // computed inline in haus_still block below
-
-                    // Hilfsfunktion: Vib-Verfeinerung ab einem Anker-Timestamp
-                    // Sucht letztes Vib-Event + >=20 Min Stille innerhalb Anker+3h
-                    var _pVibRefine = function(anchorTs) {
-                        var _max = anchorTs + 3 * 3600000;
-                        var _evts = sleepSearchEvents.filter(function(e) {
-                            return e.isVibrationBed && e.personTag === person
-                                && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
-                                && (e.timestamp||0) >= anchorTs && (e.timestamp||0) <= _max;
-                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                        for (var _ri = 0; _ri < _evts.length; _ri++) {
-                            var _rEvt = _evts[_ri];
-                            var _rNext = (_ri < _evts.length-1) ? (_evts[_ri+1].timestamp||0) : _max;
-                            if ((_rNext - (_rEvt.timestamp||0)) / 60000 >= 20) return _rEvt.timestamp||0;
-                        }
-                        return null;
-                    };
-
-                    // Bett-Events dieser Person ab 18:00 Vortag (FP2 + Vibration + Motion)
-                    var _pEve = _pBedEvts.filter(function(e) {
-                        var hr = new Date(e.timestamp||0).getHours();
-                        return hr >= 21 || hr < 2;
-                    });
-
-                    // Hilfsfunktion: letztes Bett-Event eines Typs vor langem Gap
-                    var _pFindGapAnchor = function(evtFilter, gapMs) {
-                        var _filtered = _pEve.filter(evtFilter);
-                        for (var _gi = _filtered.length - 1; _gi >= 0; _gi--) {
-                            var _gTs = _filtered[_gi].timestamp||0;
-                            var _gNext = null;
-                            for (var _gn = 0; _gn < _pBedEvts.length; _gn++) {
-                                if ((_pBedEvts[_gn].timestamp||0) > _gTs) { _gNext = _pBedEvts[_gn].timestamp||0; break; }
-                            }
-                            var _gNextTs = _gNext !== null ? _gNext : Infinity;
-                            if (_gNextTs - _gTs > gapMs) return _gTs;
-                        }
-                        return null;
-                    };
 
                     // --- Stufe 1: FP2 + Vibration (fp2_vib) ---
                     var _pFp2Anchor = _pFindGapAnchor(function(e){ return e.isFP2Bed; }, 60*60*1000);
