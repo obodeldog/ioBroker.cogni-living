@@ -2437,7 +2437,7 @@ class CogniLiving extends utils.Adapter {
                             var _sessionPeaks = [], _vaginalPeaks = [], _oralPeaks = [];
                             var _sexTrainData = []; // Stufe 3: Features fuer Python
                             var SLOT_CAL_MS = 5*60*1000;
-                            for (var _lbl of _sexLabels.slice(0, 7)) {
+                            for (var _lbl of _sexLabels.slice(0, 15)) {
                                 try {
                                     var _lPath = require('path').join(_calHistDir, _lbl.date + '.json');
                                     if (!fs.existsSync(_lPath)) continue;
@@ -2466,9 +2466,9 @@ class CogniLiving extends utils.Adapter {
                                     if (_lSlotPeaks.length > 0) {
                                         _lSlotPeaks.sort(function(a,b){return a-b;});
                                         var _lMedian = _lSlotPeaks[Math.floor(_lSlotPeaks.length/2)];
-                                        _sessionPeaks.push(_lMedian);
-                                        // Stufe 2: nach Typ trennen
+                                        // Bug-Fix: Nullnummer-Peaks nicht in _sessionPeaks (wuerden calibA faelschlich senken)
                                         var _lTypNorm = (_lbl.type||'').toLowerCase();
+                                        if (_lTypNorm !== 'nullnummer') _sessionPeaks.push(_lMedian);
                                         if (_lTypNorm === 'vaginal') _vaginalPeaks.push(_lMedian);
                                         else if (_lTypNorm === 'oral_hand') _oralPeaks.push(_lMedian);
                                         // Stufe 3: Features fuer Python-Klassifikator
@@ -2725,6 +2725,23 @@ class CogniLiving extends utils.Adapter {
                     }
                 }
             } catch(_ddE) { this.log.debug('[OC-SEX] Dedup-Fehler: ' + _ddE.message); }
+
+            // Nullnummer-Session-Filter: Entfernt Sessions die per Label als Fehlalarm markiert wurden
+            try {
+                var _nnLabels=[];
+                try{var _nnRaw=JSON.parse(this.config.sexTrainingLabels||'[]');if(Array.isArray(_nnRaw))_nnLabels=_nnRaw.filter(function(l){return l&&l.date===dateStr&&l.type==='nullnummer'&&l.time;});}catch(_nnPE){}
+                if (_nnLabels.length>0&&intimacyEvents.length>0){
+                    var _nnBefore=intimacyEvents.length;
+                    intimacyEvents=intimacyEvents.filter(function(e){
+                        return !_nnLabels.some(function(nl){
+                            var _nlP=nl.time.split(':').map(Number);
+                            var _nlMs=new Date(dateStr+'T00:00:00').setHours(_nlP[0],_nlP[1],0,0);
+                            return Math.abs((e.start||0)-_nlMs)<30*60000;
+                        });
+                    });
+                    if(intimacyEvents.length<_nnBefore)this.log.info('[OC-SEX] Nullnummer-Filter(daily): '+(_nnBefore-intimacyEvents.length)+' Session(s) entfernt, '+intimacyEvents.length+' behalten');
+                }
+            } catch(_nnE){this.log.debug('[OC-SEX] Nullnummer-Filter: '+_nnE.message);}
 
                         const snapshot = {
                 date: dateStr,
@@ -3417,7 +3434,7 @@ class CogniLiving extends utils.Adapter {
                         var _raSessPeaks = [], _raVaginalPeaks = [], _raOralPeaks = [];
                         var _raSexTrainData = [];
                         var _raSlotCalMs = 5*60*1000;
-                        for (var _raLbl of _raSexLabels.slice(0, 7)) {
+                        for (var _raLbl of _raSexLabels.slice(0, 15)) {
                             try {
                                 var _raLPath = path.join(_raCalDir, _raLbl.date + '.json');
                                 if (!fs.existsSync(_raLPath)) continue;
@@ -3444,8 +3461,9 @@ class CogniLiving extends utils.Adapter {
                                 if (_raLSPeaks.length>0){
                                     _raLSPeaks.sort(function(a,b){return a-b;});
                                     var _raLMed=_raLSPeaks[Math.floor(_raLSPeaks.length/2)];
-                                    _raSessPeaks.push(_raLMed);
+                                    // Bug-Fix: Nullnummer-Peaks ausschliessen
                                     var _raLTyp=(_raLbl.type||'').toLowerCase();
+                                    if (_raLTyp!=='nullnummer') _raSessPeaks.push(_raLMed);
                                     if (_raLTyp==='vaginal') _raVaginalPeaks.push(_raLMed);
                                     else if (_raLTyp==='oral_hand') _raOralPeaks.push(_raLMed);
                                     var _raLPkMax=_raLSPeaks[_raLSPeaks.length-1];
@@ -3558,12 +3576,19 @@ class CogniLiving extends utils.Adapter {
                     } catch(_raPyE){ this.log.debug('[OC-SEX-RA-PY] '+_raPyE.message); }
                 }
                 _raCalibInfo.pyClassifier = _raPyInfo ? {trained:_raPyInfo.trained||false,n:_raPyInfo.n_samples||0,counts:_raPyInfo.class_counts||{},msg:_raPyInfo.status_msg||'',feature_importances:_raPyInfo.feature_importances||[],loo_accuracy:(_raPyInfo.loo_accuracy!=null?_raPyInfo.loo_accuracy:null)} : null;
-                // Nullnummer-Override: Wenn der Tag manuell als Nullnummer gelabelt wurde, niemals Sensor-Events ueberschreiben
-                var _raNullCheck = [];
-                try { _raNullCheck = JSON.parse(this.config.sexTrainingLabels || '[]'); } catch(_rnE) {}
-                if (Array.isArray(_raNullCheck) && _raNullCheck.some(function(l){ return l && l.date === _raDate && l.type === 'nullnummer'; })) {
-                    this.log.info('[OC-SEX-RA] ' + _raDate + ': Nullnummer-Label aktiv - intimacyEvents geleert (kein Ueberschreiben durch Reanalyse)');
-                    _raIntimacyEvents = [];
+                // Nullnummer-Override (Session-Level): Nur gematchte Sessions entfernen, nicht den ganzen Tag
+                var _raNullLabels=[];
+                try{var _rnRaw=JSON.parse(this.config.sexTrainingLabels||'[]');if(Array.isArray(_rnRaw))_raNullLabels=_rnRaw.filter(function(l){return l&&l.date===_raDate&&l.type==='nullnummer'&&l.time;});}catch(_rnE){}
+                if (_raNullLabels.length>0){
+                    var _rnBefore=_raIntimacyEvents.length;
+                    _raIntimacyEvents=_raIntimacyEvents.filter(function(e){
+                        return !_raNullLabels.some(function(nl){
+                            var _nlP=nl.time.split(':').map(Number);
+                            var _nlMs=new Date(_raDate+'T00:00:00').setHours(_nlP[0],_nlP[1],0,0);
+                            return Math.abs((e.start||0)-_nlMs)<30*60000;
+                        });
+                    });
+                    this.log.info('[OC-SEX-RA] '+_raDate+': Nullnummer-Filter: '+(_rnBefore-_raIntimacyEvents.length)+' Session(s) entfernt, '+_raIntimacyEvents.length+' behalten');
                 }
                 _raSnap.intimacyEvents = _raIntimacyEvents;
                 _raSnap.sexCalibInfo = _raCalibInfo;
@@ -3713,6 +3738,33 @@ class CogniLiving extends utils.Adapter {
             } catch(_clE) {
                 this.log.warn('[OC-SEX] clearIntimacyEventsForDay Fehler: ' + _clE.message);
                 this.sendTo(obj.from, obj.command, { success: false, error: _clE.message }, obj.callback);
+            }
+        }
+        // removeSingleIntimacyEvent: Entfernt EINE Session per Start-Timestamp (Session-Level Nullnummer)
+        else if (obj.command === 'removeSingleIntimacyEvent') {
+            try {
+                var _rsDate = obj.message && obj.message.date;
+                var _rsStartMs = obj.message && Number(obj.message.startMs);
+                if (!_rsDate || !/^\d{4}-\d{2}-\d{2}$/.test(_rsDate) || !_rsStartMs) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Kein gueltiges Datum oder startMs' }, obj.callback); return;
+                }
+                var _rsDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                var _rsPath = path.join(_rsDir, _rsDate + '.json');
+                if (!fs.existsSync(_rsPath)) {
+                    this.sendTo(obj.from, obj.command, { success: true, removed: false, remaining: 0 }, obj.callback); return;
+                }
+                var _rsSnap = JSON.parse(fs.readFileSync(_rsPath, 'utf8'));
+                var _rsPrev = (_rsSnap.intimacyEvents || []).length;
+                _rsSnap.intimacyEvents = (_rsSnap.intimacyEvents || []).filter(function(e) {
+                    return Math.abs((e.start || 0) - _rsStartMs) > 5 * 60 * 1000;
+                });
+                var _rsRemoved = _rsPrev - _rsSnap.intimacyEvents.length;
+                fs.writeFileSync(_rsPath, JSON.stringify(_rsSnap), 'utf8');
+                this.log.info('[OC-SEX] removeSingleIntimacyEvent('+_rsDate+' ~'+new Date(_rsStartMs).toTimeString().slice(0,8)+'): '+_rsRemoved+' entfernt, '+_rsSnap.intimacyEvents.length+' verbleibend');
+                this.sendTo(obj.from, obj.command, { success: true, removed: _rsRemoved > 0, prevCount: _rsPrev, remaining: _rsSnap.intimacyEvents.length }, obj.callback);
+            } catch(_rsE) {
+                this.log.warn('[OC-SEX] removeSingleIntimacyEvent Fehler: ' + _rsE.message);
+                this.sendTo(obj.from, obj.command, { success: false, error: _rsE.message }, obj.callback);
             }
         }
         }
