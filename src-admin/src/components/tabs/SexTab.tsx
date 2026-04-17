@@ -392,7 +392,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
     events: IntimacyEvent[]; dateLabel: string; themeType: string; funMode: boolean;
     native?: Record<string, any>; labels?: SexTrainingLabel[]; curDateStr?: string;
     onChange?: (attr: string, val: any) => void;
-    onNullnummerSet?: (date: string) => void;
+    onNullnummerSet?: (date: string, startMs: number) => void;
 }) => {
     const isDark = themeType === 'dark';
     const dividerColor = isDark ? '#222' : '#eee';
@@ -422,14 +422,25 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
         );
     }
 
-    const evt = events[0]; // primäres Event (höchster Score)
+    const evt = events[0]; // höchster Score — für Nullnummer-Check und Session-Liste
 
-    // Manuelles Label hat Vorrang über Sensor-Erkennung
+    // Training-Label hat Vorrang über Sensor-Erkennung (Typ-Anzeige)
     const matchedLabel = (labels && curDateStr) ? findMatchingLabel(curDateStr, events, labels) : null;
+
+    // Primäres Event für den Banner: das Event das zum Label passt, nicht zwingend events[0]
+    // (Beispiel: Label für 19:25, aber events[0] ist 03:55 → Banner soll 19:25 zeigen)
+    let primaryEvt = evt;
+    if (matchedLabel && matchedLabel.time && curDateStr && /^\d{1,2}:\d{2}$/.test(matchedLabel.time)) {
+        const [mlH, mlM] = matchedLabel.time.split(':').map(Number);
+        const labelMs = new Date(curDateStr + 'T00:00:00').setHours(mlH, mlM, 0, 0);
+        const labeledEvt = events.find(e => Math.abs(e.start - (labelMs as number)) < 2 * 60 * 60000);
+        if (labeledEvt) primaryEvt = labeledEvt;
+    }
+
     const effectiveType = (matchedLabel && (matchedLabel.type === 'vaginal' || matchedLabel.type === 'oral_hand'))
         ? matchedLabel.type as 'vaginal' | 'oral_hand'
-        : evt.type;
-    const isManualOverride = matchedLabel != null && matchedLabel.type !== evt.type;
+        : primaryEvt.type;
+    const isManualOverride = matchedLabel != null && matchedLabel.type !== primaryEvt.type;
 
     // Nullnummer: Diese Session war kein Sex — spezielle Ansicht mit Undo
     if (curDateStr && findLabelForEvent(curDateStr, evt, labels || [])?.type === 'nullnummer') {
@@ -486,11 +497,11 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
                         {effectiveType === 'vaginal' ? 'Vaginal' : effectiveType === 'oral_hand' ? 'Oral / Hand' : 'Nicht klassifiziert'}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: isDark ? '#888' : '#999', marginTop: 1 }}>
-                        {fmtTime(evt.start)} – {fmtTime(evt.end)} · ~{evt.duration} Min · Score {evt.score}
+                        {fmtTime(primaryEvt.start)} – {fmtTime(primaryEvt.end)} · ~{primaryEvt.duration} Min · Score {primaryEvt.score}
                     </div>
                     {isManualOverride && (
                         <div style={{ fontSize: '0.6rem', color: isDark ? '#555' : '#bbb', marginTop: 2 }}>
-                            Sensor erkannte: {evt.type === 'vaginal' ? 'Vaginal' : evt.type === 'oral_hand' ? 'Oral/Hand' : 'Intim'}
+                            Sensor erkannte: {primaryEvt.type === 'vaginal' ? 'Vaginal' : primaryEvt.type === 'oral_hand' ? 'Oral/Hand' : 'Nicht klass.'}
                         </div>
                     )}
                 </div>
@@ -500,7 +511,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
                             fontSize: '0.65rem', padding: '2px 8px', borderRadius: 3,
                             background: isDark ? '#0d2b3e' : '#e3f2fd', color: isDark ? '#64b5f6' : '#1565c0',
                             fontWeight: 'bold', whiteSpace: 'nowrap'
-                        }}>✏ Manuell eingetragen</span>
+                        }}>✏ Typ-Label: {matchedLabel.type === 'vaginal' ? 'Vaginal' : 'Oral/Hand'}</span>
                     ) : (
                         <span style={{
                             fontSize: '0.65rem', padding: '2px 8px', borderRadius: 3,
@@ -508,7 +519,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
                             fontWeight: 'bold', whiteSpace: 'nowrap'
                         }}>✓ Vom Sensor erkannt</span>
                     )}
-                    {evt.pyConf != null && (
+                    {primaryEvt.pyConf != null && (
                         <span style={{
                             fontSize: '0.6rem', padding: '1px 6px', borderRadius: 3,
                             background: isDark ? '#0d1a2d' : '#e8eaf6', color: isDark ? '#90caf9' : '#3949ab',
@@ -518,19 +529,19 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
                 </div>
             </div>
 
-            {/* Score + Meta */}
+            {/* Score + Meta — zeigt das zum Label passende primaryEvt (nicht zwingend events[0]) */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
-                <ScoreCircle score={evt.score} isDark={isDark} />
+                <ScoreCircle score={primaryEvt.score} isDark={isDark} />
                 <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '0.8rem', color: isDark ? '#888' : '#aaa', marginBottom: 3 }}>SENSOR-DETAILS</div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: 4 }}>
-                        {fmtTime(evt.start)} — {fmtTime(evt.end)}
-                        <span style={{ fontSize: '0.6rem', color: isDark ? '#666' : '#aaa', marginLeft: 8 }}>~{evt.duration} Min</span>
+                        {fmtTime(primaryEvt.start)} — {fmtTime(primaryEvt.end)}
+                        <span style={{ fontSize: '0.6rem', color: isDark ? '#666' : '#aaa', marginLeft: 8 }}>~{primaryEvt.duration} Min</span>
                     </div>
                     <div style={{ marginTop: 5, fontSize: '0.83rem', color: isDark ? '#555' : '#aaa' }}>
-                        Peak: <span style={{ color: '#ab47bc' }}>{evt.peakStrength}</span> ·
-                        Dichte: <span style={{ color: '#ab47bc' }}>{evt.avgTrigger}/5min</span> ·
-                        {evt.slots.length} Slots aktiv
+                        Peak: <span style={{ color: '#ab47bc' }}>{primaryEvt.peakStrength}</span> ·
+                        Dichte: <span style={{ color: '#ab47bc' }}>{primaryEvt.avgTrigger}/5min</span> ·
+                        {primaryEvt.slots.length} Slots aktiv
                     </div>
                 </div>
             </div>
@@ -590,7 +601,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
                                     <button onClick={() => {
                                         const newLbl: SexTrainingLabel = { date: curDateStr!, type: 'nullnummer', time: eTime, durationMin: e.duration };
                                         saveSexLabels([...(labels || []), newLbl], onChange!);
-                                        onNullnummerSet?.(curDateStr!);
+                                        onNullnummerSet?.(curDateStr!, e.start); // Session-Level: start-Timestamp übergeben
                                     }} style={{
                                         fontSize: '0.6rem', padding: '2px 8px', cursor: 'pointer',
                                         background: isDark ? '#1a1a1a' : '#f9f9f9',
@@ -1501,10 +1512,11 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     // Manuelle Sessions (außerhalb Bett)
     const [manualEntries, setManualEntries] = useState<ManualSexEntry[]>([]);
 
-    const handleNullnummerSet = async (date: string) => {
+    const handleNullnummerSet = async (date: string, startMs: number) => {
         try {
-            await socket.sendTo(`${adapterName}.${instance}`, 'clearIntimacyEventsForDay', { date });
-            // Day-Daten neu laden damit die Kachel den leeren Zustand zeigt
+            // Session-Level: nur DIESE eine Session aus intimacyEvents entfernen
+            await socket.sendTo(`${adapterName}.${instance}`, 'removeSingleIntimacyEvent', { date, startMs });
+            // Day-Daten neu laden damit die Kachel die verbleibenden Sessions zeigt
             await loadDay(new Date(date + 'T12:00:00'));
         } catch (_nse) { /* ignore */ }
     };
@@ -1586,7 +1598,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                 setReanalyzeAllMsg(`${i + 1}/${dates.length} — ${dates[i]}`);
                 try {
                     const r: any = await socket.sendTo(
-                        `${adapterName}.${instance}`, 'reanalyzeSexDay', { date: dates[i] }
+                        `${adapterName}.${instance}`, 'reanalyzeSexDay', { date: dates[i], skipPy: true }
                     );
                     if (r?.success && r?.data) {
                         const evts = r.data.intimacyEvents ?? [];
@@ -1595,7 +1607,18 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                     } else { errors++; }
                 } catch { errors++; }
             }
-            const msg = `✓ ${dates.length} Tage — ${sessionsFound} Sessions${errors > 0 ? ` (${errors} Fehler)` : ''}`;
+            // Python-Klassifikator gezielt für heute aufrufen (kein skipPy)
+            const _todayStr = new Date().toISOString().slice(0, 10);
+            setReanalyzeAllMsg('⚙ Python-Klassifikator für heute...');
+            try {
+                const _todayR: any = await socket.sendTo(
+                    `${adapterName}.${instance}`, 'reanalyzeSexDay', { date: _todayStr }
+                );
+                if (_todayR?.success && _todayR?.data) {
+                    setDayData((prev: any) => ({ ...prev, [_todayStr]: _todayR.data.intimacyEvents ?? [] }));
+                }
+            } catch { /* Python ggf. nicht verfügbar */ }
+            const msg = `✓ ${dates.length} Tage (Stufe 1+2) + KI für heute${errors > 0 ? ` (${errors} Fehler)` : ''}`;
             setReanalyzeAllMsg(msg);
             // Kalender-Cache leeren und neu laden damit Icons sofort aktuell sind
             setMonthSummary({});

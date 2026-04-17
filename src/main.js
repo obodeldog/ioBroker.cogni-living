@@ -3588,9 +3588,10 @@ class CogniLiving extends utils.Adapter {
                     var _nrM2=_raNearbyRooms.size>0?evts.some(function(e){var t=e.timestamp||0;return e.type==='motion'&&_raNearbyRooms.has(e.location)&&t>=session.start-5*60000&&t<=session.end+5*60000;})?1:0:null;
                     return {hourSin:_hSin,hourCos:_hCos,lightOn:_lOn,presenceOn:_pOn,roomTemp:_rT,bathBefore:_bB,bathAfter:_bA,nearbyRoomMotion:_nrM2};
                 };
-                // Stufe 3: Python-Klassifikator
+                // Stufe 3: Python-Klassifikator (skipPy=true beim Batch-Reanalyze → kein Callback-Konflikt)
                 var _raPyInfo = null;
-                if (_raIntimacyEvents.length > 0 && _raSexTrainData.length >= 3) {
+                var _raSkipPy = (obj.message && obj.message.skipPy === true);
+                if (!_raSkipPy && _raIntimacyEvents.length > 0 && _raSexTrainData.length >= 3) {
                     try {
                         var _raPyPred = _raIntimacyEvents.map(function(e) {
                             var _sl=e.slots||[]; var _strs=_sl.map(function(s){return s.strMax||0;});
