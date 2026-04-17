@@ -524,7 +524,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
                             fontSize: '0.6rem', padding: '1px 6px', borderRadius: 3,
                             background: isDark ? '#0d1a2d' : '#e8eaf6', color: isDark ? '#90caf9' : '#3949ab',
                             whiteSpace: 'nowrap'
-                        }}>🤖 KI: {evt.pyConf}% Konfidenz</span>
+                        }} title="Das Lernmodell (KI) hat das Vibrationsmuster analysiert und ist zu diesem Prozentsatz sicher, dass die Klassifizierung stimmt.">🤖 KI-Analyse: {primaryEvt.pyConf}% sicher</span>
                     )}
                 </div>
             </div>
@@ -1618,9 +1618,10 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                 const _todayR: any = await socket.sendTo(
                     `${adapterName}.${instance}`, 'reanalyzeSexDay', { date: _todayStr }
                 );
-                if (_todayR?.success && _todayR?.data) {
-                    setDayData((prev: any) => ({ ...prev, [_todayStr]: _todayR.data.intimacyEvents ?? [] }));
-                }
+        if (_todayR?.success && _todayR?.data) {
+                setDayData((prev: any) => ({ ...prev, [_todayStr]: _todayR.data.intimacyEvents ?? [] }));
+                if (_todayR.data.sexCalibInfo) setCalibInfo(_todayR.data.sexCalibInfo);
+            }
             } catch { /* Python ggf. nicht verfügbar */ }
             const msg = `✓ ${dates.length} Tage (Stufe 1+2) + KI für heute${errors > 0 ? ` (${errors} Fehler)` : ''}`;
             setReanalyzeAllMsg(msg);
@@ -2010,8 +2011,8 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                 </div>
                                             ) : (
                                                 <div style={{ padding: '5px 8px', borderRadius: 3, background: isDark ? '#1a1a1a' : '#f5f5f5', borderLeft: '3px solid #555', fontSize: '0.75rem' }}>
-                                                    <div style={{ color: isDark ? '#666' : '#888', marginBottom: 3 }}>⏳ Noch nicht aktiv</div>
-                                                    <div style={{ color: isDark ? '#888' : '#555' }}>{rfInfo.msg}</div>
+        <div style={{ color: isDark ? '#666' : '#888', marginBottom: 3 }}>⏳ Lernmodell noch nicht bereit</div>
+                <div style={{ color: isDark ? '#888' : '#555' }}>{rfInfo.msg || 'Mehr bestätigte Sessions nötig'}</div>
                                                     {rfInfo.counts && (
                                                         <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#aaa', marginTop: 3 }}>
                                                             Vorhanden: {Object.entries(rfInfo.counts).filter(([k]) => k !== 'nullnummer').map(([k, v]) => `${k === 'vaginal' ? '🌹' : '💋'} ${v}×`).join(', ') || '—'}
@@ -2021,7 +2022,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                             )
                                         ) : (
                                             <div style={{ padding: '5px 8px', borderRadius: 3, background: isDark ? '#1a1a1a' : '#f5f5f5', borderLeft: '3px solid #444', fontSize: '0.74rem', color: isDark ? '#555' : '#aaa' }}>
-                                                ⏳ Benötigt Labels mit Sensor-Treffer (mind. je 2× 🌹 vaginal + 2× 💋 oral/hand)
+                                                ⏳ Noch zu wenig Lern-Daten · Bitte mindestens 2× Session als 🌹 vaginal und 2× als 💋 oral/hand bestätigen, damit das KI-Lernmodell starten kann.
                                             </div>
                                         )}
 
