@@ -2009,19 +2009,26 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                     </div>
                                                     {rfInfo.loo_accuracy != null && (
                                                         <div style={{ marginBottom: 6 }}>
-                                                            <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#999', marginBottom: 2 }}>Selbst-Test-Genauigkeit (Leave-One-Out):</div>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                            <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#999', marginBottom: 2 }}
+                                                                title="Das Modell wird mit allen außer einer Session trainiert und testet sich dann an der fehlenden Session. Das wiederholt es für alle Sessions. Der Prozentsatz zeigt, wie oft es richtig rät.">
+                                                                Erkennungsrate (intern selbst getestet):
+                                                            </div>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                                 {miniBar(Math.round(rfInfo.loo_accuracy * 100), 100, rfInfo.loo_accuracy >= 0.8 ? '#81c784' : rfInfo.loo_accuracy >= 0.6 ? '#ffb74d' : '#ef5350')}
                                                                 <strong style={{ color: rfInfo.loo_accuracy >= 0.8 ? (isDark ? '#81c784' : '#2e7d32') : rfInfo.loo_accuracy >= 0.6 ? '#f57c00' : '#c62828', fontSize: '0.8rem' }}>
                                                                     {Math.round(rfInfo.loo_accuracy * 100)}%
                                                                 </strong>
+                                                                <span style={{ fontSize: '0.65rem', color: isDark ? '#555' : '#aaa' }}>
+                                                                    {rfInfo.loo_accuracy >= 0.8 ? '· gut' : rfInfo.loo_accuracy >= 0.6 ? '· ausreichend' : '· mehr Daten nötig'}
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     )}
                                                     {rfInfo.feature_importances && rfInfo.feature_importances.length > 0 && (
                                                         <div>
-                                                            <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#999', marginBottom: 4 }}>
-                                                                Einflussfaktoren des Lernmodells (höher = entscheidender):
+                                                                <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#999', marginBottom: 4 }}
+                                                                    title="Faktoren mit 0% sind entweder nicht als Sensor konfiguriert oder unterscheiden sich bei deinen Sessions nicht — das Modell ignoriert sie automatisch.">
+                                                                Einflussfaktoren des Lernmodells (0% = kein Sensor oder kein Unterschied erkennbar):
                                                                 {Object.keys(prevRfImportances).length > 0 && (
                                                                     <span style={{ marginLeft: 6, fontSize: '0.6rem', color: isDark ? '#444' : '#ccc' }}>
                                                                         ░ = vorheriger Wert
@@ -2032,9 +2039,9 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                                 const RF_LABELS: Record<string,string> = {
                                                                     'dur_norm':'Dauer','avg_norm':'Ø Intensität','var_norm':'Intensitätsschwankung',
                                                                     'peak_norm':'Spitzenwert','tier_b':'Pfad B (lang)','hour_sin':'Uhrzeit',
-                                                                    'hour_cos':'Uhrzeit (Phase)','light_on':'Licht war an','presence_on':'Anwesenheit',
+                                                                    'hour_cos':'Uhrzeit (Phase 2)','light_on':'Licht war an','presence_on':'Anwesenheit',
                                                                     'room_temp_norm':'Raumtemperatur','bath_before':'Bad davor','bath_after':'Bad danach',
-                                                                    'nearby_room_mo':'Nachbarzimmer aktiv',
+                                                                    'nearby_room_mo':'Nachbarzimmer aktiv','nearby_room_motion':'Nachbarzimmer aktiv',
                                                                 };
                                                                 return rfInfo.feature_importances.map((f: any, fi: number) => {
                                                                     const label = RF_LABELS[f.name] || f.name;
