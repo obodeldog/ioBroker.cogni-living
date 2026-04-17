@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box, Button, Divider, Dialog, DialogTitle, DialogContent, DialogActions,
     Typography, IconButton, Tooltip as MuiTooltip
@@ -3187,9 +3187,10 @@ export default function HealthTab(props: any) {
                                 {personsWithSleep.map(pName => {
                                     const pd = personHistoryData[pName];
                                     const overrideData = {
-                                        sleepScore: null, sleepScoreRaw: null, sleepStages: [],
+                                        sleepScore: null, sleepScoreRaw: null, sleepStages: pd.sleepStages ?? [],
                                         garminScore: null, garminDeepMin: null, garminLightMin: null, garminRemMin: null,
                                         sleepWindowStart:    pd.sleepWindowStart    ?? null,
+                                        stagesWindowStart:   pd.stagesWindowStart   ?? pd.sleepWindowStart ?? null,
                                         sleepWindowEnd:      pd.sleepWindowEnd      ?? null,
                                         sleepWindowSource:   pd.sleepStartSource    || 'motion',
                                         wakeSource:          pd.wakeSource          ?? null,

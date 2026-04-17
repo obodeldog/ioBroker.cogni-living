@@ -2287,6 +2287,51 @@ class CogniLiving extends utils.Adapter {
                         });
                         if (_pObeCluster) _pPushCluster(_pObeCluster);
                     }
+                    // Per-Person Schlafphasen -- identischer Algorithmus wie globaler Stages-Block,
+                    // aber gefiltert auf Events dieser Person (e.personTag === person).
+                    var _pSleepStages = [];
+                    var _pStagesWinStart = _pSleepStart || winStart;
+                    var _pStagesWinEnd = _pWakeTs;
+                    if (!_pBedWasEmpty && _pStagesWinStart && _pStagesWinEnd && _pStagesWinEnd > _pStagesWinStart) {
+                        var _pSlotMs = 5 * 60 * 1000;
+                        var _pSlotCount = Math.ceil((_pStagesWinEnd - _pStagesWinStart) / _pSlotMs);
+                        var _pVibDetEvts = sleepSearchEvents.filter(function(e) {
+                            return e.isVibrationBed && e.personTag === person
+                                && (e.timestamp||0) >= _pStagesWinStart && (e.timestamp||0) <= _pStagesWinEnd
+                                && (isActiveValue(e.value) || toPersonCount(e.value) > 0);
+                        });
+                        var _pVibStrEvts = sleepSearchEvents.filter(function(e) {
+                            return e.isVibrationStrength && e.personTag === person
+                                && (e.timestamp||0) >= _pStagesWinStart && (e.timestamp||0) <= _pStagesWinEnd;
+                        });
+                        var _pConsecQuiet = 0;
+                        for (var _psi = 0; _psi < _pSlotCount; _psi++) {
+                            var _psSlotS = _pStagesWinStart + _psi * _pSlotMs;
+                            var _psSlotE = _psSlotS + _pSlotMs;
+                            var _psDet = _pVibDetEvts.filter(function(e) { return (e.timestamp||0) >= _psSlotS && (e.timestamp||0) < _psSlotE; }).length;
+                            var _psStrArr = _pVibStrEvts.filter(function(e) { return (e.timestamp||0) >= _psSlotS && (e.timestamp||0) < _psSlotE; })
+                                .map(function(e) { return typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0; });
+                            var _psStrMax = _psStrArr.length > 0 ? Math.max.apply(null, _psStrArr) : 0;
+                            var _psHrsIn = (_psSlotS - _pStagesWinStart) / 3600000;
+                            var _psStage;
+                            if (_psDet === 0) {
+                                _pConsecQuiet++;
+                                _psStage = _pConsecQuiet >= 5 ? 'deep' : 'light';
+                            } else if (_psDet >= 5 || _psStrMax > 28) {
+                                _pConsecQuiet = 0;
+                                _psStage = 'wake';
+                            } else if (_psDet >= 2 && _psHrsIn >= 2.5 && _psStrMax >= 12 && _psStrMax <= 28) {
+                                _pConsecQuiet = 0;
+                                _psStage = 'rem';
+                            } else {
+                                _pConsecQuiet = 0;
+                                _psStage = 'light';
+                            }
+                            _pSleepStages.push({ t: _psi * 5, s: _psStage });
+                        }
+                        _self.log.debug('[Per-Person Stages] ' + person + ': ' + _pSleepStages.length + ' Slots ('
+                            + new Date(_pStagesWinStart).toLocaleTimeString() + '-' + new Date(_pStagesWinEnd).toLocaleTimeString() + ')');
+                    }
                     result[person] = {
                         nightActivityCount: nightActivityCount,
                         wakeTimeMin: wakeTimeMin,
@@ -2303,7 +2348,9 @@ class CogniLiving extends utils.Adapter {
                         wakeConfirmed: _pWakeConfirmed,
                         wakeOverridden: _pWakeOverrideApplied,
                         bedWasEmpty: _pBedWasEmpty,
-                        outsideBedEvents: _pObe
+                        outsideBedEvents: _pObe,
+                        sleepStages: _pSleepStages,
+                        stagesWindowStart: _pStagesWinStart
                     };
                 });
                 return result;
