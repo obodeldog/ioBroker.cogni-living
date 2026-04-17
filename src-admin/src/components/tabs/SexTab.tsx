@@ -1515,6 +1515,30 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
 
     // Manuelle Sessions (außerhalb Bett)
     const [manualEntries, setManualEntries] = useState<ManualSexEntry[]>([]);
+    // RF Delta: vorherige Feature-Importances aus localStorage laden
+    const [prevRfImportances, setPrevRfImportances] = useState<Record<string, number>>(() => {
+        try { return JSON.parse(localStorage.getItem('cogni-rf-prev') || '{}'); } catch { return {}; }
+    });
+
+    // RF Delta: wenn calibInfo sich mit neuen Feature-Importances ändert → vorherige sichern
+    React.useEffect(() => {
+        const fis = calibInfo?.pyClassifier?.feature_importances;
+        if (!fis || fis.length === 0) return;
+        const curr: Record<string, number> = {};
+        fis.forEach((f: any) => { curr[f.name] = f.importance; });
+        const currJson = JSON.stringify(curr);
+        const storedJson = localStorage.getItem('cogni-rf-curr') || '{}';
+        if (currJson !== storedJson) {
+            try {
+                const prev = JSON.parse(storedJson);
+                if (Object.keys(prev).length > 0) {
+                    setPrevRfImportances(prev);
+                    localStorage.setItem('cogni-rf-prev', JSON.stringify(prev));
+                }
+                localStorage.setItem('cogni-rf-curr', currJson);
+            } catch {}
+        }
+    }, [JSON.stringify(calibInfo?.pyClassifier?.feature_importances)]);
 
     const handleNullnummerSet = async (date: string, startMs: number) => {
         try {
@@ -1948,15 +1972,15 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                         </div>
                                         {/* calibA Balken */}
                                         <div style={{ marginBottom: 4 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, overflow: 'hidden' }}>
                                                 <span style={{ width: 80, flexShrink: 0, fontSize: '0.72rem', color: isDark ? '#f48fb1' : '#c2185b' }}>🌹 Vaginal</span>
                                                 {miniBar(activeCalibA, 100, isDark ? '#ad1457' : '#f48fb1')}
-                                                <span style={{ width: 36, textAlign: 'right', fontSize: '0.72rem', color: isDark ? '#555' : '#bbb' }}>Peak≥{vaginalThresh}</span>
+                                                <span style={{ flexShrink: 0, minWidth: 48, textAlign: 'right', fontSize: '0.7rem', color: isDark ? '#555' : '#bbb' }}>Peak≥{vaginalThresh}</span>
                                             </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
                                                 <span style={{ width: 80, flexShrink: 0, fontSize: '0.72rem', color: isDark ? '#90caf9' : '#283593' }}>💋 Oral/Hand</span>
                                                 {miniBar(activeCalibB, 100, isDark ? '#1565c0' : '#90caf9')}
-                                                <span style={{ width: 36, textAlign: 'right', fontSize: '0.72rem', color: isDark ? '#555' : '#bbb' }}>Peak≥{activeCalibA}</span>
+                                                <span style={{ flexShrink: 0, minWidth: 48, textAlign: 'right', fontSize: '0.7rem', color: isDark ? '#555' : '#bbb' }}>Peak≥{activeCalibA}</span>
                                             </div>
                                         </div>
                                         <div style={{ fontSize: '0.7rem', color: isDark ? '#444' : '#bbb', lineHeight: 1.6 }}>
@@ -1996,16 +2020,44 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                     )}
                                                     {rfInfo.feature_importances && rfInfo.feature_importances.length > 0 && (
                                                         <div>
-                                                            <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#999', marginBottom: 4 }}>Welche Merkmale entscheiden? (höher = wichtiger):</div>
-                                                            {rfInfo.feature_importances.map((f, fi) => (
-                                                                <div key={fi} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
-                                                                    <span style={{ width: 84, flexShrink: 0, fontSize: '0.68rem', color: isDark ? '#90caf9' : '#3949ab' }}>{f.name}</span>
-                                                                    <div style={{ flex: 1, height: 7, background: isDark ? '#1a1a2e' : '#ddd', borderRadius: 3, overflow: 'hidden' }}>
-                                                                        <div style={{ width: `${Math.round(f.importance * 100)}%`, height: '100%', background: isDark ? '#5c6bc0' : '#7986cb', borderRadius: 3 }} />
-                                                                    </div>
-                                                                    <span style={{ width: 28, textAlign: 'right', fontSize: '0.68rem', color: isDark ? '#555' : '#bbb' }}>{Math.round(f.importance * 100)}%</span>
-                                                                </div>
-                                                            ))}
+                                                            <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#999', marginBottom: 4 }}>
+                                                                Einflussfaktoren des Lernmodells (höher = entscheidender):
+                                                                {Object.keys(prevRfImportances).length > 0 && (
+                                                                    <span style={{ marginLeft: 6, fontSize: '0.6rem', color: isDark ? '#444' : '#ccc' }}>
+                                                                        ░ = vorheriger Wert
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {(() => {
+                                                                const RF_LABELS: Record<string,string> = {
+                                                                    'dur_norm':'Dauer','avg_norm':'Ø Intensität','var_norm':'Intensitätsschwankung',
+                                                                    'peak_norm':'Spitzenwert','tier_b':'Pfad B (lang)','hour_sin':'Uhrzeit',
+                                                                    'hour_cos':'Uhrzeit (Phase)','light_on':'Licht war an','presence_on':'Anwesenheit',
+                                                                    'room_temp_norm':'Raumtemperatur','bath_before':'Bad davor','bath_after':'Bad danach',
+                                                                    'nearby_room_mo':'Nachbarzimmer aktiv',
+                                                                };
+                                                                return rfInfo.feature_importances.map((f: any, fi: number) => {
+                                                                    const label = RF_LABELS[f.name] || f.name;
+                                                                    const currPct = Math.round(f.importance * 100);
+                                                                    const prevPct = prevRfImportances[f.name] != null ? Math.round(prevRfImportances[f.name] * 100) : null;
+                                                                    const delta = prevPct != null ? currPct - prevPct : null;
+                                                                    return (
+                                                                        <div key={fi} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
+                                                                            <span style={{ width: 136, flexShrink: 0, fontSize: '0.67rem', color: isDark ? '#90caf9' : '#3949ab', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.name}>{label}</span>
+                                                                            <div style={{ flex: 1, position: 'relative', height: 7, background: isDark ? '#1a1a2e' : '#e0e0e0', borderRadius: 3, overflow: 'hidden', minWidth: 0 }}>
+                                                                                {prevPct != null && prevPct > 0 && (
+                                                                                    <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${prevPct}%`, background: isDark ? '#37474f' : '#b0bec5', borderRadius: 3 }} />
+                                                                                )}
+                                                                                <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${currPct}%`, background: isDark ? '#5c6bc0' : '#7986cb', borderRadius: 3 }} />
+                                                                            </div>
+                                                                            <span style={{ flexShrink: 0, width: 26, textAlign: 'right', fontSize: '0.67rem', color: isDark ? '#555' : '#bbb' }}>{currPct}%</span>
+                                                                            <span style={{ flexShrink: 0, width: 12, fontSize: '0.65rem', color: delta == null || delta === 0 ? 'transparent' : delta > 0 ? (isDark ? '#81c784' : '#2e7d32') : (isDark ? '#ef9a9a' : '#c62828') }}>
+                                                                                {delta == null || delta === 0 ? '·' : delta > 0 ? '↑' : '↓'}
+                                                                            </span>
+                                                                        </div>
+                                                                    );
+                                                                });
+                                                            })()}
                                                         </div>
                                                     )}
                                                 </div>
