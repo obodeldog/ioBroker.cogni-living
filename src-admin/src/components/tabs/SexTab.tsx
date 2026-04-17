@@ -680,13 +680,17 @@ const MonthCalendar: React.FC<{
 
         // Dominanten Typ bestimmen (erster algorithmischer Event, sonst manuell)
         const domType  = events[0]?.type ?? null;
-        // Nullnummer-Label unterdrückt algorithmischen Icon (manueller Eintrag bleibt)
-        const isNullnummerDay = labels.some((l: any) => l.date === dateStr && l.type === 'nullnummer');
+        // Nullnummer-Tag: nur wenn KEINE echten Events mehr in JSON UND kein vaginal/oral-Label
+        // (Backend entfernt Nullnummer-Sessions bereits aus intimacyEvents → events enthält nur echte)
+        const _hasValidLabel = labels.some((l: any) => l.date === dateStr && (l.type === 'vaginal' || l.type === 'oral_hand'));
+        const isNullnummerDay = events.length === 0 && !_hasValidLabel &&
+            labels.some((l: any) => l.date === dateStr && l.type === 'nullnummer');
         const domManual = manualDay[0]?.type ?? null;
         // Algorithmisch erkannt: volle Emojis; nur manuell: hohle Variante
         // Trainings-Label überschreibt Roh-Algorithmus-Typ (oral↔vaginal-Override)
         const _labelOverride = labels.find((l: any) => l.date === dateStr && (l.type === 'vaginal' || l.type === 'oral_hand'));
-        const effectiveDomType = isNullnummerDay ? null : (_labelOverride?.type ?? domType);
+        // Nullnummer unterdrückt Icon nur wenn kein Label-Override vorhanden
+        const effectiveDomType = (isNullnummerDay && !_labelOverride) ? null : (_labelOverride?.type ?? domType);
         const emoji    = effectiveDomType === 'vaginal' ? '🌹' : effectiveDomType === 'oral_hand' ? '💋' : effectiveDomType ? '❓' : null;
         const emojiManual = (isNullnummerDay || !emoji) && domManual ? (domManual === 'vaginal' ? '🌷' : domManual === 'oral_hand' ? '💋' : '❓') : null;
 

@@ -373,7 +373,7 @@ def process_message(msg):
         # ── STUFE 3: Sex-Klassifikator ──────────────────────────────────────────
         elif cmd == "CLASSIFY_SEX_SESSIONS":
             if sex_brain is None:
-                send_result("SEX_CLASSIFIED", {
+                send_result("CLASSIFY_SEX_SESSIONS_RESULT", {
                     "trained": False, "class_counts": {}, "n_samples": 0,
                     "status_msg": "SexBrain nicht geladen", "results": []
                 })
@@ -381,7 +381,7 @@ def process_message(msg):
                 train_samples    = data.get("train", [])
                 predict_sessions = data.get("predict", [])
                 result = sex_brain.classify_sessions(train_samples, predict_sessions)
-                send_result("SEX_CLASSIFIED", result)
+                send_result("CLASSIFY_SEX_SESSIONS_RESULT", result)
 
     except Exception as e: log(f"Err processing: {e}")
 
