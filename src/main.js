@@ -2025,13 +2025,51 @@ class CogniLiving extends utils.Adapter {
                     var _pCandFp2Anchor = _pFindGapAnchor(function(e){ return e.isFP2Bed; }, 60*60*1000);
                     var _pCandFp2Vib = _pCandFp2Anchor ? _pVibRefine(_pCandFp2Anchor) : null;
                     var _pCandFp2 = _pCandFp2Anchor || null;
-                    var _pCandMotAnchor = _pFindGapAnchor(function(e){ return e.isBedroomMotion && !e.isFP2Bed; }, 60*60*1000);
+                    // motion_vib: Anker = letztes Motion-Event mit >=30 Min Pause zum naechsten Motion-Event
+                    // (identisch mit globaler sleepWindowMotion-Logik -- nicht von Strength-Events abhaengig)
+                    var _pCandMotAnchor = (function() {
+                        var _pma = null;
+                        var _pmEvts = _pBedEvts.filter(function(e){ return e.isBedroomMotion && !e.isFP2Bed; })
+                            .sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                        for (var _pmai = 0; _pmai < _pmEvts.length; _pmai++) {
+                            var _pmae = _pmEvts[_pmai];
+                            var _pmhr = new Date(_pmae.timestamp||0).getHours();
+                            if (!(_pmhr >= 18 || _pmhr < 3)) continue;
+                            var _pmNext = (_pmai < _pmEvts.length - 1)
+                                ? (_pmEvts[_pmai+1].timestamp||0)
+                                : (_sleepSearchBase.getTime() + 10 * 3600000);
+                            if ((_pmNext - (_pmae.timestamp||0)) / 60000 >= 30) _pma = _pmae.timestamp||0;
+                        }
+                        return _pma;
+                    })();
                     var _pCandMotVib = _pCandMotAnchor ? _pVibRefine(_pCandMotAnchor) : null;
-                    var _pCandAllAnchor = _pFindGapAnchor(function(){ return true; }, 60*60*1000);
-                    var _pCandVibRefined = _pCandAllAnchor ? _pVibRefine(_pCandAllAnchor) : null;
+                    // vib_refined: direkter Forward-Scan (identisch mit globalem _globalVibRefinedTs)
+                    // Kein 60-Min-Anker -- sucht erstes aktives Vib-Event mit >=20 Min Stille danach
+                    var _pCandVibRefined = (function() {
+                        var _pvrEnd = _sleepSearchBase.getTime() + 10 * 3600000;
+                        var _pvEvts = sleepSearchEvents.filter(function(e) {
+                            if (!e.isVibrationBed || e.personTag !== person) return false;
+                            if (!(isActiveValue(e.value) || toPersonCount(e.value) > 0)) return false;
+                            var hr = new Date(e.timestamp||0).getHours();
+                            return hr >= 21 || hr < 4;
+                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                        for (var _pvi = 0; _pvi < _pvEvts.length; _pvi++) {
+                            var _pvTs = _pvEvts[_pvi].timestamp||0;
+                            var _pvNext = (_pvi < _pvEvts.length-1) ? (_pvEvts[_pvi+1].timestamp||0) : _pvrEnd;
+                            if ((_pvNext - _pvTs) / 60000 >= 20) return _pvTs;
+                        }
+                        return null;
+                    })();
+                    // gap60: nur Detection-Events (kein Strength), Forward-Scan auf >=60 Min Pause
+                    // Strength faeuert im Schlaf alle 15-25 Min und wuerde jeden 60-Min-Gap zerstoeren
                     var _pCandGap60 = (function() {
                         var _pg60End = _sleepSearchBase.getTime() + 10 * 3600000;
-                        var _pgEvts = _pBedEvts.filter(function(e){ return e.isVibrationBed || e.isFP2Bed; });
+                        var _pgEvts = sleepSearchEvents.filter(function(e) {
+                            if (e.personTag !== person) return false;
+                            if (!(e.isFP2Bed || (e.isVibrationBed && !e.isVibrationStrength))) return false;
+                            var hr = new Date(e.timestamp||0).getHours();
+                            return hr >= 21 || hr < 4;
+                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
                         for (var _pgi = 0; _pgi < _pgEvts.length; _pgi++) {
                             var _pgTs = _pgEvts[_pgi].timestamp||0;
                             var _pgNext = (_pgi < _pgEvts.length - 1) ? (_pgEvts[_pgi+1].timestamp||0) : _pg60End;
@@ -2061,34 +2099,23 @@ class CogniLiving extends utils.Adapter {
                     }
 
                     // --- Stufe 3: Motion + Vibration (motion_vib) ---
-                    if (!_pSleepStart) {
-                        var _pMotAnchor = _pFindGapAnchor(function(e){ return e.isBedroomMotion && !e.isFP2Bed; }, 60*60*1000);
-                        if (_pMotAnchor) {
-                            var _pMotVibTs = _pVibRefine(_pMotAnchor);
-                            if (_pMotVibTs) {
-                                _pSleepStart = _pMotVibTs;
-                                _pSleepStartSrc = 'motion_vib';
-                                _self.log.debug('[Per-Person motion_vib] ' + person + ': ' + new Date(_pSleepStart).toISOString());
-                            }
-                        }
+                    // Anker aus pre-compute (letztes Motion-Event + >=30 Min Pause, identisch mit global)
+                    if (!_pSleepStart && _pCandMotVib) {
+                        _pSleepStart = _pCandMotVib;
+                        _pSleepStartSrc = 'motion_vib';
+                        _self.log.debug('[Per-Person motion_vib] ' + person + ': ' + new Date(_pSleepStart).toISOString());
                     }
 
-                    // --- Stufe 4: Letzte Bettbewegung / gap60 (alle Bett-Events, PIR-Fallback) ---
-                    if (!_pSleepStart) {
-                        var _pGap60Ts = _pFindGapAnchor(function(){ return true; }, 60*60*1000);
-                        if (_pGap60Ts) {
-                            // Vib-Verfeinerung auch hier versuchen -> vib_refined
-                            var _pGapVibTs = _pVibRefine(_pGap60Ts);
-                            if (_pGapVibTs) {
-                                _pSleepStart = _pGapVibTs;
-                                _pSleepStartSrc = 'vib_refined';
-                                _self.log.debug('[Per-Person vib_refined] ' + person + ': ' + new Date(_pSleepStart).toISOString());
-                            } else {
-                                _pSleepStart = _pGap60Ts;
-                                _pSleepStartSrc = 'gap60';
-                                _self.log.debug('[Per-Person gap60] ' + person + ': ' + new Date(_pSleepStart).toISOString());
-                            }
-                        }
+                    // --- Stufe 4: vib_refined / gap60 (direkter Forward-Scan, identisch mit global) ---
+                    if (!_pSleepStart && _pCandVibRefined) {
+                        _pSleepStart = _pCandVibRefined;
+                        _pSleepStartSrc = 'vib_refined';
+                        _self.log.debug('[Per-Person vib_refined] ' + person + ': ' + new Date(_pSleepStart).toISOString());
+                    }
+                    if (!_pSleepStart && _pCandGap60) {
+                        _pSleepStart = _pCandGap60;
+                        _pSleepStartSrc = 'gap60';
+                        _self.log.debug('[Per-Person gap60] ' + person + ': ' + new Date(_pSleepStart).toISOString());
                     }
 
                     // --- Stufe 5: Letzter Aussenort (last_outside) ---
