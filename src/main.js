@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 'use strict';
 
 /*
@@ -395,7 +395,7 @@ class CogniLiving extends utils.Adapter {
     async discoverBatteryStates() {
         var _self = this;
         var devices = this.config.devices || [];
-        // G�ngige Battery-State-Namen quer durch alle ioBroker-Adapter:
+        // G?ngige Battery-State-Namen quer durch alle ioBroker-Adapter:
         // battery/BATTERY       ? Zigbee, deCONZ, Tuya, mihome, ZHA
         // battery_percentage    ? Tuya, einige BLE-Adapter
         // battery_level/Level   ? HomeKit-Controller, Matter, ESPHome
@@ -449,7 +449,7 @@ class CogniLiving extends utils.Adapter {
                     }
                 } catch(e) {}
             }
-            // 3. Direktsuche � bis zu 3 Pfad-Ebenen hoch
+            // 3. Direktsuche ? bis zu 3 Pfad-Ebenen hoch
             //    Tiefe 1: adapter.0.device.channel  ? adapter.0.device
             //    Tiefe 2: adapter.0.device.ch.state ? adapter.0.device  (Shelly: Bat.value)
             //    Tiefe 3: adapter.0.Node.ch.sub.st  ? adapter.0.Node   (Z-Wave: params.battery.Battery_Level)
@@ -485,7 +485,7 @@ class CogniLiving extends utils.Adapter {
                         var hmMatchDot   = !hmMatchColon && d.id.match(/^([\w-]+\.\d+\.[^\.]+)\.\d+\./);
                         var hmCh0 = hmMatchColon ? hmMatchColon[1] + ':0' : (hmMatchDot ? hmMatchDot[1] + '.0' : null);
                         if (hmCh0) {
-                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans � Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
+                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans ? Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
                             for (var _hn = 0; _hn < HM_BATT_NAMES.length; _hn++) {
                                 try {
                                     var cStateHM = await _self.getForeignStateAsync(hmCh0 + '.' + HM_BATT_NAMES[_hn]);
@@ -527,7 +527,7 @@ class CogniLiving extends utils.Adapter {
                     isLow = bst.val; isCritical = bst.val; level = bst.val ? 5 : 80;
                 } else if (typeof bst.val === 'number') {
                     // Nur echte Prozentwerte (0-100) verarbeiten.
-                    // Spannungswerte (< 10) werden bewusst ignoriert � ohne Geraete-Datenbank
+                    // Spannungswerte (< 10) werden bewusst ignoriert ? ohne Geraete-Datenbank
                     // nicht zuverlaessig konvertierbar (1x CR2032 vs 2x AAA vs 1x 1.5V).
                     if (bst.val >= 0 && bst.val <= 100) {
                         level = bst.val;
@@ -1694,7 +1694,7 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_wovE) { this.log.warn('[WakeOv] Fehler: ' + _wovE.message); }
 
-            // === STAGES + SCORE: Jetzt berechnen — sleepWindowOC7.end ist nach Wake-Detection gesetzt ===
+            // === STAGES + SCORE: Jetzt berechnen � sleepWindowOC7.end ist nach Wake-Detection gesetzt ===
             // Non-frozen: End-Zeit jetzt bekannt (von Garmin/FP2/motion/other-room/override)
             if (!_sleepFrozen && sleepWindowOC7.start && sleepWindowOC7.end) {
                 _shouldRecalcStages = true;
@@ -2437,7 +2437,7 @@ class CogniLiving extends utils.Adapter {
                             var _sessionPeaks = [], _vaginalPeaks = [], _oralPeaks = [];
                             var _sexTrainData = []; // Stufe 3: Features fuer Python
                             var SLOT_CAL_MS = 5*60*1000;
-                            for (var _lbl of _sexLabels.slice(0, 15)) {
+                            for (var _lbl of _sexLabels.filter(function(l){return (l.type||"").toLowerCase()!=="nullnummer";}).slice(0, 30)) {
                                 try {
                                     var _lPath = require('path').join(_calHistDir, _lbl.date + '.json');
                                     if (!fs.existsSync(_lPath)) continue;
@@ -2645,7 +2645,7 @@ class CogniLiving extends utils.Adapter {
                             if (_gCur.garminHRAvg != null) _gPrev.garminHRAvg = (_gPrev.garminHRAvg != null) ? Math.round((_gPrev.garminHRAvg + _gCur.garminHRAvg)/2) : _gCur.garminHRAvg;
                         }
                     }
-                    if (_gMerged.length < intimacyEvents.length) { this.log.info('[OC-SEX] Gap-Merge(daily): ' + intimacyEvents.length + ' → ' + _gMerged.length + ' Session(s)'); intimacyEvents = _gMerged; }
+                    if (_gMerged.length < intimacyEvents.length) { this.log.info('[OC-SEX] Gap-Merge(daily): ' + intimacyEvents.length + ' ? ' + _gMerged.length + ' Session(s)'); intimacyEvents = _gMerged; }
                     // Kontext-Sensor-IDs (sensorFunction-basiert)
                     var _ctxBedIds  = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.id;}));
                     var _ctxBathIds = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bathroom'||d.isBathroomSensor;}).map(function(d){return d.id;}));
@@ -2710,7 +2710,7 @@ class CogniLiving extends utils.Adapter {
                                     _pyClassInfo.results.forEach(function(r, i) {
                                         if (!intimacyEvents[i]) return;
                                         if (r.type === 'nullnummer' && r.confidence >= 0.60) {
-                                            this.log.info('[OC-SEX-PY] Session '+i+' als Nullnummer klassifiziert — wird entfernt');
+                                            this.log.info('[OC-SEX-PY] Session '+i+' als Nullnummer klassifiziert � wird entfernt');
                                             intimacyEvents[i] = null;
                                         } else if (r.type && r.type !== 'nullnummer' && r.confidence >= 0.55) {
                                             intimacyEvents[i].type = r.type;
@@ -3458,7 +3458,7 @@ class CogniLiving extends utils.Adapter {
                         var _raSessPeaks = [], _raVaginalPeaks = [], _raOralPeaks = [];
                         var _raSexTrainData = [];
                         var _raSlotCalMs = 5*60*1000;
-                        for (var _raLbl of _raSexLabels.slice(0, 15)) {
+                        for (var _raLbl of _raSexLabels.filter(function(l){return (l.type||"").toLowerCase()!=="nullnummer";}).slice(0, 30)) {
                             try {
                                 var _raLPath = path.join(_raCalDir, _raLbl.date + '.json');
                                 if (!fs.existsSync(_raLPath)) continue;
@@ -3550,7 +3550,7 @@ class CogniLiving extends utils.Adapter {
                         _raGPrev.slots = (_raGPrev.slots||[]).concat(_raGCur.slots||[]);
                     }
                 }
-                if (_raGMerged.length < _raIntimacyEvents.length) { this.log.info('[OC-SEX-RA] Gap-Merge: ' + _raIntimacyEvents.length + ' → ' + _raGMerged.length + ' Session(s)'); _raIntimacyEvents = _raGMerged; }
+                if (_raGMerged.length < _raIntimacyEvents.length) { this.log.info('[OC-SEX-RA] Gap-Merge: ' + _raIntimacyEvents.length + ' ? ' + _raGMerged.length + ' Session(s)'); _raIntimacyEvents = _raGMerged; }
                 // Kontext-Sensor-IDs (sensorFunction-basiert)
                 var _raBedIds  = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.id;}));
                 var _raBathIds = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bathroom'||d.isBathroomSensor;}).map(function(d){return d.id;}));
@@ -3588,7 +3588,7 @@ class CogniLiving extends utils.Adapter {
                     var _nrM2=_raNearbyRooms.size>0?evts.some(function(e){var t=e.timestamp||0;return e.type==='motion'&&_raNearbyRooms.has(e.location)&&t>=session.start-5*60000&&t<=session.end+5*60000;})?1:0:null;
                     return {hourSin:_hSin,hourCos:_hCos,lightOn:_lOn,presenceOn:_pOn,roomTemp:_rT,bathBefore:_bB,bathAfter:_bA,nearbyRoomMotion:_nrM2};
                 };
-                // Stufe 3: Python-Klassifikator (skipPy=true beim Batch-Reanalyze → kein Callback-Konflikt)
+                // Stufe 3: Python-Klassifikator (skipPy=true beim Batch-Reanalyze ? kein Callback-Konflikt)
                 var _raPyInfo = null;
                 var _raSkipPy = (obj.message && obj.message.skipPy === true);
                 if (!_raSkipPy && _raIntimacyEvents.length > 0 && _raSexTrainData.length >= 3) {
@@ -3610,7 +3610,7 @@ class CogniLiving extends utils.Adapter {
                                 _raPyInfo.results.forEach(function(r,i){
                                     if (!_raIntimacyEvents[i]) return;
                                     if (r.type==='nullnummer'&&r.confidence>=0.60){
-                                        this.log.info('[OC-SEX-RA-PY] Session '+i+' als Nullnummer klassifiziert — wird entfernt');
+                                        this.log.info('[OC-SEX-RA-PY] Session '+i+' als Nullnummer klassifiziert � wird entfernt');
                                         _raIntimacyEvents[i]=null;
                                     } else if (r.type&&r.type!=='nullnummer'&&r.confidence>=0.55){
                                         _raIntimacyEvents[i].type=r.type;
