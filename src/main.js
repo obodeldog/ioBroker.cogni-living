@@ -2622,6 +2622,30 @@ class CogniLiving extends utils.Adapter {
                         }
                         intimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:_hrMax,garminHRAvg:_hrAvg,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
                     });
+                    // Gap-Toleranz-Merge: Sessions mit Abstand <30 Min zu einer zusammenfassen
+                    var _gapMs = 30 * 60 * 1000;
+                    intimacyEvents.sort(function(a,b){return a.start-b.start;});
+                    var _gMerged = [];
+                    for (var _gmi = 0; _gmi < intimacyEvents.length; _gmi++) {
+                        var _gCur = intimacyEvents[_gmi];
+                        if (_gMerged.length === 0 || _gCur.start - _gMerged[_gMerged.length-1].end > _gapMs) {
+                            _gMerged.push(Object.assign({}, _gCur, {slots: (_gCur.slots||[]).slice()}));
+                        } else {
+                            var _gPrev = _gMerged[_gMerged.length-1];
+                            var _gRank = {'vaginal':3,'oral_hand':2,'intim':1};
+                            if ((_gRank[_gCur.type]||0) > (_gRank[_gPrev.type]||0)) _gPrev.type = _gCur.type;
+                            _gPrev.end = Math.max(_gPrev.end, _gCur.end);
+                            _gPrev.duration = Math.round((_gPrev.end - _gPrev.start) / 60000);
+                            _gPrev.peakStrength = Math.max(_gPrev.peakStrength, _gCur.peakStrength);
+                            _gPrev.avgStrength = Math.round((_gPrev.avgStrength + _gCur.avgStrength) / 2);
+                            _gPrev.avgTrigger = Math.round((_gPrev.avgTrigger + _gCur.avgTrigger) / 2);
+                            _gPrev.score = Math.round((_gPrev.score + _gCur.score) / 2);
+                            _gPrev.slots = (_gPrev.slots||[]).concat(_gCur.slots||[]);
+                            if (_gCur.garminHRMax != null) _gPrev.garminHRMax = (_gPrev.garminHRMax != null) ? Math.max(_gPrev.garminHRMax, _gCur.garminHRMax) : _gCur.garminHRMax;
+                            if (_gCur.garminHRAvg != null) _gPrev.garminHRAvg = (_gPrev.garminHRAvg != null) ? Math.round((_gPrev.garminHRAvg + _gCur.garminHRAvg)/2) : _gCur.garminHRAvg;
+                        }
+                    }
+                    if (_gMerged.length < intimacyEvents.length) { this.log.info('[OC-SEX] Gap-Merge(daily): ' + intimacyEvents.length + ' → ' + _gMerged.length + ' Session(s)'); intimacyEvents = _gMerged; }
                     // Kontext-Sensor-IDs (sensorFunction-basiert)
                     var _ctxBedIds  = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.id;}));
                     var _ctxBathIds = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bathroom'||d.isBathroomSensor;}).map(function(d){return d.id;}));
@@ -2675,7 +2699,7 @@ class CogniLiving extends utils.Adapter {
                                 return Object.assign({ peak: e.peakStrength, durSlots: _sl.length, avgPeak: Math.round(_avg2), variance: Math.round(_var2), tierB: (e.tier==='B'?1:0) }, _ctx2);
                             });
                             var _pyRes = await new Promise(function(resolve, reject) {
-                                var _pyTout = setTimeout(function(){ reject(new Error('timeout')); }, 5000);
+                                var _pyTout = setTimeout(function(){ reject(new Error('timeout')); }, 15000);
                                 pythonBridge.send(this, 'CLASSIFY_SEX_SESSIONS',
                                     { train: _sexTD, predict: _pyPredSess },
                                     function(r){ clearTimeout(_pyTout); resolve(r); });
@@ -3505,6 +3529,28 @@ class CogniLiving extends utils.Adapter {
                 var _raIntimacyEvents=[];
                 _raCand.forEach(function(cObj){var run=cObj.run;var _sl0=_raSlots[run[0]],_slN=_raSlots[run[run.length-1]];var _evtStart=_sl0.start,_evtEnd=_slN.end;var _durMin=Math.round(run.length*5);var _runSlots=run.map(function(i){return _raSlots[i];});var _peakMax=Math.max.apply(null,_runSlots.map(function(s){return s.strMax;}));var _avgAvg=Math.round(_runSlots.reduce(function(a,s){return a+s.strAvg;},0)/_runSlots.length);var _avgTrig=Math.round(_runSlots.reduce(function(a,s){return a+s.trigCnt;},0)/_runSlots.length);var _sStr=Math.min(100,Math.round((_peakMax/120)*100));var _sDens=Math.min(100,Math.round((_avgTrig/10)*100));var _sDur=Math.min(100,Math.round((_durMin/60)*100));var _score=Math.round(_sStr*0.5+_sDens*0.3+_sDur*0.2);var _raVagThr=Math.round(_raCalibA*1.5);var _highSlots=_runSlots.filter(function(s){return s.strMax>=_raVagThr&&s.strCnt>=2;});var _type=cObj.tier==='B'?'oral_hand':(_highSlots.length>=1?'vaginal':(_peakMax>=_raCalibA?'oral_hand':'intim'));_raIntimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:null,garminHRAvg:null,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});});
                 this.log.info('[OC-SEX-RA] '+_raDate+': '+_raIntimacyEvents.length+' Event(s). calibA='+_raCalibA+' calibB='+_raCalibB);
+                // Gap-Toleranz-Merge: Sessions mit Abstand <30 Min zu einer zusammenfassen
+                var _raGapMs = 30 * 60 * 1000;
+                _raIntimacyEvents.sort(function(a,b){return a.start-b.start;});
+                var _raGMerged = [];
+                for (var _ragmi = 0; _ragmi < _raIntimacyEvents.length; _ragmi++) {
+                    var _raGCur = _raIntimacyEvents[_ragmi];
+                    if (_raGMerged.length === 0 || _raGCur.start - _raGMerged[_raGMerged.length-1].end > _raGapMs) {
+                        _raGMerged.push(Object.assign({}, _raGCur, {slots: (_raGCur.slots||[]).slice()}));
+                    } else {
+                        var _raGPrev = _raGMerged[_raGMerged.length-1];
+                        var _raGRank = {'vaginal':3,'oral_hand':2,'intim':1};
+                        if ((_raGRank[_raGCur.type]||0) > (_raGRank[_raGPrev.type]||0)) _raGPrev.type = _raGCur.type;
+                        _raGPrev.end = Math.max(_raGPrev.end, _raGCur.end);
+                        _raGPrev.duration = Math.round((_raGPrev.end - _raGPrev.start) / 60000);
+                        _raGPrev.peakStrength = Math.max(_raGPrev.peakStrength, _raGCur.peakStrength);
+                        _raGPrev.avgStrength = Math.round((_raGPrev.avgStrength + _raGCur.avgStrength) / 2);
+                        _raGPrev.avgTrigger = Math.round((_raGPrev.avgTrigger + _raGCur.avgTrigger) / 2);
+                        _raGPrev.score = Math.round((_raGPrev.score + _raGCur.score) / 2);
+                        _raGPrev.slots = (_raGPrev.slots||[]).concat(_raGCur.slots||[]);
+                    }
+                }
+                if (_raGMerged.length < _raIntimacyEvents.length) { this.log.info('[OC-SEX-RA] Gap-Merge: ' + _raIntimacyEvents.length + ' → ' + _raGMerged.length + ' Session(s)'); _raIntimacyEvents = _raGMerged; }
                 // Kontext-Sensor-IDs (sensorFunction-basiert)
                 var _raBedIds  = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.id;}));
                 var _raBathIds = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bathroom'||d.isBathroomSensor;}).map(function(d){return d.id;}));
@@ -3554,7 +3600,7 @@ class CogniLiving extends utils.Adapter {
                             return Object.assign({peak:e.peakStrength,durSlots:_sl.length,avgPeak:Math.round(_avg3),variance:Math.round(_var3),tierB:(e.tier==='B'?1:0)},_raCtx);
                         });
                         var _raPyRes = await new Promise(function(resolve,reject){
-                            var _raTout=setTimeout(function(){reject(new Error('timeout'));},5000);
+                            var _raTout=setTimeout(function(){reject(new Error('timeout'));},15000);
                             pythonBridge.send(this,'CLASSIFY_SEX_SESSIONS',{train:_raSexTrainData,predict:_raPyPred},function(r){clearTimeout(_raTout);resolve(r);});
                         }.bind(this));
                         if (_raPyRes&&_raPyRes.payload){
