@@ -3591,7 +3591,7 @@ class CogniLiving extends utils.Adapter {
                 // Stufe 3: Python-Klassifikator (skipPy=true beim Batch-Reanalyze ? kein Callback-Konflikt)
                 var _raPyInfo = null;
                 var _raSkipPy = (obj.message && obj.message.skipPy === true);
-                if (!_raSkipPy && _raIntimacyEvents.length > 0 && _raSexTrainData.length >= 3) {
+                if (!_raSkipPy && _raSexTrainData.length >= 3) { // Python auch mit 0 Events aufrufen (Modell trainieren/speichern)
                     try {
                         var _raPyPred = _raIntimacyEvents.map(function(e) {
                             var _sl=e.slots||[]; var _strs=_sl.map(function(s){return s.strMax||0;});

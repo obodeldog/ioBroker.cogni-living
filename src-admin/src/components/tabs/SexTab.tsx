@@ -1661,6 +1661,20 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
             // Kalender-Cache leeren und neu laden damit Icons sofort aktuell sind
             setMonthSummary({});
             loadMonth(calMonth);
+            // 7-Tage-Cache forciert neu laden (stale Daten nach Reanalyse vermeiden)
+            const _refreshDates = Array.from({ length: 7 }, (_, _ri) => {
+                const _rd = new Date(); _rd.setDate(_rd.getDate() - (6 - _ri));
+                return _rd.toISOString().slice(0, 10);
+            });
+            for (const _rdd of _refreshDates) {
+                try {
+                    const _rrr: any = await socket.sendTo(`${adapterName}.${instance}`, 'getHistoryData', { date: _rdd, _t: Date.now() });
+                    if (_rrr?.data) {
+                        setDayData((prev: any) => ({ ...prev, [_rdd]: _rrr.data.intimacyEvents ?? [] }));
+                        if (_rrr.data.sexCalibInfo) setCalibInfo(_rrr.data.sexCalibInfo);
+                    }
+                } catch { /* ignorieren */ }
+            }
         } catch (e: any) {
             setReanalyzeAllMsg('✗ ' + (e?.message || 'Fehler'));
         }
