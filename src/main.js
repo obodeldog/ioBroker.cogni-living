@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 'use strict';
 
 /*
@@ -1992,9 +1992,11 @@ class CogniLiving extends utils.Adapter {
                     // Sucht letztes Vib-Event + >=20 Min Stille innerhalb Anker+3h
                     var _pVibRefine = function(anchorTs) {
                         var _max = anchorTs + 3 * 3600000;
+                        // Nur Trigger-true Events (kein Strength): Strength faeuert im Schlaf durch Atemzuege
+                        // und verhindert sonst jeden 20-Min-Gap. Trigger = echte Bewegung.
                         var _evts = sleepSearchEvents.filter(function(e) {
-                            return e.isVibrationBed && e.personTag === person
-                                && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
+                            return e.isVibrationBed && !e.isVibrationStrength && e.personTag === person
+                                && isActiveValue(e.value)
                                 && (e.timestamp||0) >= anchorTs && (e.timestamp||0) <= _max;
                         }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
                         for (var _ri = 0; _ri < _evts.length; _ri++) {
@@ -2043,6 +2045,9 @@ class CogniLiving extends utils.Adapter {
                         return _pma;
                     })();
                     var _pCandMotVib = _pCandMotAnchor ? _pVibRefine(_pCandMotAnchor) : null;
+                    // motion: Motion-Anker direkt (ohne Vib-Refinement) -- robuste Fallback-Quelle
+                    // wenn motion_vib null (kein Trigger-Gap gefunden), ist der Anker selbst ein guter Schaetzwert
+                    var _pCandMotion = _pCandMotAnchor || null;
                     // vib_refined: direkter Forward-Scan (identisch mit globalem _globalVibRefinedTs)
                     // Kein 60-Min-Anker -- sucht erstes aktives Vib-Event mit >=20 Min Stille danach
                     var _pCandVibRefined = (function() {
@@ -2100,10 +2105,19 @@ class CogniLiving extends utils.Adapter {
 
                     // --- Stufe 3: Motion + Vibration (motion_vib) ---
                     // Anker aus pre-compute (letztes Motion-Event + >=30 Min Pause, identisch mit global)
+                    // _pVibRefine nutzt nur Trigger-true (kein Strength) -- verfeinert nur wenn echte Bewegungspause
                     if (!_pSleepStart && _pCandMotVib) {
                         _pSleepStart = _pCandMotVib;
                         _pSleepStartSrc = 'motion_vib';
                         _self.log.debug('[Per-Person motion_vib] ' + person + ': ' + new Date(_pSleepStart).toISOString());
+                    }
+
+                    // --- Stufe 3b: Motion allein (motion) ---
+                    // Fallback wenn motion_vib null (kein Trigger-Gap). Anker direkt = guter Schaetzwert.
+                    if (!_pSleepStart && _pCandMotion) {
+                        _pSleepStart = _pCandMotion;
+                        _pSleepStartSrc = 'motion';
+                        _self.log.debug('[Per-Person motion] ' + person + ': ' + new Date(_pSleepStart).toISOString());
                     }
 
                     // --- Stufe 4: vib_refined / gap60 (direkter Forward-Scan, identisch mit global) ---
@@ -2180,7 +2194,22 @@ class CogniLiving extends utils.Adapter {
                     }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
                     // OC-19 Return-to-Bed: Letzte Abfahrt ohne Rueckkehr ins eigene Schlafzimmer
                     var _pWakeTs = null; var _pWakeSrc = null;
-                    var _pBedRetRaw = _pBedEvts.filter(function(e){ return (e.timestamp||0) >= _p4am.getTime() && (e.timestamp||0) <= _wakeHardCapMs; });
+                    // Return-to-Bed: Strength allein reicht nicht als Rueckkehr-Beleg (feuert im leeren Bett).
+                    // Trigger-true oder Bedroom-Motion beweisen echte Bett-Rueckkehr.
+                    // Fallback auf Strength nur wenn kein Trigger vorhanden (strength-only Setup).
+                    var _pHasTriggerAfter4 = _pBedEvts.some(function(e) {
+                        return e.isVibrationBed && !e.isVibrationStrength && isActiveValue(e.value)
+                            && (e.timestamp||0) >= _p4am.getTime();
+                    });
+                    var _pBedRetRaw = _pBedEvts.filter(function(e) {
+                        if ((e.timestamp||0) < _p4am.getTime() || (e.timestamp||0) > _wakeHardCapMs) return false;
+                        if (e.isFP2Bed) return true;
+                        if (e.isBedroomMotion && isActiveValue(e.value)) return true;
+                        if (e.isVibrationBed && !e.isVibrationStrength && isActiveValue(e.value)) return true;
+                        // Strength nur akzeptieren wenn kein Trigger konfiguriert (strength-only Setup)
+                        if (e.isVibrationStrength && !_pHasTriggerAfter4) return true;
+                        return false;
+                    });
                     // Sustained-Filter: kurze Tages-SZ-Eintraege (nach 10:00, isoliert) kein Bett-Return
                     var _pBedRet = _pBedRetRaw.filter(function(e, idx) {
                         if (e.isFP2Bed) return true;
@@ -2254,6 +2283,7 @@ class CogniLiving extends utils.Adapter {
                         { source: 'fp2_vib',      ts: _pCandFp2Vib },
                         { source: 'fp2',          ts: _pCandFp2 },
                         { source: 'motion_vib',   ts: _pCandMotVib },
+                        { source: 'motion',        ts: _pCandMotion },
                         { source: 'vib_refined',  ts: _pCandVibRefined },
                         { source: 'gap60',        ts: _pCandGap60 },
                         { source: 'last_outside', ts: _pCandLastOutside },
@@ -2681,7 +2711,9 @@ class CogniLiving extends utils.Adapter {
                             });
                         }
                     } catch(_topoE){ /* ignorieren */ }
-                    var _extractCtx = function(session, evts) {
+                    var _nearbyRoomSensorIds = (this.config.devices||[]).filter(function(d){return d.type==='motion'&&!d.isBathroomSensor&&d.sensorFunction!=='bed'&&_nearbyRooms.has(d.location);}).map(function(d){return d.id;});
+                var _nearbyRoomSensorIds = (this.config.devices||[]).filter(function(d){return d.type==='motion'&&!d.isBathroomSensor&&d.sensorFunction!=='bed'&&_nearbyRooms.has(d.location);}).map(function(d){return d.id;});
+                var _extractCtx = function(session, evts) {
                         var _wS=session.start-15*60000, _wE=session.end+30*60000;
                         var _wEvts=evts.filter(function(e){var t=e.timestamp||0;return t>=_wS&&t<=_wE;});
                         var _hrD=new Date(session.start);
@@ -2737,7 +2769,7 @@ class CogniLiving extends utils.Adapter {
                             }
                         } catch(_pyE) { this.log.debug('[OC-SEX-PY] '+_pyE.message); }
                     }
-                    _calibInfo.pyClassifier = _pyClassInfo ? { trained: _pyClassInfo.trained||false, n: _pyClassInfo.n_samples||0, counts: _pyClassInfo.class_counts||{}, msg: _pyClassInfo.status_msg||'', feature_importances: _pyClassInfo.feature_importances||[], loo_accuracy: (_pyClassInfo.loo_accuracy!=null?_pyClassInfo.loo_accuracy:null), confusion_matrix: (_pyClassInfo.confusion_matrix||null), loo_details: (_pyClassInfo.loo_details||[]) } : null;
+                    _calibInfo.pyClassifier = _pyClassInfo ? { trained: _pyClassInfo.trained||false, n: _pyClassInfo.n_samples||0, counts: _pyClassInfo.class_counts||{}, msg: _pyClassInfo.status_msg||'', feature_importances: _pyClassInfo.feature_importances||[], loo_accuracy: (_pyClassInfo.loo_accuracy!=null?_pyClassInfo.loo_accuracy:null), confusion_matrix: (_pyClassInfo.confusion_matrix||null), loo_details: (_pyClassInfo.loo_details||[]), nearbyRoomSensorIds: _nearbyRoomSensorIds } : null;
                     // Fallback: bestehende pyClassifier-Info erhalten wenn Python nicht verfuegbar war (Adapter-Neustart-Schutz)
                     if (!_calibInfo.pyClassifier) { try { var _pyFbPath=path.join(utils.getAbsoluteDefaultDataDir(),'cogni-living','history',dateStr+'.json'); if(fs.existsSync(_pyFbPath)){var _pyFbJ=JSON.parse(fs.readFileSync(_pyFbPath,'utf8'));if(_pyFbJ.sexCalibInfo&&_pyFbJ.sexCalibInfo.pyClassifier&&_pyFbJ.sexCalibInfo.pyClassifier.trained){_calibInfo.pyClassifier=_pyFbJ.sexCalibInfo.pyClassifier;this.log.debug('[OC-SEX] pyClassifier aus JSON erhalten (Neustart-Schutz, trained='+_calibInfo.pyClassifier.trained+')');}} } catch(_pyFbE){this.log.debug('[OC-SEX] pyClassifier-Fallback: '+_pyFbE.message);} }
                     if(intimacyEvents.length>0){
@@ -3608,6 +3640,7 @@ class CogniLiving extends utils.Adapter {
                         });
                     }
                 } catch(_raTopoE){ /* ignorieren */ }
+                var _raNearbyRoomSensorIds = (this.config.devices||[]).filter(function(d){return d.type==='motion'&&!d.isBathroomSensor&&d.sensorFunction!=='bed'&&_raNearbyRooms.has(d.location);}).map(function(d){return d.id;});
                 var _raExtractCtx = function(session, evts) {
                     var _wS=session.start-15*60000, _wE=session.end+30*60000;
                     var _wE2=evts.filter(function(e){var t=e.timestamp||0;return t>=_wS&&t<=_wE;});
@@ -3659,7 +3692,7 @@ class CogniLiving extends utils.Adapter {
                         }
                     } catch(_raPyE){ this.log.debug('[OC-SEX-RA-PY] '+_raPyE.message); }
                 }
-                _raCalibInfo.pyClassifier = _raPyInfo ? {trained:_raPyInfo.trained||false,n:_raPyInfo.n_samples||0,counts:_raPyInfo.class_counts||{},msg:_raPyInfo.status_msg||'',feature_importances:_raPyInfo.feature_importances||[],loo_accuracy:(_raPyInfo.loo_accuracy!=null?_raPyInfo.loo_accuracy:null),confusion_matrix:_raPyInfo.confusion_matrix||null,loo_details:_raPyInfo.loo_details||[]} : null;
+                _raCalibInfo.pyClassifier = _raPyInfo ? {trained:_raPyInfo.trained||false,n:_raPyInfo.n_samples||0,counts:_raPyInfo.class_counts||{},msg:_raPyInfo.status_msg||'',feature_importances:_raPyInfo.feature_importances||[],loo_accuracy:(_raPyInfo.loo_accuracy!=null?_raPyInfo.loo_accuracy:null),confusion_matrix:_raPyInfo.confusion_matrix||null,loo_details:_raPyInfo.loo_details||[],nearbyRoomSensorIds:_raNearbyRoomSensorIds} : null;
                 // Nullnummer-Override (Session-Level): Nur gematchte Sessions entfernen, nicht den ganzen Tag
                 var _raNullLabels=[];
                 try{var _rnRaw=JSON.parse(this.config.sexTrainingLabels||'[]');if(Array.isArray(_rnRaw))_raNullLabels=_rnRaw.filter(function(l){return l&&l.date===_raDate&&l.type==='nullnummer'&&l.time;});}catch(_rnE){}
