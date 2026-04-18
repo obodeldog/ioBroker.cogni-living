@@ -2438,7 +2438,7 @@ class CogniLiving extends utils.Adapter {
                             var _sexTrainData = []; // Stufe 3: Features fuer Python
                             var SLOT_CAL_MS = 5*60*1000;
                             var _labelsUpdated = false;
-                            for (var _lbl of _sexLabels.filter(function(l){return (l.type||"").toLowerCase()!=="nullnummer";}).slice(0, 30)) {
+                            for (var _lbl of _sexLabels /* alle Typen inkl. Nullnummer (3. RF-Klasse), unlimitiert */) {
                                 // Fast-Path: gespeicherte Features direkt verwenden
                                 if (_lbl._features) {
                                     var _lFP = _lbl._features, _lTypFP = (_lbl.type||'').toLowerCase();
@@ -3472,7 +3472,7 @@ class CogniLiving extends utils.Adapter {
                         var _raSessPeaks = [], _raVaginalPeaks = [], _raOralPeaks = [];
                         var _raSexTrainData = [];
                         var _raSlotCalMs = 5*60*1000;
-                        var _raLabelsUpdated = false;                        for (var _raLbl of _raSexLabels.filter(function(l){return (l.type||"").toLowerCase()!=="nullnummer";}).slice(0, 30)) {                            // Fast-Path: gespeicherte Features direkt verwenden (kein JSON-Lesen)                            if (_raLbl._features) {                                var _raFP = _raLbl._features, _raLTypFP = (_raLbl.type||'').toLowerCase();                                if (_raLTypFP !== 'nullnummer') _raSessPeaks.push(_raFP.medianPeak);                                if (_raLTypFP === 'vaginal') _raVaginalPeaks.push(_raFP.medianPeak);                                else if (_raLTypFP === 'oral_hand') _raOralPeaks.push(_raFP.medianPeak);                                _raSexTrainData.push({peak:_raFP.peakMax,durSlots:_raFP.durSlots,avgPeak:_raFP.avgPeak,variance:_raFP.variance,tierB:0,label:_raLTypFP});                                continue;                            }                            try {
+                        var _raLabelsUpdated = false;                        for (var _raLbl of _raSexLabels /* alle Typen inkl. Nullnummer (3. RF-Klasse), unlimitiert */) {                            // Fast-Path: gespeicherte Features direkt verwenden (kein JSON-Lesen)                            if (_raLbl._features) {                                var _raFP = _raLbl._features, _raLTypFP = (_raLbl.type||'').toLowerCase();                                if (_raLTypFP !== 'nullnummer') _raSessPeaks.push(_raFP.medianPeak);                                if (_raLTypFP === 'vaginal') _raVaginalPeaks.push(_raFP.medianPeak);                                else if (_raLTypFP === 'oral_hand') _raOralPeaks.push(_raFP.medianPeak);                                _raSexTrainData.push({peak:_raFP.peakMax,durSlots:_raFP.durSlots,avgPeak:_raFP.avgPeak,variance:_raFP.variance,tierB:0,label:_raLTypFP});                                continue;                            }                            try {
                                 var _raLPath = path.join(_raCalDir, _raLbl.date + '.json');
                                 if (!fs.existsSync(_raLPath)) continue;
                                 var _raLSnap = JSON.parse(fs.readFileSync(_raLPath, 'utf8'));

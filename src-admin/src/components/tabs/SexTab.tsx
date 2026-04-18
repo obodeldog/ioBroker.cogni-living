@@ -1761,12 +1761,37 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     const todayEvents = dayData[todayDs] ?? [];
 
     // Vibrations-Sensor IDs aus native.devices
-    const vibStrengthId: string | null = ((native.devices || []) as any[]).find(
+    const _devs = (native.devices || []) as any[];
+    const _devLabel = (d: any) => d ? (d.name ? `${d.name} (${d.id})` : d.id) : null;
+    const vibStrengthId: string | null = _devs.find(
         (d: any) => (d.type || '').toLowerCase() === 'vibration_strength' && (d.sensorFunction || '') === 'bed'
     )?.id ?? null;
-    const vibTrigId: string | null = ((native.devices || []) as any[]).find(
+    const vibTrigId: string | null = _devs.find(
         (d: any) => (d.type || '').toLowerCase() === 'vibration_trigger' && (d.sensorFunction || '') === 'bed'
     )?.id ?? null;
+    // Kontext-Sensor-IDs für Feature-Importance-Tooltips
+    const _rfLightDev  = _devs.find((d: any) => ['light','dimmer'].includes((d.type||'').toLowerCase()) && (d.sensorFunction||'').toLowerCase().includes('bed'));
+    const _rfPressDev  = _devs.find((d: any) => ['fp2','presence','fp2_presence'].includes((d.type||'').toLowerCase()));
+    const _rfTempDev   = _devs.find((d: any) => ['temperature','thermostat'].includes((d.type||'').toLowerCase()) && (d.sensorFunction||'').toLowerCase().includes('bed'));
+    const _rfBathDev   = _devs.find((d: any) => (d.type||'').toLowerCase() === 'motion' && (d.sensorFunction||'').toLowerCase().includes('bath'));
+    const _rfNearbyDev = _devs.find((d: any) => (d.type||'').toLowerCase() === 'motion' && !(d.sensorFunction||'').toLowerCase().includes('bath') && !(d.sensorFunction||'').toLowerCase().includes('bed'));
+    const _vibLabel = vibStrengthId ? `Bett-Sensor: ${vibStrengthId}` : 'Kein Bett-Vibrationssensor konfiguriert';
+    const RF_SENSOR_TIPS: Record<string, string> = {
+        'peak_norm':          `${_vibLabel} | Spitzenintensität`,
+        'var_norm':           `${_vibLabel} | Intensitätsschwankung`,
+        'dur_norm':           `${_vibLabel} | Aktive 5-Min-Slots`,
+        'avg_norm':           `${_vibLabel} | Ø Vibrationsstärke`,
+        'tier_b':             `${_vibLabel} | Erkennungspfad B (lange, schwache Session)`,
+        'hour_sin':           `${_vibLabel} | Uhrzeit abgeleitet aus Session-Start (sin)`,
+        'hour_cos':           `${_vibLabel} | Uhrzeit abgeleitet aus Session-Start (cos)`,
+        'light_on':           _rfLightDev  ? `Lichtsensor: ${_devLabel(_rfLightDev)}`    : 'Kein Lichtsensor konfiguriert (Sensortyp: light/dimmer, Funktion: bed)',
+        'presence_on':        _rfPressDev  ? `Anwesenheit: ${_devLabel(_rfPressDev)}`    : 'Kein Anwesenheitssensor konfiguriert (Sensortyp: fp2/presence)',
+        'room_temp_norm':     _rfTempDev   ? `Temperatur: ${_devLabel(_rfTempDev)}`      : 'Kein Temperatursensor konfiguriert (Sensortyp: temperature, Funktion: bed)',
+        'bath_before':        _rfBathDev   ? `Bad-Sensor: ${_devLabel(_rfBathDev)} | Bewegung 60 Min VOR Session` : 'Kein Bad-Sensor konfiguriert (Sensortyp: motion, Funktion: bathroom)',
+        'bath_after':         _rfBathDev   ? `Bad-Sensor: ${_devLabel(_rfBathDev)} | Bewegung 60 Min NACH Session` : 'Kein Bad-Sensor konfiguriert (Sensortyp: motion, Funktion: bathroom)',
+        'nearby_room_motion': _rfNearbyDev ? `Nachbarzimmer: ${_devLabel(_rfNearbyDev)}` : 'Kein Nachbarzimmer-Sensor konfiguriert (Sensortyp: motion)',
+        'nearby_room_mo':     _rfNearbyDev ? `Nachbarzimmer: ${_devLabel(_rfNearbyDev)}` : 'Kein Nachbarzimmer-Sensor konfiguriert (Sensortyp: motion)',
+    };
 
     const viewDayStart = new Date(viewDate).setHours(0, 0, 0, 0);
     const activeCalibA = calibInfo?.calibA ?? 50;
@@ -1869,6 +1894,19 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                             onDayClick={(d) => setViewDate(new Date(d + 'T12:00:00'))}
                             onMonthChange={(m) => { setCalMonth(m); }}
                             themeType={themeType}
+                        />
+                        {/* Vibrationsverlauf oberhalb der Training-Kacheln */}
+                        <VibrationChartPanel
+                            vibRaw={vibRaw[todayDs] ?? []}
+                            sessions={todayEvents}
+                            calibA={activeCalibA}
+                            calibB={activeCalibB}
+                            isDark={isDark}
+                            dayStart={viewDayStart}
+                            isToday={isToday}
+                            socket={socket}
+                            strengthId={vibStrengthId}
+                            trigId={vibTrigId}
                         />
                         <LabelForm native={native} onChange={onChange} themeType={themeType} dayData={dayData} loadDay={loadDay} />
                         <ManualSessionForm
@@ -2080,12 +2118,13 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                                 };
                                                                 return rfInfo.feature_importances.map((f: any, fi: number) => {
                                                                     const label = RF_LABELS[f.name] || f.name;
+                                                                    const sensorTip = RF_SENSOR_TIPS[f.name] || f.name;
                                                                     const currPct = Math.round(f.importance * 100);
                                                                     const prevPct = prevRfImportances[f.name] != null ? Math.round(prevRfImportances[f.name] * 100) : null;
                                                                     const delta = prevPct != null ? currPct - prevPct : null;
                                                                     return (
                                                                         <div key={fi} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
-                                                                            <span style={{ width: 136, flexShrink: 0, fontSize: '0.67rem', color: isDark ? '#90caf9' : '#3949ab', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.name}>{label}</span>
+                                                                            <span style={{ width: 136, flexShrink: 0, fontSize: '0.67rem', color: isDark ? '#90caf9' : '#3949ab', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sensorTip}>{label}</span>
                                                                             <div style={{ flex: 1, position: 'relative', height: 7, background: isDark ? '#1a1a2e' : '#e0e0e0', borderRadius: 3, overflow: 'hidden', minWidth: 0 }}>
                                                                                 {prevPct != null && prevPct > 0 && (
                                                                                     <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${prevPct}%`, background: isDark ? '#37474f' : '#b0bec5', borderRadius: 3 }} />
@@ -2140,21 +2179,6 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                 </div>
             )}
 
-            {/* ── Vibrationsverlauf ── */}
-            {funMode && (
-                <VibrationChartPanel
-                    vibRaw={vibRaw[todayDs] ?? []}
-                    sessions={todayEvents}
-                    calibA={activeCalibA}
-                    calibB={activeCalibB}
-                    isDark={isDark}
-                    dayStart={viewDayStart}
-                    isToday={isToday}
-                    socket={socket}
-                    strengthId={vibStrengthId}
-                    trigId={vibTrigId}
-                />
-            )}
         </div>
     );
 };
