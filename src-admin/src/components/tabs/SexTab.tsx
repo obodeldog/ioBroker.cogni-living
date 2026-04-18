@@ -803,10 +803,10 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels, manualEntrie
     // Werden NICHT als Session gezählt. Tage mit manuellem Eintrag zählen dagegen.
     const isNullnummerFn = (dateStr: string, evts: IntimacyEvent[]) => {
         if (!labels || evts.length === 0) return false;
-        const lbl = evts.length > 0 ? labels.find((l: any) => {
-            const evtDate = new Date(evts[0].start).toISOString().slice(0,10);
-            return l.date === dateStr && l.type === 'nullnummer';
-        }) : undefined;
+        // Wenn ein positives Label (vaginal/oral) fuer denselben Tag existiert → kein Nullnummer-Tag
+        const hasPositiveLabel = labels.some((l: any) => l.date === dateStr && (l.type === 'vaginal' || l.type === 'oral_hand'));
+        if (hasPositiveLabel) return false;
+        const lbl = labels.find((l: any) => l.date === dateStr && l.type === 'nullnummer');
         return !!lbl;
     };
     const withEvents = historyDays.filter(d => {
@@ -1597,7 +1597,13 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
             if (result?.success && result?.data) {
                 const evts: IntimacyEvent[] = result.data.intimacyEvents ?? [];
                 setDayData(prev => ({ ...prev, [ds]: evts }));
-                if (result.data.sexCalibInfo) setCalibInfo(result.data.sexCalibInfo);
+                if (result.data.sexCalibInfo) setCalibInfo((prev: any) => {
+                const nc = result.data.sexCalibInfo;
+                // trained=true nie durch null/false ueberschreiben
+                if (prev?.pyClassifier?.trained && !nc?.pyClassifier?.trained)
+                    return { ...nc, pyClassifier: prev.pyClassifier };
+                return nc;
+            });
                 const vibEvts = (result.data.eventHistory || []).filter((e: any) =>
                     (e.type === 'vibration_strength' || e.type === 'vibration_trigger') &&
                     (e.isVibrationBed || e.isFP2Bed)
@@ -1703,7 +1709,13 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
             const evts: IntimacyEvent[] = result?.data?.intimacyEvents ?? [];
             setDayData(prev => ({ ...prev, [ds]: evts }));
             // Kalibrierungs-Info vom aktuellen (heute/gestern) Tag merken
-            if (result?.data?.sexCalibInfo) setCalibInfo(result.data.sexCalibInfo);
+            if (result?.data?.sexCalibInfo) setCalibInfo((prev: any) => {
+                const nc = result.data.sexCalibInfo;
+                // trained=true nie durch null/false ueberschreiben (Race-Condition bei parallelem 7-Tage-Load)
+                if (prev?.pyClassifier?.trained && !nc?.pyClassifier?.trained)
+                    return { ...nc, pyClassifier: prev.pyClassifier };
+                return nc;
+            });
             // Vibrations-Events für Chart extrahieren
             const vibEvts = (result?.data?.eventHistory || []).filter((e: any) =>
                 (e.type === 'vibration_strength' || e.type === 'vibration_trigger') &&

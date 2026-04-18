@@ -1694,7 +1694,7 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_wovE) { this.log.warn('[WakeOv] Fehler: ' + _wovE.message); }
 
-            // === STAGES + SCORE: Jetzt berechnen — sleepWindowOC7.end ist nach Wake-Detection gesetzt ===
+            // === STAGES + SCORE: Jetzt berechnen ï¿½ sleepWindowOC7.end ist nach Wake-Detection gesetzt ===
             // Non-frozen: End-Zeit jetzt bekannt (von Garmin/FP2/motion/other-room/override)
             if (!_sleepFrozen && sleepWindowOC7.start && sleepWindowOC7.end) {
                 _shouldRecalcStages = true;
@@ -2437,7 +2437,17 @@ class CogniLiving extends utils.Adapter {
                             var _sessionPeaks = [], _vaginalPeaks = [], _oralPeaks = [];
                             var _sexTrainData = []; // Stufe 3: Features fuer Python
                             var SLOT_CAL_MS = 5*60*1000;
+                            var _labelsUpdated = false;
                             for (var _lbl of _sexLabels.filter(function(l){return (l.type||"").toLowerCase()!=="nullnummer";}).slice(0, 30)) {
+                                // Fast-Path: gespeicherte Features direkt verwenden
+                                if (_lbl._features) {
+                                    var _lFP = _lbl._features, _lTypFP = (_lbl.type||'').toLowerCase();
+                                    if (_lTypFP !== 'nullnummer') _sessionPeaks.push(_lFP.medianPeak);
+                                    if (_lTypFP === 'vaginal') _vaginalPeaks.push(_lFP.medianPeak);
+                                    else if (_lTypFP === 'oral_hand') _oralPeaks.push(_lFP.medianPeak);
+                                    _sexTrainData.push({peak:_lFP.peakMax,durSlots:_lFP.durSlots,avgPeak:_lFP.avgPeak,variance:_lFP.variance,tierB:0,label:_lTypFP,hourSin:_lFP.hourSin||0,hourCos:_lFP.hourCos||1,lightOn:_lFP.lightOn!==undefined?_lFP.lightOn:null,presenceOn:_lFP.presenceOn!==undefined?_lFP.presenceOn:null,roomTemp:_lFP.roomTemp||null,bathBefore:_lFP.bathBefore||0,bathAfter:_lFP.bathAfter||0});
+                                    continue;
+                                }
                                 try {
                                     var _lPath = require('path').join(_calHistDir, _lbl.date + '.json');
                                     if (!fs.existsSync(_lPath)) continue;
@@ -2489,10 +2499,14 @@ class CogniLiving extends utils.Adapter {
                                         var _lRoomT=_lTempE.length>0?(Number(_lTempE[_lTempE.length-1].value)||null):null;
                                         var _lBathB=_lCtxEvts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||(typeof _ctxBathIds!=='undefined'&&_ctxBathIds.has(e.id)))&&e.type==='motion'&&t>=_lSessProxy.start-60*60000&&t<_lSessProxy.start;})?1:0;
                                         var _lBathA=_lCtxEvts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||(typeof _ctxBathIds!=='undefined'&&_ctxBathIds.has(e.id)))&&e.type==='motion'&&t>_lSessProxy.end&&t<=_lSessProxy.end+60*60000;})?1:0;
-                                        _sexTrainData.push({ peak: _lPkMax, durSlots: _lSlotPeaks.length, avgPeak: _lAvgP, variance: _lVarP, tierB: 0, label: _lTypNorm, hourSin: _lHSin, hourCos: _lHCos, lightOn: _lLightOn, presenceOn: _lPresOn, roomTemp: _lRoomT, bathBefore: _lBathB, bathAfter: _lBathA });
+                                        // Features einmalig im Label speichern (Migration)
+                                         if (!_lbl._features) { _lbl._features = {peakMax:_lPkMax,medianPeak:_lMedian,durSlots:_lSlotPeaks.length,avgPeak:_lAvgP,variance:_lVarP,hourSin:_lHSin,hourCos:_lHCos,lightOn:_lLightOn,presenceOn:_lPresOn,roomTemp:_lRoomT,bathBefore:_lBathB,bathAfter:_lBathA}; _labelsUpdated = true; }
+                                         _sexTrainData.push({ peak: _lPkMax, durSlots: _lSlotPeaks.length, avgPeak: _lAvgP, variance: _lVarP, tierB: 0, label: _lTypNorm, hourSin: _lHSin, hourCos: _lHCos, lightOn: _lLightOn, presenceOn: _lPresOn, roomTemp: _lRoomT, bathBefore: _lBathB, bathAfter: _lBathA });
                                     }
                                 } catch(_lE) { this.log.debug('[OC-SEX] Calib-Label: '+_lE.message); }
                             }
+                            // Angereicherte Labels persistieren (Fire-and-Forget)
+                            if (_labelsUpdated) { try { var _lblUpd=JSON.stringify(_sexLabels); this.config.sexTrainingLabels=_lblUpd; this.extendForeignObject('system.adapter.'+this.namespace,{native:{sexTrainingLabels:_lblUpd}},function(){}); this.log.debug('[OC-SEX] Labels angereichert ('+_sexLabels.filter(function(l){return l._features;}).length+' mit Features)'); } catch(_lSE){} }
                             // Stufe 2: Typ-spezifische Kalibrierung
                             if (_vaginalPeaks.length >= 2 && _oralPeaks.length >= 2) {
                                 _vaginalPeaks.sort(function(a,b){return a-b;}); _oralPeaks.sort(function(a,b){return a-b;});
@@ -2710,7 +2724,7 @@ class CogniLiving extends utils.Adapter {
                                     _pyClassInfo.results.forEach(function(r, i) {
                                         if (!intimacyEvents[i]) return;
                                         if (r.type === 'nullnummer' && r.confidence >= 0.60) {
-                                            this.log.info('[OC-SEX-PY] Session '+i+' als Nullnummer klassifiziert — wird entfernt');
+                                            this.log.info('[OC-SEX-PY] Session '+i+' als Nullnummer klassifiziert ï¿½ wird entfernt');
                                             intimacyEvents[i] = null;
                                         } else if (r.type && r.type !== 'nullnummer' && r.confidence >= 0.55) {
                                             intimacyEvents[i].type = r.type;
@@ -3458,8 +3472,7 @@ class CogniLiving extends utils.Adapter {
                         var _raSessPeaks = [], _raVaginalPeaks = [], _raOralPeaks = [];
                         var _raSexTrainData = [];
                         var _raSlotCalMs = 5*60*1000;
-                        for (var _raLbl of _raSexLabels.filter(function(l){return (l.type||"").toLowerCase()!=="nullnummer";}).slice(0, 30)) {
-                            try {
+                        var _raLabelsUpdated = false;                        for (var _raLbl of _raSexLabels.filter(function(l){return (l.type||"").toLowerCase()!=="nullnummer";}).slice(0, 30)) {                            // Fast-Path: gespeicherte Features direkt verwenden (kein JSON-Lesen)                            if (_raLbl._features) {                                var _raFP = _raLbl._features, _raLTypFP = (_raLbl.type||'').toLowerCase();                                if (_raLTypFP !== 'nullnummer') _raSessPeaks.push(_raFP.medianPeak);                                if (_raLTypFP === 'vaginal') _raVaginalPeaks.push(_raFP.medianPeak);                                else if (_raLTypFP === 'oral_hand') _raOralPeaks.push(_raFP.medianPeak);                                _raSexTrainData.push({peak:_raFP.peakMax,durSlots:_raFP.durSlots,avgPeak:_raFP.avgPeak,variance:_raFP.variance,tierB:0,label:_raLTypFP});                                continue;                            }                            try {
                                 var _raLPath = path.join(_raCalDir, _raLbl.date + '.json');
                                 if (!fs.existsSync(_raLPath)) continue;
                                 var _raLSnap = JSON.parse(fs.readFileSync(_raLPath, 'utf8'));
@@ -3493,10 +3506,14 @@ class CogniLiving extends utils.Adapter {
                                     var _raLPkMax=_raLSPeaks[_raLSPeaks.length-1];
                                     var _raLAvgP=Math.round(_raLSPeaks.reduce(function(a,b){return a+b;},0)/_raLSPeaks.length);
                                     var _raLVarP=Math.round(_raLSPeaks.reduce(function(a,b){return a+(b-_raLAvgP)*(b-_raLAvgP);},0)/_raLSPeaks.length);
-                                    _raSexTrainData.push({peak:_raLPkMax,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP,tierB:0,label:_raLTyp});
+                                    // Features einmalig im Label speichern (Migration â€” kein erneutes JSON-Lesen)
+                                     if (!_raLbl._features) { _raLbl._features = {peakMax:_raLPkMax,medianPeak:_raLMed,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP}; _raLabelsUpdated = true; }
+                                     _raSexTrainData.push({peak:_raLPkMax,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP,tierB:0,label:_raLTyp});
                                 }
                             } catch(_raLE){ this.log.debug('[OC-SEX-RA] Calib: '+_raLE.message); }
                         }
+                        // Angereicherte Labels persistieren (Fire-and-Forget)
+                        if (_raLabelsUpdated) { try { var _raLblUpd=JSON.stringify(_raSexLabels); this.config.sexTrainingLabels=_raLblUpd; this.extendForeignObjectAsync('system.adapter.'+this.namespace,{native:{sexTrainingLabels:_raLblUpd}}).catch(function(){}); this.log.debug('[OC-SEX-RA] Labels angereichert ('+_raSexLabels.filter(function(l){return l._features;}).length+' mit Features)'); } catch(_rlSE){} }
                         if (_raVaginalPeaks.length>=2&&_raOralPeaks.length>=2){
                             _raVaginalPeaks.sort(function(a,b){return a-b;}); _raOralPeaks.sort(function(a,b){return a-b;});
                             _raCalibA=Math.max(5,Math.round(_raVaginalPeaks[0]*1.0)); _raCalibB=Math.max(3,Math.round(_raOralPeaks[0]*0.7));
@@ -3610,7 +3627,7 @@ class CogniLiving extends utils.Adapter {
                                 _raPyInfo.results.forEach(function(r,i){
                                     if (!_raIntimacyEvents[i]) return;
                                     if (r.type==='nullnummer'&&r.confidence>=0.60){
-                                        this.log.info('[OC-SEX-RA-PY] Session '+i+' als Nullnummer klassifiziert — wird entfernt');
+                                        this.log.info('[OC-SEX-RA-PY] Session '+i+' als Nullnummer klassifiziert ï¿½ wird entfernt');
                                         _raIntimacyEvents[i]=null;
                                     } else if (r.type&&r.type!=='nullnummer'&&r.confidence>=0.55){
                                         _raIntimacyEvents[i].type=r.type;
