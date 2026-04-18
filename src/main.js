@@ -3474,7 +3474,7 @@ class CogniLiving extends utils.Adapter {
                         var _raSessPeaks = [], _raVaginalPeaks = [], _raOralPeaks = [];
                         var _raSexTrainData = [];
                         var _raSlotCalMs = 5*60*1000;
-                        var _raLabelsUpdated = false;                        for (var _raLbl of _raSexLabels /* alle Typen inkl. Nullnummer (3. RF-Klasse), unlimitiert */) {                            // Fast-Path: gespeicherte Features direkt verwenden (kein JSON-Lesen)                            if (_raLbl._features) {                                var _raFP = _raLbl._features, _raLTypFP = (_raLbl.type||'').toLowerCase();                                if (_raLTypFP !== 'nullnummer') _raSessPeaks.push(_raFP.medianPeak);                                if (_raLTypFP === 'vaginal') _raVaginalPeaks.push(_raFP.medianPeak);                                else if (_raLTypFP === 'oral_hand') _raOralPeaks.push(_raFP.medianPeak);                                _raSexTrainData.push({peak:_raFP.peakMax,durSlots:_raFP.durSlots,avgPeak:_raFP.avgPeak,variance:_raFP.variance,tierB:0,label:_raLTypFP});                                continue;                            }                            try {
+                        var _raLabelsUpdated = false;                        for (var _raLbl of _raSexLabels /* alle Typen inkl. Nullnummer (3. RF-Klasse), unlimitiert */) {                            // Fast-Path: gespeicherte Features direkt verwenden (kein JSON-Lesen)                            if (_raLbl._features) {                                var _raFP = _raLbl._features, _raLTypFP = (_raLbl.type||'').toLowerCase();                                if (_raLTypFP !== 'nullnummer') _raSessPeaks.push(_raFP.medianPeak);                                if (_raLTypFP === 'vaginal') _raVaginalPeaks.push(_raFP.medianPeak);                                else if (_raLTypFP === 'oral_hand') _raOralPeaks.push(_raFP.medianPeak);                                _raSexTrainData.push({peak:_raFP.peakMax,durSlots:_raFP.durSlots,avgPeak:_raFP.avgPeak,variance:_raFP.variance,tierB:0,label:_raLTypFP,hourSin:_raFP.hourSin||0,hourCos:_raFP.hourCos||1,lightOn:_raFP.lightOn!==undefined?_raFP.lightOn:null,presenceOn:_raFP.presenceOn!==undefined?_raFP.presenceOn:null,roomTemp:_raFP.roomTemp||null,bathBefore:_raFP.bathBefore||0,bathAfter:_raFP.bathAfter||0,nearbyRoomMotion:_raFP.nearbyRoomMotion||0});                                continue;                            }                            try {
                                 var _raLPath = path.join(_raCalDir, _raLbl.date + '.json');
                                 if (!fs.existsSync(_raLPath)) continue;
                                 var _raLSnap = JSON.parse(fs.readFileSync(_raLPath, 'utf8'));
@@ -3509,8 +3509,24 @@ class CogniLiving extends utils.Adapter {
                                     var _raLAvgP=Math.round(_raLSPeaks.reduce(function(a,b){return a+b;},0)/_raLSPeaks.length);
                                     var _raLVarP=Math.round(_raLSPeaks.reduce(function(a,b){return a+(b-_raLAvgP)*(b-_raLAvgP);},0)/_raLSPeaks.length);
                                     // Features einmalig im Label speichern (Migration — kein erneutes JSON-Lesen)
-                                     if (!_raLbl._features) { _raLbl._features = {peakMax:_raLPkMax,medianPeak:_raLMed,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP}; _raLabelsUpdated = true; }
-                                     _raSexTrainData.push({peak:_raLPkMax,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP,tierB:0,label:_raLTyp});
+                                     
+                                    // Kontext-Features aus eventHistory extrahieren (identisch zu saveDailyHistory)
+                                    var _raLCtxE = _raLSnap.eventHistory || [];
+                                    var _raLSessP = {start: _raLT0||_raLFirst, end: _raLT1||(_raLLast+_raLFirst)};
+                                    var _raLHrD = new Date(_raLSessP.start); var _raLHF = _raLHrD.getHours()+_raLHrD.getMinutes()/60;
+                                    var _raLHSin = Math.round(Math.sin(2*Math.PI*_raLHF/24)*1000)/1000;
+                                    var _raLHCos = Math.round(Math.cos(2*Math.PI*_raLHF/24)*1000)/1000;
+                                    var _raLLitE = _raLCtxE.filter(function(e){var t=e.timestamp||0;return (e.type==='light'||e.type==='light_status')&&t>=_raLSessP.start&&t<=_raLSessP.end;});
+                                    var _raLLightOn = _raLLitE.length>0?(Number(_raLLitE[_raLLitE.length-1].value)>0?1:0):null;
+                                    var _raLPresE = _raLCtxE.filter(function(e){var t=e.timestamp||0;return e.isFP2Bed&&t>=_raLSessP.start&&t<=_raLSessP.end;});
+                                    var _raLPresOn = _raLPresE.length>0?(Number(_raLPresE[_raLPresE.length-1].value)>0?1:0):null;
+                                    var _raLTempE = _raLCtxE.filter(function(e){var t=e.timestamp||0;return (e.type==='temperature'||e.type==='temp')&&t>=_raLSessP.start&&t<=_raLSessP.end;});
+                                    var _raLRoomT = _raLTempE.length>0?(Number(_raLTempE[_raLTempE.length-1].value)||null):null;
+                                    var _raLBathB = _raLCtxE.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||e.type==='bathroom_motion')&&t>=(_raLSessP.start-3600000)&&t<_raLSessP.start;});
+                                    var _raLBathA = _raLCtxE.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||e.type==='bathroom_motion')&&t>_raLSessP.end&&t<=(_raLSessP.end+3600000);});
+                                    // Features vollständig speichern (incl. Kontext) — immer überschreiben für Re-Migration
+                                    _raLbl._features = {peakMax:_raLPkMax,medianPeak:_raLMed,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP,hourSin:_raLHSin,hourCos:_raLHCos,lightOn:_raLLightOn,presenceOn:_raLPresOn,roomTemp:_raLRoomT,bathBefore:_raLBathB?1:0,bathAfter:_raLBathA?1:0,nearbyRoomMotion:0}; _raLabelsUpdated = true;
+                                     _raSexTrainData.push({peak:_raLPkMax,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP,tierB:0,label:_raLTyp,hourSin:_raLHSin,hourCos:_raLHCos,lightOn:_raLLightOn,presenceOn:_raLPresOn,roomTemp:_raLRoomT,bathBefore:_raLBathB?1:0,bathAfter:_raLBathA?1:0,nearbyRoomMotion:0});
                                 }
                             } catch(_raLE){ this.log.debug('[OC-SEX-RA] Calib: '+_raLE.message); }
                         }
