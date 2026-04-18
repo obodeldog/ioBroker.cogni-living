@@ -393,6 +393,7 @@ if __name__ == "__main__":
         energy_brain.load_brain()
         pinn_brain.load_brain()
         tracker_brain.load_brain()
+        sex_brain.load_brain()  # RF-Modell von Disk laden (sex_model.pkl)
 
     while True:
         try:

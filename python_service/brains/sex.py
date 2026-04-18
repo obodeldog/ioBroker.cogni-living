@@ -1,3 +1,16 @@
+import os
+import pickle
+
+# Persistenz-Pfad (identisches Muster wie energy.py, health.py, etc.)
+_ADAPTER_DIR   = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_DATA_DIR      = os.path.join(os.path.dirname(os.path.dirname(_ADAPTER_DIR)), 'iobroker-data', 'cogni-living')
+if not os.path.exists(_DATA_DIR):
+    try:
+        os.makedirs(_DATA_DIR, exist_ok=True)
+    except Exception:
+        _DATA_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SEX_MODEL_PATH = os.path.join(_DATA_DIR, 'sex_model.pkl')
+
 """
 SexBrain — KI-Klassifikation von Intimacy-Sessions (Stufe 3)
 
@@ -49,6 +62,51 @@ class SexBrain:
         self.status_msg         = 'Noch nicht trainiert'
         self.feature_importances = []
         self.loo_accuracy       = None
+        self.model_date         = None  # Datum des letzten gespeicherten Modells
+
+    # ------------------------------------------------------------------
+    # Persistenz (identisches Muster wie EnergyBrain, HealthBrain, etc.)
+    # ------------------------------------------------------------------
+    def load_brain(self):
+        """Laedt trainiertes Modell von Disk (sex_model.pkl). Gibt True zurueck wenn erfolgreich."""
+        try:
+            if os.path.exists(SEX_MODEL_PATH):
+                with open(SEX_MODEL_PATH, 'rb') as f:
+                    data = pickle.load(f)
+                self.clf               = data.get('clf')
+                self.is_trained        = data.get('is_trained', False)
+                self.class_counts      = data.get('class_counts', {})
+                self.n_samples         = data.get('n_samples', 0)
+                self.status_msg        = data.get('status_msg', 'Modell von Disk geladen')
+                self.feature_importances = data.get('feature_importances', [])
+                self.loo_accuracy      = data.get('loo_accuracy')
+                self.model_date        = data.get('model_date')
+                if self.is_trained:
+                    print(f'[SexBrain] Modell geladen ({self.model_date}) — {self.n_samples} Samples, trained={self.is_trained}')
+            return self.is_trained
+        except Exception as e:
+            print(f'[SexBrain] load_brain Fehler: {e}')
+            return False
+
+    def save_brain(self):
+        """Speichert trainiertes Modell auf Disk (sex_model.pkl)."""
+        try:
+            from datetime import datetime
+            self.model_date = datetime.now().strftime('%Y-%m-%d %H:%M')
+            with open(SEX_MODEL_PATH, 'wb') as f:
+                pickle.dump({
+                    'clf':                self.clf,
+                    'is_trained':         self.is_trained,
+                    'class_counts':       self.class_counts,
+                    'n_samples':          self.n_samples,
+                    'status_msg':         self.status_msg,
+                    'feature_importances': self.feature_importances,
+                    'loo_accuracy':       self.loo_accuracy,
+                    'model_date':         self.model_date,
+                }, f)
+            print(f'[SexBrain] Modell gespeichert ({self.model_date})')
+        except Exception as e:
+            print(f'[SexBrain] save_brain Fehler: {e}')
 
     # ------------------------------------------------------------------
     # Feature-Extraktion (Sentinel -1 fuer fehlende Kontext-Sensoren)
@@ -178,6 +236,7 @@ class SexBrain:
         nn = counts.get('nullnummer', 0)
         nn_info = f' | {nn}x Nullnummer' if nn > 0 else ''
         self.status_msg = f'Aktiv — {len(X)} Sessions{nn_info} | Top-Features: {top3}'
+        self.save_brain()  # Modell persistent auf Disk speichern
         return True, counts, self.status_msg
 
     # ------------------------------------------------------------------
@@ -217,18 +276,38 @@ class SexBrain:
             'results': [{'type': str|None, 'confidence': float}, ...]
         }
         """
+        # Zustand vor dem Training sichern (falls neu trainieren scheitert)
+        _prev_clf         = self.clf
+        _prev_trained     = self.is_trained
+        _prev_fi          = self.feature_importances
+        _prev_loo         = self.loo_accuracy
+        _prev_counts      = self.class_counts
+        _prev_date        = self.model_date
+
         trained, counts, msg = self.train(train_samples)
+
+        # Wenn Neutraining scheitert, aber gespeichertes Modell vorhanden: weiter nutzen
+        if not trained and _prev_trained and _prev_clf is not None:
+            self.clf              = _prev_clf
+            self.is_trained       = True
+            self.feature_importances = _prev_fi
+            self.loo_accuracy     = _prev_loo
+            self.class_counts     = _prev_counts
+            trained               = True
+            msg = f'Gespeichertes Modell ({_prev_date}) — zu wenig neue Daten fuer Neutraining'
+
         results = []
         for s in predict_sessions:
             typ, conf = self.predict(s)
             results.append({'type': typ, 'confidence': conf})
         return {
             'trained':              trained,
-            'class_counts':         counts,
+            'class_counts':         self.class_counts,
             'status_msg':           msg,
             'n_samples':            self.n_samples,
             'feature_names':        self.FEATURE_NAMES,
             'feature_importances':  getattr(self, 'feature_importances', []),
             'loo_accuracy':         getattr(self, 'loo_accuracy', None),
-            'results':       results,
+            'model_date':           getattr(self, 'model_date', None),
+            'results':              results,
         }

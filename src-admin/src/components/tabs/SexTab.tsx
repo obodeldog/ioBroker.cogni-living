@@ -819,8 +819,17 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels, manualEntrie
         !historyDays.some(d => d.dateStr === m.date && d.events.length > 0 && !isNullnummerFn(d.dateStr, d.events))
     );
     const weekCount = withEvents.length + manualOnlyDays.length;
-    const avgScore   = weekCount > 0 ? Math.round(withEvents.reduce((a, d) => a + d.events[0].score, 0) / weekCount) : null;
-    const avgDur     = weekCount > 0 ? Math.round(withEvents.reduce((a, d) => a + d.events[0].duration, 0) / weekCount) : null;
+    // avgScore: nur Sensor-Events haben Scores → durch withEvents.length teilen, nicht weekCount
+    const avgScore = withEvents.length > 0
+        ? Math.round(withEvents.reduce((a, d) => a + d.events[0].score, 0) / withEvents.length)
+        : null;
+    // avgDur: Sensor-Events + manuelle Einträge (durationMin) einbeziehen
+    const avgDur = weekCount > 0
+        ? Math.round((
+            withEvents.reduce((a, d) => a + d.events[0].duration, 0) +
+            manualOnlyDays.reduce((a: number, m: any) => a + (Number(m.durationMin) || 0), 0)
+          ) / weekCount)
+        : null;
 
     // Letzte Aktivität: wie viele Tage her?
     let daysSince: number | null = null;
