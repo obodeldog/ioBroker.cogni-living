@@ -1509,6 +1509,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
             feature_importances?: Array<{ name: string; importance: number }>;
             loo_accuracy?: number | null;
             confusion_matrix?: { tp: number; fp: number; tn: number; fn: number } | null;
+            loo_details?: Array<{ date: string; actual: string; predicted: string; correct: boolean; cell: string }> | null;
         } | null;
     } | null>(null);
 
@@ -1771,11 +1772,14 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
         (d: any) => (d.type || '').toLowerCase() === 'vibration_trigger' && (d.sensorFunction || '') === 'bed'
     )?.id ?? null;
     // Kontext-Sensor-IDs für Feature-Importance-Tooltips
-    const _rfLightDev  = _devs.find((d: any) => ['light','dimmer'].includes((d.type||'').toLowerCase()) && (d.sensorFunction||'').toLowerCase().includes('bed'));
+    const _rfBedRoom  = _devs.find((d: any) => d.sensorFunction === 'bed' && ['vibration_strength','vibration_trigger','presence_radar_bool'].includes((d.type||'').toLowerCase()))?.location ?? null;
+    const _rfLightDev  = _devs.find((d: any) => ['light','dimmer'].includes((d.type||'').toLowerCase()) && (_rfBedRoom ? (d.location||'') === _rfBedRoom : (d.sensorFunction||'').toLowerCase().includes('bed')));
     const _rfPressDev  = _devs.find((d: any) => ['fp2','presence','fp2_presence'].includes((d.type||'').toLowerCase()));
-    const _rfTempDev   = _devs.find((d: any) => ['temperature','thermostat'].includes((d.type||'').toLowerCase()) && (d.sensorFunction||'').toLowerCase().includes('bed'));
-    const _rfBathDev   = _devs.find((d: any) => (d.type||'').toLowerCase() === 'motion' && (d.sensorFunction||'').toLowerCase().includes('bath'));
-    const _rfNearbyDev = _devs.find((d: any) => (d.type||'').toLowerCase() === 'motion' && !(d.sensorFunction||'').toLowerCase().includes('bath') && !(d.sensorFunction||'').toLowerCase().includes('bed'));
+    const _rfTempDev   = _devs.find((d: any) => ['temperature','thermostat','heating_valve'].includes((d.type||'').toLowerCase()) && (_rfBedRoom ? (d.location||'') === _rfBedRoom : (d.sensorFunction||'').toLowerCase().includes('bed')));
+    const _rfBathDevs  = _devs.filter((d: any) => (d.type||'').toLowerCase() === 'motion' && (d.sensorFunction||'').toLowerCase().includes('bath'));
+    const _rfBathDev   = _rfBathDevs[0] ?? null;
+    const _rfNearbyDevs= _devs.filter((d: any) => (d.type||'').toLowerCase() === 'motion' && !(d.sensorFunction||'').toLowerCase().includes('bath') && !(d.sensorFunction||'').toLowerCase().includes('bed'));
+    const _rfNearbyDev = _rfNearbyDevs[0] ?? null;
     const _vibLabel = vibStrengthId ? `Bett-Sensor: ${vibStrengthId}` : 'Kein Bett-Vibrationssensor konfiguriert';
     const RF_SENSOR_TIPS: Record<string, string> = {
         'peak_norm':          `${_vibLabel} | Spitzenintensität`,
@@ -1785,13 +1789,13 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
         'tier_b':             `${_vibLabel} | Erkennungspfad B (lange, schwache Session)`,
         'hour_sin':           `${_vibLabel} | Uhrzeit abgeleitet aus Session-Start (sin)`,
         'hour_cos':           `${_vibLabel} | Uhrzeit abgeleitet aus Session-Start (cos)`,
-        'light_on':           _rfLightDev  ? `Lichtsensor: ${_devLabel(_rfLightDev)}`    : 'Kein Lichtsensor konfiguriert (Sensortyp: light/dimmer, Funktion: bed)',
+        'light_on':           _rfLightDev  ? `Lichtsensor (${_rfBedRoom||'Schlafzimmer'}): ${_devLabel(_rfLightDev)}`    : `Kein Lichtsensor im Schlafzimmer gefunden (${_rfBedRoom||'kein Bett-Sensor konfiguriert'})`,
         'presence_on':        _rfPressDev  ? `Anwesenheit: ${_devLabel(_rfPressDev)}`    : 'Kein Anwesenheitssensor konfiguriert (Sensortyp: fp2/presence)',
-        'room_temp_norm':     _rfTempDev   ? `Temperatur: ${_devLabel(_rfTempDev)}`      : 'Kein Temperatursensor konfiguriert (Sensortyp: temperature, Funktion: bed)',
-        'bath_before':        _rfBathDev   ? `Bad-Sensor: ${_devLabel(_rfBathDev)} | Bewegung 60 Min VOR Session` : 'Kein Bad-Sensor konfiguriert (Sensortyp: motion, Funktion: bathroom)',
-        'bath_after':         _rfBathDev   ? `Bad-Sensor: ${_devLabel(_rfBathDev)} | Bewegung 60 Min NACH Session` : 'Kein Bad-Sensor konfiguriert (Sensortyp: motion, Funktion: bathroom)',
-        'nearby_room_motion': _rfNearbyDev ? `Nachbarzimmer: ${_devLabel(_rfNearbyDev)}` : 'Kein Nachbarzimmer-Sensor konfiguriert (Sensortyp: motion)',
-        'nearby_room_mo':     _rfNearbyDev ? `Nachbarzimmer: ${_devLabel(_rfNearbyDev)}` : 'Kein Nachbarzimmer-Sensor konfiguriert (Sensortyp: motion)',
+        'room_temp_norm':     _rfTempDev   ? `Temperatursensor (${_rfBedRoom||'Schlafzimmer'}): ${_devLabel(_rfTempDev)}`      : `Kein Temperatursensor im Schlafzimmer gefunden (${_rfBedRoom||'kein Bett-Sensor konfiguriert'})`,
+        'bath_before':        _rfBathDevs.length > 0 ? `Bad-Sensoren: ${_rfBathDevs.map(_devLabel).join(', ')} | Bewegung 60 Min VOR Session` : 'Kein Bad-Sensor konfiguriert (Sensortyp: motion, Funktion: bathroom)',
+        'bath_after':         _rfBathDevs.length > 0 ? `Bad-Sensoren: ${_rfBathDevs.map(_devLabel).join(', ')} | Bewegung 60 Min NACH Session` : 'Kein Bad-Sensor konfiguriert (Sensortyp: motion, Funktion: bathroom)',
+        'nearby_room_motion': _rfNearbyDevs.length > 0 ? `Nachbarzimmer (Hop=1): ${_rfNearbyDevs.map(_devLabel).join(', ')}` : 'Kein Nachbarzimmer-Sensor konfiguriert (Sensortyp: motion)',
+        'nearby_room_mo':     _rfNearbyDevs.length > 0 ? `Nachbarzimmer (Hop=1): ${_rfNearbyDevs.map(_devLabel).join(', ')}` : 'Kein Nachbarzimmer-Sensor konfiguriert (Sensortyp: motion)',
     };
 
     const viewDayStart = new Date(viewDate).setHours(0, 0, 0, 0);
@@ -2142,6 +2146,37 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                                         {specificity != null && <span title="Spezifität = TN/(TN+FP) — Wie viele Nullnummern wurden korrekt als No-Sex erkannt?">Spezifität: <strong style={{ color: specificity >= 80 ? (isDark ? '#81c784' : '#2e7d32') : '#f57c00' }}>{specificity}%</strong></span>}
                                                                     </div>
                                                                 )}
+
+                                                                {rfInfo.confusion_matrix && rfInfo.loo_details && rfInfo.loo_details.length > 0 && (
+                                                                    <details style={{ marginTop: 4 }}>
+                                                                        <summary style={{ fontSize: '0.65rem', color: isDark ? '#555' : '#999', cursor: 'pointer', userSelect: 'none' }}>
+                                                                            LOO-Details ({rfInfo.loo_details.length} Fälle) anzeigen…
+                                                                        </summary>
+                                                                        <div style={{ marginTop: 4, maxHeight: 180, overflowY: 'auto', fontSize: '0.6rem' }}>
+                                                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                                                <thead>
+                                                                                    <tr style={{ color: isDark ? '#555' : '#aaa' }}>
+                                                                                        <th style={{ textAlign: 'left', padding: '1px 4px' }}>Datum</th>
+                                                                                        <th style={{ textAlign: 'left', padding: '1px 4px' }}>Ist</th>
+                                                                                        <th style={{ textAlign: 'left', padding: '1px 4px' }}>Vorhergesagt</th>
+                                                                                        <th style={{ textAlign: 'center', padding: '1px 4px' }}>Zelle</th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                    {rfInfo.loo_details.map((d: any, i: number) => (
+                                                                                        <tr key={i} style={{ background: d.correct ? (isDark ? 'rgba(129,199,132,0.08)' : 'rgba(200,230,201,0.4)') : (isDark ? 'rgba(239,83,80,0.08)' : 'rgba(255,205,210,0.5)') }}>
+                                                                                            <td style={{ padding: '1px 4px', fontFamily: 'monospace' }}>{d.date || '—'}</td>
+                                                                                            <td style={{ padding: '1px 4px' }}>{d.actual === 'vaginal' ? '🌹' : d.actual === 'oral_hand' ? '💋' : '🚫'} {d.actual}</td>
+                                                                                            <td style={{ padding: '1px 4px' }}>{d.predicted === 'vaginal' ? '🌹' : d.predicted === 'oral_hand' ? '💋' : '🚫'} {d.predicted}</td>
+                                                                                            <td style={{ textAlign: 'center', padding: '1px 4px', fontWeight: 700, color: d.cell === 'tp' || d.cell === 'tn' ? (isDark ? '#81c784' : '#2e7d32') : '#c62828' }}>{(d.cell||'').toUpperCase()}</td>
+                                                                                        </tr>
+                                                                                    ))}
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+                                                                    </details>
+                                                                )}
+
                                                             </div>
                                                         );
                                                     })()}

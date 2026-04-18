@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.171",
+    "version": "0.33.172",
     "news": {
       "0": {
         "version": "0.33.105",
@@ -52,6 +52,10 @@
       },
       "0.33.106": {
         "en": "v0.33.106: Fix SEX-Kachel Daten-Load (getHistoryData), Zeitfenster 06-03h, Garmin-HR-Settings-Feld"
+      },
+      "0.33.172": {
+        "en": "Fix: LOO details with dates, light/temp sensor by room location, bathroom multi-sensor tooltip, nearby rooms hop=1",
+        "de": "Fix: LOO-Details mit Datum, Licht/Temp-Sensor via Raumlocation, Bad-Sensoren alle im Tooltip, Nachbarzimmer Hop=1"
       }
     },
     "titleLang": {
