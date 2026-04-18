@@ -1508,6 +1508,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
             trained: boolean; n: number; counts: Record<string,number>; msg: string;
             feature_importances?: Array<{ name: string; importance: number }>;
             loo_accuracy?: number | null;
+            confusion_matrix?: { tp: number; fp: number; tn: number; fn: number } | null;
         } | null;
     } | null>(null);
 
@@ -2097,6 +2098,53 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                             </div>
                                                         </div>
                                                     )}
+                                                    {rfInfo.confusion_matrix && (rfInfo.confusion_matrix.tp + rfInfo.confusion_matrix.fn + rfInfo.confusion_matrix.fp + rfInfo.confusion_matrix.tn > 0) && (() => {
+                                                        const cm = rfInfo.confusion_matrix!;
+                                                        const total = cm.tp + cm.fn + cm.fp + cm.tn;
+                                                        const sensitivity = cm.tp + cm.fn > 0 ? Math.round(cm.tp / (cm.tp + cm.fn) * 100) : null;
+                                                        const specificity = cm.tn + cm.fp > 0 ? Math.round(cm.tn / (cm.tn + cm.fp) * 100) : null;
+                                                        const cellStyle = (bg: string): React.CSSProperties => ({
+                                                            textAlign: 'center', padding: '4px 6px', borderRadius: 3,
+                                                            background: bg, fontSize: '0.75rem', fontWeight: 700, minWidth: 28,
+                                                        });
+                                                        return (
+                                                            <div style={{ marginBottom: 6 }}>
+                                                                <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#999', marginBottom: 4 }}
+                                                                    title="Leave-One-Out Confusion Matrix: Das Modell testet sich selbst an jeder Session. Sex = vaginal + oral/hand, No-Sex = Nullnummer.">
+                                                                    2×2 Konfusionsmatrix (Sex vs. No-Sex, LOO, {total} Fälle):
+                                                                </div>
+                                                                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: 3, fontSize: '0.62rem', alignItems: 'center' }}>
+                                                                    <div />
+                                                                    <div style={{ textAlign: 'center', color: isDark ? '#666' : '#aaa', fontSize: '0.6rem' }}>Vorhergesagt: Sex</div>
+                                                                    <div style={{ textAlign: 'center', color: isDark ? '#666' : '#aaa', fontSize: '0.6rem' }}>Vorhergesagt: No-Sex</div>
+                                                                    <div style={{ color: isDark ? '#666' : '#aaa', fontSize: '0.6rem', paddingRight: 4 }}>Ist: Sex</div>
+                                                                    <div style={cellStyle(isDark ? '#1b5e20' : '#c8e6c9')}>
+                                                                        <div style={{ fontSize: '0.55rem', color: isDark ? '#4caf50' : '#2e7d32' }}>TP</div>
+                                                                        <div style={{ color: isDark ? '#a5d6a7' : '#1b5e20' }}>{cm.tp}</div>
+                                                                    </div>
+                                                                    <div style={cellStyle(isDark ? '#4a1515' : '#ffcdd2')}>
+                                                                        <div style={{ fontSize: '0.55rem', color: isDark ? '#ef9a9a' : '#c62828' }}>FN</div>
+                                                                        <div style={{ color: isDark ? '#ef9a9a' : '#c62828' }}>{cm.fn}</div>
+                                                                    </div>
+                                                                    <div style={{ color: isDark ? '#666' : '#aaa', fontSize: '0.6rem', paddingRight: 4 }}>Ist: No-Sex</div>
+                                                                    <div style={cellStyle(isDark ? '#4a1515' : '#ffcdd2')}>
+                                                                        <div style={{ fontSize: '0.55rem', color: isDark ? '#ef9a9a' : '#c62828' }}>FP</div>
+                                                                        <div style={{ color: isDark ? '#ef9a9a' : '#c62828' }}>{cm.fp}</div>
+                                                                    </div>
+                                                                    <div style={cellStyle(isDark ? '#1b5e20' : '#c8e6c9')}>
+                                                                        <div style={{ fontSize: '0.55rem', color: isDark ? '#4caf50' : '#2e7d32' }}>TN</div>
+                                                                        <div style={{ color: isDark ? '#a5d6a7' : '#1b5e20' }}>{cm.tn}</div>
+                                                                    </div>
+                                                                </div>
+                                                                {(sensitivity != null || specificity != null) && (
+                                                                    <div style={{ display: 'flex', gap: 10, marginTop: 3, fontSize: '0.65rem', color: isDark ? '#555' : '#999' }}>
+                                                                        {sensitivity != null && <span title="Sensitivität = TP/(TP+FN) — Wie viele echte Sessions wurden korrekt erkannt?">Sensitivität: <strong style={{ color: sensitivity >= 80 ? (isDark ? '#81c784' : '#2e7d32') : '#f57c00' }}>{sensitivity}%</strong></span>}
+                                                                        {specificity != null && <span title="Spezifität = TN/(TN+FP) — Wie viele Nullnummern wurden korrekt als No-Sex erkannt?">Spezifität: <strong style={{ color: specificity >= 80 ? (isDark ? '#81c784' : '#2e7d32') : '#f57c00' }}>{specificity}%</strong></span>}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
                                                     {rfInfo.feature_importances && rfInfo.feature_importances.length > 0 && (
                                                         <div>
                                                                 <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#999', marginBottom: 4 }}

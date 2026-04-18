@@ -2702,7 +2702,7 @@ class CogniLiving extends utils.Adapter {
                     // Stufe 3: Python-Klassifikator (wenn genug Trainings-Daten vorhanden)
                     var _pyClassInfo = null;
                     var _sexTD = (typeof _sexTrainData !== 'undefined') ? _sexTrainData : [];
-                    if (intimacyEvents.length > 0 && _sexTD.length >= 3) {
+                    if (_sexTD.length >= 3) { // Python auch bei 0 Events (Stufe-3-Status aktuell halten, Modell trainieren)
                         try {
                             var _pyPredSess = intimacyEvents.map(function(e) {
                                 var _sl = e.slots || [];
@@ -2736,7 +2736,9 @@ class CogniLiving extends utils.Adapter {
                             }
                         } catch(_pyE) { this.log.debug('[OC-SEX-PY] '+_pyE.message); }
                     }
-                    _calibInfo.pyClassifier = _pyClassInfo ? { trained: _pyClassInfo.trained||false, n: _pyClassInfo.n_samples||0, counts: _pyClassInfo.class_counts||{}, msg: _pyClassInfo.status_msg||'', feature_importances: _pyClassInfo.feature_importances||[], loo_accuracy: (_pyClassInfo.loo_accuracy!=null?_pyClassInfo.loo_accuracy:null) } : null;
+                    _calibInfo.pyClassifier = _pyClassInfo ? { trained: _pyClassInfo.trained||false, n: _pyClassInfo.n_samples||0, counts: _pyClassInfo.class_counts||{}, msg: _pyClassInfo.status_msg||'', feature_importances: _pyClassInfo.feature_importances||[], loo_accuracy: (_pyClassInfo.loo_accuracy!=null?_pyClassInfo.loo_accuracy:null), confusion_matrix: (_pyClassInfo.confusion_matrix||null) } : null;
+                    // Fallback: bestehende pyClassifier-Info erhalten wenn Python nicht verfuegbar war (Adapter-Neustart-Schutz)
+                    if (!_calibInfo.pyClassifier) { try { var _pyFbPath=path.join(utils.getAbsoluteDefaultDataDir(),'cogni-living','history',dateStr+'.json'); if(fs.existsSync(_pyFbPath)){var _pyFbJ=JSON.parse(fs.readFileSync(_pyFbPath,'utf8'));if(_pyFbJ.sexCalibInfo&&_pyFbJ.sexCalibInfo.pyClassifier&&_pyFbJ.sexCalibInfo.pyClassifier.trained){_calibInfo.pyClassifier=_pyFbJ.sexCalibInfo.pyClassifier;this.log.debug('[OC-SEX] pyClassifier aus JSON erhalten (Neustart-Schutz, trained='+_calibInfo.pyClassifier.trained+')');}} } catch(_pyFbE){this.log.debug('[OC-SEX] pyClassifier-Fallback: '+_pyFbE.message);} }
                     if(intimacyEvents.length>0){
                         this.log.info('[OC-SEX] '+intimacyEvents.length+' Event(s) erkannt. calibA='+_calibA+' calibB='+_calibB+' Scores: '+intimacyEvents.map(function(e){return e.score+'('+e.type+')';}).join(', '));
                     } else {
@@ -3639,7 +3641,7 @@ class CogniLiving extends utils.Adapter {
                         }
                     } catch(_raPyE){ this.log.debug('[OC-SEX-RA-PY] '+_raPyE.message); }
                 }
-                _raCalibInfo.pyClassifier = _raPyInfo ? {trained:_raPyInfo.trained||false,n:_raPyInfo.n_samples||0,counts:_raPyInfo.class_counts||{},msg:_raPyInfo.status_msg||'',feature_importances:_raPyInfo.feature_importances||[],loo_accuracy:(_raPyInfo.loo_accuracy!=null?_raPyInfo.loo_accuracy:null)} : null;
+                _raCalibInfo.pyClassifier = _raPyInfo ? {trained:_raPyInfo.trained||false,n:_raPyInfo.n_samples||0,counts:_raPyInfo.class_counts||{},msg:_raPyInfo.status_msg||'',feature_importances:_raPyInfo.feature_importances||[],loo_accuracy:(_raPyInfo.loo_accuracy!=null?_raPyInfo.loo_accuracy:null),confusion_matrix:_raPyInfo.confusion_matrix||null} : null;
                 // Nullnummer-Override (Session-Level): Nur gematchte Sessions entfernen, nicht den ganzen Tag
                 var _raNullLabels=[];
                 try{var _rnRaw=JSON.parse(this.config.sexTrainingLabels||'[]');if(Array.isArray(_rnRaw))_raNullLabels=_rnRaw.filter(function(l){return l&&l.date===_raDate&&l.type==='nullnummer'&&l.time;});}catch(_rnE){}

@@ -62,6 +62,7 @@ class SexBrain:
         self.status_msg         = 'Noch nicht trainiert'
         self.feature_importances = []
         self.loo_accuracy       = None
+        self.confusion_matrix   = None  # {'tp': int, 'fp': int, 'tn': int, 'fn': int}
         self.model_date         = None  # Datum des letzten gespeicherten Modells
 
     # ------------------------------------------------------------------
@@ -80,6 +81,7 @@ class SexBrain:
                 self.status_msg        = data.get('status_msg', 'Modell von Disk geladen')
                 self.feature_importances = data.get('feature_importances', [])
                 self.loo_accuracy      = data.get('loo_accuracy')
+                self.confusion_matrix  = data.get('confusion_matrix')
                 self.model_date        = data.get('model_date')
                 if self.is_trained:
                     print(f'[SexBrain] Modell geladen ({self.model_date}) — {self.n_samples} Samples, trained={self.is_trained}')
@@ -102,6 +104,7 @@ class SexBrain:
                     'status_msg':         self.status_msg,
                     'feature_importances': self.feature_importances,
                     'loo_accuracy':       self.loo_accuracy,
+                    'confusion_matrix':   self.confusion_matrix,
                     'model_date':         self.model_date,
                 }, f)
             print(f'[SexBrain] Modell gespeichert ({self.model_date})')
@@ -207,31 +210,44 @@ class SexBrain:
         ]
         top3 = ', '.join(f'{n}={v:.2f}' for n, v in imp_pairs[:3])
 
-        # Leave-One-Out Genauigkeit (nur bei >=5 Samples sinnvoll)
+        # Leave-One-Out Genauigkeit + 2x2 Confusion Matrix (Sex vs. No-Sex)
         self.loo_accuracy = None
+        self.confusion_matrix = None
         if len(X) >= 5:
             try:
                 from sklearn.model_selection import LeaveOneOut
-                loo    = LeaveOneOut()
-                X_arr  = [self._feat(s) for s in [sp for sp in samples if (sp.get('label') or '').strip().lower() in ('vaginal', 'oral_hand')]]
-                y_arr  = [lbl for lbl in y]
+                loo = LeaveOneOut()
                 n_correct = 0
-                for train_idx, test_idx in loo.split(X_arr):
+                cm = {'tp': 0, 'fp': 0, 'tn': 0, 'fn': 0}
+                loo_total = 0
+                for train_idx, test_idx in loo.split(X):
                     clf_loo = RandomForestClassifier(
                         n_estimators=20, max_depth=5,
                         random_state=42, class_weight='balanced'
                     )
-                    X_train = [X_arr[i] for i in train_idx]
-                    y_train = [y_arr[i] for i in train_idx]
+                    X_train = [X[i] for i in train_idx]
+                    y_train = [y[i] for i in train_idx]
                     if len(set(y_train)) < 2:
-                        continue  # LOO-Fold ohne beide Klassen überspringen
+                        continue  # LOO-Fold ohne mindestens 2 Klassen überspringen
                     clf_loo.fit(X_train, y_train)
-                    pred_loo = clf_loo.predict([X_arr[test_idx[0]]])[0]
-                    if pred_loo == y_arr[test_idx[0]]:
+                    pred_loo = clf_loo.predict([X[test_idx[0]]])[0]
+                    actual   = y[test_idx[0]]
+                    loo_total += 1
+                    if pred_loo == actual:
                         n_correct += 1
-                self.loo_accuracy = round(n_correct / len(X_arr), 3)
+                    # 2x2-Matrix: Sex (vaginal/oral_hand) vs. No-Sex (nullnummer/sonstiges)
+                    is_sex_actual = actual in ('vaginal', 'oral_hand')
+                    is_sex_pred   = pred_loo in ('vaginal', 'oral_hand')
+                    if   is_sex_actual and is_sex_pred:      cm['tp'] += 1
+                    elif is_sex_actual and not is_sex_pred:  cm['fn'] += 1
+                    elif not is_sex_actual and is_sex_pred:  cm['fp'] += 1
+                    else:                                     cm['tn'] += 1
+                if loo_total > 0:
+                    self.loo_accuracy   = round(n_correct / loo_total, 3)
+                    self.confusion_matrix = cm
             except Exception:
                 self.loo_accuracy = None
+                self.confusion_matrix = None
 
         nn = counts.get('nullnummer', 0)
         nn_info = f' | {nn}x Nullnummer' if nn > 0 else ''
@@ -308,6 +324,7 @@ class SexBrain:
             'feature_names':        self.FEATURE_NAMES,
             'feature_importances':  getattr(self, 'feature_importances', []),
             'loo_accuracy':         getattr(self, 'loo_accuracy', None),
+            'confusion_matrix':     getattr(self, 'confusion_matrix', None),
             'model_date':           getattr(self, 'model_date', None),
             'results':              results,
         }
