@@ -29,6 +29,372 @@ const cloudflareTunnel = require('./lib/cloudflare_tunnel');
 
 // --- CONSTANTS ---
 const GEMINI_MODEL = 'models/gemini-flash-latest';
+// =============================================================================
+// computePersonSleep — Einheitlicher Schlafanalyse-Algorithmus
+// Wird sowohl fuer den globalen Haushalt als auch fuer Einzelpersonen verwendet.
+// Single-Source-of-Truth: Keine doppelte Implementierung.
+// Parameter (p): allEvents, personTag, fp2RawStart, garminTs, garminWakeTs, fp2WakeTs,
+//   searchBase, wakeHardCap, startOverride, wakeOverride, existingSnap, sleepDate,
+//   bathroomIds, log
+// =============================================================================
+function computePersonSleep(p) {
+    var allEvents    = p.allEvents;
+    var personTag    = p.personTag  || null;
+    var fp2RawStart  = p.fp2RawStart || null;
+    var garminTs     = p.garminTs    || null;
+    var garminWakeTs = p.garminWakeTs || null;
+    var fp2WakeTs    = p.fp2WakeTs   || null;
+    var searchBase   = p.searchBase;
+    var wakeHardCap  = p.wakeHardCap;
+    var startOverride = p.startOverride || null;
+    var wakeOverride  = p.wakeOverride  || null;
+    var existingSnap  = p.existingSnap  || null;
+    var sleepDate    = p.sleepDate;
+    var bathroomIds  = p.bathroomIds || new Set();
+    var log          = p.log;
+    var logPfx       = personTag ? ('[cPS:' + personTag + '] ') : '[cPS:global] ';
+
+    var isMine = function(e) { return !personTag || e.personTag === personTag; };
+    var isOtherPerson = function(e) { return !!(personTag && e.personTag && e.personTag !== personTag); };
+
+    var searchFromTs = (function() {
+        var d = new Date(searchBase); d.setHours(18, 0, 0, 0);
+        if (d.getTime() > searchBase.getTime()) d.setDate(d.getDate() - 1);
+        return d.getTime();
+    })();
+    var bedEvts = allEvents.filter(function(e) {
+        return isMine(e) && (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed)
+            && (e.timestamp || 0) >= searchFromTs;
+    }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+
+    var vibRefine = function(anchorTs) {
+        var maxTs = anchorTs + 3 * 3600000;
+        var evts = allEvents.filter(function(e) {
+            return isMine(e) && e.isVibrationBed && !e.isVibrationStrength
+                && isActiveValue(e.value)
+                && (e.timestamp || 0) >= anchorTs && (e.timestamp || 0) <= maxTs;
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        for (var i = 0; i < evts.length; i++) {
+            var ts = evts[i].timestamp || 0;
+            var next = (i < evts.length - 1) ? (evts[i + 1].timestamp || 0) : maxTs;
+            if ((next - ts) / 60000 >= 20) return ts;
+        }
+        return null;
+    };
+
+    var candFp2Anchor = (function() {
+        if (!fp2RawStart) return null;
+        var fp2Evts = bedEvts.filter(function(e) {
+            var hr = new Date(e.timestamp || 0).getHours();
+            return e.isFP2Bed && (hr >= 21 || hr < 2);
+        });
+        for (var i = fp2Evts.length - 1; i >= 0; i--) {
+            var ts = fp2Evts[i].timestamp || 0;
+            var nextBed = null;
+            for (var j = 0; j < bedEvts.length; j++) {
+                if ((bedEvts[j].timestamp || 0) > ts) { nextBed = bedEvts[j].timestamp || 0; break; }
+            }
+            if ((nextBed !== null ? nextBed : Infinity) - ts > 60 * 60 * 1000) return ts;
+        }
+        return fp2RawStart;
+    })();
+
+    var motionAnchor = (function() {
+        var anchor = null;
+        var fallbackEnd = searchBase.getTime() + 10 * 3600000;
+        var motEvts = allEvents.filter(function(e) {
+            return isMine(e) && e.isBedroomMotion && !e.isFP2Bed && isActiveValue(e.value);
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        for (var i = 0; i < motEvts.length; i++) {
+            var hr = new Date(motEvts[i].timestamp || 0).getHours();
+            if (!(hr >= 18 || hr < 3)) continue;
+            var nextTs = (i < motEvts.length - 1) ? (motEvts[i + 1].timestamp || 0) : fallbackEnd;
+            if ((nextTs - (motEvts[i].timestamp || 0)) / 60000 >= 30) anchor = motEvts[i].timestamp || 0;
+        }
+        return anchor;
+    })();
+
+    var hausStillTs = (function() {
+        var fallbackEnd = searchBase.getTime() + 10 * 3600000;
+        var commonEvts = allEvents.filter(function(e) {
+            if (isOtherPerson(e)) return false;
+            if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion || e.isBathroomSensor) return false;
+            return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        for (var i = 0; i < commonEvts.length; i++) {
+            var ts = commonEvts[i].timestamp || 0;
+            var next = (i < commonEvts.length - 1) ? (commonEvts[i + 1].timestamp || 0) : fallbackEnd;
+            if (next - ts >= 60 * 60 * 1000) return ts;
+        }
+        return null;
+    })();
+
+    var candFp2Vib   = candFp2Anchor ? vibRefine(candFp2Anchor) : null;
+    var candFp2      = candFp2Anchor || null;
+    var candMotVib   = motionAnchor  ? vibRefine(motionAnchor)  : null;
+    var candMotion   = motionAnchor  || null;
+
+    var candVibRefined = (function() {
+        var end = searchBase.getTime() + 10 * 3600000;
+        var evts = allEvents.filter(function(e) {
+            if (!isMine(e) || !e.isVibrationBed) return false;
+            if (!(isActiveValue(e.value) || toPersonCount(e.value) > 0)) return false;
+            var hr = new Date(e.timestamp || 0).getHours();
+            return hr >= 21 || hr < 4;
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        for (var i = 0; i < evts.length; i++) {
+            var ts = evts[i].timestamp || 0;
+            var next = (i < evts.length - 1) ? (evts[i + 1].timestamp || 0) : end;
+            if ((next - ts) / 60000 >= 20) return ts;
+        }
+        return null;
+    })();
+
+    var candGap60 = (function() {
+        var end = searchBase.getTime() + 10 * 3600000;
+        var evts = allEvents.filter(function(e) {
+            if (!isMine(e)) return false;
+            if (!(e.isFP2Bed || (e.isVibrationBed && !e.isVibrationStrength))) return false;
+            var hr = new Date(e.timestamp || 0).getHours();
+            return hr >= 21 || hr < 4;
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        for (var i = 0; i < evts.length; i++) {
+            var ts = evts[i].timestamp || 0;
+            var next = (i < evts.length - 1) ? (evts[i + 1].timestamp || 0) : end;
+            if (next - ts >= 60 * 60 * 1000) return ts;
+        }
+        return null;
+    })();
+
+    var candLastOutside = (function() {
+        if (fp2RawStart || hausStillTs || motionAnchor) return null;
+        var extEvts = allEvents.filter(function(e) {
+            if (!isMine(e)) return false;
+            if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed || e.isBathroomSensor) return false;
+            var hr = new Date(e.timestamp || 0).getHours();
+            return (hr >= 18 || hr < 2) && isActiveValue(e.value);
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        var eveEvts = extEvts.filter(function(e) { var hr = new Date(e.timestamp || 0).getHours(); return hr >= 18 || hr < 2; });
+        for (var i = eveEvts.length - 1; i >= 0; i--) {
+            var ts = eveEvts[i].timestamp || 0;
+            var hasNext = extEvts.some(function(e) { return (e.timestamp || 0) > ts && (e.timestamp || 0) <= ts + 30 * 60 * 1000; });
+            if (!hasNext) {
+                for (var j = 0; j < bedEvts.length; j++) {
+                    if ((bedEvts[j].timestamp || 0) > ts && isActiveValue(bedEvts[j].value)) return bedEvts[j].timestamp || 0;
+                }
+            }
+        }
+        return null;
+    })();
+
+    var sleepStart = null; var sleepStartSrc = 'winstart'; var overrideApplied = false;
+    var ovWinMin = searchBase.getTime(); var ovWinMax = ovWinMin + 10 * 3600000;
+
+    if (startOverride && startOverride.date === sleepDate && startOverride.ts
+            && startOverride.ts >= ovWinMin && startOverride.ts <= ovWinMax) {
+        sleepStart = startOverride.ts; sleepStartSrc = startOverride.source || 'override'; overrideApplied = true;
+        if (log) log.info(logPfx + 'Override: ' + sleepStartSrc + ' = ' + new Date(sleepStart).toISOString());
+    }
+    if (!overrideApplied) {
+        if (garminTs)          { sleepStart = garminTs;       sleepStartSrc = 'garmin';       if (log) log.info(logPfx  + 'Garmin: '       + new Date(sleepStart).toISOString()); }
+        else if (candFp2Vib)   { sleepStart = candFp2Vib;     sleepStartSrc = 'fp2_vib';      if (log) log.debug(logPfx + 'fp2_vib: '      + new Date(sleepStart).toISOString()); }
+        else if (candFp2)      { sleepStart = candFp2;        sleepStartSrc = 'fp2';          if (log) log.debug(logPfx + 'fp2: '          + new Date(sleepStart).toISOString()); }
+        else if (candMotVib)   { sleepStart = candMotVib;     sleepStartSrc = 'motion_vib';   if (log) log.debug(logPfx + 'motion_vib: '   + new Date(sleepStart).toISOString()); }
+        else if (candMotion)   { sleepStart = candMotion;     sleepStartSrc = 'motion';       if (log) log.debug(logPfx + 'motion: '       + new Date(sleepStart).toISOString()); }
+        else if (candVibRefined) { sleepStart = candVibRefined; sleepStartSrc = 'vib_refined'; if (log) log.debug(logPfx + 'vib_refined: '  + new Date(sleepStart).toISOString()); }
+        else if (candGap60)    { sleepStart = candGap60;      sleepStartSrc = 'gap60';        if (log) log.debug(logPfx + 'gap60: '        + new Date(sleepStart).toISOString()); }
+        else if (candLastOutside) { sleepStart = candLastOutside; sleepStartSrc = 'last_outside'; if (log) log.debug(logPfx + 'last_outside: ' + new Date(sleepStart).toISOString()); }
+        else if (hausStillTs)  { sleepStart = hausStillTs;    sleepStartSrc = 'haus_still';   if (log) log.debug(logPfx + 'haus_still: '   + new Date(sleepStart).toISOString()); }
+    }
+
+    var allSleepStartSources = [
+        { source: 'garmin',       ts: garminTs },
+        { source: 'fp2_vib',      ts: candFp2Vib },
+        { source: 'fp2',          ts: candFp2 },
+        { source: 'motion_vib',   ts: candMotVib },
+        { source: 'motion',       ts: candMotion },
+        { source: 'vib_refined',  ts: candVibRefined },
+        { source: 'gap60',        ts: candGap60 },
+        { source: 'last_outside', ts: candLastOutside },
+        { source: 'haus_still',   ts: hausStillTs || null },
+        { source: 'fixed',        ts: ovWinMin + 2 * 3600000 }
+    ];
+
+    var p4amTs = (function() { var d = new Date(searchBase); d.setDate(d.getDate() + 1); d.setHours(4, 0, 0, 0); return d.getTime(); })();
+    var minSlTs = (fp2RawStart || sleepStart || 0) + 3 * 3600000;
+
+    var otherRoomEvts = allEvents.filter(function(e) {
+        if (e.isFP2Bed || e.isVibrationBed || e.isBathroomSensor || e.isBedroomMotion) return false;
+        if (isOtherPerson(e)) return false;
+        return (e.type === 'motion' || e.type === 'presence_radar_bool')
+            && (e.timestamp || 0) >= p4amTs && (e.timestamp || 0) >= minSlTs && (e.timestamp || 0) <= wakeHardCap;
+    }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+
+    var hasTriggerAfter4 = bedEvts.some(function(e) {
+        return e.isVibrationBed && !e.isVibrationStrength && isActiveValue(e.value) && (e.timestamp || 0) >= p4amTs;
+    });
+    var bedRetRaw = bedEvts.filter(function(e) {
+        if ((e.timestamp || 0) < p4amTs || (e.timestamp || 0) > wakeHardCap) return false;
+        if (e.isFP2Bed) return true;
+        if (e.isBedroomMotion && isActiveValue(e.value)) return true;
+        if (e.isVibrationBed && !e.isVibrationStrength && isActiveValue(e.value)) return true;
+        if (e.isVibrationStrength && !hasTriggerAfter4) return true;
+        return false;
+    });
+    var bedRet = bedRetRaw.filter(function(e, idx) {
+        if (e.isFP2Bed) return true;
+        var ts = e.timestamp || 0;
+        if (new Date(ts).getHours() < 10) return true;
+        var prev = idx > 0 ? (bedRetRaw[idx - 1].timestamp || 0) : 0;
+        var next = idx < bedRetRaw.length - 1 ? (bedRetRaw[idx + 1].timestamp || 0) : Infinity;
+        return (ts - prev <= 15 * 60 * 1000) || (next - ts <= 15 * 60 * 1000);
+    });
+
+    var wakeTs = null; var wakeSrc = null;
+    if (garminWakeTs) { wakeTs = garminWakeTs; wakeSrc = 'garmin'; if (log) log.info(logPfx + 'Wake Garmin: ' + new Date(wakeTs).toISOString()); }
+    if (!wakeTs && fp2WakeTs) { wakeTs = fp2WakeTs; wakeSrc = 'fp2'; if (log) log.debug(logPfx + 'Wake FP2: ' + new Date(wakeTs).toISOString()); }
+    if (!wakeTs && otherRoomEvts.length > 0) {
+        var ci = 0;
+        while (ci < otherRoomEvts.length) {
+            var dep = otherRoomEvts[ci].timestamp || 0; var ret = null;
+            for (var bi = 0; bi < bedRet.length; bi++) { if ((bedRet[bi].timestamp || 0) > dep + 2 * 60 * 1000) { ret = bedRet[bi]; break; } }
+            if (!ret) { wakeTs = dep; wakeSrc = 'other'; break; }
+            var ni = -1;
+            for (var oi = ci + 1; oi < otherRoomEvts.length; oi++) { if ((otherRoomEvts[oi].timestamp || 0) > (ret.timestamp || 0) + 2 * 60 * 1000) { ni = oi; break; } }
+            if (ni === -1) { wakeTs = null; break; }
+            ci = ni;
+        }
+    }
+    if (wakeTs === null && bedRet.length > 0) { wakeTs = bedRet[bedRet.length - 1].timestamp || null; wakeSrc = 'motion'; }
+
+    if (!garminWakeTs && existingSnap && existingSnap.sleepWindowEnd) {
+        var exWakeHr = new Date(existingSnap.sleepWindowEnd).getHours();
+        var exWakeAge = Date.now() - existingSnap.sleepWindowEnd;
+        if (exWakeHr >= 5 && exWakeAge > 2 * 3600000) {
+            wakeTs = existingSnap.sleepWindowEnd; wakeSrc = existingSnap.wakeSource || wakeSrc;
+            if (log) log.info(logPfx + 'Wake FROZEN: ' + new Date(wakeTs).toLocaleTimeString());
+        }
+    }
+    var wakeOverrideApplied = false;
+    if (wakeOverride && wakeOverride.date === sleepDate && wakeOverride.ts) {
+        wakeTs = wakeOverride.ts; wakeSrc = wakeOverride.source || 'override'; wakeOverrideApplied = true;
+        if (log) log.info(logPfx + 'Wake Override: ' + wakeSrc + ' = ' + new Date(wakeTs).toISOString());
+    }
+
+    var allWakeSources = [
+        { source: 'garmin',   ts: garminWakeTs || null },
+        { source: 'fp2',      ts: fp2WakeTs    || null },
+        { source: 'other',    ts: (wakeSrc === 'other' || wakeSrc === 'override') ? wakeTs : null },
+        { source: 'motion',   ts: wakeSrc === 'motion' ? wakeTs : null },
+        { source: 'override', ts: wakeOverrideApplied  ? wakeTs : null }
+    ];
+    var wakeConf = wakeTs
+        ? (wakeSrc === 'garmin' || wakeSrc === 'fp2' ? 'hoch' : wakeSrc === 'other' ? 'mittel' : 'niedrig')
+        : 'niedrig';
+    var wakeConfirmed = !!(wakeTs && new Date().getHours() >= 10 && (Date.now() - wakeTs) >= 3600000);
+
+    var winSCheck = sleepStart || fp2RawStart || searchBase.getTime();
+    var winECheck = wakeTs || Date.now();
+    var bedInWin = (winSCheck <= winECheck)
+        ? bedEvts.filter(function(e) { var ts = e.timestamp || 0; return ts >= winSCheck && ts <= winECheck; })
+        : bedEvts.filter(function(e) { var ts = e.timestamp || 0; return ts >= (fp2RawStart || searchBase.getTime()) && ts <= winECheck; });
+    var bedWasEmpty = bedInWin.length === 0;
+
+    var obe = [];
+    var obeWinS = sleepStart || fp2RawStart || searchBase.getTime();
+    var obeWinE = wakeTs || Date.now();
+    if (obeWinS < obeWinE) {
+        var obeAllSrc = allEvents.filter(function(e) {
+            var ts = e.timestamp || 0;
+            if (ts < obeWinS || ts > obeWinE) return false;
+            if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion) return false;
+            if (isOtherPerson(e)) return false;
+            return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        var obeCluster = null; var obeCGap = 5 * 60 * 1000; var obeCAfter = 3 * 60 * 1000;
+        var obePush = function(c) {
+            var dur = Math.max(1, Math.round((c.end - c.start) / 60000));
+            if (c.hasBath) {
+                obe.push({ start: c.start, end: c.end, duration: dur, type: 'bathroom', confirmed: true, sensors: c.sensors || [] });
+                if (c.hasOther) obe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true, sensors: c.sensors || [] });
+            } else { obe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true, sensors: c.sensors || [] }); }
+        };
+        obeAllSrc.forEach(function(e) {
+            var ts = e.timestamp || 0; var isBath = e.isBathroomSensor || bathroomIds.has(e.id);
+            if (!obeCluster) {
+                obeCluster = { start: ts, end: ts + obeCAfter, hasBath: isBath, hasOther: !isBath, sensors: [{ name: e.name || e.id, location: e.location || '', isBathroomSensor: isBath, timestamp: ts }] };
+            } else if (ts <= obeCluster.end + obeCGap) {
+                obeCluster.end = ts + obeCAfter; if (isBath) obeCluster.hasBath = true; else obeCluster.hasOther = true;
+                var sn = e.name || e.id; if (!obeCluster.sensors.some(function(s) { return s.name === sn; })) obeCluster.sensors.push({ name: sn, location: e.location || '', isBathroomSensor: isBath, timestamp: ts });
+            } else { obePush(obeCluster); obeCluster = { start: ts, end: ts + obeCAfter, hasBath: isBath, hasOther: !isBath, sensors: [{ name: e.name || e.id, location: e.location || '', isBathroomSensor: isBath, timestamp: ts }] }; }
+        });
+        if (obeCluster) obePush(obeCluster);
+    }
+
+    var sleepStages = []; var stagesWinStart = sleepStart || fp2RawStart || searchBase.getTime(); var stagesWinEnd = wakeTs;
+    var sleepScore = null; var sleepScoreRaw = null;
+    if (!bedWasEmpty && stagesWinStart && stagesWinEnd && stagesWinEnd > stagesWinStart) {
+        var SLOT_MS = 5 * 60 * 1000;
+        var slotCount = Math.ceil((stagesWinEnd - stagesWinStart) / SLOT_MS);
+        var vibDetEvts = allEvents.filter(function(e) {
+            return isMine(e) && e.isVibrationBed && (e.timestamp || 0) >= stagesWinStart && (e.timestamp || 0) <= stagesWinEnd
+                && (isActiveValue(e.value) || toPersonCount(e.value) > 0);
+        });
+        var vibStrEvts = allEvents.filter(function(e) {
+            return isMine(e) && e.isVibrationStrength && (e.timestamp || 0) >= stagesWinStart && (e.timestamp || 0) <= stagesWinEnd;
+        });
+        var consQuiet = 0; var deepSec = 0; var lightSec = 0; var remSec = 0; var wakeSec2 = 0;
+        for (var si = 0; si < slotCount; si++) {
+            var slotS = stagesWinStart + si * SLOT_MS; var slotE = slotS + SLOT_MS;
+            var slotDet = vibDetEvts.filter(function(e) { return (e.timestamp || 0) >= slotS && (e.timestamp || 0) < slotE; }).length;
+            var slotStrArr = vibStrEvts.filter(function(e) { return (e.timestamp || 0) >= slotS && (e.timestamp || 0) < slotE; })
+                .map(function(e) { return typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0; });
+            var slotStrMax = slotStrArr.length > 0 ? Math.max.apply(null, slotStrArr) : 0;
+            var hoursIn = (slotS - stagesWinStart) / 3600000; var stage;
+            if (slotDet === 0)                                                                { consQuiet++; stage = consQuiet >= 5 ? 'deep' : 'light'; }
+            else if (slotDet >= 5 || slotStrMax > 28)                                         { consQuiet = 0; stage = 'wake'; }
+            else if (slotDet >= 2 && hoursIn >= 2.5 && slotStrMax >= 12 && slotStrMax <= 28)  { consQuiet = 0; stage = 'rem'; }
+            else                                                                               { consQuiet = 0; stage = 'light'; }
+            sleepStages.push({ t: si * 5, s: stage });
+            if (stage === 'deep') deepSec += 300; else if (stage === 'light') lightSec += 300;
+            else if (stage === 'rem') remSec += 300; else wakeSec2 += 300;
+        }
+        if (log) log.debug(logPfx + 'Stages: ' + sleepStages.length + ' Slots (' + new Date(stagesWinStart).toLocaleTimeString() + '-' + new Date(stagesWinEnd).toLocaleTimeString() + ')');
+        var totalSec = deepSec + lightSec + remSec + wakeSec2;
+        var durMin = (stagesWinEnd - stagesWinStart) / 60000;
+        var durScore = Math.max(20, Math.min(95, 25 + 0.12 * durMin)); var stageAdj = 0;
+        if (totalSec > 0) {
+            var rp = remSec / totalSec; var wp = wakeSec2 / totalSec;
+            var coverage = Math.min(1, (totalSec / 60) / Math.max(1, durMin));
+            stageAdj = Math.max(-8, Math.min(8, Math.round((rp * 30 - wp * 50) * coverage)));
+        }
+        sleepScoreRaw = Math.round(Math.max(0, durScore + stageAdj));
+        sleepScore    = Math.round(Math.max(0, Math.min(100, sleepScoreRaw)));
+        if (log) log.debug(logPfx + 'Score=' + sleepScore + ' dur=' + Math.round(durMin) + 'min adj=' + stageAdj);
+    }
+
+    return {
+        sleepWindowStart:     sleepStart,
+        sleepWindowEnd:       wakeTs,
+        sleepStartSource:     sleepStartSrc,
+        allSleepStartSources: allSleepStartSources,
+        sleepStartOverridden: overrideApplied,
+        wakeSource:           wakeSrc || null,
+        allWakeSources:       allWakeSources,
+        wakeConf:             wakeConf,
+        wakeConfirmed:        wakeConfirmed,
+        wakeOverridden:       wakeOverrideApplied,
+        bedWasEmpty:          bedWasEmpty,
+        outsideBedEvents:     obe,
+        sleepStages:          sleepStages,
+        stagesWindowStart:    stagesWinStart,
+        sleepScore:           sleepScore,
+        sleepScoreRaw:        sleepScoreRaw,
+        _motionAnchor:        motionAnchor,
+        _hausStillTs:         hausStillTs
+    };
+}
+
 
 class CogniLiving extends utils.Adapter {
     constructor(options) {
@@ -936,68 +1302,13 @@ class CogniLiving extends utils.Adapter {
             // Pr+?zision: Einschlafzeit ??? letzte Bewegung vor ???45 Min Stille (18???03 Uhr).
             //            Aufwachzeit ??? erste Bewegung nach 04 Uhr + mind. 3h nach Einschlafzeit.
             // Besser als Fixfenster, aber schlechter als FP2 (keine Tief-/Ruhephasen-Erkennung).
-            const sleepWindowMotion = (function() {
-                var motEvts = sleepSearchEvents
-                    .filter(function(e) { return e.isBedroomMotion && isActiveValue(e.value); })
-                    .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
-                if (motEvts.length === 0) return { start: null, end: null };
-                // Einschlafzeit: letztes Motion-Event das von ???45 Min Stille gefolgt wird, zwischen 18:00???03:00
-                var sleepStartTs = null;
-                for (var _msi = 0; _msi < motEvts.length; _msi++) {
-                    var _mse = motEvts[_msi];
-                    var _mhr = new Date(_mse.timestamp||0).getHours();
-                    if (!(_mhr >= 18 || _mhr < 3)) continue;
-                    var _nextMotTs = (_msi < motEvts.length - 1) ? (motEvts[_msi+1].timestamp||0) : (_sleepSearchBase.getTime() + 10*3600000);
-                    var _motGap = (_nextMotTs - (_mse.timestamp||0)) / 60000;
-                    if (_motGap >= 30) sleepStartTs = _mse.timestamp||0;  // letztes solches Event gewinnt
-                }
-                if (!sleepStartTs) return { start: null, end: null };
-                // Aufwachzeit: erste Bewegung nach 04:00 die mindestens 3h nach Einschlafzeit liegt
-                var wakeTs = null;
-                for (var _mwi = 0; _mwi < motEvts.length; _mwi++) {
-                    var _mwe = motEvts[_mwi];
-                    if ((_mwe.timestamp||0) <= sleepStartTs) continue;
-                    var _mwhr = new Date(_mwe.timestamp||0).getHours();
-                    var _sinceStart = ((_mwe.timestamp||0) - sleepStartTs) / 3600000;
-                    if ((_mwhr >= 4 && _mwhr <= 14) && _sinceStart >= 3) { wakeTs = _mwe.timestamp||0; break; }
-                }
-                return { start: sleepStartTs, end: wakeTs };
-            })();
-
-            // "Haus-wird-still": erstes anderer-Raum-Event vor >=60 Min Stille.
-            // Kein Schlafzimmer-Bewegungsmelder noetig -- funktioniert fuer Single & Multi.
-            const sleepWindowHausStill = (function() {
-                var _hsCommon = sleepSearchEvents
-                    .filter(function(e) {
-                        return !e.isFP2Bed && !e.isVibrationBed && !e.isBathroomSensor && !e.isBedroomMotion
-                            && (e.type === 'motion' || e.type === 'presence_radar_bool')
-                            && isActiveValue(e.value);
-                    })
-                    .sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                if (_hsCommon.length === 0) return { start: null, end: null };
-                var _hsEnd = _sleepSearchBase.getTime() + 10 * 3600000;
-                var _hsSleepTs = null;
-                for (var _hsi = 0; _hsi < _hsCommon.length; _hsi++) {
-                    var _hsCandTs = _hsCommon[_hsi].timestamp||0;
-                    var _hsNextTs = (_hsi < _hsCommon.length - 1) ? (_hsCommon[_hsi+1].timestamp||0) : _hsEnd;
-                    if (_hsNextTs - _hsCandTs >= 60*60*1000) { _hsSleepTs = _hsCandTs; break; }
-                }
-                return { start: _hsSleepTs, end: null };
-            })();
-
-            // --- Einschlafzeit-Verfeinerung: Garmin + Vibration -------------------------
-            // Ziel: Unterscheidung "ins Bett gehen" (FP2) vs. "einschlafen" (Vib/Garmin)
-            // Stufe 0: Garmin sleepStartTimestampGMT ??? nur wenn 18???04 Uhr UND innerhalb FP2+3h
-            // Stufe 1: Vibrations-Verfeinerung ??? letztes Vib-Event + ???20min Stille (FP2-Fenster)
-            // Stufe 2: FP2 allein ??? Zeit ins Bett gehen
-            // Stufe 2b: Bewegungsmelder + Vibration (motion_vib, kein FP2)
-            // Stufe 3: Bewegungsmelder
-            // Stufe 4: Fixfenster
-            var _fp2RawStart = sleepWindowCalc.start || null; // FP2-Start vor +?berschreibung merken
+            // --- Globale Einschlafzeit-Kandidaten via computePersonSleep ---
+            // (personTag=null = globale Analyse, identischer Algorithmus wie per-Person)
+            var _fp2RawStart = sleepWindowCalc.start || null;
             var garminSleepStartTs = null;
-            var vibRefinedSleepStartTs = null;
+            var vibRefinedSleepStartTs = null; // fp2_vib Kandidat (fuer Priority-Chain)
 
-            // Garmin Einschlafzeit lesen
+            // Garmin Einschlafzeit lesen (async, bleibt ausserhalb der Funktion)
             var _garminSleepStartId = (this.config.garminSleepStartStateId || '').trim()
                 || 'garmin.0.dailysleep.dailySleepDTO.sleepStartTimestampGMT';
             try {
@@ -1007,7 +1318,6 @@ class CogniLiving extends utils.Adapter {
                     if (!isNaN(_gSVal) && _gSVal > 0) {
                         var _gSHr = new Date(_gSVal).getHours();
                         var _gSPlausibel = (_gSHr >= 18 || _gSHr < 4);
-                        // Fix B: bidirektional +-3h von fp2 + Datum-Konsistenz
                         var _gSInFP2Window = !_fp2RawStart || (Math.abs(_gSVal - _fp2RawStart) <= 3 * 3600000);
                         var _gSNightOk = (_gSVal >= (_sleepSearchBase.getTime() - 2 * 3600000))
                             && (_gSVal <= (_sleepSearchBase.getTime() + 16 * 3600000));
@@ -1021,122 +1331,32 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_gse) { this.log.debug('[SleepStart] Garmin nicht lesbar: ' + _gse.message); }
 
-            // Vibrations-Verfeinerung: erstes Vib-Event mit >=20min Stille danach (FORWARD, innerhalb FP2+3h)
-            if (_fp2RawStart) {
-                var _vibRefMax = _fp2RawStart + 3 * 3600000;
-                var _vibRefEvts = sleepSearchEvents.filter(function(e) {
-                    return e.isVibrationBed && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
-                        && (e.timestamp||0) >= _fp2RawStart && (e.timestamp||0) <= _vibRefMax;
-                }).sort(function(a, b) { return (a.timestamp||0) - (b.timestamp||0); });
-                if (_vibRefEvts.length >= 1) {
-                    for (var _vsi = 0; _vsi < _vibRefEvts.length; _vsi++) {
-                        var _vsEvt = _vibRefEvts[_vsi];
-                        var _vsNext = (_vsi < _vibRefEvts.length - 1) ? (_vibRefEvts[_vsi + 1].timestamp||0) : _vibRefMax;
-                        var _vsGap = (_vsNext - (_vsEvt.timestamp||0)) / 60000;
-                        if (_vsGap >= 20) {
-                            vibRefinedSleepStartTs = _vsEvt.timestamp||0;
-                            this.log.debug('[SleepStart] Vib-Verfeinerung (forward): ' + new Date(vibRefinedSleepStartTs).toISOString());
-                            break;
-                        }
-                    }
-                }
-            }
+            // Alle Einschlafzeit-Kandidaten via computePersonSleep (Single-Source-of-Truth)
+            var _gR = computePersonSleep({
+                allEvents:    sleepSearchEvents,
+                personTag:    null,
+                fp2RawStart:  _fp2RawStart,
+                garminTs:     garminSleepStartTs,
+                garminWakeTs: null,
+                fp2WakeTs:    null,
+                searchBase:   _sleepSearchBase,
+                wakeHardCap:  (function(){ var d=new Date(); d.setHours(12,0,0,0); return d.getTime(); })(),
+                startOverride: null,
+                wakeOverride:  null,
+                existingSnap:  null,
+                sleepDate:    sleepDate,
+                bathroomIds:  new Set((this.config.devices||[]).filter(function(d){return d.isBathroomSensor||d.sensorFunction==='bathroom';}).map(function(d){return d.id;})),
+                log:          this.log
+            });
 
-            // Vibrations-Verfeinerung auf Bewegungsmelder-Basis (kein FP2, aber Vibration vorhanden)
-            // Analog zu fp2_vib: Bewegungsmelder liefert Fenster-Anker, Vibration praezisiert Einschlafzeit
-            var motionVibSleepStartTs = null;
-            if (!_fp2RawStart && sleepWindowMotion.start) {
-                var _mvRefMax = sleepWindowMotion.start + 3 * 3600000;
-                var _mvRefEvts = sleepSearchEvents.filter(function(e) {
-                    return e.isVibrationBed && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
-                        && (e.timestamp||0) >= sleepWindowMotion.start && (e.timestamp||0) <= _mvRefMax;
-                }).sort(function(a, b) { return (a.timestamp||0) - (b.timestamp||0); });
-                if (_mvRefEvts.length >= 1) {
-                    for (var _mvi = 0; _mvi < _mvRefEvts.length; _mvi++) {
-                        var _mvEvt = _mvRefEvts[_mvi];
-                        var _mvNext = (_mvi < _mvRefEvts.length - 1) ? (_mvRefEvts[_mvi + 1].timestamp||0) : _mvRefMax;
-                        var _mvGap = (_mvNext - (_mvEvt.timestamp||0)) / 60000;
-                        if (_mvGap >= 20) {
-                            motionVibSleepStartTs = _mvEvt.timestamp||0;
-                            this.log.debug('[SleepStart] Motion+Vib-Verfeinerung (forward): ' + new Date(motionVibSleepStartTs).toISOString());
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // --- Globale Einschlafzeit: Letzter Aussenort (last_outside) ---
-            // Fallback wenn keine Bett-/Bewegungssensoren ausschlaggebend waren
-            var lastOutsideSleepStartTs = null;
-            if (!_fp2RawStart && !sleepWindowHausStill.start && !motionVibSleepStartTs && !sleepWindowMotion.start) {
-                var _loExtEvts = sleepSearchEvents.filter(function(e) {
-                    if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion || e.isBathroomSensor) return false;
-                    var hr = new Date(e.timestamp||0).getHours();
-                    return (hr >= 18 || hr < 2) && isActiveValue(e.value);
-                }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                for (var _logi = _loExtEvts.length - 1; _logi >= 0; _logi--) {
-                    var _loTs = _loExtEvts[_logi].timestamp||0;
-                    var _loHasNext = _loExtEvts.some(function(e) {
-                        return (e.timestamp||0) > _loTs && (e.timestamp||0) <= _loTs + 30*60*1000;
-                    });
-                    if (!_loHasNext) {
-                        var _loBedsAfter = sleepSearchEvents.filter(function(e) {
-                            return (e.isFP2Bed || e.isBedroomMotion) && (e.timestamp||0) > _loTs && isActiveValue(e.value);
-                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                        if (_loBedsAfter.length > 0) {
-                            lastOutsideSleepStartTs = _loBedsAfter[0].timestamp||0;
-                            this.log.debug('[SleepStart] last_outside: ' + new Date(lastOutsideSleepStartTs).toISOString());
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // allSleepStartSources + sleepStartSource bestimmen
-            var _fixedSleepStartTs = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr
-            // Globale Standalone-Berechnungen fuer vollstaendiges Dropdown
-            // vib_refined: letztes Vib-Event mit >=20 Min Stille (ohne FP2-Anforderung)
-            var _globalVibRefinedTs = null;
-            (function() {
-                var _gvrEnd = _sleepSearchBase.getTime() + 10 * 3600000; // 04:00 als Fenster-Ende
-                var _vEve = sleepSearchEvents.filter(function(e) {
-                    if (!e.isVibrationBed || !(isActiveValue(e.value) || toPersonCount(e.value) > 0)) return false;
-                    var hr = new Date(e.timestamp||0).getHours();
-                    return hr >= 21 || hr < 4;
-                }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                for (var _vi = 0; _vi < _vEve.length; _vi++) {
-                    var _vTs = _vEve[_vi].timestamp||0;
-                    var _vNext = (_vi < _vEve.length-1) ? (_vEve[_vi+1].timestamp||0) : _gvrEnd;
-                    if ((_vNext - _vTs) / 60000 >= 20) { _globalVibRefinedTs = _vTs; break; }
-                }
-            })();
-            // gap60: erstes Vib/FP2-Event das von >=60 Min Stille gefolgt wird (Forward-Scan)
-            var _globalGap60Ts = null;
-            (function() {
-                var _g60End = _sleepSearchBase.getTime() + 10 * 3600000; // 04:00 Uhr
-                var _gEvts = sleepSearchEvents.filter(function(e) {
-                    if (!e.isFP2Bed && !e.isVibrationBed) return false;
-                    var hr = new Date(e.timestamp||0).getHours();
-                    return hr >= 21 || hr < 4;
-                }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                for (var _gi = 0; _gi < _gEvts.length; _gi++) {
-                    var _gTs = _gEvts[_gi].timestamp||0;
-                    var _gNext = (_gi < _gEvts.length - 1) ? (_gEvts[_gi+1].timestamp||0) : _g60End;
-                    if (_gNext - _gTs >= 60*60*1000) { _globalGap60Ts = _gTs; break; }
-                }
-            })();
-            var allSleepStartSources = [
-                { source: 'garmin',       ts: garminSleepStartTs },
-                { source: 'fp2_vib',      ts: vibRefinedSleepStartTs },
-                { source: 'fp2',          ts: _fp2RawStart },
-                { source: 'motion_vib',   ts: motionVibSleepStartTs },
-                { source: 'vib_refined',  ts: _globalVibRefinedTs },
-                { source: 'gap60',        ts: _globalGap60Ts },
-                { source: 'last_outside', ts: lastOutsideSleepStartTs },
-                { source: 'haus_still',   ts: sleepWindowHausStill.start || null },
-                { source: 'motion',       ts: sleepWindowMotion.start || null },
-                { source: 'fixed',        ts: _fixedSleepStartTs },
-            ];
+            // Kandidaten aus Funktionsergebnis extrahieren (fuer Priority-Chain und sleepWindowSource)
+            var _findSrc = function(src) { return (_gR.allSleepStartSources.find(function(s){return s.source===src;})||{}).ts||null; };
+            vibRefinedSleepStartTs   = _findSrc('fp2_vib');
+            var motionVibSleepStartTs  = _findSrc('motion_vib');
+            var lastOutsideSleepStartTs = _findSrc('last_outside');
+            var sleepWindowMotion    = { start: _gR._motionAnchor, end: null };
+            var sleepWindowHausStill = { start: _gR._hausStillTs,  end: null };
+            var allSleepStartSources = _gR.allSleepStartSources;
             var sleepStartSource = _fp2RawStart ? 'fp2'
                 : (motionVibSleepStartTs ? 'motion_vib'
                 : (lastOutsideSleepStartTs ? 'last_outside'
@@ -1911,7 +2131,31 @@ class CogniLiving extends utils.Adapter {
             })();
 
             // ============================================================
-            // Per-Person Nacht-Analyse
+            // Per-Person Garmin: async reads vor der personData-IIFE
+            var _personGarminData = {};
+            var _garminAssign = (this.config.garminPersonAssignment && typeof this.config.garminPersonAssignment === 'object')
+                ? this.config.garminPersonAssignment : {};
+            for (var _gaPerson of Object.keys(_garminAssign)) {
+                var _gaPrefix = (_garminAssign[_gaPerson] || '').trim();
+                if (!_gaPrefix) continue;
+                try {
+                    var _gaStartSt2 = await this.getForeignStateAsync(_gaPrefix + '.dailysleep.dailySleepDTO.sleepStartTimestampGMT');
+                    var _gaEndSt2   = await this.getForeignStateAsync(_gaPrefix + '.dailysleep.dailySleepDTO.sleepEndTimestampGMT');
+                    var _gaStartV   = (_gaStartSt2 && _gaStartSt2.val != null) ? Number(_gaStartSt2.val) : null;
+                    var _gaEndV     = (_gaEndSt2   && _gaEndSt2.val   != null) ? Number(_gaEndSt2.val)   : null;
+                    var _gaStartH   = _gaStartV ? new Date(_gaStartV).getHours() : null;
+                    var _gaEndH     = _gaEndV   ? new Date(_gaEndV).getHours()   : null;
+                    var _gaSleepSt  = (_gaStartV && _gaStartH !== null && (_gaStartH >= 18 || _gaStartH < 4)
+                        && _gaStartV >= _sleepSearchBase.getTime() - 2*3600000
+                        && _gaStartV <= _sleepSearchBase.getTime() + 16*3600000) ? _gaStartV : null;
+                    var _gaWakeT    = (_gaEndV && _gaEndH !== null && _gaEndH >= 3 && _gaEndH < 14) ? _gaEndV : null;
+                    _personGarminData[_gaPerson] = { sleepStartTs: _gaSleepSt, wakeTs: _gaWakeT };
+                    if (_gaSleepSt) this.log.info('[Per-Person Garmin] ' + _gaPerson + ' Start: ' + new Date(_gaSleepSt).toISOString());
+                    if (_gaWakeT)   this.log.info('[Per-Person Garmin] ' + _gaPerson + ' Wake: '  + new Date(_gaWakeT).toISOString());
+                } catch(_gaE) { this.log.debug('[Per-Person Garmin] ' + _gaPerson + ' Fehler: ' + _gaE.message); }
+            }
+
+                        // Per-Person Nacht-Analyse
             // ============================================================
             const _self = this;
             const personData = (function() {
@@ -1931,487 +2175,76 @@ class CogniLiving extends utils.Adapter {
                     var ids = personSensorIds[person];
                     var personEvents = todayEvents.filter(function(e) { return ids.has(e.id); });
                     var nightEvents = personEvents.filter(function(e) {
-                        var ts = e.timestamp||e.ts||0;
-                        return ts >= winStart && ts <= winEnd;
+                        var ts = e.timestamp||e.ts||0; return ts >= winStart && ts <= winEnd;
                     });
                     var nightActivityCount = nightEvents.length;
                     var morning5 = new Date(winEnd); morning5.setHours(5,0,0,0);
                     var morningEvt = personEvents.filter(function(e) {
-                        var ts = e.timestamp||e.ts||0;
-                        return ts >= morning5.getTime();
+                        var ts=e.timestamp||e.ts||0; return ts >= morning5.getTime();
                     }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
                     var wakeTimeMin = morningEvt.length > 0 ? Math.round(((morningEvt[0].timestamp||0) - new Date(morningEvt[0].timestamp||0).setHours(0,0,0,0)) / 60000) : null;
-                    var eveningEvts = personEvents.filter(function(e) {
-                        var ts = e.timestamp||e.ts||0; var hr = new Date(ts).getHours();
-                        return hr >= 18 && hr <= 23;
-                    }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                    var sleepOnsetMin = null;
-                    for (var i = eveningEvts.length-1; i >= 0; i--) {
-                        var next = eveningEvts[i+1] ? eveningEvts[i+1].timestamp : null;
-                        if (!next || (next - eveningEvts[i].timestamp) > 45*60*1000) {
-                            sleepOnsetMin = Math.round(((eveningEvts[i].timestamp||0) - new Date(eveningEvts[i].timestamp||0).setHours(0,0,0,0)) / 60000);
-                            break;
-                        }
-                    }
-                    var bathroomIds = new Set((devices||[]).filter(function(d){ return d.isBathroomSensor || d.sensorFunction==='bathroom'; }).map(function(d){ return d.id; }));
+                    var bathroomIds2 = new Set(((_self.config && _self.config.devices)||[]).filter(function(d){ return d.isBathroomSensor || d.sensorFunction==='bathroom'; }).map(function(d){ return d.id; }));
                     var bathroomNightEvents = todayEvents.filter(function(e) {
-                        if (!bathroomIds.has(e.id)) return false;
-                        var ts = e.timestamp||e.ts||0;
-                        return ts >= winStart && ts <= winEnd;
+                        if (!bathroomIds2.has(e.id)) return false;
+                        var ts = e.timestamp||e.ts||0; return ts >= winStart && ts <= winEnd;
                     });
                     var nocturiaAttr = 0;
                     bathroomNightEvents.forEach(function(bathEvt) {
                         var bathTs = bathEvt.timestamp||0;
-                        var recentPersonEvt = nightEvents.filter(function(e) {
-                            var ts = e.timestamp||0;
-                            return ts >= bathTs - 10*60*1000 && ts < bathTs;
-                        });
+                        var recentPersonEvt = nightEvents.filter(function(e) { var ts=e.timestamp||0; return ts>=bathTs-10*60*1000&&ts<bathTs; });
                         if (recentPersonEvt.length > 0) nocturiaAttr++;
                     });
-                    // OC-18 Prio 2: Schlafanalyse pro Person (separate Schlafkacheln)
-                    // sleepSearchEvents-Events haben personTag, isBedroomMotion etc. direkt als Properties
-                    var _p4am = new Date(); _p4am.setHours(4,0,0,0);
-                    var _pMinSlTs = (winStart||0) + 3*3600000;
-                    // Schlafzimmer-Events ab 18:00 Vortag, um Abend-Zubettgehzeiten zu erfassen
-                    var _pSearchFrom = (function(){ var d=new Date(winStart); d.setHours(18,0,0,0); if(d.getTime()>winStart) d.setDate(d.getDate()-1); return d.getTime(); })();
-                    var _pBedEvts = sleepSearchEvents.filter(function(e) {
-                        return e.personTag === person && (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed)
-                            && (e.timestamp||0) >= _pSearchFrom;
-                    }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                    // === EINHEITLICHE EINSCHLAFZEIT-KETTE (analog globale Analyse) ===
-                    // Prioritaet: fp2_vib > fp2 > motion_vib > vib_refined > gap60 > last_outside > haus_still > winstart
-                    // Jede Methode nutzt nur personTagged Events (e.personTag === person)
-                    var _pSleepStart = null; var _pSleepStartSrc = 'winstart';
-                    // Bett-Events dieser Person ab 18:00 Vortag (FP2 + Vibration + Motion)
-                    var _pEve = _pBedEvts.filter(function(e) {
-                        var hr = new Date(e.timestamp||0).getHours();
-                        return hr >= 21 || hr < 2;
+                    // Per-Person Garmin (Zuweisung via config.garminPersonAssignment)
+                    var _pGarminInfo = _personGarminData[person] || {};
+                    var _pGarminTs = _pGarminInfo.sleepStartTs || null;
+                    var _pGarminWakeTs = _pGarminInfo.wakeTs || null;
+                    // computePersonSleep: einheitlicher Algorithmus (Single-Source-of-Truth)
+                    var _pResult = computePersonSleep({
+                        allEvents:     sleepSearchEvents,
+                        personTag:     person,
+                        fp2RawStart:   null,
+                        garminTs:      _pGarminTs,
+                        garminWakeTs:  _pGarminWakeTs,
+                        fp2WakeTs:     null,
+                        searchBase:    _sleepSearchBase,
+                        wakeHardCap:   _wakeHardCapMs,
+                        startOverride: (_personOverrides&&_personOverrides[person])?_personOverrides[person]:null,
+                        wakeOverride:  (_personWakeOverrides&&_personWakeOverrides[person])?_personWakeOverrides[person]:null,
+                        existingSnap:  (_existingSnap&&_existingSnap.personData&&_existingSnap.personData[person])?_existingSnap.personData[person]:null,
+                        sleepDate:     sleepDate,
+                        bathroomIds:   _bathroomDevIds,
+                        log:           _self.log
                     });
-
-                    // Hilfsfunktion: Vib-Verfeinerung ab einem Anker-Timestamp
-                    // Sucht letztes Vib-Event + >=20 Min Stille innerhalb Anker+3h
-                    var _pVibRefine = function(anchorTs) {
-                        var _max = anchorTs + 3 * 3600000;
-                        // Nur Trigger-true Events (kein Strength): Strength faeuert im Schlaf durch Atemzuege
-                        // und verhindert sonst jeden 20-Min-Gap. Trigger = echte Bewegung.
-                        var _evts = sleepSearchEvents.filter(function(e) {
-                            return e.isVibrationBed && !e.isVibrationStrength && e.personTag === person
-                                && isActiveValue(e.value)
-                                && (e.timestamp||0) >= anchorTs && (e.timestamp||0) <= _max;
-                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                        for (var _ri = 0; _ri < _evts.length; _ri++) {
-                            var _rEvt = _evts[_ri];
-                            var _rNext = (_ri < _evts.length-1) ? (_evts[_ri+1].timestamp||0) : _max;
-                            if ((_rNext - (_rEvt.timestamp||0)) / 60000 >= 20) return _rEvt.timestamp||0;
-                        }
-                        return null;
-                    };
-
-                    // Hilfsfunktion: letztes Bett-Event eines Typs vor langem Gap
-                    var _pFindGapAnchor = function(evtFilter, gapMs) {
-                        var _filtered = _pEve.filter(evtFilter);
-                        for (var _gi = _filtered.length - 1; _gi >= 0; _gi--) {
-                            var _gTs = _filtered[_gi].timestamp||0;
-                            var _gNext = null;
-                            for (var _gn = 0; _gn < _pBedEvts.length; _gn++) {
-                                if ((_pBedEvts[_gn].timestamp||0) > _gTs) { _gNext = _pBedEvts[_gn].timestamp||0; break; }
-                            }
-                            var _gNextTs = _gNext !== null ? _gNext : Infinity;
-                            if (_gNextTs - _gTs > gapMs) return _gTs;
-                        }
-                        return null;
-                    };
-
-
-                    // Pre-compute ALL candidates independently for complete allSleepStartSources
-                    var _pCandFp2Anchor = _pFindGapAnchor(function(e){ return e.isFP2Bed; }, 60*60*1000);
-                    var _pCandFp2Vib = _pCandFp2Anchor ? _pVibRefine(_pCandFp2Anchor) : null;
-                    var _pCandFp2 = _pCandFp2Anchor || null;
-                    // motion_vib: Anker = letztes Motion-Event mit >=30 Min Pause zum naechsten Motion-Event
-                    // (identisch mit globaler sleepWindowMotion-Logik -- nicht von Strength-Events abhaengig)
-                    var _pCandMotAnchor = (function() {
-                        var _pma = null;
-                        var _pmEvts = _pBedEvts.filter(function(e){ return e.isBedroomMotion && !e.isFP2Bed; })
-                            .sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                        for (var _pmai = 0; _pmai < _pmEvts.length; _pmai++) {
-                            var _pmae = _pmEvts[_pmai];
-                            var _pmhr = new Date(_pmae.timestamp||0).getHours();
-                            if (!(_pmhr >= 18 || _pmhr < 3)) continue;
-                            var _pmNext = (_pmai < _pmEvts.length - 1)
-                                ? (_pmEvts[_pmai+1].timestamp||0)
-                                : (_sleepSearchBase.getTime() + 10 * 3600000);
-                            if ((_pmNext - (_pmae.timestamp||0)) / 60000 >= 30) _pma = _pmae.timestamp||0;
-                        }
-                        return _pma;
-                    })();
-                    var _pCandMotVib = _pCandMotAnchor ? _pVibRefine(_pCandMotAnchor) : null;
-                    // motion: Motion-Anker direkt (ohne Vib-Refinement) -- robuste Fallback-Quelle
-                    // wenn motion_vib null (kein Trigger-Gap gefunden), ist der Anker selbst ein guter Schaetzwert
-                    var _pCandMotion = _pCandMotAnchor || null;
-                    // vib_refined: direkter Forward-Scan (identisch mit globalem _globalVibRefinedTs)
-                    // Kein 60-Min-Anker -- sucht erstes aktives Vib-Event mit >=20 Min Stille danach
-                    var _pCandVibRefined = (function() {
-                        var _pvrEnd = _sleepSearchBase.getTime() + 10 * 3600000;
-                        var _pvEvts = sleepSearchEvents.filter(function(e) {
-                            if (!e.isVibrationBed || e.personTag !== person) return false;
-                            if (!(isActiveValue(e.value) || toPersonCount(e.value) > 0)) return false;
-                            var hr = new Date(e.timestamp||0).getHours();
-                            return hr >= 21 || hr < 4;
-                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                        for (var _pvi = 0; _pvi < _pvEvts.length; _pvi++) {
-                            var _pvTs = _pvEvts[_pvi].timestamp||0;
-                            var _pvNext = (_pvi < _pvEvts.length-1) ? (_pvEvts[_pvi+1].timestamp||0) : _pvrEnd;
-                            if ((_pvNext - _pvTs) / 60000 >= 20) return _pvTs;
-                        }
-                        return null;
-                    })();
-                    // gap60: nur Detection-Events (kein Strength), Forward-Scan auf >=60 Min Pause
-                    // Strength faeuert im Schlaf alle 15-25 Min und wuerde jeden 60-Min-Gap zerstoeren
-                    var _pCandGap60 = (function() {
-                        var _pg60End = _sleepSearchBase.getTime() + 10 * 3600000;
-                        var _pgEvts = sleepSearchEvents.filter(function(e) {
-                            if (e.personTag !== person) return false;
-                            if (!(e.isFP2Bed || (e.isVibrationBed && !e.isVibrationStrength))) return false;
-                            var hr = new Date(e.timestamp||0).getHours();
-                            return hr >= 21 || hr < 4;
-                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                        for (var _pgi = 0; _pgi < _pgEvts.length; _pgi++) {
-                            var _pgTs = _pgEvts[_pgi].timestamp||0;
-                            var _pgNext = (_pgi < _pgEvts.length - 1) ? (_pgEvts[_pgi+1].timestamp||0) : _pg60End;
-                            if (_pgNext - _pgTs >= 60*60*1000) return _pgTs;
-                        }
-                        return null;
-                    })();
-                    var _pCandLastOutside = null; // computed inline in last_outside block below
-                    var _pCandHausStill = null;   // computed inline in haus_still block below
-
-                    // --- Stufe 1: FP2 + Vibration (fp2_vib) ---
-                    var _pFp2Anchor = _pFindGapAnchor(function(e){ return e.isFP2Bed; }, 60*60*1000);
-                    if (_pFp2Anchor) {
-                        var _pFp2VibTs = _pVibRefine(_pFp2Anchor);
-                        if (_pFp2VibTs) {
-                            _pSleepStart = _pFp2VibTs;
-                            _pSleepStartSrc = 'fp2_vib';
-                            _self.log.debug('[Per-Person fp2_vib] ' + person + ': ' + new Date(_pSleepStart).toISOString());
-                        }
-                    }
-
-                    // --- Stufe 2: FP2 allein (fp2) ---
-                    if (!_pSleepStart && _pFp2Anchor) {
-                        _pSleepStart = _pFp2Anchor;
-                        _pSleepStartSrc = 'fp2';
-                        _self.log.debug('[Per-Person fp2] ' + person + ': ' + new Date(_pSleepStart).toISOString());
-                    }
-
-                    // --- Stufe 3: Motion + Vibration (motion_vib) ---
-                    // Anker aus pre-compute (letztes Motion-Event + >=30 Min Pause, identisch mit global)
-                    // _pVibRefine nutzt nur Trigger-true (kein Strength) -- verfeinert nur wenn echte Bewegungspause
-                    if (!_pSleepStart && _pCandMotVib) {
-                        _pSleepStart = _pCandMotVib;
-                        _pSleepStartSrc = 'motion_vib';
-                        _self.log.debug('[Per-Person motion_vib] ' + person + ': ' + new Date(_pSleepStart).toISOString());
-                    }
-
-                    // --- Stufe 3b: Motion allein (motion) ---
-                    // Fallback wenn motion_vib null (kein Trigger-Gap). Anker direkt = guter Schaetzwert.
-                    if (!_pSleepStart && _pCandMotion) {
-                        _pSleepStart = _pCandMotion;
-                        _pSleepStartSrc = 'motion';
-                        _self.log.debug('[Per-Person motion] ' + person + ': ' + new Date(_pSleepStart).toISOString());
-                    }
-
-                    // --- Stufe 4: vib_refined / gap60 (direkter Forward-Scan, identisch mit global) ---
-                    if (!_pSleepStart && _pCandVibRefined) {
-                        _pSleepStart = _pCandVibRefined;
-                        _pSleepStartSrc = 'vib_refined';
-                        _self.log.debug('[Per-Person vib_refined] ' + person + ': ' + new Date(_pSleepStart).toISOString());
-                    }
-                    if (!_pSleepStart && _pCandGap60) {
-                        _pSleepStart = _pCandGap60;
-                        _pSleepStartSrc = 'gap60';
-                        _self.log.debug('[Per-Person gap60] ' + person + ': ' + new Date(_pSleepStart).toISOString());
-                    }
-
-                    // --- Stufe 5: Letzter Aussenort (last_outside) ---
-                    if (!_pSleepStart) {
-                        var _pExtEvts = sleepSearchEvents.filter(function(e) {
-                            if (!e.personTag || e.personTag !== person) return false;
-                            if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed) return false;
-                            return isActiveValue(e.value);
-                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                        var _pExtEve = _pExtEvts.filter(function(e) {
-                            var hr = new Date(e.timestamp||0).getHours();
-                            return hr >= 18 || hr < 2;
-                        });
-                        for (var _ploi = _pExtEve.length - 1; _ploi >= 0; _ploi--) {
-                            var _ploTs = _pExtEve[_ploi].timestamp||0;
-                            var _ploHasNext = _pExtEvts.some(function(e) {
-                                return (e.timestamp||0) > _ploTs && (e.timestamp||0) <= _ploTs + 30*60*1000;
-                            });
-                            if (!_ploHasNext) {
-                                var _ploBedAfter = null;
-                                for (var _plbi = 0; _plbi < _pBedEvts.length; _plbi++) {
-                                    if ((_pBedEvts[_plbi].timestamp||0) > _ploTs && isActiveValue(_pBedEvts[_plbi].value)) {
-                                        _ploBedAfter = _pBedEvts[_plbi].timestamp||0; break;
-                                    }
-                                }
-                                if (_ploBedAfter) { _pCandLastOutside = _ploBedAfter; _pSleepStart = _ploBedAfter; _pSleepStartSrc = 'last_outside'; break; }
-                            }
-                        }
-                    }
-
-                    // --- Stufe 6: Haus-wird-still (haus_still) ---
-                    if (!_pSleepStart) {
-                        var _pCommonEvts = sleepSearchEvents.filter(function(e) {
-                            var _isOtherP = e.personTag && e.personTag !== person;
-                            if (_isOtherP || e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion || e.isBathroomSensor) return false;
-                            return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
-                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                        var _pBedActive = _pBedEvts.filter(function(e){ return isActiveValue(e.value); });
-                        for (var _phsi = _pBedActive.length - 1; _phsi >= 0; _phsi--) {
-                            var _phsE = _pBedActive[_phsi];
-                            var _phsHr = new Date(_phsE.timestamp||0).getHours();
-                            if (!(_phsHr >= 18 || _phsHr < 2)) continue;
-                            var _phsTs = _phsE.timestamp||0;
-                            var _phsCommonAfter = _pCommonEvts.some(function(ce) {
-                                return (ce.timestamp||0) > _phsTs && (ce.timestamp||0) <= _phsTs + 30*60*1000;
-                            });
-                            if (!_phsCommonAfter) { _pCandHausStill = _phsTs; _pSleepStart = _phsTs; _pSleepStartSrc = 'haus_still'; break; }
-                        }
-                    }
-
-                    // Fallback: Person hatte Bett-Events aber keinen Einschlafzeitpunkt (z.B. vor winStart eingeschlafen)
-                    if (!_pSleepStart && _pBedEvts.length > 0) { _pSleepStart = winStart; }
-                    // Andere-Raum-Events (nicht Bett, nicht Bad, nicht andere Person) nach 04:00, max 12:00
-                    var _pOtherEvts = sleepSearchEvents.filter(function(e) {
-                        var _isBed = e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion;
-                        var _isOtherPers = e.personTag && e.personTag !== person;
-                        if (_isBed || e.isBathroomSensor || _isOtherPers) return false;
-                        return (e.type === 'motion' || e.type === 'presence_radar_bool')
-                            && (e.timestamp||0) >= _p4am.getTime()
-                            && (e.timestamp||0) >= _pMinSlTs
-                            && (e.timestamp||0) <= _wakeHardCapMs;
-                    }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                    // OC-19 Return-to-Bed: Letzte Abfahrt ohne Rueckkehr ins eigene Schlafzimmer
-                    var _pWakeTs = null; var _pWakeSrc = null;
-                    // Return-to-Bed: Strength allein reicht nicht als Rueckkehr-Beleg (feuert im leeren Bett).
-                    // Trigger-true oder Bedroom-Motion beweisen echte Bett-Rueckkehr.
-                    // Fallback auf Strength nur wenn kein Trigger vorhanden (strength-only Setup).
-                    var _pHasTriggerAfter4 = _pBedEvts.some(function(e) {
-                        return e.isVibrationBed && !e.isVibrationStrength && isActiveValue(e.value)
-                            && (e.timestamp||0) >= _p4am.getTime();
-                    });
-                    var _pBedRetRaw = _pBedEvts.filter(function(e) {
-                        if ((e.timestamp||0) < _p4am.getTime() || (e.timestamp||0) > _wakeHardCapMs) return false;
-                        if (e.isFP2Bed) return true;
-                        if (e.isBedroomMotion && isActiveValue(e.value)) return true;
-                        if (e.isVibrationBed && !e.isVibrationStrength && isActiveValue(e.value)) return true;
-                        // Strength nur akzeptieren wenn kein Trigger konfiguriert (strength-only Setup)
-                        if (e.isVibrationStrength && !_pHasTriggerAfter4) return true;
-                        return false;
-                    });
-                    // Sustained-Filter: kurze Tages-SZ-Eintraege (nach 10:00, isoliert) kein Bett-Return
-                    var _pBedRet = _pBedRetRaw.filter(function(e, idx) {
-                        if (e.isFP2Bed) return true;
-                        var _eTs = e.timestamp||0;
-                        if (new Date(_eTs).getHours() < 10) return true;
-                        var _pp = idx > 0 ? (_pBedRetRaw[idx-1].timestamp||0) : 0;
-                        var _pn = idx < _pBedRetRaw.length - 1 ? (_pBedRetRaw[idx+1].timestamp||0) : Infinity;
-                        return (_eTs - _pp <= 15*60*1000) || (_pn - _eTs <= 15*60*1000);
-                    });
-                    if (_pOtherEvts.length > 0) {
-                        var _pCi2 = 0;
-                        while (_pCi2 < _pOtherEvts.length) {
-                            var _pDep2 = _pOtherEvts[_pCi2].timestamp || 0;
-                            var _pRet2 = null;
-                            for (var _pBi2 = 0; _pBi2 < _pBedRet.length; _pBi2++) {
-                                if ((_pBedRet[_pBi2].timestamp||0) > _pDep2 + 2*60*1000) { _pRet2 = _pBedRet[_pBi2]; break; }
-                            }
-                            if (!_pRet2) { _pWakeTs = _pDep2; _pWakeSrc = 'other'; break; }
-                            var _pRetTs2 = _pRet2.timestamp || 0;
-                            var _pNi2 = -1;
-                            for (var _pJ2 = _pCi2 + 1; _pJ2 < _pOtherEvts.length; _pJ2++) {
-                                if ((_pOtherEvts[_pJ2].timestamp||0) > _pRetTs2 + 2*60*1000) { _pNi2 = _pJ2; break; }
-                            }
-                            if (_pNi2 === -1) { _pWakeTs = null; break; }
-                            _pCi2 = _pNi2;
-                        }
-                    }
-                    // Fallback: letzter Bedroom-Event nach 04:00
-                    if (_pWakeTs === null && _pBedRet.length > 0) {
-                        _pWakeTs = _pBedRet[_pBedRet.length - 1].timestamp || null;
-                        _pWakeSrc = 'motion';
-                    }
-                    // Per-Person FROZEN: gespeicherte Aufwachzeit beibehalten wenn stabil
-                    // (>2h in Vergangenheit, Stunde >= 5) -> verhindert Aufwachzeit-Drift durch Tages-Bett-Events
-                    var _pExistSnap = _existingSnap && _existingSnap.personData && _existingSnap.personData[person]
-                        ? _existingSnap.personData[person] : null;
-                    if (_pExistSnap && _pExistSnap.sleepWindowEnd) {
-                        var _pExistWakeHr  = new Date(_pExistSnap.sleepWindowEnd).getHours();
-                        var _pExistWakeAge = Date.now() - _pExistSnap.sleepWindowEnd;
-                        if (_pExistWakeHr >= 5 && _pExistWakeAge > 2 * 3600000) {
-                            _pWakeTs  = _pExistSnap.sleepWindowEnd;
-                            _pWakeSrc = _pExistSnap.wakeSource || _pWakeSrc;
-                            _self.log.info('[Per-Person FROZEN] ' + person + ': Aufwachzeit eingefroren auf ' + new Date(_pWakeTs).toLocaleTimeString());
-                        }
-                    }
-                    // Per-Person Wake-Override
-                    var _pWakeOverrideApplied = false;
-                    var _pWovEntry = _personWakeOverrides && _personWakeOverrides[person] ? _personWakeOverrides[person] : null;
-                    if (_pWovEntry && _pWovEntry.date === sleepDate && _pWovEntry.ts) {
-                        _pWakeTs = _pWovEntry.ts;
-                        _pWakeSrc = _pWovEntry.source || 'override';
-                        _pWakeOverrideApplied = true;
-                        _self.log.info('[WakeOv-Person] ' + person + ': ' + _pWakeSrc + ' = ' + new Date(_pWakeTs).toISOString());
-                    }
-
-                    // Per-Person Override (OC-neu-C): manuelle Einschlafzeit-Korrektur
-                    var _pOvEntry = _personOverrides && _personOverrides[person] ? _personOverrides[person] : null;
-                    var _pOverrideApplied = false;
-                    if (_pOvEntry && _pOvEntry.date === sleepDate && _pOvEntry.ts) {
-                        var _pOvWinMin = _sleepSearchBase.getTime();
-                        var _pOvWinMax = _sleepSearchBase.getTime() + 10 * 3600000;
-                        if (_pOvEntry.ts >= _pOvWinMin && _pOvEntry.ts <= _pOvWinMax) {
-                            _pSleepStart = _pOvEntry.ts;
-                            _pSleepStartSrc = _pOvEntry.source || 'override';
-                            _pOverrideApplied = true;
-                            _self.log.info('[Per-Person Override] ' + person + ': ' + _pSleepStartSrc + ' = ' + new Date(_pSleepStart).toLocaleTimeString());
-                        }
-                    }
-                    // allSleepStartSources pro Person (fuer Tooltip im Frontend)
-                    var _pAllSleepSources = [
-                        { source: 'fp2_vib',      ts: _pCandFp2Vib },
-                        { source: 'fp2',          ts: _pCandFp2 },
-                        { source: 'motion_vib',   ts: _pCandMotVib },
-                        { source: 'motion',        ts: _pCandMotion },
-                        { source: 'vib_refined',  ts: _pCandVibRefined },
-                        { source: 'gap60',        ts: _pCandGap60 },
-                        { source: 'last_outside', ts: _pCandLastOutside },
-                        { source: 'haus_still',   ts: _pCandHausStill },
-                    ];
-                    // allWakeSources pro Person (alle kandidaten, override als aktive Quelle)
-                    var _pAllWakeSources = [
-                        { source: 'other',    ts: (_pWakeSrc === 'other'    || _pWakeSrc === 'override') ? _pWakeTs : null },
-                        { source: 'motion',   ts:  _pWakeSrc === 'motion'   ? _pWakeTs : null },
-                        { source: 'override', ts:  _pWakeOverrideApplied    ? _pWakeTs : null }
-                    ];
-                    // wakeConfirmed: nach 10:00 und mindestens 1h seit Aufwachzeit
-                    var _pWakeConfirmed = !!(_pWakeTs && new Date().getHours() >= 10 && (Date.now() - _pWakeTs) >= 3600000);
-                    // bedWasEmpty pro Person: keine eigenen Bett-Events im Schlaffenster
-                    var _pWinS_check = _pSleepStart || winStart;
-                    var _pWinE_check = _pWakeTs || Date.now();
-                    // Invertiertes Fenster (heute Abend eingeschlafen, wakeTs von heute Morgen): historisches Fenster nutzen
-                    var _pBedInWin = (_pWinS_check <= _pWinE_check)
-                        ? _pBedEvts.filter(function(e){ var ts=e.timestamp||0; return ts>=_pWinS_check && ts<=_pWinE_check; })
-                        : _pBedEvts.filter(function(e){ var ts=e.timestamp||0; return ts>=winStart && ts<=_pWinE_check; });
-                    var _pBedWasEmpty = _pBedInWin.length === 0;
-                    // Per-Person outsideBedEvents: Ausserhalb-Bett-Aktivitaeten im Schlaffenster (fuer OBE-Dreiecke im Frontend)
-                    var _pObe = [];
-                    var _pObeWinS = _pSleepStart || winStart;
-                    var _pObeWinE = _pWakeTs || Date.now();
-                    if (_pObeWinS < _pObeWinE) {
-                        var _pAllOutSrc = sleepSearchEvents.filter(function(e) {
-                            var ts = e.timestamp||0;
-                            if (ts < _pObeWinS || ts > _pObeWinE) return false;
-                            if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion) return false;
-                            if (e.personTag && e.personTag !== person) return false;
-                            if (!(e.type === 'motion' || e.type === 'presence_radar_bool') || !isActiveValue(e.value)) return false;
-                            return true;
-                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                        var _pObeCluster = null; var _pCGap = 5*60*1000; var _pCAfter = 3*60*1000;
-                        var _pPushCluster = function(c) {
-                            var dur = Math.max(1, Math.round((c.end - c.start) / 60000));
-                            if (c.hasBath) {
-                                _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'bathroom', confirmed: true, sensors: c.sensors||[] });
-                                if (c.hasOther) _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true, sensors: c.sensors||[] });
-                            } else {
-                                _pObe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true, sensors: c.sensors||[] });
-                            }
-                        };
-                        _pAllOutSrc.forEach(function(e) {
-                            var ts = e.timestamp||0;
-                            var _isBath = e.isBathroomSensor || bathroomIds.has(e.id);
-                            if (!_pObeCluster) {
-                                _pObeCluster = { start: ts, end: ts + _pCAfter, hasBath: _isBath, hasOther: !_isBath, sensors: [{name: e.name||e.id, location: e.location||'', isBathroomSensor: _isBath, timestamp: ts}] };
-                            } else if (ts <= _pObeCluster.end + _pCGap) {
-                                _pObeCluster.end = ts + _pCAfter;
-                                if (_isBath) _pObeCluster.hasBath = true; else _pObeCluster.hasOther = true;
-                                var _pSn = e.name||e.id; if (!_pObeCluster.sensors.some(function(s){return s.name===_pSn;})) _pObeCluster.sensors.push({name: _pSn, location: e.location||'', isBathroomSensor: _isBath, timestamp: ts});
-                            } else {
-                                _pPushCluster(_pObeCluster);
-                                _pObeCluster = { start: ts, end: ts + _pCAfter, hasBath: _isBath, hasOther: !_isBath, sensors: [{name: e.name||e.id, location: e.location||'', isBathroomSensor: _isBath, timestamp: ts}] };
-                            }
-                        });
-                        if (_pObeCluster) _pPushCluster(_pObeCluster);
-                    }
-                    // Per-Person Schlafphasen -- identischer Algorithmus wie globaler Stages-Block,
-                    // aber gefiltert auf Events dieser Person (e.personTag === person).
-                    var _pSleepStages = [];
-                    var _pStagesWinStart = _pSleepStart || winStart;
-                    var _pStagesWinEnd = _pWakeTs;
-                    if (!_pBedWasEmpty && _pStagesWinStart && _pStagesWinEnd && _pStagesWinEnd > _pStagesWinStart) {
-                        var _pSlotMs = 5 * 60 * 1000;
-                        var _pSlotCount = Math.ceil((_pStagesWinEnd - _pStagesWinStart) / _pSlotMs);
-                        var _pVibDetEvts = sleepSearchEvents.filter(function(e) {
-                            return e.isVibrationBed && e.personTag === person
-                                && (e.timestamp||0) >= _pStagesWinStart && (e.timestamp||0) <= _pStagesWinEnd
-                                && (isActiveValue(e.value) || toPersonCount(e.value) > 0);
-                        });
-                        var _pVibStrEvts = sleepSearchEvents.filter(function(e) {
-                            return e.isVibrationStrength && e.personTag === person
-                                && (e.timestamp||0) >= _pStagesWinStart && (e.timestamp||0) <= _pStagesWinEnd;
-                        });
-                        var _pConsecQuiet = 0;
-                        for (var _psi = 0; _psi < _pSlotCount; _psi++) {
-                            var _psSlotS = _pStagesWinStart + _psi * _pSlotMs;
-                            var _psSlotE = _psSlotS + _pSlotMs;
-                            var _psDet = _pVibDetEvts.filter(function(e) { return (e.timestamp||0) >= _psSlotS && (e.timestamp||0) < _psSlotE; }).length;
-                            var _psStrArr = _pVibStrEvts.filter(function(e) { return (e.timestamp||0) >= _psSlotS && (e.timestamp||0) < _psSlotE; })
-                                .map(function(e) { return typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0; });
-                            var _psStrMax = _psStrArr.length > 0 ? Math.max.apply(null, _psStrArr) : 0;
-                            var _psHrsIn = (_psSlotS - _pStagesWinStart) / 3600000;
-                            var _psStage;
-                            if (_psDet === 0) {
-                                _pConsecQuiet++;
-                                _psStage = _pConsecQuiet >= 5 ? 'deep' : 'light';
-                            } else if (_psDet >= 5 || _psStrMax > 28) {
-                                _pConsecQuiet = 0;
-                                _psStage = 'wake';
-                            } else if (_psDet >= 2 && _psHrsIn >= 2.5 && _psStrMax >= 12 && _psStrMax <= 28) {
-                                _pConsecQuiet = 0;
-                                _psStage = 'rem';
-                            } else {
-                                _pConsecQuiet = 0;
-                                _psStage = 'light';
-                            }
-                            _pSleepStages.push({ t: _psi * 5, s: _psStage });
-                        }
-                        _self.log.debug('[Per-Person Stages] ' + person + ': ' + _pSleepStages.length + ' Slots ('
-                            + new Date(_pStagesWinStart).toLocaleTimeString() + '-' + new Date(_pStagesWinEnd).toLocaleTimeString() + ')');
+                    var sleepOnsetMin = null;
+                    if (_pResult.sleepWindowStart) {
+                        sleepOnsetMin = Math.round((_pResult.sleepWindowStart - new Date(_pResult.sleepWindowStart).setHours(0,0,0,0)) / 60000);
                     }
                     result[person] = {
-                        nightActivityCount: nightActivityCount,
-                        wakeTimeMin: wakeTimeMin,
-                        sleepOnsetMin: sleepOnsetMin,
-                        nocturiaAttr: nocturiaAttr,
-                        sleepWindowStart: _pSleepStart,
-                        sleepWindowEnd: _pWakeTs,
-                        wakeSource: _pWakeSrc || null,
-                        wakeConf: _pWakeTs ? (_pWakeSrc === 'other' ? 'mittel' : 'niedrig') : 'niedrig',
-                        sleepStartSource: _pSleepStartSrc,
-                        sleepStartOverridden: _pOverrideApplied,
-                        allSleepStartSources: _pAllSleepSources,
-                        allWakeSources: _pAllWakeSources,
-                        wakeConfirmed: _pWakeConfirmed,
-                        wakeOverridden: _pWakeOverrideApplied,
-                        bedWasEmpty: _pBedWasEmpty,
-                        outsideBedEvents: _pObe,
-                        sleepStages: _pSleepStages,
-                        stagesWindowStart: _pStagesWinStart
+                        nightActivityCount:   nightActivityCount,
+                        wakeTimeMin:          wakeTimeMin,
+                        sleepOnsetMin:        sleepOnsetMin,
+                        nocturiaAttr:         nocturiaAttr,
+                        sleepWindowStart:     _pResult.sleepWindowStart,
+                        sleepWindowEnd:       _pResult.sleepWindowEnd,
+                        wakeSource:           _pResult.wakeSource,
+                        wakeConf:             _pResult.wakeConf,
+                        sleepStartSource:     _pResult.sleepStartSource,
+                        sleepStartOverridden: _pResult.sleepStartOverridden,
+                        allSleepStartSources: _pResult.allSleepStartSources,
+                        allWakeSources:       _pResult.allWakeSources,
+                        wakeConfirmed:        _pResult.wakeConfirmed,
+                        wakeOverridden:       _pResult.wakeOverridden,
+                        bedWasEmpty:          _pResult.bedWasEmpty,
+                        outsideBedEvents:     _pResult.outsideBedEvents,
+                        sleepStages:          _pResult.sleepStages,
+                        stagesWindowStart:    _pResult.stagesWindowStart,
+                        sleepScore:           _pResult.sleepScore,
+                        sleepScoreRaw:        _pResult.sleepScoreRaw
                     };
                 });
                 return result;
             })();
+
             try { await this.setStateAsync('system.personData', { val: JSON.stringify(personData), ack: true }); } catch(e) {}
 
 

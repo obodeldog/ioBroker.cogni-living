@@ -559,6 +559,53 @@ export default function SensorList(props) {
                             Andere Smartwatch-Adapter (Polar, Withings, Fitbit …) können ebenfalls eingetragen werden —
                             solange die Objekte numerische Werte und Unix-ms-Timestamps liefern.
                         </Box>
+
+                        {/* Garmin pro Person (Mehrpersonenhaushalt) */}
+                        {(() => {
+                            const persons = Array.from(new Set(
+                                (native?.devices || [])
+                                    .map((d: any) => (d.personTag || '').trim())
+                                    .filter((p: string) => p.length > 0)
+                            )) as string[];
+                            if (persons.length < 2) return null;
+                            const assignment: Record<string, string> = (native?.garminPersonAssignment && typeof native.garminPersonAssignment === 'object')
+                                ? native.garminPersonAssignment : {};
+                            return (
+                                <Box sx={{ mt: 1.5, pt: 1, borderTop: `1px dashed ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}` }}>
+                                    <Box sx={{ fontSize: "0.7rem", fontWeight: 600, mb: 0.8, color: isDark ? '#90caf9' : '#1565c0' }}>
+                                        👤 Smartwatch pro Person (Mehrpersonenhaushalt)
+                                    </Box>
+                                    <Box sx={{ fontSize: "0.65rem", color: "text.secondary", mb: 1, lineHeight: 1.5 }}>
+                                        Trage den Adapter-Präfix (z.B. <code>garmin.0</code> oder <code>garmin.1</code>) für jede Person ein.
+                                        Der Adapter muss dieselbe Objektstruktur wie der Standard-Garmin-Adapter verwenden.
+                                    </Box>
+                                    {persons.map((person: string) => {
+                                        const val = assignment[person] || '';
+                                        return (
+                                            <Box key={person} sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.7 }}>
+                                                <Typography variant="caption" sx={{ flex: '0 0 80px', fontWeight: 500, fontSize: '0.72rem', color: 'text.secondary' }}>
+                                                    {person}
+                                                </Typography>
+                                                <TextField
+                                                    label={`Garmin-Präfix für ${person}`}
+                                                    value={val}
+                                                    onChange={e => {
+                                                        const newAssign = { ...assignment, [person]: e.target.value };
+                                                        if (!e.target.value) delete newAssign[person];
+                                                        onNativeChange && onNativeChange('garminPersonAssignment', newAssign);
+                                                    }}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    fullWidth
+                                                    placeholder="garmin.0"
+                                                    sx={{ "& .MuiInputBase-input": { fontSize: "0.72rem" }, "& .MuiInputLabel-root": { fontSize: "0.72rem" } }}
+                                                />
+                                            </Box>
+                                        );
+                                    })}
+                                </Box>
+                            );
+                        })()}
                     </Box>
                 </Collapse>
             </Box>
