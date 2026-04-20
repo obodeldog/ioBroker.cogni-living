@@ -2181,6 +2181,7 @@ class CogniLiving extends utils.Adapter {
                 if (Object.keys(personSensorIds).length === 0) return result;
                 var winStart = sleepWindowCalc.start || sleepWindowOC7.start || _sleepSearchBase.getTime(); // Fallback: gestern 18:00 (analog _sleepSearchBase) statt 22:00 heute
                 var winEnd   = sleepWindowCalc.end   || (function(){ var d=new Date(); d.setHours(6,0,0,0); if(d.getTime()<winStart) d.setDate(d.getDate()+1); return d.getTime(); })();
+                var _wakeHardCapMs = (function(){ var _d = new Date(); _d.setHours(12, 0, 0, 0); return _d.getTime(); })();
                 Object.keys(personSensorIds).forEach(function(person) {
                     var ids = personSensorIds[person];
                     var personEvents = todayEvents.filter(function(e) { return ids.has(e.id); });
