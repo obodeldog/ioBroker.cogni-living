@@ -195,16 +195,50 @@ function computePersonSleep(p) {
         sleepStart = startOverride.ts; sleepStartSrc = startOverride.source || 'override'; overrideApplied = true;
         if (log) log.info(logPfx + 'Override: ' + sleepStartSrc + ' = ' + new Date(sleepStart).toISOString());
     }
-    if (!overrideApplied) {
-        if (garminTs)          { sleepStart = garminTs;       sleepStartSrc = 'garmin';       if (log) log.info(logPfx  + 'Garmin: '       + new Date(sleepStart).toISOString()); }
-        else if (candFp2Vib)   { sleepStart = candFp2Vib;     sleepStartSrc = 'fp2_vib';      if (log) log.debug(logPfx + 'fp2_vib: '      + new Date(sleepStart).toISOString()); }
-        else if (candFp2)      { sleepStart = candFp2;        sleepStartSrc = 'fp2';          if (log) log.debug(logPfx + 'fp2: '          + new Date(sleepStart).toISOString()); }
-        else if (candMotVib)   { sleepStart = candMotVib;     sleepStartSrc = 'motion_vib';   if (log) log.debug(logPfx + 'motion_vib: '   + new Date(sleepStart).toISOString()); }
-        else if (candMotion)   { sleepStart = candMotion;     sleepStartSrc = 'motion';       if (log) log.debug(logPfx + 'motion: '       + new Date(sleepStart).toISOString()); }
-        else if (candVibRefined) { sleepStart = candVibRefined; sleepStartSrc = 'vib_refined'; if (log) log.debug(logPfx + 'vib_refined: '  + new Date(sleepStart).toISOString()); }
-        else if (candGap60)    { sleepStart = candGap60;      sleepStartSrc = 'gap60';        if (log) log.debug(logPfx + 'gap60: '        + new Date(sleepStart).toISOString()); }
-        else if (candLastOutside) { sleepStart = candLastOutside; sleepStartSrc = 'last_outside'; if (log) log.debug(logPfx + 'last_outside: ' + new Date(sleepStart).toISOString()); }
-        else if (hausStillTs)  { sleepStart = hausStillTs;    sleepStartSrc = 'haus_still';   if (log) log.debug(logPfx + 'haus_still: '   + new Date(sleepStart).toISOString()); }
+        if (!overrideApplied) {
+        // Cluster-basierte Einschlafzeit-Auswahl
+        // Stufe 1: Trusted (Garmin/FP2) immer vorrangig
+        // Stufe 2: Dominantester Cluster innerhalb 90 Min fuer restliche Quellen
+        var _sleepCandAll = [
+            { source: 'garmin',       ts: garminTs,        prio: 0 },
+            { source: 'fp2_vib',      ts: candFp2Vib,      prio: 1 },
+            { source: 'fp2',          ts: candFp2,          prio: 2 },
+            { source: 'vib_refined',  ts: candVibRefined,   prio: 3 },
+            { source: 'motion_vib',   ts: candMotVib,       prio: 4 },
+            { source: 'gap60',        ts: candGap60,        prio: 5 },
+            { source: 'motion',       ts: candMotion,       prio: 6 },
+            { source: 'last_outside', ts: candLastOutside,  prio: 7 },
+            { source: 'haus_still',   ts: hausStillTs,      prio: 8 }
+        ].filter(function(c) { return c.ts != null; });
+
+        if (_sleepCandAll.length > 0) {
+            var _trusted = _sleepCandAll.filter(function(c) { return c.prio <= 2; });
+            if (_trusted.length > 0) {
+                var _t = _trusted[0];
+                sleepStart = _t.ts; sleepStartSrc = _t.source;
+                if (log) log.info(logPfx + 'Onset trusted: ' + _t.source + ' @ ' + new Date(sleepStart).toISOString());
+            } else {
+                var _CWIN = 90 * 60 * 1000;
+                var _bestCluster = null; var _bestCount = 0;
+                for (var _ci = 0; _ci < _sleepCandAll.length; _ci++) {
+                    var _cAnchor = _sleepCandAll[_ci].ts;
+                    var _cGrp = _sleepCandAll.filter(function(c) { return Math.abs(c.ts - _cAnchor) <= _CWIN; });
+                    if (_cGrp.length > _bestCount || (_cGrp.length === _bestCount && (!_bestCluster || _cAnchor < _bestCluster[0].ts))) {
+                        _bestCount = _cGrp.length; _bestCluster = _cGrp;
+                    }
+                }
+                if (_bestCluster && _bestCluster.length > 0) {
+                    _bestCluster.sort(function(a,b) { return a.prio - b.prio; });
+                    var _winner = _bestCluster[0];
+                    sleepStart = _winner.ts; sleepStartSrc = _winner.source;
+                    if (log) {
+                        log.debug(logPfx + 'Onset Cluster ' + _bestCluster.length + '/' + _sleepCandAll.length + ': ' + _winner.source + ' @ ' + new Date(sleepStart).toLocaleTimeString());
+                        var _outliers = _sleepCandAll.filter(function(c) { return _bestCluster.indexOf(c) < 0; });
+                        if (_outliers.length > 0) log.debug(logPfx + 'Onset Ausreisser: ' + _outliers.map(function(c){return c.source+'@'+new Date(c.ts).toLocaleTimeString();}).join(', '));
+                    }
+                }
+            }
+        }
     }
 
     var allSleepStartSources = [
@@ -304,6 +338,21 @@ function computePersonSleep(p) {
         _fp2VibWakeTs = Math.min(fp2WakeTs, _vibWakeTs);
     }
 
+    // motionVibWakeTs: Schlafzimmer-BM + Vibrations-Bestaetigung (Pendant zu fp2_vib fuer Haeuser ohne Radar)
+    // Findet: Ersten Schlafzimmer-BM-Abgang nach 04:00 bei dem in den vorangehenden 30 Min Vibration war
+    var _motionVibWakeTs = null;
+    var _bedroomMotEvts = allEvents.filter(function(e) {
+        return e.isBedroomMotion && isMine(e) && !isOtherPerson(e)
+            && (e.timestamp||0) >= p4amTs && (e.timestamp||0) >= minSlTs && (e.timestamp||0) <= wakeHardCap;
+    }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+    if (_bedroomMotEvts.length > 0) {
+        var _bmFirst = _bedroomMotEvts[0].timestamp || 0;
+        var _bmVibBefore = _vibEvtsWk.some(function(e) {
+            return (e.timestamp||0) >= _bmFirst - 30*60*1000 && (e.timestamp||0) <= _bmFirst;
+        });
+        if (_bmVibBefore) _motionVibWakeTs = _bmFirst;
+    }
+
     // otherRoomWakeTs explizit (fuer allWakeSources)
     var _otherRoomWakeTs = null;
 
@@ -326,6 +375,7 @@ function computePersonSleep(p) {
             ci = ni;
         }
     }
+    if (!wakeTs && _motionVibWakeTs) { wakeTs = _motionVibWakeTs; wakeSrc = 'motion_vib'; }
     if (!wakeTs && _vibAloneWakeTs) { wakeTs = _vibAloneWakeTs; wakeSrc = 'vibration_alone'; }
     if (wakeTs === null && bedRet.length > 0) { wakeTs = bedRet[bedRet.length - 1].timestamp || null; wakeSrc = 'motion'; }
 
@@ -349,6 +399,7 @@ function computePersonSleep(p) {
         { source: 'fp2',             ts: fp2WakeTs          || null },
         { source: 'fp2_other',       ts: _fp2OtherWakeTs    || null },
         { source: 'other',           ts: _otherRoomWakeTs   || null },
+        { source: 'motion_vib',       ts: _motionVibWakeTs   || null },
         { source: 'vibration_alone', ts: _vibAloneWakeTs    || null },
         { source: 'vibration',       ts: _vibWakeTs         || null },
         { source: 'motion',          ts: wakeSrc === 'motion' ? wakeTs : null },
@@ -1404,7 +1455,7 @@ class CogniLiving extends utils.Adapter {
                 fp2RawStart:  _fp2RawStart,
                 garminTs:     garminSleepStartTs,
                 garminWakeTs: null,
-                fp2WakeTs:    null,
+                fp2WakeTs:    sleepWindowCalc.firstEmpty || null,
                 searchBase:   _sleepSearchBase,
                 wakeHardCap:  (function(){ var d=new Date(); d.setHours(12,0,0,0); return d.getTime(); })(),
                 startOverride: null,
@@ -1417,17 +1468,13 @@ class CogniLiving extends utils.Adapter {
 
             // Kandidaten aus Funktionsergebnis extrahieren (fuer Priority-Chain und sleepWindowSource)
             var _findSrc = function(src) { return (_gR.allSleepStartSources.find(function(s){return s.source===src;})||{}).ts||null; };
-            vibRefinedSleepStartTs   = _findSrc('fp2_vib');
+            vibRefinedSleepStartTs   = _findSrc('vib_refined');
             var motionVibSleepStartTs  = _findSrc('motion_vib');
             var lastOutsideSleepStartTs = _findSrc('last_outside');
             var sleepWindowMotion    = { start: _gR._motionAnchor, end: null };
             var sleepWindowHausStill = { start: _gR._hausStillTs,  end: null };
             var allSleepStartSources = _gR.allSleepStartSources;
-            var sleepStartSource = _fp2RawStart ? 'fp2'
-                : (motionVibSleepStartTs ? 'motion_vib'
-                : (lastOutsideSleepStartTs ? 'last_outside'
-                : (sleepWindowHausStill.start ? 'haus_still'
-                : (sleepWindowMotion.start ? 'motion' : 'fixed'))));
+            var sleepStartSource = _gR.sleepWindowSource || 'fixed';
 
             // OC-23: Manueller Override der Einschlafzeit-Quelle
             var _overrideApplied = false;
@@ -1502,17 +1549,19 @@ class CogniLiving extends utils.Adapter {
             // Betrifft NICHT sleepWindowStart/End im Snapshot -- die Schlafzeit-Kachel bleibt FP2-only.
             var sleepWindowOC7 = sleepWindowCalc.start
                 ? sleepWindowCalc
-                : sleepWindowHausStill.start
-                    ? sleepWindowHausStill
-                    : sleepWindowMotion.start
-                        ? sleepWindowMotion
-                        : (function() {
-                            var _fs = _sleepSearchBase.getTime() + 2 * 3600000; // 20:00 Uhr
-                            var _fe = _fs + 13 * 3600000;                       // 09:00 naechster Morgen
-                            if (_fs > Date.now()) return { start: null, end: null };
-                            if (_fe > Date.now()) _fe = Date.now();
-                            return { start: _fs, end: _fe };
-                        })();
+                : (_gR.sleepWindowStart
+                    ? { start: _gR.sleepWindowStart, end: sleepWindowCalc.end || null, firstEmpty: null }
+                    : (sleepWindowHausStill.start
+                        ? sleepWindowHausStill
+                        : (sleepWindowMotion.start
+                            ? sleepWindowMotion
+                            : (function() {
+                                var _fs = _sleepSearchBase.getTime() + 2 * 3600000;
+                                var _fe = _fs + 13 * 3600000;
+                                if (_fs > Date.now()) return { start: null, end: null };
+                                if (_fe > Date.now()) _fe = Date.now();
+                                return { start: _fs, end: _fe };
+                            })())));
 
             // FP2-Roh-Aufwachzeit vor Garmin-Override sichern (fuer allWakeSources)
             var _fp2RawWakeTs = sleepWindowCalc.firstEmpty || null;  // FP2-Abgangzeit vor Garmin-Override
@@ -1602,8 +1651,8 @@ class CogniLiving extends utils.Adapter {
             var _motionAvail = sleepWindowMotion.start !== null;
             var _hausStillAvail = sleepWindowHausStill.start !== null;
             var sleepWindowSource = _sleepFrozen
-                ? (_existingSnap.sleepWindowSource || (_origFP2Window ? 'fp2' : (_hausStillAvail ? 'haus_still' : (_motionAvail ? 'motion' : 'fixed'))))
-                : (_origFP2Window ? 'fp2' : (_hausStillAvail ? 'haus_still' : (_motionAvail ? 'motion' : 'fixed')));
+                ? (_existingSnap.sleepWindowSource || _gR.sleepWindowSource || 'fixed')
+                : (_gR.sleepWindowSource || 'fixed');
 
             // Au+?erhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
             var outsideBedEvents = [];
@@ -1841,129 +1890,19 @@ class CogniLiving extends utils.Adapter {
 
             // Vibrationssensor-Best+?tigung: Letztes Vib-Event vor FP2-Leer-Signal (-?30min)
             // Erh+?ht Konfidenz, +?ndert aber nicht den Timestamp
-            var vibWakeConfirm = false;
-            if (fp2WakeTs && sleepWindowOC7.start) {
-                var _vibWakeSearch = sleepSearchEvents.filter(function(e) {
-                    return e.isVibrationBed && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
-                        && (e.timestamp||0) >= fp2WakeTs - 30*60*1000
-                        && (e.timestamp||0) <= fp2WakeTs;  // nur Events VOR Abgang
-                });
-                if (_vibWakeSearch.length > 0) vibWakeConfirm = true;
-            }
-
-            // Wake-Kandidaten mit echten Timestamps berechnen
-            var _4amTs = new Date(); _4amTs.setHours(4,0,0,0); var _4amMs = _4amTs.getTime();
-            var _wakeMinSleepTs = (sleepWindowOC7.start || 0) + 3*3600000; // mind. 3h Schlaf
-            // Hard Cap: Aufwachzeit max. 12:00 Uhr (kurze Tageseintraege nicht als Wake werten)
-            var _wakeHardCapTs = new Date(); _wakeHardCapTs.setHours(12, 0, 0, 0);
-            var _wakeHardCapMs = _wakeHardCapTs.getTime();
-
-            // otherRoomWakeTs: Letzte Abfahrt ohne Rueckkehr (OC-19 Return-to-Bed + OC-18 Problem-A-Fix)
-            // Problem A: isBedroomMotion ausgeschlossen (andere Schlafzimmer sind kein "anderer Raum")
-            var otherRoomWakeTs = null;
-            var _otherRoomEvts = sleepSearchEvents.filter(function(e) {
-                return !e.isFP2Bed && !e.isVibrationBed && !e.isBathroomSensor && !e.isBedroomMotion
-                    && (e.type === 'motion' || e.type === 'presence_radar_bool')
-                    && (e.timestamp||0) >= _4amMs
-                    && (e.timestamp||0) >= _wakeMinSleepTs
-                    && (e.timestamp||0) <= _wakeHardCapMs;
-            }).sort(function(a,b) { return (a.timestamp||0) - (b.timestamp||0); });
-            // Forward-Scan: erste andere-Raum-Bewegung nach 04:00 und Mindestschlaf
-            if (_otherRoomEvts.length > 0) {
-                otherRoomWakeTs = _otherRoomEvts[0].timestamp || null;
-            }
-
-            // fp2OtherWakeTs: erste andere-Raum-Bewegung nach FP2-Abgang (Forward-Scan, max. +60 Min)
-            var fp2OtherWakeTs = null;
-            if (sleepWindowSource === 'fp2' && fp2WakeTs) {
-                var _fp2OtherEvts = sleepSearchEvents.filter(function(e) {
-                    return !e.isFP2Bed && !e.isVibrationBed && !e.isBathroomSensor && !e.isBedroomMotion
-                        && (e.type === 'motion' || e.type === 'presence_radar_bool')
-                        && (e.timestamp||0) >= fp2WakeTs
-                        && (e.timestamp||0) <= fp2WakeTs + 60*60*1000;
-                }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-                if (_fp2OtherEvts.length > 0) fp2OtherWakeTs = _fp2OtherEvts[0].timestamp || null;
-            }
-
-            // vibAloneWakeTs: letztes Vib-Event mit >=45 Min Stille danach
-            var vibAloneWakeTs = null;
-            var vibWakeTs = null;
-            var _vibEvtsAfter4 = sleepSearchEvents.filter(function(e) {
-                return e.isVibrationBed && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
-                    && (e.timestamp||0) >= _4amMs
-                    && (e.timestamp||0) >= _wakeMinSleepTs;
-            }).sort(function(a,b) { return (a.timestamp||0) - (b.timestamp||0); });
-            for (var _vwi = 0; _vwi < _vibEvtsAfter4.length; _vwi++) {
-                var _vwTs = _vibEvtsAfter4[_vwi].timestamp||0;
-                var _vwNextTs = _vibEvtsAfter4[_vwi+1] ? (_vibEvtsAfter4[_vwi+1].timestamp||0) : null;
-                if (!_vwNextTs || _vwNextTs - _vwTs >= 45*60*1000) { vibAloneWakeTs = _vwTs; }
-            }
-            if (_vibWakeSearch && _vibWakeSearch.length > 0) {
-                var _vwSorted = _vibWakeSearch.slice().sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
-                vibWakeTs = _vwSorted[0].timestamp||null;
-            }
-
-            // fp2VibWakeTs: kombinierte Quelle (FP2 + Vib) bei enger Korrelation und optionalem Outside-Bestaetiger
-            var fp2VibWakeTs = null;
-            if (fp2WakeTs && vibWakeTs && Math.abs(vibWakeTs - fp2WakeTs) <= 12*60*1000) {
-                var _outsideNearVib = outsideBedEvents.some(function(evt) {
-                    return (evt.start || 0) >= vibWakeTs && (evt.start || 0) <= vibWakeTs + 20*60*1000;
-                });
-                if (_outsideNearVib || vibWakeConfirm) {
-                    fp2VibWakeTs = Math.min(fp2WakeTs, vibWakeTs);
-                }
-            }
-
-            // allWakeSources: alle Kandidaten mit echten Timestamps
-            var allWakeSources = [
-                { source: 'garmin',          ts: garminWakeTs },
-                { source: 'fp2_vib',         ts: fp2VibWakeTs },
-                { source: 'fp2',             ts: fp2WakeTs },
-                { source: 'fp2_other',       ts: fp2OtherWakeTs },
-                { source: 'other',           ts: otherRoomWakeTs },
-                { source: 'motion',          ts: (sleepWindowSource === 'motion') ? fp2WakeTs : null },
-                { source: 'vibration_alone', ts: vibAloneWakeTs },
-                { source: 'vibration',       ts: vibWakeTs },
-                { source: 'fixed',           ts: (sleepWindowSource === 'fixed') ? fp2WakeTs : null }
-            ];
-
-            // wakeSource + wakeConf bestimmen
-            var wakeSource, wakeConf;
+            // ---- Aufwachzeit von computePersonSleep (Single-Source-of-Truth) ----
+            var allWakeSources = _gR.allWakeSources.map(function(s) {
+                return s.source === 'garmin' ? { source: 'garmin', ts: garminWakeTs || null } : s;
+            });
+            var wakeSource = garminWakeTs ? 'garmin' : (_gR.wakeSource || 'fixed');
+            var wakeConf   = garminWakeTs ? 'maximal' : (_gR.wakeConf   || 'niedrig');
             if (garminWakeTs) {
                 sleepWindowOC7.end = garminWakeTs;
-                wakeSource = 'garmin';
-                wakeConf   = 'maximal';
-                this.log.info('[Wake] Garmin-Override: ' + new Date(garminWakeTs).toISOString());
-            } else if (fp2VibWakeTs) {
-                sleepWindowOC7.end = fp2VibWakeTs;
-                wakeSource = 'fp2_vib';
-                wakeConf   = 'sehr_hoch';
-            } else if (fp2OtherWakeTs) {
-                sleepWindowOC7.end = fp2OtherWakeTs;
-                wakeSource = 'fp2_other';
-                wakeConf   = 'sehr_hoch';
-            } else if (sleepWindowSource === 'fp2' && vibWakeConfirm) {
-                wakeSource = 'fp2';
-                wakeConf   = 'sehr_hoch';
-            } else if (sleepWindowSource === 'fp2') {
-                wakeSource = 'fp2';
-                wakeConf   = 'hoch';
-            } else if (otherRoomWakeTs) {
-                sleepWindowOC7.end = otherRoomWakeTs;
-                wakeSource = 'other';
-                // Kein Schlafbeginn bekannt -> niedrigere Konfidenz fuer Aufwachzeit
-                wakeConf   = sleepWindowOC7.start ? 'mittel' : 'niedrig';
-            } else if (sleepWindowSource === 'motion') {
-                wakeSource = 'motion';
-                wakeConf   = 'mittel';
-            } else if (vibAloneWakeTs) {
-                sleepWindowOC7.end = vibAloneWakeTs;
-                wakeSource = 'vibration_alone';
-                wakeConf   = 'mittel';
-            } else {
-                wakeSource = 'fixed';
-                wakeConf   = 'niedrig';
+                this.log.info('[Wake] Garmin-Override (global): ' + new Date(garminWakeTs).toISOString());
+            } else if (_gR.sleepWindowEnd) {
+                sleepWindowOC7.end = _gR.sleepWindowEnd;
             }
+
 
             // OC-WakeOv: Manueller Override der Aufwachzeit (global)
             var _wakeOverrideApplied = false;
