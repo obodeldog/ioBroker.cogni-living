@@ -3187,7 +3187,12 @@ export default function HealthTab(props: any) {
                                 {personsWithSleep.map(pName => {
                                     const pd = personHistoryData[pName];
                                     const overrideData = {
-                                        sleepScore: null, sleepScoreRaw: null, sleepStages: pd.sleepStages ?? [],
+                                        sleepScore:          pd.sleepScore        ?? null,
+                                        sleepScoreRaw:       pd.sleepScoreRaw     ?? null,
+                                        sleepScoreCal:       pd.sleepScoreCal     ?? null,
+                                        sleepScoreCalNights: pd.sleepScoreCalNights ?? 0,
+                                        sleepScoreCalStatus: pd.sleepScoreCalStatus || 'uncalibrated',
+                                        sleepStages: pd.sleepStages ?? [],
                                         garminScore: null, garminDeepMin: null, garminLightMin: null, garminRemMin: null,
                                         sleepWindowStart:    pd.sleepWindowStart    ?? null,
                                         stagesWindowStart:   pd.stagesWindowStart   ?? pd.sleepWindowStart ?? null,

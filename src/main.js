@@ -2250,7 +2250,8 @@ class CogniLiving extends utils.Adapter {
                         sleepStages:          _pResult.sleepStages,
                         stagesWindowStart:    _pResult.stagesWindowStart,
                         sleepScore:           _pResult.sleepScore,
-                        sleepScoreRaw:        _pResult.sleepScoreRaw
+                        sleepScoreRaw:        _pResult.sleepScoreRaw,
+                        sleepScoreCalStatus:  'uncalibrated'
                     };
                 });
                 return result;
