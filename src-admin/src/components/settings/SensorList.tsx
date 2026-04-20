@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
     Box, TableContainer, Paper, Table, TableHead, TableRow, TableCell, Tooltip, TableBody,
     TextField, IconButton, Autocomplete, FormControl, Select, MenuItem, Checkbox, Button, Chip,
-    Collapse, CircularProgress, Alert
+    Collapse, CircularProgress, Alert, Typography
 } from "@mui/material";
 import BatteryAlertIcon from "@mui/icons-material/BatteryAlert";
 import Battery20Icon from "@mui/icons-material/Battery20";
@@ -79,13 +79,13 @@ function getSFColor(sfId) {
 const filter = createFilterOptions();
 
 const WEARABLE_FIELDS = [
-    { key: "garminSleepScoreStateId",  label: "Sleep-Score",           unit: "0–100",   example: "garmin.0.dailysleep.dailySleepDTO.sleepScores.overall.value",        tooltip: "ioBroker-Objekt-ID des Garmin Schlaf-Scores (0–100). Beispiel: garmin.0.dailysleep.dailySleepDTO.sleepScores.overall.value" },
+    { key: "garminSleepScoreStateId",  label: "Sleep-Score",           unit: "0â€“100",   example: "garmin.0.dailysleep.dailySleepDTO.sleepScores.overall.value",        tooltip: "ioBroker-Objekt-ID des Garmin Schlaf-Scores (0â€“100). Beispiel: garmin.0.dailysleep.dailySleepDTO.sleepScores.overall.value" },
     { key: "garminSleepStartStateId",  label: "Schlafbeginn (GMT-ms)", unit: "Unix-ms", example: "garmin.0.dailysleep.dailySleepDTO.sleepStartTimestampGMT",           tooltip: "ioBroker-Objekt-ID des Schlafbeginn-Timestamps (Unix-Millisekunden, GMT). Beispiel: garmin.0.dailysleep.dailySleepDTO.sleepStartTimestampGMT" },
     { key: "garminSleepEndStateId",    label: "Schlafende (GMT-ms)",   unit: "Unix-ms", example: "garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT",             tooltip: "ioBroker-Objekt-ID des Schlafende-Timestamps (Unix-Millisekunden, GMT). Beispiel: garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT" },
     { key: "garminDeepSleepStateId",   label: "Tiefschlaf (Sekunden)", unit: "sec",     example: "garmin.0.dailysleep.dailySleepDTO.deepSleepSeconds",                tooltip: "ioBroker-Objekt-ID der Tiefschlaf-Dauer in Sekunden. Beispiel: garmin.0.dailysleep.dailySleepDTO.deepSleepSeconds" },
     { key: "garminLightSleepStateId",  label: "Leichtschlaf (Sek.)",   unit: "sec",     example: "garmin.0.dailysleep.dailySleepDTO.lightSleepSeconds",               tooltip: "ioBroker-Objekt-ID der Leichtschlaf-Dauer in Sekunden. Beispiel: garmin.0.dailysleep.dailySleepDTO.lightSleepSeconds" },
     { key: "garminRemSleepStateId",    label: "REM-Schlaf (Sek.)",     unit: "sec",     example: "garmin.0.dailysleep.dailySleepDTO.remSleepSeconds",                 tooltip: "ioBroker-Objekt-ID der REM-Schlaf-Dauer in Sekunden. Beispiel: garmin.0.dailysleep.dailySleepDTO.remSleepSeconds" },
-    { key: "garminLastSyncStateId",    label: "Letzter Sync (Timestamp)", unit: "auto", example: "garmin.0.info.connection",                                          tooltip: "ioBroker-Objekt-ID eines Zustands, dessen letztes Update-Datum als Aktualitätsprüfung dient. Wird verwendet um festzustellen ob die Garmin-Verbindung noch aktiv ist. Empfehlung: garmin.0.info.connection oder ein beliebiger garmin.0-Wert der sich täglich ändert." },
+    { key: "garminLastSyncStateId",    label: "Letzter Sync (Timestamp)", unit: "auto", example: "garmin.0.info.connection",                                          tooltip: "ioBroker-Objekt-ID eines Zustands, dessen letztes Update-Datum als AktualitÃ¤tsprÃ¼fung dient. Wird verwendet um festzustellen ob die Garmin-Verbindung noch aktiv ist. Empfehlung: garmin.0.info.connection oder ein beliebiger garmin.0-Wert der sich tÃ¤glich Ã¤ndert." },
 ];
 
 function FreshnessChip({ stateId, socket, isDark }: { stateId: string; socket: any; isDark: boolean }) {
@@ -115,7 +115,7 @@ function FreshnessChip({ stateId, socket, isDark }: { stateId: string; socket: a
     };
     const c = cfg[status];
     return (
-        <Tooltip title={status === 'unknown' ? "Kein Sync-Objekt konfiguriert oder Objekt nicht erreichbar" : `Letzter Datenpunkt vor ${ageHours}h. Frisch < 12h, Veraltet 12–30h, Eingefroren > 30h.`}>
+        <Tooltip title={status === 'unknown' ? "Kein Sync-Objekt konfiguriert oder Objekt nicht erreichbar" : `Letzter Datenpunkt vor ${ageHours}h. Frisch < 12h, Veraltet 12â€“30h, Eingefroren > 30h.`}>
             <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.3, ml: 0.5, color: c.color, fontSize: "0.65rem", fontWeight: 600, cursor: "help" }}>
                 {c.icon} {c.label}
             </Box>
@@ -125,6 +125,9 @@ function FreshnessChip({ stateId, socket, isDark }: { stateId: string; socket: a
 
 export default function SensorList(props) {
     const { devices, isDark, uniqueLocations, sensorProblems, native, onNativeChange, socket } = props;
+    const uniquePersonTags: string[] = Array.from(new Set(
+        (devices || []).map((d: any) => (d.personTag || '').trim()).filter((p: string) => p.length > 0)
+    )).sort() as string[];
     const [wearableOpen, setWearableOpen] = useState(false);
     const [batteryOpen, setBatteryOpen] = useState(false);
     const [testResults, setTestResults] = useState<Record<string, 'loading' | 'ok' | 'error' | null>>({});
@@ -197,7 +200,7 @@ export default function SensorList(props) {
                                 <Tooltip title="Nacht-Sensor: Tagesbeginn ignoriert diesen Raum"><NightsStayIcon sx={{ fontSize: 17, opacity: 0.55 }} /></Tooltip>
                             </TableCell>
                             <TableCell align="center" sx={{ width: "5%", bgcolor: stickyBg, px: 0.3 }}>
-                                <Tooltip title="Primärflur: Dieser Flur-Sensor wird als Hauptflur für die Ganggeschwindigkeits-Analyse verwendet. Nur für Sensoren mit Funktion 'Flur/Gang' relevant.">
+                                <Tooltip title="PrimÃ¤rflur: Dieser Flur-Sensor wird als Hauptflur fÃ¼r die Ganggeschwindigkeits-Analyse verwendet. Nur fÃ¼r Sensoren mit Funktion 'Flur/Gang' relevant.">
                                     <span style={{ cursor: "help", fontSize: "0.65rem", fontWeight: 600, color: "#8d6e63" }}>P-Flur</span>
                                 </Tooltip>
                             </TableCell>
@@ -223,7 +226,7 @@ export default function SensorList(props) {
                                     <TableCell sx={{ overflow: "hidden" }}>
                                         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                                             {sensorProblems && sensorProblems.has && sensorProblems.has(device.id) && (
-                                                <Tooltip title={"Sensor nicht erreichbar � zuletzt aktiv vor mehr als Schwellwert"}>
+                                                <Tooltip title={"Sensor nicht erreichbar ï¿½ zuletzt aktiv vor mehr als Schwellwert"}>
                                                     <WarningAmberIcon sx={{ color: "#ff9800", fontSize: 16, flexShrink: 0 }} />
                                                 </Tooltip>
                                             )}
@@ -339,13 +342,27 @@ export default function SensorList(props) {
 
                                     {/* Person-Tag */}
                                     <TableCell sx={{ px: 0.5 }}>
-                                        <TextField
-                                            size="small"
+                                        <Autocomplete
+                                            freeSolo
+                                            options={uniquePersonTags}
                                             value={device.personTag || ""}
-                                            placeholder="Person..."
-                                            title="Personenname f�r individuelle Nacht-Analyse (z.B. Rob)"
-                                            sx={{ width: "100%", "& input": { fontSize: "0.7rem", p: "3px 6px" } }}
-                                            onChange={e => props.onDeviceChange(index, "personTag", e.target.value)}
+                                            onChange={(_e, v) => props.onDeviceChange(index, "personTag", v || "")}
+                                            onInputChange={(_e, v) => props.onDeviceChange(index, "personTag", v || "")}
+                                            filterOptions={(options, params) => {
+                                                const filtered = filter(options, params);
+                                                if (params.inputValue !== "" && !options.includes(params.inputValue)) {
+                                                    filtered.push(params.inputValue);
+                                                }
+                                                return filtered;
+                                            }}
+                                            renderInput={params => (
+                                                <TextField {...params} size="small" variant="standard"
+                                                    placeholder="Person..."
+                                                    title="Personenname fur individuelle Nacht-Analyse (z.B. Rob)"
+                                                    inputProps={{ ...params.inputProps, style: { fontSize: "0.7rem" } }}
+                                                    sx={{ width: "100%" }}
+                                                />
+                                            )}
                                         />
                                     </TableCell>
 
@@ -390,16 +407,16 @@ export default function SensorList(props) {
                                         </Tooltip>
                                     </TableCell>
 
-                                    {/* Primärflur */}
+                                    {/* PrimÃ¤rflur */}
                                     <TableCell align="center" sx={{ px: 0.3 }}>
                                         {effectiveSF === 'hallway' ? (
-                                            <Tooltip title="Als Primärflur für Ganggeschwindigkeit verwenden (nur ein Flur aktiv nötig)">
+                                            <Tooltip title="Als PrimÃ¤rflur fÃ¼r Ganggeschwindigkeit verwenden (nur ein Flur aktiv nÃ¶tig)">
                                                 <Checkbox
                                                     checked={device.isPrimaryHallway || false}
                                                     onChange={e => props.onDeviceChange(index, "isPrimaryHallway", e.target.checked)}
                                                     size="small" sx={{ p: 0.4 }}
-                                                    icon={<span style={{ fontSize: 14, opacity: 0.2 }}>🚶</span>}
-                                                    checkedIcon={<span style={{ fontSize: 14, color: "#8d6e63" }}>🚶</span>}
+                                                    icon={<span style={{ fontSize: 14, opacity: 0.2 }}>ðŸš¶</span>}
+                                                    checkedIcon={<span style={{ fontSize: 14, color: "#8d6e63" }}>ðŸš¶</span>}
                                                 />
                                             </Tooltip>
                                         ) : <Box sx={{ width: 30 }} />}
@@ -446,7 +463,7 @@ export default function SensorList(props) {
                 {SENSOR_FUNCTIONS.filter(f => f.id).map(f => {
                     const isActive = activeFunctions.has(f.id);
                     return (
-                        <Tooltip key={f.id} title={`${f.description}${isActive ? " � konfiguriert" : " � noch kein Sensor zugewiesen"}`} placement="top">
+                        <Tooltip key={f.id} title={`${f.description}${isActive ? " ï¿½ konfiguriert" : " ï¿½ noch kein Sensor zugewiesen"}`} placement="top">
                             <Chip
                                 label={`${isActive ? "? " : ""}${f.label}`}
                                 size="small"
@@ -467,7 +484,7 @@ export default function SensorList(props) {
             </Box>
             {/* Hinweiszeile */}
             <Box sx={{ mb: 0.5, fontSize: "0.62rem", color: "text.disabled", fontStyle: "italic" }}>
-                ? Farbe + dicker Rahmen = mindestens 1 Sensor mit dieser Funktion aktiv � gestrichelt = noch kein Sensor zugewiesen � Tooltip zeigt Details
+                ? Farbe + dicker Rahmen = mindestens 1 Sensor mit dieser Funktion aktiv ï¿½ gestrichelt = noch kein Sensor zugewiesen ï¿½ Tooltip zeigt Details
             </Box>
 
             <Box sx={{ display: "flex", gap: 2, mt: 1.5, justifyContent: "space-between", alignItems: "center" }}>
@@ -481,7 +498,7 @@ export default function SensorList(props) {
                 )}
             </Box>
 
-            {/* ─── WEARABLE-DATENQUELLEN ─── */}
+            {/* â”€â”€â”€ WEARABLE-DATENQUELLEN â”€â”€â”€ */}
             <Box sx={{ mt: 2, border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)"}`, borderRadius: 1 }}>
                 <Box
                     onClick={() => setWearableOpen(o => !o)}
@@ -508,7 +525,7 @@ export default function SensorList(props) {
                         <Box sx={{ fontSize: "0.67rem", color: "text.secondary", mb: 1.2, lineHeight: 1.5 }}>
                             Trage hier die ioBroker-Objekt-IDs deines Garmin- (oder anderen) Adapters ein.
                             Die Werte werden nur lesend verwendet. Lasse Felder leer wenn kein Adapter installiert ist.
-                            Das Feld <b>Letzter Sync</b> dient der Aktualitätsprüfung — wird als veraltet markiert wenn
+                            Das Feld <b>Letzter Sync</b> dient der AktualitÃ¤tsprÃ¼fung â€” wird als veraltet markiert wenn
                             der Wert &gt;&nbsp;12&nbsp;h alt ist (Hinweis auf unterbrochene Garmin&nbsp;Connect Verbindung).
                         </Box>
                         {WEARABLE_FIELDS.map(f => {
@@ -547,8 +564,8 @@ export default function SensorList(props) {
                                                 }}
                                             >
                                                 {testRes === 'loading' ? <CircularProgress size={12} /> :
-                                                 testRes === 'ok'      ? "✓ OK" :
-                                                 testRes === 'error'   ? "✗ Fehler" : "Testen"}
+                                                 testRes === 'ok'      ? "âœ“ OK" :
+                                                 testRes === 'error'   ? "âœ— Fehler" : "Testen"}
                                             </Button>
                                         </span>
                                     </Tooltip>
@@ -556,11 +573,11 @@ export default function SensorList(props) {
                             );
                         })}
                         <Box sx={{ mt: 1, fontSize: "0.62rem", color: "text.disabled", fontStyle: "italic" }}>
-                            Andere Smartwatch-Adapter (Polar, Withings, Fitbit …) können ebenfalls eingetragen werden —
+                            Andere Smartwatch-Adapter (Polar, Withings, Fitbit â€¦) kÃ¶nnen ebenfalls eingetragen werden â€”
                             solange die Objekte numerische Werte und Unix-ms-Timestamps liefern.
                         </Box>
 
-                        {/* Garmin pro Person (Mehrpersonenhaushalt) */}
+                        {/* Smartwatch pro Person (Mehrpersonenhaushalt) — universell, jede Marke */}
                         {(() => {
                             const persons = Array.from(new Set(
                                 (native?.devices || [])
@@ -568,38 +585,59 @@ export default function SensorList(props) {
                                     .filter((p: string) => p.length > 0)
                             )) as string[];
                             if (persons.length < 2) return null;
-                            const assignment: Record<string, string> = (native?.garminPersonAssignment && typeof native.garminPersonAssignment === 'object')
-                                ? native.garminPersonAssignment : {};
+                            const assignment: Record<string, { sleepStartId?: string; wakeId?: string }> =
+                                (native?.garminPersonAssignment && typeof native.garminPersonAssignment === 'object')
+                                    ? native.garminPersonAssignment : {};
+                            const updatePerson = (person: string, field: 'sleepStartId' | 'wakeId', val: string) => {
+                                const prev = assignment[person] || {};
+                                const updated = { ...prev, [field]: val };
+                                if (!updated.sleepStartId && !updated.wakeId) {
+                                    const next = { ...assignment };
+                                    delete next[person];
+                                    onNativeChange && onNativeChange('garminPersonAssignment', next);
+                                } else {
+                                    onNativeChange && onNativeChange('garminPersonAssignment', { ...assignment, [person]: updated });
+                                }
+                            };
                             return (
                                 <Box sx={{ mt: 1.5, pt: 1, borderTop: `1px dashed ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}` }}>
                                     <Box sx={{ fontSize: "0.7rem", fontWeight: 600, mb: 0.8, color: isDark ? '#90caf9' : '#1565c0' }}>
-                                        👤 Smartwatch pro Person (Mehrpersonenhaushalt)
+                                        Smartwatch pro Person (Mehrpersonenhaushalt)
                                     </Box>
                                     <Box sx={{ fontSize: "0.65rem", color: "text.secondary", mb: 1, lineHeight: 1.5 }}>
-                                        Trage den Adapter-Präfix (z.B. <code>garmin.0</code> oder <code>garmin.1</code>) für jede Person ein.
-                                        Der Adapter muss dieselbe Objektstruktur wie der Standard-Garmin-Adapter verwenden.
+                                        Trage die ioBroker-Objekt-IDs des Schlafbeginn- und Aufwach-Timestamps pro Person ein
+                                        (Unix-Millisekunden GMT). Funktioniert mit Garmin, Samsung, Apple Watch, Fitbit, Polar usw.
+                                        Felder leer lassen wenn keine Smartwatch vorhanden.
                                     </Box>
                                     {persons.map((person: string) => {
-                                        const val = assignment[person] || '';
+                                        const pw = assignment[person] || {};
                                         return (
-                                            <Box key={person} sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.7 }}>
-                                                <Typography variant="caption" sx={{ flex: '0 0 80px', fontWeight: 500, fontSize: '0.72rem', color: 'text.secondary' }}>
+                                            <Box key={person} sx={{ mb: 1 }}>
+                                                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.72rem', color: 'text.secondary', display: 'block', mb: 0.4 }}>
                                                     {person}
                                                 </Typography>
-                                                <TextField
-                                                    label={`Garmin-Präfix für ${person}`}
-                                                    value={val}
-                                                    onChange={e => {
-                                                        const newAssign = { ...assignment, [person]: e.target.value };
-                                                        if (!e.target.value) delete newAssign[person];
-                                                        onNativeChange && onNativeChange('garminPersonAssignment', newAssign);
-                                                    }}
-                                                    size="small"
-                                                    variant="outlined"
-                                                    fullWidth
-                                                    placeholder="garmin.0"
-                                                    sx={{ "& .MuiInputBase-input": { fontSize: "0.72rem" }, "& .MuiInputLabel-root": { fontSize: "0.72rem" } }}
-                                                />
+                                                <Box sx={{ display: "flex", gap: 1 }}>
+                                                    <TextField
+                                                        label="Schlafbeginn (GMT-ms)"
+                                                        value={pw.sleepStartId || ''}
+                                                        onChange={e => updatePerson(person, 'sleepStartId', e.target.value)}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        fullWidth
+                                                        placeholder="garmin.0.dailysleep...sleepStartTimestampGMT"
+                                                        sx={{ "& .MuiInputBase-input": { fontSize: "0.68rem" }, "& .MuiInputLabel-root": { fontSize: "0.68rem" } }}
+                                                    />
+                                                    <TextField
+                                                        label="Aufwachen (GMT-ms)"
+                                                        value={pw.wakeId || ''}
+                                                        onChange={e => updatePerson(person, 'wakeId', e.target.value)}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        fullWidth
+                                                        placeholder="garmin.0.dailysleep...sleepEndTimestampGMT"
+                                                        sx={{ "& .MuiInputBase-input": { fontSize: "0.68rem" }, "& .MuiInputLabel-root": { fontSize: "0.68rem" } }}
+                                                    />
+                                                </Box>
                                             </Box>
                                         );
                                     })}
@@ -610,7 +648,7 @@ export default function SensorList(props) {
                 </Collapse>
             </Box>
 
-            {/* ─── BATTERIE-KONFIGURATION (OC-15) ─── */}
+            {/* â”€â”€â”€ BATTERIE-KONFIGURATION (OC-15) â”€â”€â”€ */}
             {(() => {
                 const WIRED = ['knx.', 'loxone.', 'bacnet.', 'modbus.'];
                 const BATT_TYPES = ['motion', 'vibration', 'vibration_trigger', 'vibration_strength', 'presence_radar', 'presence_radar_bool', 'moisture', 'door', 'temperature'];
@@ -634,16 +672,16 @@ export default function SensorList(props) {
                         >
                             <Battery20Icon sx={{ fontSize: 16, opacity: 0.7, color: "#ff9800" }} />
                             <Box sx={{ fontSize: "0.78rem", fontWeight: 600, flex: 1 }}>
-                                Batterie-Konfiguration (OC-15) — {battDevices.length} Sensor{battDevices.length !== 1 ? "en" : ""}
+                                Batterie-Konfiguration (OC-15) â€” {battDevices.length} Sensor{battDevices.length !== 1 ? "en" : ""}
                             </Box>
                             {batteryOpen ? <ExpandLessIcon sx={{ fontSize: 16 }} /> : <ExpandMoreIcon sx={{ fontSize: 16 }} />}
                         </Box>
                         <Collapse in={batteryOpen}>
                             <Box sx={{ px: 1.5, py: 1, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.1)"}` }}>
                                 <Alert severity="info" icon={<BatteryAlertIcon />} sx={{ mb: 1.5, py: 0.3, fontSize: "0.72rem" }}>
-                                    <b>Auto-Discovery</b> versucht automatisch einen Battery-State zu finden (auch bei Alias-Objekten). Nur eintragen wenn Auto-Discovery fehlschlägt.
-                                    Kabel­gebundene Sensoren (KNX, Loxone) werden automatisch übersprungen.
-                                    Schwellen: ≤ 20 % = Warnung · ≤ 10 % = Kritisch + Pushover täglich 09:00 Uhr.
+                                    <b>Auto-Discovery</b> versucht automatisch einen Battery-State zu finden (auch bei Alias-Objekten). Nur eintragen wenn Auto-Discovery fehlschlÃ¤gt.
+                                    KabelÂ­gebundene Sensoren (KNX, Loxone) werden automatisch Ã¼bersprungen.
+                                    Schwellen: â‰¤ 20 % = Warnung Â· â‰¤ 10 % = Kritisch + Pushover tÃ¤glich 09:00 Uhr.
                                 </Alert>
                                 <Table size="small">
                                     <TableHead>
@@ -651,7 +689,7 @@ export default function SensorList(props) {
                                             <TableCell sx={{ fontWeight: 600, fontSize: "0.7rem", width: "35%" }}>Sensor</TableCell>
                                             <TableCell sx={{ fontWeight: 600, fontSize: "0.7rem", width: "20%" }}>Ort</TableCell>
                                             <TableCell sx={{ fontWeight: 600, fontSize: "0.7rem" }}>
-                                                <Tooltip title="Optionaler ioBroker-Objekt-Pfad für den Batterie-State. Leer lassen für Auto-Discovery. Beispiel: zigbee.0.00158d0001234567.battery">
+                                                <Tooltip title="Optionaler ioBroker-Objekt-Pfad fÃ¼r den Batterie-State. Leer lassen fÃ¼r Auto-Discovery. Beispiel: zigbee.0.00158d0001234567.battery">
                                                     <span style={{ cursor: "help", textDecoration: "underline dotted" }}>Batterie-State-ID (optional, manuell)</span>
                                                 </Tooltip>
                                             </TableCell>
@@ -663,7 +701,7 @@ export default function SensorList(props) {
                                             const discoveredEntry = (props.batteryStatus?.sensors || []).find(s => s.id === device.id);
                                             const discoveredId = discoveredEntry?.stateId || null;
                                             const discoveredLevel = discoveredEntry?.level ?? null;
-                                            // Boolean-Quellen (LOWBAT): level=5 → "Niedrig!", level=80 → "OK"
+                                            // Boolean-Quellen (LOWBAT): level=5 â†’ "Niedrig!", level=80 â†’ "OK"
                                             // Echte Prozentwerte: "97%"
                                             const isLowbatBool = discoveredLevel === 5 || discoveredLevel === 80;
                                             const battLevel = discoveredEntry
@@ -677,7 +715,7 @@ export default function SensorList(props) {
                                                     <TableCell sx={{ fontSize: "0.7rem" }}>
                                                         <Tooltip title={device.id}><span style={{ cursor: "help" }}>{device.name || device.id}</span></Tooltip>
                                                     </TableCell>
-                                                    <TableCell sx={{ fontSize: "0.7rem", color: "text.secondary" }}>{device.location || "—"}</TableCell>
+                                                    <TableCell sx={{ fontSize: "0.7rem", color: "text.secondary" }}>{device.location || "â€”"}</TableCell>
                                                     <TableCell>
                                                         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                                                             <Box sx={{ flex: 1 }}>
@@ -690,7 +728,7 @@ export default function SensorList(props) {
                                                                 />
                                                                 {discoveredId && !device.batteryStateId && (
                                                                     <Box sx={{ fontSize: "0.62rem", color: "text.secondary", mt: 0.2, display: "flex", alignItems: "center", gap: 0.5 }}>
-                                                                        <span style={{ color: "#4caf50" }}>✓</span>
+                                                                        <span style={{ color: "#4caf50" }}>âœ“</span>
                                                                         <Tooltip title={`Auto-Discovery (${discoveredEntry?.source === 'hm-auto' ? 'Homematic Kanal-0' : discoveredEntry?.source === 'alias' ? 'Alias-Rekonstruktion' : 'Zigbee/direkt'}): ${discoveredId}`}>
                                                                             <span style={{ cursor: "help", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: 220, display: "inline-block" }}>
                                                                                 {discoveredId}
@@ -698,13 +736,13 @@ export default function SensorList(props) {
                                                                         </Tooltip>
                                                                         {battLevel && (
                                                                             <span style={{ color: battColor, fontWeight: 600, flexShrink: 0 }}>
-                                                                                · {battLevel}
+                                                                                Â· {battLevel}
                                                                             </span>
                                                                         )}
                                                                     </Box>
                                                                 )}
                                                             </Box>
-                                                            <Tooltip title="Objekt aus ioBroker auswählen">
+                                                            <Tooltip title="Objekt aus ioBroker auswÃ¤hlen">
                                                                 <IconButton size="small" onClick={() => props.onSelectBatteryId && props.onSelectBatteryId(idx)} sx={{ p: 0.3, fontSize: "0.65rem", flexShrink: 0 }}>.</IconButton>
                                                             </Tooltip>
                                                         </Box>
