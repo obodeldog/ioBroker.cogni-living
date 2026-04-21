@@ -35,7 +35,7 @@ const GEMINI_MODEL = 'models/gemini-flash-latest';
 // Single-Source-of-Truth: Keine doppelte Implementierung.
 // Parameter (p): allEvents, personTag, fp2RawStart, garminTs, garminWakeTs, fp2WakeTs,
 //   searchBase, wakeHardCap, startOverride, wakeOverride, existingSnap, sleepDate,
-//   bathroomIds, log
+//   bathroomIds, bedroomLocations, hopDistFn, log
 // =============================================================================
 function computePersonSleep(p) {
     var allEvents    = p.allEvents;
@@ -50,7 +50,9 @@ function computePersonSleep(p) {
     var wakeOverride  = p.wakeOverride  || null;
     var existingSnap  = p.existingSnap  || null;
     var sleepDate    = p.sleepDate;
-    var bathroomIds  = p.bathroomIds || new Set();
+    var bathroomIds      = p.bathroomIds      || new Set();
+    var bedroomLocations = p.bedroomLocations  || [];
+    var hopDistFn        = p.hopDistFn         || null;
     var log          = p.log;
     var logPfx       = personTag ? ('[cPS:' + personTag + '] ') : '[cPS:global] ';
 
@@ -119,7 +121,16 @@ function computePersonSleep(p) {
         var commonEvts = allEvents.filter(function(e) {
             if (isOtherPerson(e)) return false;
             if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion || e.isBathroomSensor) return false;
-            return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+            if (!(e.type === 'motion' || e.type === 'presence_radar_bool') || !isActiveValue(e.value)) return false;
+            // Hop-Filter (OC-24/Fix-1): Sensor >2 Hops vom Schlafzimmer -> raus
+            if (hopDistFn && bedroomLocations.length > 0 && e.location) {
+                var minHops = bedroomLocations.reduce(function(min, bedLoc) {
+                    var h = hopDistFn(e.location, bedLoc);
+                    return (h >= 0 && h < min) ? h : min;
+                }, 999);
+                if (minHops > 2) return false;
+            }
+            return true;
         }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
         for (var i = 0; i < commonEvts.length; i++) {
             var ts = commonEvts[i].timestamp || 0;
@@ -421,29 +432,42 @@ function computePersonSleep(p) {
     var obeWinS = sleepStart || fp2RawStart || searchBase.getTime();
     var obeWinE = wakeTs || Date.now();
     if (obeWinS < obeWinE) {
+        // OC-21: isOtherPerson-Events werden NICHT mehr gefiltert, sondern als 'other_person' markiert
         var obeAllSrc = allEvents.filter(function(e) {
             var ts = e.timestamp || 0;
             if (ts < obeWinS || ts > obeWinE) return false;
             if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion) return false;
-            if (isOtherPerson(e)) return false;
             return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
         }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
         var obeCluster = null; var obeCGap = 5 * 60 * 1000; var obeCAfter = 3 * 60 * 1000;
         var obePush = function(c) {
             var dur = Math.max(1, Math.round((c.end - c.start) / 60000));
+            // OC-21: Cluster besteht nur aus fremden Personen -> 'other_person' (blau), nicht rot/orange
+            if (c.onlyOtherPerson) {
+                obe.push({ start: c.start, end: c.end, duration: dur, type: 'other_person', confirmed: true, sensors: c.sensors || [] });
+                return;
+            }
             if (c.hasBath) {
                 obe.push({ start: c.start, end: c.end, duration: dur, type: 'bathroom', confirmed: true, sensors: c.sensors || [] });
                 if (c.hasOther) obe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true, sensors: c.sensors || [] });
             } else { obe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true, sensors: c.sensors || [] }); }
         };
         obeAllSrc.forEach(function(e) {
-            var ts = e.timestamp || 0; var isBath = e.isBathroomSensor || bathroomIds.has(e.id);
+            var ts = e.timestamp || 0;
+            var isBath = e.isBathroomSensor || bathroomIds.has(e.id);
+            var isOP   = isOtherPerson(e); // OC-21: event gehoert anderer Person
             if (!obeCluster) {
-                obeCluster = { start: ts, end: ts + obeCAfter, hasBath: isBath, hasOther: !isBath, sensors: [{ name: e.name || e.id, location: e.location || '', isBathroomSensor: isBath, timestamp: ts }] };
+                obeCluster = { start: ts, end: ts + obeCAfter, hasBath: !isOP && isBath, hasOther: !isOP && !isBath, onlyOtherPerson: isOP, sensors: [{ name: e.name || e.id, location: e.location || '', isBathroomSensor: isBath, timestamp: ts }] };
             } else if (ts <= obeCluster.end + obeCGap) {
-                obeCluster.end = ts + obeCAfter; if (isBath) obeCluster.hasBath = true; else obeCluster.hasOther = true;
+                obeCluster.end = ts + obeCAfter;
+                if (!isOP && isBath) obeCluster.hasBath = true;
+                if (!isOP && !isBath) obeCluster.hasOther = true;
+                if (!isOP) obeCluster.onlyOtherPerson = false;
                 var sn = e.name || e.id; if (!obeCluster.sensors.some(function(s) { return s.name === sn; })) obeCluster.sensors.push({ name: sn, location: e.location || '', isBathroomSensor: isBath, timestamp: ts });
-            } else { obePush(obeCluster); obeCluster = { start: ts, end: ts + obeCAfter, hasBath: isBath, hasOther: !isBath, sensors: [{ name: e.name || e.id, location: e.location || '', isBathroomSensor: isBath, timestamp: ts }] }; }
+            } else {
+                obePush(obeCluster);
+                obeCluster = { start: ts, end: ts + obeCAfter, hasBath: !isOP && isBath, hasOther: !isOP && !isBath, onlyOtherPerson: isOP, sensors: [{ name: e.name || e.id, location: e.location || '', isBathroomSensor: isBath, timestamp: ts }] };
+            }
         });
         if (obeCluster) obePush(obeCluster);
     }
@@ -567,6 +591,8 @@ class CogniLiving extends utils.Adapter {
     }
 
     async startSystem() {
+        // _historyDir fuer ai_agent.js (Morning Briefing) vorbelegen
+        this._historyDir = require('path').join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
         await setup.initZombies(this);
         try { this.isProVersion = await setup.checkLicense(this.config.licenseKey); } catch(e) {}
         if (!this.config.inactivityThresholdHours || this.config.inactivityThresholdHours < 0.1) this.config.inactivityThresholdHours = 12;
@@ -828,7 +854,7 @@ class CogniLiving extends utils.Adapter {
         var devices = this.config.devices || [];
         // Schwellwerte pro Typ ? T?r/Fenster 7 Tage (wochenlang geschlossen ist normal)
         var thresholds = { motion: 7*24*3600000, presence_radar: 7*24*3600000, vibration: 7*24*3600000,
-            door: 7*24*3600000, temperature: 6*3600000, light: 8*3600000, dimmer: 8*3600000, moisture: 8*3600000 };
+            door: 7*24*3600000, temperature: 6*3600000, moisture: 8*3600000 };
         var defaultThreshold = 7 * 24 * 3600000; // OC-5: Schwelle 7 Tage
         var ALERT_COOLDOWN = 24 * 3600000; // max. 1 Pushover pro Sensor pro Tag
         // KNX/Loxone/BACnet: kabelgebunden, kein Heartbeat ? Timeout-Check ?berspringen
@@ -840,6 +866,8 @@ class CogniLiving extends utils.Adapter {
             if (!d.id) continue;
             var isWired = WIRED_PREFIXES.some(function(p) { return d.id.toLowerCase().startsWith(p); });
             if (isWired) continue;
+            // Aktoren (Lampen, Dimmer, Schalter) senden keine regelmaessigen Events - kein Ausfall-Check
+            if (d.type === 'light' || d.type === 'dimmer' || d.type === 'switch') continue;
             // getForeignStateAsync: ts wird vom Basisadapter (zigbee, homekit etc.) bei jedem Heartbeat aktualisiert
             var lastSeen = _self.sensorLastSeen[d.id] || 0;
             try {
@@ -1463,6 +1491,8 @@ class CogniLiving extends utils.Adapter {
                 existingSnap:  null,
                 sleepDate:    sleepDate,
                 bathroomIds:  new Set((this.config.devices||[]).filter(function(d){return d.isBathroomSensor||d.sensorFunction==='bathroom';}).map(function(d){return d.id;})),
+                bedroomLocations: (this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed'||d.isBedroomMotion||d.isFP2Bed||d.isVibrationBed;}).map(function(d){return d.location;}).filter(function(l){return !!l;}).filter(function(v,i,a){return a.indexOf(v)===i;}),
+                hopDistFn:    this._roomHopDistance.bind(this),
                 log:          this.log
             });
 
@@ -2216,7 +2246,7 @@ class CogniLiving extends utils.Adapter {
                         fp2RawStart:   null,
                         garminTs:      _pGarminTs,
                         garminWakeTs:  _pGarminWakeTs,
-                        fp2WakeTs:     null,
+                        fp2WakeTs:     sleepWindowCalc.firstEmpty || null,
                         searchBase:    _sleepSearchBase,
                         wakeHardCap:   _wakeHardCapMs,
                         startOverride: (_personOverrides&&_personOverrides[person])?_personOverrides[person]:null,
@@ -2224,6 +2254,8 @@ class CogniLiving extends utils.Adapter {
                         existingSnap:  (_existingSnap&&_existingSnap.personData&&_existingSnap.personData[person])?_existingSnap.personData[person]:null,
                         sleepDate:     sleepDate,
                         bathroomIds:   _bathroomDevIds,
+                        bedroomLocations: (_self.config.devices||[]).filter(function(d){return d.sensorFunction==='bed'||d.isBedroomMotion||d.isFP2Bed||d.isVibrationBed;}).map(function(d){return d.location;}).filter(function(l){return !!l;}).filter(function(v,i,a){return a.indexOf(v)===i;}),
+                        hopDistFn:     _self._roomHopDistance.bind(_self),
                         log:           _self.log
                     });
                     var sleepOnsetMin = null;
