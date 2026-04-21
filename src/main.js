@@ -596,6 +596,9 @@ class CogniLiving extends utils.Adapter {
     async startSystem() {
         // _historyDir fuer ai_agent.js (Morning Briefing) vorbelegen
         this._historyDir = require('path').join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+        // OC-11: gelernte Raum-Uebergangszeiten aus persistiertem State laden
+        try { const _rttState = await this.getStateAsync('LTM.roomTransitionTimes'); if (_rttState && _rttState.val) this._roomTransitionTimes = JSON.parse(_rttState.val); } catch(_rtte) {}
+        if (!this._roomTransitionTimes) this._roomTransitionTimes = {};
         await setup.initZombies(this);
         try { this.isProVersion = await setup.checkLicense(this.config.licenseKey); } catch(e) {}
         if (!this.config.inactivityThresholdHours || this.config.inactivityThresholdHours < 0.1) this.config.inactivityThresholdHours = 12;
@@ -896,11 +899,55 @@ class CogniLiving extends utils.Adapter {
         try {
             await this.setStateAsync('system.sensorStatus', { val: JSON.stringify({ timestamp: now, sensors: statusList, offlineCount: offlineCount }), ack: true });
         } catch(e) {}
-        // OC-5: Pushover-Alarme waehrend der Nachtruhe unterdruecken (Sensor schlaeimft normal)         var _nowH = new Date(now).getHours();         var _isSleepTime = _nowH >= 22 || _nowH < 8;         if (_isSleepTime) alerts = []; // Status-LED bleibt rot, aber kein Push-Spam         
+
+        // OC-12: Gateway-Cluster-Erkennung — wenn >= 2 Sensoren desselben Gateways gleichzeitig offline
+        // -> einzelne Sensor-Alerts unterdrücken, stattdessen einen Gateway-Alarm senden
+        var offlineSensors = statusList.filter(function(s) { return s.status === 'offline'; });
+        var gatewayGroups = {};
+        offlineSensors.forEach(function(s) {
+            // Ignoriere alias.X-Eintraege (virtuelle States, kein physisches Gateway)
+            if (s.id.startsWith('alias.')) return;
+            // Prefix = "adapter.instance" (erste 2 Dot-Segmente: "zigbee.0", "homematic.0", etc.)
+            var parts = s.id.split('.');
+            if (parts.length < 2) return;
+            var gwKey = parts[0] + '.' + parts[1];
+            if (!gatewayGroups[gwKey]) gatewayGroups[gwKey] = [];
+            gatewayGroups[gwKey].push(s);
+        });
+        var gatewayOutages = Object.entries(gatewayGroups).filter(function(e) { return e[1].length >= 2; });
+        var gatewayOutageIds = new Set();
+        gatewayOutages.forEach(function(e) { e[1].forEach(function(s) { gatewayOutageIds.add(s.id); }); });
+        // Gateway-Outage-State setzen
+        var gwOutageInfo = gatewayOutages.map(function(e) {
+            return { gateway: e[0], count: e[1].length, sensors: e[1].map(function(s) { return s.name || s.id; }) };
+        });
+        try { await _self.setStateAsync('analysis.safety.gatewayOutage', { val: JSON.stringify(gwOutageInfo), ack: true }); } catch(_goe) {}
+        if (gatewayOutages.length > 0) {
+            _self.log.warn('[OC-12] Gateway-Ausfall erkannt: ' + gatewayOutages.map(function(e) { return e[0] + ' (' + e[1].length + ' Sensoren)'; }).join(', '));
+        }
+
+        // Nachtruheschutz: kein Push-Spam waehrend Schlafzeit (22-08 Uhr)
+        var _nowH = new Date(now).getHours();
+        var _isSleepTime = _nowH >= 22 || _nowH < 8;
+        if (_isSleepTime) alerts = [];
+
+        // Einzelne Sensor-Alerts fuer Gateway-Cluster-Mitglieder unterdrücken -> ein gebündelter Alert stattdessen
+        if (gatewayOutages.length > 0 && !_isSleepTime) {
+            alerts = alerts.filter(function(a) {
+                return !offlineSensors.some(function(s) { return gatewayOutageIds.has(s.id) && a.startsWith((s.name || s.id)); });
+            });
+            var _gwLastAlert = _self.sensorAlertSent['__gateway__'] || 0;
+            if ((now - _gwLastAlert) > (24 * 3600000)) {
+                _self.sensorAlertSent['__gateway__'] = now;
+                var _gwMsg = gwOutageInfo.map(function(g) { return 'Gateway ' + g.gateway + ': ' + g.count + ' Sensoren gleichzeitig offline (' + g.sensors.slice(0,3).join(', ') + (g.sensors.length > 3 ? '...' : '') + ')'; }).join('\n');
+                alerts.push('[GATEWAY-AUSFALL] ' + _gwMsg);
+            }
+        }
+
         if (alerts.length > 0) {
-            var msg = '?? Sensor-Ausfall:\n' + alerts.join('\n');
+            var msg = '⚠️ Sensor-Ausfall:\n' + alerts.join('\n');
             this.log.warn('[SENSOR-CHECK] ' + alerts.join(', '));
-            try { setup.sendNotification(this, msg, true, false, '?? NUUKANNI: Sensor-Ausfall'); } catch(e) {}
+            try { setup.sendNotification(this, msg, true, false, '⚠️ AURA: Sensor-Ausfall'); } catch(e) {}
         }
         // OC-15: Batteriestand stuendlich pruefen (Pushover taeglich um 09:00)
         try { await this.checkBatteryLevels(); } catch(e) {}
@@ -2331,6 +2378,9 @@ class CogniLiving extends utils.Adapter {
                 await this.setObjectNotExistsAsync('analysis.safety.noisySensors', {
                     type: 'state', common: { name: 'OC-24 Rauschende Sensoren (JSON)', type: 'string', role: 'json', read: true, write: false, def: '[]' }, native: {}
                 });
+                await this.setObjectNotExistsAsync('analysis.safety.gatewayOutage', {
+                    type: 'state', common: { name: 'OC-12 Gateway-Ausfall-Erkennung (JSON)', type: 'string', role: 'json', read: true, write: false, def: '[]' }, native: {}
+                });
                 var _scoreHistory = [];
                 var _histState = await this.getStateAsync('analysis.health.sleepScoreHistory');
                 if (_histState && _histState.val) { try { _scoreHistory = JSON.parse(_histState.val); if (!Array.isArray(_scoreHistory)) _scoreHistory = []; } catch(_) { _scoreHistory = []; } }
@@ -2845,6 +2895,11 @@ class CogniLiving extends utils.Adapter {
             const filePath = path.join(historyDir, `${dateStr}.json`);
             fs.writeFileSync(filePath, JSON.stringify(snapshot));
             this.log.info(`? History saved: ${filePath}`);
+            // OC-11: Gelernte Raum-Uebergangszeiten persistieren (nach jedem History-Save)
+            if (this._roomTransitionTimes && Object.keys(this._roomTransitionTimes).length > 0) {
+                try { await this.setObjectNotExistsAsync('LTM.roomTransitionTimes', { type: 'state', common: { name: 'OC-11 Gelernte Raum-Uebergangszeiten (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} }); } catch(_) {}
+                try { await this.setStateAsync('LTM.roomTransitionTimes', { val: JSON.stringify(this._roomTransitionTimes), ack: true }); } catch(_rttp) {}
+            }
 
             // Kalibrier-Log: Sensorquellen gegen Garmin (fuer spaetere Auswertung ohne Smartwatch)
             try {
@@ -4073,9 +4128,8 @@ class CogniLiving extends utils.Adapter {
         var topo = this._cachedTopoMatrix;
         if (!topo || !topo.rooms || !topo.matrix) return;
 
-        // Festes 5s-Fenster auf steigende Flanken (sensorLastActive) ? kein fallendes Flanken-Problem
-        var ACTIVE_WINDOW_MS = 5000;
-        // Mindestens 2 Hops: in 5s physikalisch unm?glich f?r eine Person
+        // OC-11: Adaptives Fenster — gelernter p90 pro Raum-Paar, Fallback 5s
+        var DEFAULT_WINDOW_MS = 5000;
         var MIN_HOPS = 2;
         var now = Date.now();
         var _self = this;
@@ -4084,16 +4138,36 @@ class CogniLiving extends utils.Adapter {
 
         var multiPersonDetected = false;
         var bestMatch = null; // bester Treffer fuer Log (meiste Hops)
+        if (!_self._roomTransitionTimes) _self._roomTransitionTimes = {};
         Object.keys(this.sensorLastActive || {}).forEach(function(otherId) {
             if (otherId === triggerId) return;
             var lastActiveTs = _self.sensorLastActive[otherId];
-            if (!lastActiveTs || (now - lastActiveTs) > ACTIVE_WINDOW_MS) return;
+            if (!lastActiveTs) return;
+            var deltaMs = Math.round(now - lastActiveTs);
+            var otherDev = devicesById[otherId];
+            if (!otherDev || !otherDev.location || otherDev.location === triggerLocation) return;
+            // OC-11: Gelerntes Zeitfenster fuer dieses Raum-Paar ermitteln
+            var _pairKey = [triggerLocation, otherDev.location].sort().join('|');
+            var _learnedSamples = _self._roomTransitionTimes[_pairKey] || [];
+            var _activeWindowMs = DEFAULT_WINDOW_MS;
+            if (_learnedSamples.length >= 5) {
+                var _sorted = _learnedSamples.slice().sort(function(a,b){return a-b;});
+                var _p90idx = Math.floor(_sorted.length * 0.9);
+                var _p90 = _sorted[_p90idx] || DEFAULT_WINDOW_MS;
+                _activeWindowMs = Math.max(DEFAULT_WINDOW_MS, Math.round(_p90 * 1.3)); // p90 + 30% Buffer
+            }
+            if (deltaMs > _activeWindowMs) return;
             var otherDev = devicesById[otherId];
             if (!otherDev || !otherDev.location || otherDev.location === triggerLocation) return;
             var hopDist = _self._roomHopDistance(triggerLocation, otherDev.location);
+            // OC-11: Transition immer aufzeichnen (unabhaengig von hopDist) fuer Lern-Datenbasis
+            var _maxSamples = 100;
+            if (!_self._roomTransitionTimes[_pairKey]) _self._roomTransitionTimes[_pairKey] = [];
+            _self._roomTransitionTimes[_pairKey].push(deltaMs);
+            if (_self._roomTransitionTimes[_pairKey].length > _maxSamples) _self._roomTransitionTimes[_pairKey].shift();
+
             if (hopDist >= MIN_HOPS) {
                 multiPersonDetected = true;
-                var deltaMs = Math.round(now - lastActiveTs);
                 _self.log.info('[PersonCount] Rauml. Unmoglichkeit: ' + triggerLocation + ' <-> ' + otherDev.location +
                     ' (' + hopDist + ' Hops, ' + deltaMs + 'ms) -> mind. 2 Personen');
                 // Besten Treffer merken (meiste Hops = zuverlaessigste Erkennung)

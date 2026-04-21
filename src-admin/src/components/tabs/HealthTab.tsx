@@ -176,6 +176,7 @@ export default function HealthTab(props: any) {
     const [personHistoryData, setPersonHistoryData] = useState<Record<string, any>>({});
     const [sensorBatteryStatus, setSensorBatteryStatus] = useState<{sensors: {id:string, level:number|null, isLow:boolean, isCritical:boolean, source:string}[]} | null>(null);
     const [noisySensors, setNoisySensors] = useState<{id:string, name:string, location:string, count:number, threshold:number}[]>([]);
+    const [gatewayOutage, setGatewayOutage] = useState<{gateway:string, count:number, sensors:string[]}[]>([]);
     const [nativeDevices, setNativeDevices] = useState<any[]>([]);
     const [topoData, setTopoData] = useState<{rooms:string[], matrix:number[][]} | null>(null);
 
@@ -750,6 +751,11 @@ export default function HealthTab(props: any) {
                 if (s && s.val) { try { const v = JSON.parse(s.val); setNoisySensors(Array.isArray(v) ? v : []); } catch(e) {} }
             }).catch(() => {});
         };
+        const loadGatewayOutage = () => {
+            socket.getState(`${adapterName}.${instance}.analysis.safety.gatewayOutage`).then((s: any) => {
+                if (s && s.val) { try { const v = JSON.parse(s.val); setGatewayOutage(Array.isArray(v) ? v : []); } catch(e) {} }
+            }).catch(() => {});
+        };
         const loadDevices = () => {
             socket.getObject(`system.adapter.${adapterName}.${instance}`).then((obj: any) => {
                 if (obj && obj.native && obj.native.devices) setNativeDevices(obj.native.devices);
@@ -757,6 +763,7 @@ export default function HealthTab(props: any) {
         };
         loadBattery();
         loadNoisySensors();
+        loadGatewayOutage();
         loadDevices();
         socket.getState(`${namespace}.analysis.topology.structure`).then((s: any) => {
             if (s && s.val) { try { setTopoData(JSON.parse(s.val)); } catch(e) {} }
@@ -3251,6 +3258,36 @@ export default function HealthTab(props: any) {
                     }
                     return renderSleepScoreCard();
                 })()}
+
+                {/* OC-12: Gateway-Ausfall Banner — prominent über allen anderen Kacheln */}
+                {gatewayOutage && gatewayOutage.length > 0 && (
+                    <div style={{
+                        background: isDark ? '#3a1a00' : '#fff3e0',
+                        border: '2px solid #ff9800',
+                        borderRadius: '8px',
+                        padding: '12px 16px',
+                        marginBottom: '8px',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px'
+                    }}>
+                        <span style={{fontSize: '1.4rem', lineHeight: 1}}>🔌</span>
+                        <div>
+                            <div style={{fontWeight: 'bold', color: '#ff9800', fontSize: '0.85rem', marginBottom: '4px'}}>
+                                Gateway-Ausfall erkannt — Schlafanalyse evtl. unvollständig
+                            </div>
+                            {gatewayOutage.map((g, i) => (
+                                <div key={i} style={{fontSize: '0.75rem', color: isDark ? '#ffcc80' : '#e65100', marginTop: i > 0 ? '3px' : 0}}>
+                                    <b>{g.gateway}</b>: {g.count} Sensoren gleichzeitig offline
+                                    {g.sensors && g.sensors.length > 0 && (
+                                        <span style={{color: isDark?'#aaa':'#888'}}> ({g.sensors.slice(0,3).join(', ')}{g.sensors.length > 3 ? '…' : ''})</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {renderMobility()}
 
                 <div style={{display:'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px'}}>

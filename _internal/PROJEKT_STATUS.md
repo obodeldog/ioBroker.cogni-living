@@ -1,5 +1,13 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 21.04.2026 | **Version:** 0.33.186
+**Letzte Aktualisierung:** 21.04.2026 | **Version:** 0.33.187
+
+---
+
+## ✅ Sitzung 21.04.2026 — Version 0.33.187
+
+### ✅ Abgeschlossen
+- **[OC-12] Gateway-Cluster-Erkennung**: In `checkSensorHealth()` werden offline Sensoren nach Gateway-Prefix (`adapter.instance`) gruppiert. Wenn >= 2 Sensoren desselben Gateways gleichzeitig offline sind -> einzelne Sensor-Alerts werden zu einem gebündelten 'Gateway X ausgefallen'-Alert zusammengefasst. State `analysis.safety.gatewayOutage` (JSON). Im HealthTab erscheint ein oranges 🔌-Banner 'Gateway-Ausfall erkannt — Schlafanalyse evtl. unvollständig' mit Gateway-Name und betroffenen Sensoren.
+- **[OC-11] Gelernte Raumübergangszeiten**: In `_checkSpatialImpossibility()` wird fuer jedes Raum-Paar der Zeitdelta jeder Transition aufgezeichnet (`this._roomTransitionTimes`). Ab 5 Samples: adaptiver Schwellwert = p90 * 1.3 statt festem 5s-Wert. Persistiert in `LTM.roomTransitionTimes` (JSON) nach jedem History-Save. Beim Start geladen. Loest das Problem dass kleine Wohnungen mit kurzen Wegen falsche Mehrpersonen-Erkennungen ausloesen.
 
 ---
 
