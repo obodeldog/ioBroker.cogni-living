@@ -1990,11 +1990,14 @@ export default function HealthTab(props: any) {
                                 <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>
                                     {wakeConfirmed ? '✓' : '⟳'} {fmtTime(swEnd)}
                                 </div>
+                                <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
+                                    {wakeDisplay.icon} {wakeDisplay.label}
+                                </div>
                                 <div style={{fontSize:'0.6rem', color: wakeConfirmed ? (isDark?'#555':'#bbb') : '#ffab40', marginTop:'1px'}}
                                     title={wakeConfirmed
                                         ? `Bestätigt via ${wakeDisplay.label}: Bett ≥1h leer nach 10:00 Uhr`
                                         : `Vorläufig via ${wakeDisplay.label}: Wird bestätigt wenn nach 10:00 Uhr ≥1h kein Bett belegt`}>
-                                    {wakeDisplay.icon} {wakeConfirmed ? 'bestätigt' : 'vorläufig'}
+                                    {wakeConfirmed ? 'bestätigt' : 'vorläufig'}
                                 </div>
                                 {wakeOverridden && (
                                     <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
