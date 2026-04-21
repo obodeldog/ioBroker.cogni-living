@@ -253,7 +253,7 @@ Wenn ein neuer Sensor in die Sensorliste eingetragen wird, muss der Nutzer mehre
 
 **Relevanz:** Reduziert Einrichtungsfehler erheblich, insbesondere für Kunden ohne technischen Hintergrund. Besonders wichtig wenn AURA als Produkt verkauft wird.
 
-**Priorität:** MITTEL — kein Akut-Bug, aber wichtig für Produktqualität und Support-Entlastung.
+**Priorität:** NIEDRIG (Nice-to-have) — Sensor-Einrichtung funktioniert ohne Assistent. Relevant erst wenn AURA als Produkt an technisch unerfahrene Kunden verkauft wird.
 
 ---
 
@@ -572,7 +572,7 @@ Ist kein kritisches Problem — der aktuelle Filter (v0.33.73) ist bereits deutl
 
 ### OC-7: AURA Sleep Score — Schlafphasen-Rekonstruktion aus Vibrationssensor (17.03.2026)
 
-> **✅ Größtenteils implementiert** — Schlafanalyse-Kachel mit Einschlaf-/Aufwachzeit, Quellenangabe, Konfidenz, AURA Sleep Score (v0.33.180/181), Cluster-basierte Einschlafzeitauswahl (v0.33.178), separate Kacheln pro Person (v0.33.76), Garmin-Zuweisung pro Person (v0.33.175). **Noch offen:** Schlafphasen-Balkendiagramm (Tief/Leicht/REM/Wach), per-Person-Kalibrierungslogik (ab wie vielen Nächten? Garmin-Referenz?).
+> **✅ Größtenteils implementiert** — Schlafanalyse-Kachel mit Einschlaf-/Aufwachzeit, Quellenangabe, Konfidenz, AURA Sleep Score (v0.33.180/181), Cluster-basierte Einschlafzeitauswahl (v0.33.178), separate Kacheln pro Person (v0.33.76), Garmin-Zuweisung pro Person (v0.33.175). **Fertiggestellt (v0.33.185+):** Schlafphasen-Timeline (horizontal, Tief/Leicht/REM/Wachliegen/Bad/Ausserhalb) vollstaendig implementiert und im Gesundheits-Tab sichtbar (Bestaetigung 21.04.2026). Per-Person-Kalibrierung ab 35 Naechten aktiv (kalibriert-Badge). OC-7 vollstaendig abgeschlossen.
 
 **Idee:** Auf Basis der Aqara-Vibrationssensordaten (Detektions-Bool + Stärke-Wert) eine Garmin-ähnliche Schlafphasen-Visualisierung und einen Sleep Score berechnen und im Tab "Gesundheit" darstellen.
 

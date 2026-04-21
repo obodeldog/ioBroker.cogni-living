@@ -175,6 +175,7 @@ export default function HealthTab(props: any) {
     const [personOverrideWakeLoading, setPersonOverrideWakeLoading] = useState(false);
     const [personHistoryData, setPersonHistoryData] = useState<Record<string, any>>({});
     const [sensorBatteryStatus, setSensorBatteryStatus] = useState<{sensors: {id:string, level:number|null, isLow:boolean, isCritical:boolean, source:string}[]} | null>(null);
+    const [noisySensors, setNoisySensors] = useState<{id:string, name:string, location:string, count:number, threshold:number}[]>([]);
     const [nativeDevices, setNativeDevices] = useState<any[]>([]);
     const [topoData, setTopoData] = useState<{rooms:string[], matrix:number[][]} | null>(null);
 
@@ -744,12 +745,18 @@ export default function HealthTab(props: any) {
                 if (s && s.val) { try { setSensorBatteryStatus(JSON.parse(s.val)); } catch(e) {} }
             }).catch(() => {});
         };
+        const loadNoisySensors = () => {
+            socket.getState(`${adapterName}.${instance}.analysis.safety.noisySensors`).then((s: any) => {
+                if (s && s.val) { try { const v = JSON.parse(s.val); setNoisySensors(Array.isArray(v) ? v : []); } catch(e) {} }
+            }).catch(() => {});
+        };
         const loadDevices = () => {
             socket.getObject(`system.adapter.${adapterName}.${instance}`).then((obj: any) => {
                 if (obj && obj.native && obj.native.devices) setNativeDevices(obj.native.devices);
             }).catch(() => {});
         };
         loadBattery();
+        loadNoisySensors();
         loadDevices();
         socket.getState(`${namespace}.analysis.topology.structure`).then((s: any) => {
             if (s && s.val) { try { setTopoData(JSON.parse(s.val)); } catch(e) {} }
@@ -2243,6 +2250,27 @@ export default function HealthTab(props: any) {
                                             {s.isCritical ? 'Batterie kritisch' : 'Batterie niedrig'}
                                             {s.level !== null ? ` · ${s.level === 5 || s.level === 80 ? (s.level === 5 ? 'LOWBAT aktiv' : 'OK') : s.level + '%'}` : ''}
                                             {' — Schlafanalyse evtl. ungenau'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* OC-24: Rauschende Sensoren Badge */}
+                        {noisySensors && noisySensors.length > 0 && (
+                            <div style={{
+                                borderTop: `1px dashed ${isDark?'#444':'#ddd'}`,
+                                paddingTop: '6px',
+                                marginTop: '6px',
+                                fontSize: '0.65rem',
+                                color: '#ff9800'
+                            }}>
+                                {noisySensors.map((s, i) => (
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: i > 0 ? '3px' : 0 }}>
+                                        <span>⚡</span>
+                                        <span>
+                                            <b>{s.name}{s.location && s.name !== s.location ? ` (${s.location})` : ''}</b>
+                                            {`: ${s.count} Auslösungen nachts — evtl. zu sensibel (temporär aus haus_still)`}
                                         </span>
                                     </div>
                                 ))}

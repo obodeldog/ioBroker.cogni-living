@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 'use strict';
 
 /*
@@ -53,6 +53,7 @@ function computePersonSleep(p) {
     var bathroomIds      = p.bathroomIds      || new Set();
     var bedroomLocations = p.bedroomLocations  || [];
     var hopDistFn        = p.hopDistFn         || null;
+    var noisySensorIds   = p.noisySensorIds    || new Set();
     var log          = p.log;
     var logPfx       = personTag ? ('[cPS:' + personTag + '] ') : '[cPS:global] ';
 
@@ -130,6 +131,8 @@ function computePersonSleep(p) {
                 }, 999);
                 if (minHops > 2) return false;
             }
+            // OC-24: Rauschende Sensoren aus haus_still ausschliessen (temporaere Blacklist)
+            if (noisySensorIds.size > 0 && e.id && noisySensorIds.has(e.id)) return false;
             return true;
         }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
         for (var i = 0; i < commonEvts.length; i++) {
@@ -1324,6 +1327,32 @@ class CogniLiving extends utils.Adapter {
                     }
                 }
             } catch(_suppE) { this.log.debug('[AURA] Buffer-Supplement: '+_suppE.message); }
+            // OC-24: Sensor-Rauschen-Erkennung (Schlaffenster 22:00-08:00)
+            // Sensoren die deutlich haeufiger als der Median feuern -> temporaere haus_still-Blacklist
+            const _noiseWinStart = (() => { const d = new Date(_sleepSearchBase); d.setHours(22,0,0,0); return d.getTime(); })();
+            const _noiseWinEnd   = (() => { const d = new Date(); d.setHours(8,0,0,0); if (d.getTime() < _noiseWinStart) d.setDate(d.getDate()+1); return Math.min(d.getTime(), Date.now()); })();
+            const _noiseEvts = sleepSearchEvents.filter(e => {
+                const ts = e.timestamp || 0;
+                if (ts < _noiseWinStart || ts > _noiseWinEnd) return false;
+                if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion || e.isBathroomSensor) return false;
+                return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+            });
+            const _noiseCounts = {};
+            for (const e of _noiseEvts) { const sid = e.id || e.name || '?'; _noiseCounts[sid] = (_noiseCounts[sid] || 0) + 1; }
+            const _noiseValues = Object.values(_noiseCounts).sort((a,b) => a-b);
+            const _noiseMedian = _noiseValues.length > 0 ? _noiseValues[Math.floor(_noiseValues.length / 2)] : 0;
+            const NOISE_THRESHOLD = Math.max(10, _noiseMedian * 3); // mind. 10 Events und 3x Median
+            const noisySensors = Object.entries(_noiseCounts)
+                .filter(([id, cnt]) => cnt >= NOISE_THRESHOLD)
+                .map(([id, cnt]) => {
+                    const dev = (this.config.devices || []).find(d => d.id === id);
+                    return { id, count: cnt, name: dev ? (dev.name || id) : id, location: dev ? (dev.location || '') : '', threshold: NOISE_THRESHOLD };
+                });
+            if (noisySensors.length > 0) {
+                this.log.warn('[OC-24] Rauschende Sensoren erkannt: ' + noisySensors.map(s => s.name + ' (' + s.count + ' Events)').join(', '));
+            }
+            this._noisySensorIds = new Set(noisySensors.map(s => s.id));
+            try { await this.setStateAsync('analysis.safety.noisySensors', { val: JSON.stringify(noisySensors), ack: true }); } catch(_nse) {}
 
             // Raum-Verweildauer heute aus roomHistory berechnen (Minuten pro Raum)
             const roomHistoryData = roomHistory?.val ? JSON.parse(roomHistory.val) : {};
@@ -1493,6 +1522,7 @@ class CogniLiving extends utils.Adapter {
                 bathroomIds:  new Set((this.config.devices||[]).filter(function(d){return d.isBathroomSensor||d.sensorFunction==='bathroom';}).map(function(d){return d.id;})),
                 bedroomLocations: (this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed'||d.isBedroomMotion||d.isFP2Bed||d.isVibrationBed;}).map(function(d){return d.location;}).filter(function(l){return !!l;}).filter(function(v,i,a){return a.indexOf(v)===i;}),
                 hopDistFn:    this._roomHopDistance.bind(this),
+                noisySensorIds: this._noisySensorIds || new Set(),
                 log:          this.log
             });
 
@@ -2256,6 +2286,7 @@ class CogniLiving extends utils.Adapter {
                         bathroomIds:   _bathroomDevIds,
                         bedroomLocations: (_self.config.devices||[]).filter(function(d){return d.sensorFunction==='bed'||d.isBedroomMotion||d.isFP2Bed||d.isVibrationBed;}).map(function(d){return d.location;}).filter(function(l){return !!l;}).filter(function(v,i,a){return a.indexOf(v)===i;}),
                         hopDistFn:     _self._roomHopDistance.bind(_self),
+                       noisySensorIds: (_self && _self._noisySensorIds) ? _self._noisySensorIds : new Set(),
                         log:           _self.log
                     });
                     var sleepOnsetMin = null;
@@ -2296,6 +2327,9 @@ class CogniLiving extends utils.Adapter {
             try {
                 await this.setObjectNotExistsAsync('analysis.health.sleepScoreHistory', {
                     type: 'state', common: { name: 'Sleep Score History for Calibration (JSON)', type: 'string', role: 'json', read: true, write: false, def: '[]' }, native: {}
+                });
+                await this.setObjectNotExistsAsync('analysis.safety.noisySensors', {
+                    type: 'state', common: { name: 'OC-24 Rauschende Sensoren (JSON)', type: 'string', role: 'json', read: true, write: false, def: '[]' }, native: {}
                 });
                 var _scoreHistory = [];
                 var _histState = await this.getStateAsync('analysis.health.sleepScoreHistory');
@@ -2800,7 +2834,8 @@ class CogniLiving extends utils.Adapter {
                 sleepStartOverridden: _overrideApplied,
                 sleepStartOverrideSource: _overrideApplied ? sleepStartSource : null,
                 wakeOverridden: _wakeOverrideApplied,
-                bedWasEmpty: bedWasEmpty
+                bedWasEmpty: bedWasEmpty,
+                noisySensors: noisySensors
             };
 
             const dataDir = utils.getAbsoluteDefaultDataDir();

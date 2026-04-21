@@ -1,5 +1,17 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 21.04.2026 | **Version:** 0.33.185
+**Letzte Aktualisierung:** 21.04.2026 | **Version:** 0.33.186
+
+---
+
+## ✅ Sitzung 21.04.2026 — Version 0.33.186
+
+### ✅ Abgeschlossen
+- **[OC-24] Sensor-Rauschen-Erkennung**: In `saveDailyHistory()` wird das Schlaffenster (22:00-08:00) ausgewertet. Sensoren die >= 3x den Median aller Sensoren feuern UND mindestens 10 Events haben, werden als `noisySensor` eingestuft. Werden in `analysis.safety.noisySensors` (JSON) gespeichert, im taeglich JSON-Snapshot unter `noisySensors[]` archiviert, und temporaer aus der `haus_still`-Berechnung ausgeschlossen (`noisySensorIds` Parameter in `computePersonSleep`). Im Gesundheits-Tab erscheint ein oranges Warnsymbol (Blitz) mit Sensor-Name, Ausloeseanzahl und Hinweis 'temporaer aus haus_still'.
+- **[Docs] OC-7 vollstaendig markiert**: Schlafphasen-Timeline (horizontal, Tief/Leicht/REM/Wachliegen) ist implementiert und bestaetigt (Screenshot 21.04.2026). Status in BRAINSTORMING.md auf 'vollstaendig' aktualisiert.
+- **[Docs] OC-26 auf NIEDRIG/Nice-to-have gesetzt**: Sensor-Onboarding-Assistent ist kein akutes Problem, erst relevant wenn Produkt an unerfahrene Kunden verkauft wird.
+
+### Naechster Schritt
+- Adapter neu starten. Noisy-Sensor-Detection laeuft ab naechstem `saveDailyHistory`-Aufruf (jede Stunde und nach Nacht-Abschluss)
 
 ---
 
