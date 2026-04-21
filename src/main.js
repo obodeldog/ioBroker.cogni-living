@@ -2918,22 +2918,36 @@ class CogniLiving extends utils.Adapter {
                 try { await this.setStateAsync('LTM.roomTransitionTimes', { val: JSON.stringify(this._roomTransitionTimes), ack: true }); } catch(_rttp) {}
             }
 
-            // Kalibrier-Log: Sensorquellen gegen Garmin (fuer spaetere Auswertung ohne Smartwatch)
+            // OC-16 + OC-30: Kalibrier-Log + MAE-Ranking + Override-Zaehler
             try {
                 const absDeltaMin = (candidateTs, refTs) => {
                     if (!candidateTs || !refTs) return null;
                     return Math.abs(Math.round((candidateTs - refTs) / 60000));
                 };
+                // OC-30 Stufe 2: Override als Referenz wenn kein Garmin vorhanden
+                // Nutzer-Override wird wie Garmin-Ground-Truth behandelt
+                const _refSleepStartTs = garminSleepStartTs || (_overrideApplied && sleepStart ? sleepStart : null);
+                const _refWakeTs       = garminWakeTs; // Wake-Override koennte spaeter aehnlich erweitert werden
+                const _refSrcSleep     = garminSleepStartTs ? 'garmin' : (_overrideApplied && sleepStart ? 'manual_override' : null);
+
                 const calibrationEntry = {
                     date: dateStr,
                     ts: Date.now(),
+                    referenceSource: _refSrcSleep,  // OC-30: 'garmin' | 'manual_override' | null
                     chosen: { sleepStartSource: sleepStartSource || null, wakeSource: wakeSource || null, wakeConf: wakeConf || null },
-                    references: { garminSleepStartTs: garminSleepStartTs || null, garminWakeTs: garminWakeTs || null },
+                    references: { garminSleepStartTs: garminSleepStartTs || null, garminWakeTs: garminWakeTs || null,
+                                  manualOverrideSleepStartTs: (_overrideApplied && !garminSleepStartTs && sleepStart) ? sleepStart : null },
                     candidatesStart: { garmin: garminSleepStartTs || null, fp2_vib: vibRefinedSleepStartTs || null, fp2: _fp2RawStart || null, motion: sleepWindowMotion.start || null, fixed: _fixedSleepStartTs || null },
                     candidatesWake: { garmin: garminWakeTs || null, fp2_vib: fp2VibWakeTs || null, fp2_other: fp2OtherWakeTs || null, fp2: fp2WakeTs || null, other: otherRoomWakeTs || null, motion: (sleepWindowSource === 'motion') ? fp2WakeTs : null, vibration_alone: vibAloneWakeTs || null, vibration: vibWakeTs || null, fixed: (sleepWindowSource === 'fixed') ? fp2WakeTs : null },
+                    // absDeltaToGarminMin: strikt nur Garmin (Abwaertskompatibilitaet)
                     absDeltaToGarminMin: {
                         sleepStart: { fp2_vib: absDeltaMin(vibRefinedSleepStartTs, garminSleepStartTs), fp2: absDeltaMin(_fp2RawStart, garminSleepStartTs), motion: absDeltaMin(sleepWindowMotion.start, garminSleepStartTs), fixed: absDeltaMin(_fixedSleepStartTs, garminSleepStartTs) },
                         wake: { fp2_vib: absDeltaMin(fp2VibWakeTs, garminWakeTs), fp2_other: absDeltaMin(fp2OtherWakeTs, garminWakeTs), fp2: absDeltaMin(fp2WakeTs, garminWakeTs), other: absDeltaMin(otherRoomWakeTs, garminWakeTs), vibration_alone: absDeltaMin(vibAloneWakeTs, garminWakeTs), vibration: absDeltaMin(vibWakeTs, garminWakeTs) }
+                    },
+                    // OC-30 Stufe 2: absDeltaToRefMin = Garmin ODER manueller Override als Referenz
+                    absDeltaToRefMin: {
+                        sleepStart: { fp2_vib: absDeltaMin(vibRefinedSleepStartTs, _refSleepStartTs), fp2: absDeltaMin(_fp2RawStart, _refSleepStartTs), motion: absDeltaMin(sleepWindowMotion.start, _refSleepStartTs), fixed: absDeltaMin(_fixedSleepStartTs, _refSleepStartTs) },
+                        wake: { fp2_vib: absDeltaMin(fp2VibWakeTs, _refWakeTs), fp2_other: absDeltaMin(fp2OtherWakeTs, _refWakeTs), fp2: absDeltaMin(fp2WakeTs, _refWakeTs), other: absDeltaMin(otherRoomWakeTs, _refWakeTs), vibration_alone: absDeltaMin(vibAloneWakeTs, _refWakeTs), vibration: absDeltaMin(vibWakeTs, _refWakeTs) }
                     }
                 };
                 let calibrationLog = [];
@@ -2944,6 +2958,34 @@ class CogniLiving extends utils.Adapter {
                 calibrationLog.push(calibrationEntry);
                 if (calibrationLog.length > 120) calibrationLog = calibrationLog.slice(calibrationLog.length - 120);
                 await this.setStateAsync('analysis.health.sleepCalibrationLog', { val: JSON.stringify(calibrationLog), ack: true });
+
+                // OC-16: MAE-Ranking berechnen (ab 7 Eintraegen mit Referenz)
+                const _withRef = calibrationLog.filter(function(e) { return e.referenceSource === 'garmin' || e.referenceSource === 'manual_override'; });
+                if (_withRef.length >= 7) {
+                    const _SRCS_START = ['fp2_vib','fp2','vib_refined','motion_vib','motion','fixed'];
+                    const _SRCS_WAKE  = ['fp2_vib','fp2_other','fp2','other','vibration_alone','vibration'];
+                    const _maeFor = function(entries, cat, src) {
+                        var _deltas = entries.map(function(e){ var d=(e.absDeltaToRefMin||e.absDeltaToGarminMin||{}); return (d[cat]||{})[src]; }).filter(function(v){return v!=null&&!isNaN(v);});
+                        if (_deltas.length < 3) return null;
+                        return { mae: Math.round(_deltas.reduce(function(a,b){return a+b;},0)/_deltas.length), n: _deltas.length };
+                    };
+                    const _maeResult = { nNights: _withRef.length, computedAt: Date.now(), sleepStart: {}, wake: {} };
+                    _SRCS_START.forEach(function(s){ var m=_maeFor(_withRef,'sleepStart',s); if(m) _maeResult.sleepStart[s]=m; });
+                    _SRCS_WAKE.forEach(function(s){ var m=_maeFor(_withRef,'wake',s); if(m) _maeResult.wake[s]=m; });
+                    await this.setStateAsync('analysis.health.sleepCalibrationMAE', { val: JSON.stringify(_maeResult), ack: true });
+                    this.log.info('[OC-16] MAE-Ranking aktualisiert: ' + _withRef.length + ' Referenz-Naechte. Beste Einschlaf-Quelle: ' + (Object.entries(_maeResult.sleepStart).sort(function(a,b){return a[1].mae-b[1].mae;})[0]||['?'])[0]);
+                }
+
+                // OC-30 Stufe 1: Override-Zaehler aus Log ableiten (wie oft wurde welche Quelle manuell gewaehlt)
+                const _overrideCounts = {};
+                calibrationLog.forEach(function(e) {
+                    if (e.referenceSource === 'manual_override' && e.chosen && e.chosen.sleepStartSource) {
+                        var _s = e.chosen.sleepStartSource;
+                        _overrideCounts[_s] = (_overrideCounts[_s] || 0) + 1;
+                    }
+                });
+                await this.setStateAsync('analysis.health.sourceOverrideHistory', { val: JSON.stringify(_overrideCounts), ack: true });
+
             } catch (calErr) {
                 this.log.warn('[SleepCalibration] Log konnte nicht gespeichert werden: ' + calErr.message);
             }

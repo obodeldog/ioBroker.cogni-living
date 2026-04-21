@@ -177,6 +177,8 @@ export default function HealthTab(props: any) {
     const [sensorBatteryStatus, setSensorBatteryStatus] = useState<{sensors: {id:string, level:number|null, isLow:boolean, isCritical:boolean, source:string}[]} | null>(null);
     const [noisySensors, setNoisySensors] = useState<{id:string, name:string, location:string, count:number, threshold:number}[]>([]);
     const [gatewayOutage, setGatewayOutage] = useState<{gateway:string, count:number, sensors:string[]}[]>([]);
+    const [sleepCalMAE, setSleepCalMAE] = useState<{nNights:number, computedAt:number, sleepStart:Record<string,{mae:number,n:number}>, wake:Record<string,{mae:number,n:number}>} | null>(null);
+    const [sourceOverrideHistory, setSourceOverrideHistory] = useState<Record<string,number>>({});
     const [nativeDevices, setNativeDevices] = useState<any[]>([]);
     const [topoData, setTopoData] = useState<{rooms:string[], matrix:number[][]} | null>(null);
 
@@ -761,9 +763,21 @@ export default function HealthTab(props: any) {
                 if (obj && obj.native && obj.native.devices) setNativeDevices(obj.native.devices);
             }).catch(() => {});
         };
+        const loadSleepCalMAE = () => {
+            socket.getState(`${adapterName}.${instance}.analysis.health.sleepCalibrationMAE`).then((s: any) => {
+                if (s && s.val) { try { setSleepCalMAE(JSON.parse(s.val)); } catch(e) {} }
+            }).catch(() => {});
+        };
+        const loadSourceOverrides = () => {
+            socket.getState(`${adapterName}.${instance}.analysis.health.sourceOverrideHistory`).then((s: any) => {
+                if (s && s.val) { try { setSourceOverrideHistory(JSON.parse(s.val)); } catch(e) {} }
+            }).catch(() => {});
+        };
         loadBattery();
         loadNoisySensors();
         loadGatewayOutage();
+        loadSleepCalMAE();
+        loadSourceOverrides();
         loadDevices();
         socket.getState(`${namespace}.analysis.topology.structure`).then((s: any) => {
             if (s && s.val) { try { setTopoData(JSON.parse(s.val)); } catch(e) {} }
@@ -3287,6 +3301,66 @@ export default function HealthTab(props: any) {
                         </div>
                     </div>
                 )}
+
+                {/* OC-16 + OC-30: Quellen-Genauigkeit (MAE-Ranking vs Garmin/Override) */}
+                {sleepCalMAE && sleepCalMAE.nNights >= 7 && (() => {
+                    const srcLabel: Record<string,string> = {
+                        fp2_vib: 'Radar+Vibration', fp2: 'FP2/Radar', vib_refined: 'Vibration (verfeinert)',
+                        motion_vib: 'Bewegung+Vibr.', motion: 'Bewegung', fixed: 'Festes Fenster',
+                        fp2_other: 'FP2 (Aufwach)', other: 'Anderer Raum', vibration_alone: 'Vibration allein', vibration: 'Vibration'
+                    };
+                    const sortedStart = Object.entries(sleepCalMAE.sleepStart).sort((a,b) => a[1].mae - b[1].mae);
+                    const sortedWake  = Object.entries(sleepCalMAE.wake).sort((a,b) => a[1].mae - b[1].mae);
+                    const medals = ['🥇','🥈','🥉'];
+                    const overrideEntries = Object.entries(sourceOverrideHistory).sort((a,b) => b[1]-a[1]);
+                    return (
+                        <details style={{marginBottom: '8px', background: isDark ? '#1a2a1a' : '#f1f8e9', border: '1px solid #4caf50', borderRadius: '8px', padding: '10px 14px'}}>
+                            <summary style={{cursor:'pointer', fontWeight:'bold', fontSize:'0.82rem', color:'#4caf50', userSelect:'none'}}>
+                                📊 QUELLEN-GENAUIGKEIT — vs. Garmin/Override ({sleepCalMAE.nNights} Nächte) ▸
+                            </summary>
+                            <div style={{marginTop: '10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+                                <div>
+                                    <div style={{fontSize:'0.72rem', fontWeight:'bold', color: isDark?'#aaa':'#666', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.05em'}}>Einschlafzeit</div>
+                                    {sortedStart.map(([src, v], i) => (
+                                        <div key={src} style={{display:'flex', alignItems:'center', gap:'6px', marginBottom:'3px', fontSize:'0.78rem'}}>
+                                            <span style={{width:'1.4em', textAlign:'center'}}>{medals[i] || '·'}</span>
+                                            <span style={{flex:1, color: isDark?'#ccc':'#333'}}>{srcLabel[src] || src}</span>
+                                            <span style={{fontWeight:'bold', color: i===0 ? '#4caf50' : i===1 ? '#ffb300' : isDark?'#aaa':'#888'}}>±{v.mae}min</span>
+                                            <span style={{fontSize:'0.68rem', color: isDark?'#555':'#bbb'}}>({v.n}N)</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div>
+                                    <div style={{fontSize:'0.72rem', fontWeight:'bold', color: isDark?'#aaa':'#666', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.05em'}}>Aufwachzeit</div>
+                                    {sortedWake.map(([src, v], i) => (
+                                        <div key={src} style={{display:'flex', alignItems:'center', gap:'6px', marginBottom:'3px', fontSize:'0.78rem'}}>
+                                            <span style={{width:'1.4em', textAlign:'center'}}>{medals[i] || '·'}</span>
+                                            <span style={{flex:1, color: isDark?'#ccc':'#333'}}>{srcLabel[src] || src}</span>
+                                            <span style={{fontWeight:'bold', color: i===0 ? '#4caf50' : i===1 ? '#ffb300' : isDark?'#aaa':'#888'}}>±{v.mae}min</span>
+                                            <span style={{fontSize:'0.68rem', color: isDark?'#555':'#bbb'}}>({v.n}N)</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            {overrideEntries.length > 0 && (
+                                <div style={{marginTop:'10px', paddingTop:'8px', borderTop: `1px solid ${isDark?'#333':'#ddd'}`}}>
+                                    <div style={{fontSize:'0.72rem', fontWeight:'bold', color: isDark?'#aaa':'#666', marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.05em'}}>Manuelle Korrekturen (OC-30)</div>
+                                    <div style={{display:'flex', flexWrap:'wrap', gap:'6px'}}>
+                                        {overrideEntries.map(([src, count]) => (
+                                            <span key={src} style={{fontSize:'0.75rem', background: isDark?'#2a3a2a':'#e8f5e9', border:'1px solid #4caf50', borderRadius:'4px', padding:'2px 7px', color: isDark?'#a5d6a7':'#2e7d32'}}>
+                                                {srcLabel[src] || src}: {count}×
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div style={{fontSize:'0.68rem', color: isDark?'#666':'#aaa', marginTop:'4px'}}>Manuell gewählte Quellen fließen als Referenz ins MAE-Ranking ein</div>
+                                </div>
+                            )}
+                            <div style={{fontSize:'0.68rem', color: isDark?'#555':'#bbb', marginTop:'8px', paddingTop:'6px', borderTop:`1px solid ${isDark?'#2a2a2a':'#eee'}`}}>
+                                Berechnet aus {sleepCalMAE.nNights} Nächten · Letzte Aktualisierung: {new Date(sleepCalMAE.computedAt).toLocaleDateString('de-DE')}
+                            </div>
+                        </details>
+                    );
+                })()}
 
                 {renderMobility()}
 

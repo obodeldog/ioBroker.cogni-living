@@ -89,19 +89,11 @@ OC-23 (Manueller Override) ist vollständig implementiert. Wenn ein Nutzer wiede
 
 **Drei Ausbaustufen:**
 
-#### Stufe 1 — Quellen-Zähler (einfach, ~1h)
-```json
-// in der History-JSON oder einem separaten State:
-"sourceOverrideHistory": {
-  "vib_refined": 7,    // so oft manuell gewählt
-  "motion_vib": 2,
-  "garmin": 1
-}
-```
-Nach N=5 Overrides auf dieselbe Quelle: diese Quelle bekommt in der Cluster-Direktheitsbewertung einen Bonus. Effektiv verschiebt sich die Prioritätskette für diesen Nutzer.
+#### ✅ Stufe 1 — Quellen-Zähler (v0.33.189)
+`analysis.health.sourceOverrideHistory` — zählt wie oft der Nutzer manuell zu welcher Quelle wechselt. Im HealthTab als grüne Chips sichtbar.
 
-#### Stufe 2 — Override als Ground Truth für Kalibrierung
-Jede manuelle Korrektur wird wie ein Garmin-Ground-Truth behandelt und in das Kalibrierungs-Log eingetragen (`sourceCalibLog`). Das MAE-Ranking der Quellen (welche trifft Garmin am besten?) verbessert sich auch ohne Smartwatch. Der Nutzer wird sein eigener Kalibrierungs-Sensor.
+#### ✅ Stufe 2 — Override als Ground Truth für Kalibrierung (v0.33.189)
+Kalibrierungseinträge haben `referenceSource: 'manual_override'` und `absDeltaToRefMin` wenn Override gesetzt. Fließt direkt in OC-16 MAE-Ranking ein — Nutzer ohne Garmin kalibrieren über eigene Korrekturen.
 
 #### Stufe 3 — Gelernter Prior (Verbindung zu OC-22)
 Der Rolling-7-Nacht-Mittelwert der Einschlafzeiten (OC-22 Stufe 1) soll Override-korrigierte Werte bevorzugt als Eingang nutzen — statt dem automatisch berechneten Wert. Damit konvergiert der Prior schneller auf die wahre Einschlafzeit.
@@ -343,13 +335,14 @@ Erkrankung AN = mehr Sensitivität + besseres Kontextverständnis — niemals Ab
 - Über mehrere Tage/Wochen ermitteln, welche Sensorquelle/Sensorkombination Garmin am besten trifft.
 - Daraus robuste Regeln für Nutzer ohne Garmin/Smartwatch ableiten (Zielgruppe: ältere Personen).
 
-**Tracking-Idee:**
-- Jede Nacht Kandidaten für Einschlaf-/Aufwachzeit + Garmin-Referenz in ein Kalibrier-Log schreiben.
-- Auswertung später über absolute Abweichung (Minuten) pro Quelle.
+**✅ Implementiert (v0.33.189):**
+- Kalibrierungs-Log (`analysis.health.sleepCalibrationLog`) läuft seit v0.33.183 — speichert jede Nacht alle Kandidaten + Deltas zu Garmin.
+- MAE-Ranking wird ab 7 Referenz-Nächten automatisch berechnet → `analysis.health.sleepCalibrationMAE`.
+- HealthTab zeigt aufklappbare "QUELLEN-GENAUIGKEIT" Sektion mit 🥇🥈🥉 Medaillen-Ranking.
+- OC-30 Stufe 2 Integration: manuelle Overrides fließen als `referenceSource: 'manual_override'` ins Ranking ein (Nutzer ohne Smartwatch kalibrieren über eigene Korrekturen).
 
-**Offen:**
-- Nach 7+ Nächten MAE-Ranking pro Quelle berechnen (Start/Ende getrennt).
-- Entscheidung, ob `fp2_vib` (kombiniert) in mehr Fällen die Endzeit direkt übernehmen soll.
+**Noch offen (Stufe 2):**
+- Automatische Anpassung der Cluster-Prioritäten basierend auf MAE-Ranking (wenn fp2_vib dauerhaft besser als garmin → Prio anpassen). Aktuell nur Anzeige, keine Konsequenz für Algorithmus.
 
 ---
 
@@ -427,24 +420,6 @@ Erkrankung AN = mehr Sensitivität + besseres Kontextverständnis — niemals Ab
 
 ---
 
-### OC-4: Schlafzeit-Zuverlässigkeit mit FP2 (17.03.2026)
-
-**Problem:** Die Schlafzeit-Kachel (sleepWindowStart/sleepWindowEnd) zeigt unplausible Werte wenn:
-- Der Adapter während der Nacht neu startet (z.B. wegen Update) → Aufwach-Zeit = Restart-Zeit
-- FP2 kurze Aussetzer hat → scheinbares "Aufwachen" mitten in der Nacht
-
-**Konsequenz:** "Schlafzeit 02:53–04:36" statt echtem 22:00–07:00 Fenster
-
-**Offene Fragen:**
-- Wie erkennen wir ob ein "Aufwachen" echt ist oder nur ein Adapter-Neustart?
-- Mindest-Schlafdauer als Plausibilitätsprüfung (z.B. < 3h = unplausibel)?
-- Soll der Startup-Save das sleepWindow NICHT berechnen wenn der eventHistory-Horizont < 4h ist?
-
-**Kurzfristige Idee:** Bei Startup-Save: wenn `bedPresenceMinutes` aus eventHistory < 180 min (3h), kein sleepWindow berechnen → lieber kein Wert als falscher Wert
-
-**Status:** ⏳ Noch nicht implementiert — nach nächstem stabilen Release diskutieren
-
----
 
 ### OC-3: Hardware-Personenzähler — Stufe 3 (16.03.2026)
 

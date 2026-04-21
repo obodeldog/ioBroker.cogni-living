@@ -1,8 +1,19 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 21.04.2026 | **Version:** 0.33.188
+**Letzte Aktualisierung:** 21.04.2026 | **Version:** 0.33.189
 
 ---
 
+## ✅ Sitzung 21.04.2026 — Version 0.33.189
+
+### ✅ Abgeschlossen
+- **[OC-16] MAE-Ranking Sensorquellen**: In `saveDailyHistory()` wird nach jedem Kalibrierungseintrag ein MAE-Ranking berechnet (ab 7 Referenz-Nächten). Für jede Einschlaf- und Aufwachquelle wird der mittlere absolute Fehler (in Minuten) vs. Garmin/Override-Referenz berechnet und in `analysis.health.sleepCalibrationMAE` gespeichert. Im HealthTab erscheint eine aufklappbare Sektion "QUELLEN-GENAUIGKEIT" mit Medaillen-Ranking (🥇🥈🥉) für Einschlaf- und Aufwachzeit getrennt.
+- **[OC-30 Stufe 1] Override-Zähler**: Wenn ein Nutzer manuell eine Einschlafquelle überschreibt, wird der Zähler für diese Quelle in `analysis.health.sourceOverrideHistory` inkrementiert (abgeleitet aus dem Kalibrierungslog). Im HealthTab sichtbar als grüne Chips ("Radar+Vibration: 3×").
+- **[OC-30 Stufe 2] Override als Ground Truth**: Kalibrierungseinträge haben jetzt ein neues Feld `referenceSource` ('garmin' | 'manual_override' | null) und `absDeltaToRefMin` (Deltas gegen Garmin ODER manuellen Override). Wenn kein Garmin vorhanden aber Override gesetzt: wird der Override-Zeitstempel als Referenz behandelt — Nutzer ohne Smartwatch kalibrieren über ihre eigenen Korrekturen.
+
+### Nächster logischer Schritt
+- Nach 7 Nächten mit Garmin oder manuellen Overrides: Sektion erscheint automatisch in HealthTab
+
+---
 ## ✅ Sitzung 21.04.2026 — Version 0.33.188
 
 ### ✅ Abgeschlossen
