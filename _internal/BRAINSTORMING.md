@@ -272,60 +272,9 @@ Kinder-/Gäste-Aufenthalte sind sporadisch aber planbar (z. B. Kinder kommen jed
 
 **Priorität:** NIEDRIG — Nice-to-have, kein akutes Problem. Erst sinnvoll wenn `_isMultiPerson`-Logik insgesamt stabiler ist.
 
----
+### OC-22: Neuronales Netz für Schlafmuster-Klassifikation — Stufe 2 (26.03.2026)
 
-### OC-24: Sensor-Rauschen-Erkennung und Nutzer-Hinweis (29.03.2026)
-
-**Problem / Nutzerbedarf:**
-Ein einzelner Sensor (z. B. "Homematic OG Flur Bewegung Hinten 1") kann durch Defekt, zu hohe Empfindlichkeit oder lange PIR-Nachlaufzeit deutlich häufiger feuern als alle anderen Sensoren. Das blockiert aktuell den `haus_still`-Algorithmus: Da dieser Sensor auch nachts aktiv bleibt, findet der Algorithmus nie einen 30-Min-Stille-Block und liefert immer "—".
-
-**Idee: Anomalie-Erkennung pro Sensor**
-- Täglich (oder beim saveDailyHistory) pro Sensor: Event-Frequenz berechnen (Events/Stunde)
-- Wenn Sensor X deutlich über Median aller Sensoren liegt (z. B. 3× häufiger als Durchschnitt) → Verdacht auf Rauschen
-- Hinweis in UI/Log: "Sensor 'OG Flur' hat heute 47 Auslösungen zwischen 23:00 und 06:00 — prüfe Empfindlichkeit oder Defekt"
-- Optional: Sensor temporär aus haus_still-Berechnung ausschließen (Auto-Blacklist mit Ablauf)
-
-**Relevanz für haus_still:**
-Der `haus_still`-Algorithmus selbst sollte robuster werden (Pflicht, kurzfristig), ABER die Sensor-Anomalie-Erkennung ist ein wertvoller ergänzender Hinweis an den Nutzer (mittelfristig).
-
-**Ansatz für Robustheit (kurzfristig, in haus_still selbst):**
-Statt "exakt 0 Events von beliebigen Sensoren in 30 Min": "0 Events von mindestens 2 VERSCHIEDENEN Sensoren in 30 Min" — so blockiert ein einzelner Rausch-Sensor nicht mehr allein.
-
-**Priorität:** MITTEL — wichtig für Produkt-Qualitätsgefühl, kein Sicherheitsthema.
-
----
-
-### OC-22: Gelernter Einschlafzeit-Prior + Neuronales Netz für Schlafmuster (26.03.2026)
-
-> **✅ Stufe 1 ("Haus-wird-still")** implementiert in v0.33.79. Stufe 2 (NN) bleibt Langfrist-Roadmap Phase 5+.
-
-**Kontext:** In PIR-only-Haushalten (keine FP2/Vibration/Garmin) liefert der neue "Haus-wird-still"-Algorithmus (v0.33.79) eine erste zuverlässige Einschlafzeit. Aber diese Erkennung ist kontextfrei — sie weiß nicht, dass Robert typischerweise um 22:30 schläft und Ingrid um 23:00. Dieses Wissen könnte als Konfidenz-Boost und Plausibilitätscheck dienen.
-
-**Zwei Entwicklungsstufen:**
-
-#### Stufe 1 (Mittelfristig): Gelernter Rolling-Durchschnitt pro Person
-
-Ein einfacher Bayes-Prior ohne Machine Learning:
-
-```javascript
-// Für jede Person wird ein gleitender 7-Nacht-Mittelwert geführt:
-person.learnedBedtime = {
-    meanMinutes: 1380,  // 23:00 Uhr in Minuten seit Mitternacht (rolling 7 Nächte)
-    stdMinutes:  25,    // ±25 min Standardabweichung
-    sampleCount: 7      // Anzahl der zugrunde liegenden Nächte
-};
-```
-
-**Anwendung:**
-- `sleepWindowStart` aus "Haus-wird-still" liegt innerhalb `mean ± 2*std` → Konfidenz von `niedrig` auf `mittel` erhöhen
-- `sleepWindowStart` liegt außerhalb (mehr als 90 min Abweichung) → Konfidenz bleibt `niedrig`, Log-Hinweis: "untypisch spät/früh"
-- Nächte ohne erkannte Einschlafzeit → Prior dient als Fallback-Schätzung (`wakeSource = 'learned_prior'`, `wakeConf = 'niedrig'`)
-
-**Datenspeicherung:** Einschlafzeiten je Person in `dailyHistory` → bei jeder neuen Nacht rollierend über 7 Einträge mitteln. Kein externer Service nötig.
-
-**Vorteil:** Funktioniert ohne NN, braucht keine Trainingsdaten, adaptiert sich nach wenigen Nächten automatisch an den Nutzer.
-
-**Abhängigkeit:** Benötigt mind. 3 erfolgreiche Nächte aus "Haus-wird-still" (v0.33.79) um Prior zu initialisieren.
+> **Stufe 1 (gelernter Haus-wird-still-Prior)** ist implementiert (v0.33.79). Nur Stufe 2 ist noch offen.
 
 #### Stufe 2 (Langfristig): Neuronales Netz für Schlafmuster-Klassifikation
 
@@ -354,50 +303,6 @@ Bereits in Python vorhanden sind NNs für andere Analysen. Ein weiteres kleines 
 - Beide Stufen sind additiv: Stufe-2-Ausgabe kann Stufe-1-Prior überschreiben wenn Konfidenz höher
 
 **Status:** Brainstorming. Stufe 1 kann nach ~3 stabilen Nächten mit v0.33.79 begonnen werden. Stufe 2 ist Langfrist-Roadmap (Phase 5+).
-
----
-
-### OC-21: personTag-Filter für Außerhalb-Bett-Events in Schlafanalyse (26.03.2026)
-
-**Problem:** `_motOutEvts` (Grundlage für rote/orange Dreiecke im Schlafbalken) filtert aktuell nur nach Sensor-Typ (nicht Schlafzimmer), aber NICHT nach personTag. In Mehretagen-Haushalten mit eigenem Kinderzimmer/Kinderbad OG werden OG-Sensoren trotz personTag korrekt konfigurierter Bewohner EG als "Außerhalb"-Events eingestuft.
-
-**Warum Topologie-Hop-Filter (OC-17/v0.33.78) nicht ausreicht:**
-- Der Hop-Filter deckt den häufigsten Fall gut ab (OG Flur = 3+ Hops = ausgefiltert)
-- Aber: in kleinen Wohnungen können OG-Räume topologisch "nah" sein (wenig Räume → Matrix gut verbunden)
-- Außerdem: Kunden-Haushalte wo BEIDE Etagen bewohnt sind wollen granulare Zuordnung
-
-**Idee: personTag-basierter Filter als Ergänzung**
-
-```
-Sensor hat personTag='Kind'    → gehört einer anderen Person → bei Schlafanalyse für 'Marc' ignorieren
-Sensor hat personTag='Marc'    → gehört dem Schläfer → immer relevant (Bad, Flur EG)
-Sensor hat personTag=''        → shared/unbekannt → immer relevant (kein Filter)
-```
-
-**Algorithmus (Backend _motOutEvts):**
-```javascript
-// Wenn Schläfer einen personTag hat ('Marc'):
-//   - Sensor mit GLEICHEM personTag → einschließen
-//   - Sensor OHNE personTag → einschließen (shared Sensor)
-//   - Sensor mit ANDEREM personTag → 'other_person' (blau) statt 'outside' (rot)
-if (_sleepPersonTag && e.personTag && e.personTag !== _sleepPersonTag) {
-    // Nicht filtern, aber als 'other_person' markieren (nicht als 'outside')
-    return SPECIAL_MARKER; // → _motType = 'other_person'
-}
-```
-
-**Verhältnis zu Topologie-Hop-Filter:**
-- Beide Ansätze ergänzen sich: Hop-Filter = geometrische Nähe, personTag = semantische Zuordnung
-- Empfehlung: Hop-Filter als erste Stufe (OC-17, v0.33.78), personTag als zweite Stufe (dieses OC)
-- Wenn BEIDE aktiv: erst Hop-Filter, dann personTag-Filter
-
-**Voraussetzung:** personTag muss vom User korrekt in der Sensor-Konfiguration eingetragen sein (freiwillig, kein Pflichtfeld). Sensoren ohne personTag bleiben immer "shared".
-
-**Abhängigkeit:** OC-18 (Per-Person-Schlafanalyse, v0.33.76) — `_sleepPersonTag` kommt aus der Person-spezifischen Schlafberechnung.
-
-**Status:** Brainstorming; Umsetzung nach Praxistest Hop-Filter.
-
----
 
 ### OC-20: Medizinisches Profil beeinflusst Schlaf-Algorithmus (25.03.2026)
 
@@ -431,66 +336,6 @@ Erkrankung AN = mehr Sensitivität + besseres Kontextverständnis — niemals Ab
 - Als klinisches Signal in Gesundheits-Trending einbinden
 
 **Abhängigkeit:** Return-to-Bed-Logik bereits implementiert (v0.33.75) — OC-20 baut darauf auf (Schlafstörungen-Modus senkt Rückkehr-Schwelle)
-
----
-
-### OC-17: ✅ DONE (v0.33.78) — Batterie-Warnung in Schlafkachel — Topologie-basierter Nähefilter (24.03.2026)
-
-**Ausgangssituation:**
-Ab v0.33.73 wird die Batterie-Warnung in der Schlafanalyse-Kachel nur noch für schlaf-relevante Sensoren angezeigt (Vibration, FP2-Radar, Bewegung mit Funktion `bed`/`bathroom`/`kitchen`/`hallway`). Das ist ein guter erster Filter — aber er ist **standortblind**.
-
-**Das Problem:**
-Der Filter kennt nur den Sensor-Typ, nicht den physischen Abstand zum Schlafzimmer. Konsequenz: Ein Bewegungsmelder im **Bad OG** (obere Etage, weit weg) warnt genauso wie ein Bewegungsmelder im **Bad EG** direkt neben dem Schlafzimmer. Gleiches gilt für Flur, Küche etc. auf anderen Etagen oder in anderen Gebäudebereichen.
-
-**Konkrete Beispiele die falsch gefiltert werden:**
-- `OG Flur Hinten` → `sensorFunction=hallway` → wird gewarnt, obwohl Schlafzimmer auf EG
-- `Bad OG` → `sensorFunction=bathroom` → wird gewarnt, obwohl Schlafzimmer auf EG
-- `Küche Einliegerwohnung` → `sensorFunction=kitchen` → komplett andere Wohneinheit
-
-**Die Lösung: Topologie-Matrix als Nähefilter**
-
-Die Topologie-Matrix ist im System bereits vorhanden und beim Kunden vollständig gepflegt (`SystemTab → Topologie-Matrix & Raum-Adjazenz`). Sie definiert welche Räume direkt aneinander angrenzen.
-
-**Algorithmus (geplant):**
-
-```
-1. Schlafzimmer-Raum bestimmen:
-   → Alle Sensoren mit sensorFunction='bed' aus native.devices
-   → Deren location-Felder = Schlafzimmer-Räume (kann mehrere geben!)
-
-2. Topologie laden:
-   → cogni-living.X.system.topologyMatrix (oder via getObject)
-
-3. BFS/Dijkstra: Für jeden Schlafzimmer-Raum alle Räume mit Hop-Distanz ≤ 2 ermitteln
-   (Hop 1 = direkt angrenzend, Hop 2 = eine Tür weiter)
-
-4. Filter: Nur Sensoren warnen, deren location in der Nähe-Menge enthalten ist
-```
-
-**Schwellwert-Diskussion:**
-- **Hop 1 (direkt angrenzend):** Sehr streng — vielleicht zu wenig (Küche oft 2 Schritte entfernt)
-- **Hop 2 (eine Tür weiter):** Empfohlen — deckt typisches Bad/WC + Flur ab
-- **Hop 3:** Zu weit — würde wieder zu viele irrelevante Räume einschließen
-
-**Voraussetzungen:**
-- Topologie-Matrix ist vollständig gepflegt (beim Kunden gegeben ✅)
-- `location`-Feld der Sensoren stimmt mit Raumnamen in Topologie-Matrix überein (Pflicht!)
-- Mehrere Schlafzimmer im Haushalt müssen alle berücksichtigt werden (Senioren + Partner)
-
-**Implementierungsaufwand:**
-- Backend: Topologie-State als JSON bereits vorhanden — kein Backend-Aufwand
-- Frontend: HealthTab.tsx muss Topologie-Matrix laden (ein `getState`-Aufruf)
-- BFS-Algorithmus: ~20 Zeilen JavaScript
-- Gesamtaufwand: ca. 1–2 Stunden
-
-**Warum noch nicht umgesetzt:**
-Ist kein kritisches Problem — der aktuelle Filter (v0.33.73) ist bereits deutlich besser als vorher. Die Topologie-Lösung wäre die "perfekte" Lösung, hat aber keine Dringlichkeit.
-
-**Nächster Schritt wenn umgesetzt:**
-- `SLEEP_RELEVANT_FUNCS`-Filter in `HealthTab.tsx` durch BFS-Topologie-Filter ersetzen
-- Fallback: wenn Topologie nicht verfügbar → aktueller Typ/Funktion-Filter greift weiter
-
----
 
 ### OC-16: Schlaf-Kalibrierung gegen Garmin + Fallback ohne Wearable (24.03.2026)
 
@@ -568,99 +413,6 @@ Ist kein kritisches Problem — der aktuelle Filter (v0.33.73) ist bereits deutl
 
 **Offen:** konkrete Schwellen, Mindest‑n, Filter für „Lernen erlaubt“, Abhängigkeit zu OC-3 (Personenzählung).
 
----
-
-### OC-7: AURA Sleep Score — Schlafphasen-Rekonstruktion aus Vibrationssensor (17.03.2026)
-
-> **✅ Größtenteils implementiert** — Schlafanalyse-Kachel mit Einschlaf-/Aufwachzeit, Quellenangabe, Konfidenz, AURA Sleep Score (v0.33.180/181), Cluster-basierte Einschlafzeitauswahl (v0.33.178), separate Kacheln pro Person (v0.33.76), Garmin-Zuweisung pro Person (v0.33.175). **Fertiggestellt (v0.33.185+):** Schlafphasen-Timeline (horizontal, Tief/Leicht/REM/Wachliegen/Bad/Ausserhalb) vollstaendig implementiert und im Gesundheits-Tab sichtbar (Bestaetigung 21.04.2026). Per-Person-Kalibrierung ab 35 Naechten aktiv (kalibriert-Badge). OC-7 vollstaendig abgeschlossen.
-
-**Idee:** Auf Basis der Aqara-Vibrationssensordaten (Detektions-Bool + Stärke-Wert) eine Garmin-ähnliche Schlafphasen-Visualisierung und einen Sleep Score berechnen und im Tab "Gesundheit" darstellen.
-
-**Korrelations-Evidenz (analysiert 16./17.03.2026):**
-Direkter Vergleich der Aqara-CSV-Rohdaten (Detection + Strength) mit der Garmin-Schlafkurve zeigt klare Signaturmuster:
-- **Tiefschlaf-Signatur:** Pausen von 30–60 Minuten ohne Vibrations-Events → entspricht exakt Garmin "Tief"-Blöcken
-- **REM-Signatur:** Kurze Ereignis-Cluster + Stärke-Peak (Nacht 16./17.03.: Peak 32 um 04:40 → exakt der Garmin-REM-Block 04:30)
-- **Wach/Einschlaf-Signatur:** Dichte Events (15 in 40 Min) + hohe Stärke → Garmin "Wach" / Einschlafphase
-- **Limitation:** Leicht vs. REM nicht trennscharf unterscheidbar ohne HRV/Herzrate (Aqara hat kein Biometrie-Signal)
-
-**Vorgeschlagene Stadien-Klassifikation (5-Minuten-Fenster):**
-```
-Wach:       > 4 Events in 5min ODER Stärke > 28
-REM (est.): 2–4 Events + Stärke 15–28, nach 3h Schlaf (REM tritt erst spät auf)
-Leicht:     1–3 Events in 5min, Stärke < 20
-Tief:       0–1 Events in 30min, niedrige Stärke
-```
-
-**Sleep Score Formel (Vorschlag, 0–100):**
-```
-Basis-Score:
-  Tief%  × 2.0  (Tiefschlaf wichtigster Faktor)
-  REM%   × 1.5
-  Leicht × 0.8
-  Wach%  × -2.0  (Abzug für Unterbrechungen)
-
-Bonus:
-  + 5 Punkte wenn Gesamtschlafdauer 7–9h
-  + 3 Punkte wenn erste Tiefschlafphase < 45 Min nach Einschlafen
-
-Cap: max 100, min 0
-```
-
-**UI-Konzept (im AURA Monitor, Tab "Gesundheit"):**
-- Position: Unterhalb der Kacheln "Schlafradar" und "Neurotimeline", gleicher Card-Stil
-- Horizontales Balkendiagramm wie Garmin (Zeit auf X-Achse, Schlafstadium als Farbe)
-  - Dunkelblau = Tief, Hellblau = Leicht, Magenta = REM (geschätzt), Rosa = Wach
-- Links: Einschlafzeit, Rechts: Aufwachzeit (aus `sleepWindowStart/End`)
-- Oben-rechts: Score-Badge (z. B. "72 / 100")
-- Legende + klarer Hinweis: "Geschätzte Schlafstadien (Vibrationssensor — kein medizinisches Gerät)"
-
-**Datenbasis:**
-- `isVibrationBed` Events aus `eventHistory` (Detection: true/false) — bereits vorhanden
-- `isVibrationStrength` Events (numerischer Wert) — bereits vorhanden und in `nightVibrationStrengthAvg/Max` ausgewertet
-- `sleepWindowStart`/`sleepWindowEnd` — bereits vorhanden
-
-**Architektur-Option:**
-- **Option A (Backend):** Sleep-Score-Algorithmus in `saveDailyHistory()`, gespeichert als `sleepScore` + `sleepStages[]` im Tages-JSON → Frontend liest fertige Daten
-- **Option B (Frontend-only):** Raw-Vibrationsdaten per ioBroker-History laden und im Frontend berechnen (kein Backend-Aufwand, aber langsamer beim Laden)
-- **Empfehlung:** Option A — Algorithmus im Backend, Score im Daily-JSON, damit Langzeit-Trend auswertbar bleibt
-
-**Priorisierung:** Mittel-Hoch — Feature mit hohem Nutzer-Wow-Faktor, weil direkt vergleichbar mit Garmin/Apple Watch. Technisch machbar ohne neue Hardware.
-
-**Offen:**
-- REM-Erkennung ohne HRV ist probabilistisch — wie kommunizieren wir das dem Nutzer transparent?
-- Soll AURA die Garmin-Schlafzeiten auch auslesen (ioBroker Garmin-Adapter)? Falls Garmin-Daten verfügbar, könnten diese als Ground Truth für ML-Training dienen.
-- Zeitfenster-Granularität: 5 Min? 10 Min? (Aqara-Events sind punktuell, nicht kontinuierlich)
-
-**Sensor-Skalierung (Kernprinzip):**
-- Kein Vibrationssensor vorhanden → Kachel wird ausgeblendet + Hinweis "Für Sleep Score: Vibrationssensor am Bett empfohlen"
-- Nur Detection-Signal, kein Strength-Kanal → vereinfachte 2-Stufen-Klassifikation (Aktiv / Ruhig)
-- Mehrere Bett-Sensoren (z. B. Doppelbett mit 2 Sensoren) → Durchschnitt oder Person-A / Person-B getrennt
-
-**Card-Skizze (AURA Monitor — Tab "Gesundheit"):**
-
-```
-╔══════════════════════════════════════════════════════════════════════╗
-║  🌙 Schlafanalyse                                     ╭──────────╮  ║
-║  23:04  Einschlafen                  06:16  Aufwachen │  74/100  │  ║
-║                                                       ╰──────────╯  ║
-║  ┌────────────────────────────────────────────────────────────────┐  ║
-║  │▓▓▓░░░░░░░░░░██░░░░░░░░░░░░░░░░░░░░░░███░░░░░░░░░██░░░░░░░░░░│  ║
-║  │Tief  Leicht  REM   Leicht      Tief  REM   Leicht  Wach/auf  │  ║
-║  └────────────────────────────────────────────────────────────────┘  ║
-║    23:00      01:00      03:00      04:30      06:00                  ║
-║                                                                       ║
-║   ▓▓ Tief (ca. 1h 45min)   ░░ Leicht (ca. 3h)   ██ REM/Wach (est.) ║
-║                                                                       ║
-║   ℹ  Geschätzte Schlafstadien auf Basis Vibrationssensor.            ║
-║      Kein Medizinprodukt. Für klinische Auswertung Arzt hinzuziehen. ║
-╚══════════════════════════════════════════════════════════════════════╝
-```
-
-> *Farben im echten UI: Dunkelblau = Tief · Hellblau = Leicht · Magenta = REM · Rosa = Wach*
-> *Score-Badge: Grün ≥ 80, Orange 60–79, Rot < 60*
-
----
-
 ### OC-6: WLAN-Präsenzerkennung für Personenzählung (17.03.2026)
 
 **Idee:** `cogni-living.0.system.presenceWho` — der Adapter kann bereits heute WLAN-Geräte (Smartphones) erkennen und daraus ableiten welche Personen zu Hause sind. Das könnte direkt zur Personenzählung beitragen:
@@ -694,37 +446,9 @@ Cap: max 100, min 0
 
 ---
 
-### OC-3: Personenzählung im Haushalt — Architektur-Konzept (16.03.2026)
+### OC-3: Hardware-Personenzähler — Stufe 3 (16.03.2026)
 
-**Warum wichtig:**
-Viele Krankheitsprofile (Demenz, Depression, UTI/Nykturie, Diabetes) funktionieren nur zuverlässig im Einpersonen-Kontext. Im Mehrpersonenhaushalt verfälschen sich Bewegungsprofile, Bad-Besuche sind nicht mehr einer Person zuordenbar. Das System muss wissen: **0 / 1 / 2+ Personen zu Hause**.
-
-**Drei Ausbaustufen (Progressive Enhancement):**
-
-#### ✅ Stufe 1 — Statische Konfiguration (v0.33.21)
-- Neues Dropdown im System-Tab: „Standard-Haushaltsgröße: Alleine lebend / Zu zweit / Familie"
-- Wird beim Adapter-Start als Baseline in `system.householdType` geschrieben
-- Funktioniert ohne jegliche Sensor-Hardware
-
-#### Stufe 2 — Räumliche Unmöglichkeit als Heuristik (mittelfristig)
-**Idee:** Wenn zwei Sensoren an physisch nicht-benachbarten Räumen quasi-gleichzeitig feuern (< X Sekunden), kann das physisch nicht eine Person sein → mind. 2 Personen.
-
-**Infrastruktur bereits vorhanden:**
-- `this.sensorLastSeen` — Timestamp je Sensor-ID
-- `analysis.topology.structure` — Raum-Adjazenz-Matrix (vom Nutzer im Sicherheits-Tab konfiguriert)
-- `LTM.trainingData.sequences` — Bewegungssequenzen mit Zeitstempeln
-
-**Algorithmus:**
-1. Bei jedem Sensor-Event: prüfe alle anderen `sensorLastSeen`-Einträge der letzten X Sekunden
-2. Für jeden anderen kürzlich aktiven Sensor: prüfe ob Räume laut Topologie-Matrix **nicht benachbart**
-3. Wenn ja: `estimatedPersonCount = max(estimatedPersonCount, 2)`
-4. Reset nach Y Minuten Inaktivität zurück auf 1
-
-**Stärke:** Nur Flanken (rising edges), nicht sustained presence → funktioniert mit PIR
-**Schwäche:** Erkennt nicht 2 Personen die lange im selben Raum sitzen
-
-**Zeitfenster-Entscheidung:** 8-Sekunden-Fenster für Flanken-Erkennung
-**✅ Implementiert in v0.33.22** — `_checkSpatialImpossibility()` in main.js, Reset auf Config-Baseline nach 1h Inaktivität (v0.33.24)
+> **Stufen 1 (statische Konfiguration, v0.33.21) und 2 (räumliche Unmöglichkeit, v0.33.22)** sind implementiert. Nur Stufe 3 ist noch offen.
 
 #### Stufe 3 — Hardware-Personenzähler (langfristig)
 - **FP2 via Matter**: ioBroker Matter-Adapter könnte Zonen-Daten liefern (muss getestet werden)
