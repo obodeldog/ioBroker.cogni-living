@@ -1697,7 +1697,7 @@ export default function HealthTab(props: any) {
                                                          display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
                                                 title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufwachzeit-Quelle manuell wählen'}
                                                 onClick={() => { if (!isOverrideWakeLoading) setIsOverrideWakePanelOpen(!isOverrideWakePanelOpen); }}>
-                                                {isOverrideWakeLoading ? '⏳' : '⌚'} Quellen {isOverrideWakePanelOpen ? '▴' : '▾'}
+                                                {isOverrideWakeLoading ? '⏳' : '⚙'} Quellen {isOverrideWakePanelOpen ? '▲' : '▼'}
                                             </div>
                                         )}
                                         {isOverrideWakePanelOpen && !isOverrideWakeLoading && allWakeSourcesArr.length > 0 && (
@@ -2004,7 +2004,7 @@ export default function HealthTab(props: any) {
                                                  display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
                                         title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufwachzeit-Quelle manuell wählen'}
                                         onClick={() => { if (!isOverrideWakeLoading) setIsOverrideWakePanelOpen(!isOverrideWakePanelOpen); }}>
-                                        {isOverrideWakeLoading ? '⏳' : '⌚'} Quellen {isOverrideWakePanelOpen ? '▴' : '▾'}
+                                        {isOverrideWakeLoading ? '⏳' : '⚙'} Quellen {isOverrideWakePanelOpen ? '▲' : '▼'}
                                     </div>
                                 )}
                                 {isOverrideWakePanelOpen && !isOverrideWakeLoading && allWakeSourcesArr.length > 0 && (

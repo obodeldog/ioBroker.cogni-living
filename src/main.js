@@ -448,7 +448,7 @@ function computePersonSleep(p) {
         if (obeCluster) obePush(obeCluster);
     }
 
-    var sleepStages = []; var stagesWinStart = sleepStart || fp2RawStart || searchBase.getTime(); var stagesWinEnd = wakeTs;
+    var sleepStages = []; var stagesWinStart = sleepStart || fp2RawStart || searchBase.getTime(); var stagesWinEnd = wakeTs || (wakeHardCap && wakeHardCap < Date.now() ? wakeHardCap : null);
     var sleepScore = null; var sleepScoreRaw = null;
     if (!bedWasEmpty && stagesWinStart && stagesWinEnd && stagesWinEnd > stagesWinStart) {
         var SLOT_MS = 5 * 60 * 1000;
@@ -3294,7 +3294,7 @@ class CogniLiving extends utils.Adapter {
         else if (obj.command === 'setPersonWakeOverride') {
             try {
                 var _pwovMsg = obj.message || {};
-                var _pwovAllowed = ['other','motion','override'];
+                var _pwovAllowed = ['garmin','fp2_vib','fp2','fp2_other','motion_vib','motion_vib_wake','vib_refined','gap60','last_outside','haus_still','vibration_alone','vibration','other','fixed','override'];
                 if (!_pwovMsg.person || !_pwovMsg.date || !_pwovMsg.source || !_pwovMsg.ts || _pwovAllowed.indexOf(_pwovMsg.source) < 0) {
                     this.sendTo(obj.from, obj.command, { success: false, error: 'Ungueltige Per-Person Wake-Override-Daten' }, obj.callback); return;
                 }
