@@ -1,7 +1,7 @@
-{
+﻿{
     "common":  {
                    "name":  "cogni-living",
-                   "version":  "0.33.182",
+                   "version":  "0.33.183",
                    "news":  {
                                 "0":  {
                                           "version":  "0.33.105",
@@ -20,11 +20,11 @@
                                       },
                                 "0.33.115":  {
                                                  "en":  "Vibration chart: removed Aura variant, renamed to VIBRATIONSVERLAUF, LIVE indicator green, trigger markers (cyan), fixed misleading legend + explanatory hint text, detailed hover tooltip with session context",
-                                                 "de":  "Vibrations-Chart: Aura-Variante entfernt, umbenannt zu VIBRATIONSVERLAUF, LIVE-Indikator grÃ¼n, Trigger-Markierungen (cyan), irrefÃ¼hrende Legende korrigiert + Hinweistext, detaillierter Hover-Tooltip mit Session-Kontext"
+                                                 "de":  "Vibrations-Chart: Aura-Variante entfernt, umbenannt zu VIBRATIONSVERLAUF, LIVE-Indikator grÃƒÂ¼n, Trigger-Markierungen (cyan), irrefÃƒÂ¼hrende Legende korrigiert + Hinweistext, detaillierter Hover-Tooltip mit Session-Kontext"
                                              },
                                 "0.33.114":  {
                                                  "en":  "Vibration charts improved: auto-scaled Y-axis, 12h default zoom, 260px height, larger fonts, Aura chart dark-navy background, separate zoom controls per chart",
-                                                 "de":  "Vibrations-Charts verbessert: Auto-Y-Achse, 12h Standard-Zoom, 260px HÃ¶he, grÃ¶ÃŸere Schriften, Aura-Chart Dunkelblau-Hintergrund, separater Zoom pro Chart"
+                                                 "de":  "Vibrations-Charts verbessert: Auto-Y-Achse, 12h Standard-Zoom, 260px HÃƒÂ¶he, grÃƒÂ¶ÃƒÅ¸ere Schriften, Aura-Chart Dunkelblau-Hintergrund, separater Zoom pro Chart"
                                              },
                                 "0.33.113":  {
                                                  "en":  "Vibration chart panel in Sex tab: Garmin-style (bars+trend) and Aura-style (neon glow), live sensor subscription, 6h/12h/24h zoom, calibration reference lines",
@@ -68,7 +68,7 @@
                                  },
                    "desc":  {
                                 "en":  "Neuro-Symbolic AI for Home Automation \u0026 Health",
-                                "de":  "Neuro-Symbolische KI fÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼r Hausautomation \u0026 Gesundheit"
+                                "de":  "Neuro-Symbolische KI fÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼r Hausautomation \u0026 Gesundheit"
                             },
                    "authors":  [
                                    "Marc Jaeger \u003cmj112@gmx.de\u003e"
@@ -164,12 +164,12 @@
                    "garminPersonAssignment":  {
 
                                               },
-                   "garminSleepScoreStateId":  "garmin.0.dailysleep.dailySleepDTO.sleepScores.overall.value",
-                   "garminSleepStartStateId":  "garmin.0.dailysleep.dailySleepDTO.sleepStartTimestampGMT",
-                   "garminSleepEndStateId":  "garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT",
-                   "garminDeepSleepStateId":  "garmin.0.dailysleep.dailySleepDTO.deepSleepSeconds",
-                   "garminLightSleepStateId":  "garmin.0.dailysleep.dailySleepDTO.lightSleepSeconds",
-                   "garminRemSleepStateId":  "garmin.0.dailysleep.dailySleepDTO.remSleepSeconds",
+                  "garminSleepScoreStateId":  "",
+                  "garminSleepStartStateId":  "",
+                  "garminSleepEndStateId":  "",
+                  "garminDeepSleepStateId":  "",
+                  "garminLightSleepStateId":  "",
+                  "garminRemSleepStateId":  "",
                    "garminLastSyncStateId":  "",
                    "healthProfiles":  {
                                           "fallRisk":  {

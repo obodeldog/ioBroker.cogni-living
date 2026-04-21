@@ -1,1 +1,4480 @@
-function a0_0x5d7f(){var _0x390e89=['):\x20seit\x20','keys','system.config.sensorList','events.history','moduleHealth','_multiPersonResetTimer','calendarCheckTimer','getHistoryData','?\x20Dashboard\x20Data\x20(Rooms\x20&\x20Timeline\x20&\x20Details)\x20restored.','./lib/cloudflare_tunnel','updateTopologyMatrix','replace','getObjectViewAsync','readFileSync','garminHRAvg','forEach','status','analysis.security.lastScore','\x20rooms)','timeout','ceil','slots','frailty','light','fp2','other','class_counts','namespace','./lib/dead_man','weatherTempId','[outsideBedEvents]\x20Frozen-Fallback:\x20','_roomHopDistance','setDate','stateChange','BATTERY','hops','sleepStages','clearSleepStartOverride','[OC-SEX-RA]\x20Gap-Merge:\x20','min\x20durScore=','modbus.','findIndex','min\x20ignoriert\x20(kein\x20Aussensensor\x20bestaetigt)','runPythonHealthCheck','??\x20Gait\x20Analysis\x20triggered\x20with\x20','geminiModel','infrasoundArmingId','sensorLastSeen','Stages:\x20','{\x22today\x22:{},\x20\x22yesterday\x22:{},\x20\x22date\x22:\x22\x22}','Init...','isVibrationStrength','isCritical','Warte\x20auf\x20Analyse...','driftAnalysisTimer','[DiseaseScore]\x20Zu\x20wenig\x20Tage:\x20','analysis.health.screening.hints','@iobroker/adapter-core','analysis.triggerBriefing','hourlySaveInterval','_lastBatteryPushoverDay','./lib/ai_agent','[Drift]\x20Cooldown\x20aktiv\x20(','[SleepStart]\x20Garmin\x20plausibel:\x20','match','enum','\x20(Fallback\x20gestern\x2018:00)','Sensor\x20baseline\x20init\x20failed:\x20','getForeignObjectAsync','analysis.health.todayRoomDetails','object','checkSolarCondition','command','[bedWasEmpty]\x20Bett\x20leer\x20erkannt:\x20fp2InWindow=','n_samples','checkWifiPresence','\x20Tage\x20Datenbasis)\x0a\x0a','currentSystemMode','indexOf','[OC-SEX]\x20Nullnummer-Filter(daily):\x20','batteryLevel','moduleComfort','korridor','[BATTERY]\x20Init\x20error:\x20','checkLicense','clear','Sensor\x20Health\x20Status\x20(JSON)','15491OACEuD','Alle\x20konfigurierten\x20Sensoren\x20aus\x20dem\x20System-Tab:\x20ID,\x20Bezeichnung,\x20Ort,\x20Typ,\x20Funktion.\x20Wird\x20bei\x20jedem\x20Adapterstart\x20aktualisiert.','\x20Session(s)\x20entfernt,\x20','presenceOn','Sensor\x20baseline\x20initialized\x20for\x20','push','CLASSIFY_SEX_SESSIONS','[AURA]\x20Buffer-Supplement:\x20','Sleep\x20Score\x20History\x20for\x20Calibration\x20(JSON)','abortExitTimer','Letzter\x20Drift-Alarm','analysis.topology.structure','[SleepStart]\x20Vib-Verfeinerung:\x20','sendWeeklyBriefing','apply','toLocaleTimeString','sensorFunction','1314700sHQEuz','trained','bathroom_motion','garmin.0.dailysleep.dailySleepDTO.deepSleepSeconds','\x20offset=','write','familyShareToken','geminiApiKey','getDate','Wird\x20bei\x20jeder\x20rauemlichen\x20Unmoglichkeitserkennung\x20(>=\x202\x20Hops,\x20<=\x205s)\x20geschrieben.\x20Enthaelt:\x20Sensor-IDs,\x20Raeume,\x20Hop-Abstand,\x20Zeitdelta,\x20Personenzahl\x20vorher/nachher.','./lib/scheduler','_livePersonCount','readdirSync','checkSensorHealth','[DiseaseScore]\x20History-Tage\x20geladen:\x20','trackerHeartbeat','reduce','presence_radar','cogni-living','??\x20Manual\x20event\x20logged:\x20','cos','dimmer','Failed\x20to\x20trigger\x20Python\x20Health\x20Check','down','garminWakeTs','Personen','minDaysForBaseline','heating_valve','dependencyInstallInProgress','eventHistory','roomIntegratorTimer','LOW_BAT','baseline','[WakeOv]\x20Fehler:\x20','Disease\x20Risk\x20Scores\x20(JSON)','Unknown','[OC-SEX]\x20Dedup:\x20','[SleepStart]\x20Garmin-Override\x20auf\x20Frozen:\x20','entries','automation.triggerAction','inactivityThresholdHours','number','override','[OC-SEX-RA]\x20Fehler:\x20','Haushaltsgroesse\x20(Config-Baseline):\x20','protectAiMemory','toTimeString','Room\x20Dwell\x20Time\x20Stats','[SleepStart]\x20Garmin\x20nicht\x20lesbar:\x20','[FROZEN-Vib]\x20MotionOnly-Freeze\x20aufgehoben\x20—\x20','dailyDigests','LOW_BAT_ALARM','\x20Vibrations-Events\x20vorhanden\x20->\x20Stages\x20neu\x20berechnen','checkWifiPresence:\x20Error\x20checking\x20','3BDGfiG','params.battery.Battery_Level_Alarm','healthTrendInterval','??\x20INFRASCHALL-ALARM:\x20Anomalie\x20bei\x20Abwesenheit\x20(scharf)!','hallway','scanForDevices','getManualSexSessions','utf8','hourCos','bathroom','level','filter','battery','Override:\x20','Daily\x20Room\x20Details\x20(48x30min)','then','diabetes2','[OC-SEX]\x20clearIntimacyEventsForDay(','isProVersion','[Screening]\x20Kein\x20Ergebnis','[ScoreMigration]\x20Datei\x20','Bat.value','.uptime','clearPersonWakeOverride','[BATTERY]\x20Kritisch:\x20','undefined','analysis.sleep.wakeOverride','times','NORMAL','durSlots','[cPS:','.json','./lib/recorder','cloudflareEnabled','sendNotification','sonn','updateSchedulePreview','./lib/automation','durationMin','matrix','analysis.energy.warmupTargets','moduleSecurity','[SleepStart]\x20Garmin:\x20','??\x20Infraschall:\x20','analysisTimer','parse','batteryStates','_cachedTopoMatrix','checkCalendarTriggers','briefingJob','analysis.health.activityTrend','updated','getAbsoluteDefaultDataDir','setPersonWakeOverride','analysis.safety.infrasoundAlert','error','[OC-SEX-RA-PY]\x20','Sleep\x20Start\x20Override\x20(OC-23)\x20-\x20JSON','activeModules','sensorCheckInterval','open','toDateString','/?token=','getMinutes','[DiseaseScore]\x20Fehler:\x20','nightMotionCount','sex-manual.json','loo_accuracy','hm-auto','Per-Person\x20Night\x20Metrics\x20(JSON)','\x20|\x20Nacht:\x20','sleepWindowOC7Start','default','person\x20fehlt','[OC-28]\x20Stages\x20neu\x20berechnen:\x20Fenster\x20noch\x20aktiv/gerade\x20beendet\x20(end=','pythonBridge','checkBatteryLevels','Live\x20Event\x20Pulse','bind','analysis.training.triggerHealth','writeFileSync','sexGarminHRStateId','triggerGaitAnalysis','personData','energy','8850230kogswf','\x20Vib-Events\x20gesamt)','alias','assign','??\x20Restored\x20','epilepsy','value','saveManualSexSession','memoryCache','application/json','hourSin','loadSystemMode','battery-level','stagesWindowStart','Personenerkennung:\x20Heuristik-Ereignis\x20(SQL)\x20-\x20mind.\x202\x20Personen\x20erkannt','sensorLastActive','kitchenVisits','analysis.energy.warmupTimes','saveDailyHistory','[OC-SEX]\x20clearIntimacyEventsForDay\x20Fehler:\x20','tur','accuweather.0','prio','analysis.security.learningStatus','strCnt','haus_still','skipPy','[OC-SEX]\x20Anomalie-Baseline:\x20P75=','Lernphase\x20(','\x20als\x20Nullnummer\x20klassifiziert\x20�\x20wird\x20entfernt','startOverride','none','[Drift]\x20Zu\x20wenig\x20Daten\x20(','Standard','clearIntimacyEventsForDay','type','triggerGaitAnalysis\x20parse\x20error:\x20','Manual\x20Event','parkinson','\x20-\x20','[OC-23]\x20Manueller\x20Override\x20aktiv:\x20','toFixed','Keine\x20Daten\x20fuer\x20diesen\x20Tag','analysis.activity.roomHistory','\x20vibCount=0\x20lokalNull=','.json\x20gefiltert\x20(Event\x20gehoert\x20zum\x20Vortag)','strAvg','multi','ANALYZE_DISEASE_SCORES','...','cleanupGhostInterventions','source','thermostat','.system.mode','models/gemini-flash-latest','fallRisk','time','light_status','analysis.health.geminiDay','rows','[BATTERY]\x20','isLow','motion','\x20Fehler:\x20',',\x20count=','[ScoreMigration]\x20Fehler:\x20','[OC-SEX]\x20removeSingleIntimacyEvent\x20Fehler:\x20','payload','outsideBedEvents','[ReanalyzeAll]\x20Fehler:\x20','triggerDailyDigest','month','flur','\x20(Threshold)','[Drift]\x20Alarm-Check\x20Fehler:\x20','constructor','isHallway','\x20Person(en))','\x20events\x20from\x20today...','\x20(aus\x20per-Person-Quellen)','LTM.triggerDailyDigest','[OC-SEX-RA]\x20Kalibrierung:\x20','bathroomIds','hasOther','NextHours.Location_1.Day_1.current.symbol_desc','isRelevantActivity','analysis.training.triggerComfort','removeSingleIntimacyEvent','maximal','Wake\x20Override\x20(JSON)','householdSize','_checkDriftAlarm','sendMorningBriefing','outdoorSensorId','[OC-23]\x20Override\x20auf\x20Frozen\x20Snapshot:\x20start=','isBathroomSensor','getTime','generateHealthReport','moduleSex','\x20=\x20','reanalyzeSexDay','vaginal','toString','discoverBatteryStates','sin','diele','date','[Integrator]\x20Error:\x20','gang','isVibrationBed','todayRoomMinutes','getMonth','??\x20Aktivit?t\x20sinkt\x20(Score\x20','copd','sleepWindowSource','motion_vib','[SleepStart]\x20Motion+Vib-Verfeinerung:\x20','Gemini\x20Init\x20Error:\x20','OC-7\x20Sleep\x20Debug\x20(letzter\x20saveDailyHistory-Lauf)','migrateScoresToV2','localeCompare','getOverviewData','Einpersonenhaushalt','./lib/scanner','setState','[ScoreMigration]\x20sleepScoreHistory\x20mit\x20','padStart','\x20Tage)','\x20mit\x20Features)','reanalyzeAllSexDays','hm-rpc.','updateTopology','\x20calibA=','??\x20L?ftung\x20in\x20','offline','system.sensorBatteryStatus','\x20verbleibend','enum.functions.*','hasBath','startSystem','rem','\x20windowOC7=','useCalendar','config','gap60','[ScoreMigration]\x20History-Backfill\x20Fehler:\x20','concat','abs','substring','\x20Hops,\x20','confusion_matrix','[OC-7\x20Debug]\x20Fehler\x20beim\x20Schreiben\x20des\x20Debug-States:\x20','??\x20Triggering\x20Python\x20Health\x20Check\x20(Activity\x20Trend)...','exitGraceTimer','isPresent','SET_LEARNING_MODE','\x20von\x20','stop','system.adapter.ical.香','now','\x20end=','[WakeOv]\x20Override\x20aktiv:\x20','fp2_vib','sexCalibThreshold','roomTemp','TRAIN_TOPOLOGY','[OC-SEX]\x20Labels\x20angereichert\x20(','\x20historischen\x20Eintraegen\x20ergaenzt\x20(','confidence','apiKey','Ungueltige\x20Wake-Override-Daten','_checkSpatialImpossibility','loo_details','licenseKey','loc','run','[Wake]\x20Garmin\x20plausibel:\x20','log','socialIsolation','\x20Min\x20->\x20Stages\x20neu\x20berechnen','isBedroomMotion','hmip-rfc.','\x20(Peaks:\x20','sexCalibInfo','niedrig','\x20>\x20','main','[cPS:global]\x20','Kein\x20gueltiges\x20Datum','map','some','./lib/pwa_server','integrateRoomTime','split','wakeOverridden','warn','add','2-digit','setObjectNotExistsAsync','act','startService','analysis.training.status','medianPeak','garminRemSleepStateId','excludeFromActivity','analysis.automation.targetId','ERROR','boolean','params.battery.Battery_Level','length','systemConfig','analysis.health.todayVector','Geschaetzte\x20Personenanzahl\x20(Config-Baseline\x20+\x20raeumliche\x20Heuristik\x20+\x20FP2)','toISOString','gaitSpeed','[SleepScore-V2]\x20Score=','wake','allEvents','sleepDisorder','motion_vib_wake','modules','\x20mit\x20Garmin).','sleepScoreRaw','Sex-Modul\x20nicht\x20aktiviert','bed','nightVibrationCount','firstEmpty','single','toLowerCase','getForeignStateAsync','startGMT','LTM.dailyDigests','L?ften\x20empfohlen','\x20Events\x20aus\x20Snapshot\x20wiederhergestellt.','pyClassifier','[SleepScoreCal]\x20Status=','outside','every','analysis.automation.patternDetected',')\x20-\x20Phase\x20E\x20(Scheduler\x20Fix)','./lib/topology','from','communicate.request','sources','History\x20Save\x20Error:\x20','\x20Einschlafen:\x20','getStateAsync','[ScoreMigration]\x20V2-Score\x20fuer\x20','presenceDevices',':\x20Nullnummer-Filter:\x20','knx.','history','isArray','Event','analysis.health.disease.','other_person','garminDeepSleepStateId','??\x20Nacht-Unruhe\x20nimmt\x20zu\x20(Score\x20','.json\x20ergaenzt\x20(Buffer-Gap)','setPersonSleepStartOverride','genAI','onStateChange','h\x20inaktiv','searchBase','pressureBuffer','oral_hand','analysis.sleep.personStartOverrides','322824qFztaz','sort','5284182AtsYQO','fill','runAutopilot','system.currentPersonCount','Sonne:\x20','moduleEnergy','??\x20Sensor-Ausfall:\x0a','system.presenceWho','size','allSleepStartSources','handleInfrasound','system','nullnummer','sleepStartTs','callback','analysis.health.geminiNight','ready','family','[AURA]\x20sleepSearch:\x20+','NIGHT','infrasoundEnabled','threshold','presenceCheckTimer','./lib/setup','testApiKey','contact','testContext','Invalid\x20matrix\x20data','Gute\x20L?ftungsm?glichkeit!','todayVector','bathBefore','unload','\x20Event(s).\x20calibA=','isSolar','\x20sequences','vibration_strength','updateLocation','stopService','sunny','analyzeWindowOpening','\x20vibBedEvts=','has','Kein\x20gueltiges\x20Datum\x20oder\x20startMs','pop','find','[SENSOR-CHECK]\x20','Room\x20History\x20(24h\x20Buckets)','\x20entfernt,\x20','[OC-SEX-RA]\x20Labels\x20angereichert\x20(','val','[PersonCount]\x20Rauml.\x20Unmoglichkeit:\x20','telegram','wakeId','Kein\x20gueltiges\x20YYYY-MM','duration','batteryDiscoveryInterval','setHours','[History]\x20OC-4\x20Guard:\x20bedPresenceMinutes=','includes','_lastSeqState','garminHRMax','test','LTM.rawEventLog','analysis.health.saveDailyDebug','refreshCalendar','Personenerkennung:\x20Sensor-Aktivitaet\x20(SQL)\x20-\x20Bewegung/Praesenz/Tuer-Fenster','fixed','[ReanalyzeAll]\x20','4008ZWSiQa','presence_radar_bool','calendarName','auto','refreshCalendar\x20failed:\x20','\x22history\x22:{}','5098855Wagktv','startsWith','ack','peakStrength','SYSTEM_DP_MODE','endsWith','values','\x20Event(s)\x20erkannt.\x20calibA=','sleepScoreCalStatus','analysis.sleep.startOverride','sleepScoreCalNights','analysis.training.triggerSecurity','SYSTEM_MODES','\x20@\x20','[Config]\x20Fehler\x20beim\x20Schreiben\x20der\x20sensorList:\x20','?\x20History\x20saved:\x20','sleepDate','debug','system.personCount.heuristicDetection','garmin.0.dailysleep.dailySleepDTO.lightSleepSeconds','stateId','end','deep','intim','exitTimer','[SleepScoreCal]\x20Fehler:\x20',',\x20Temp:\x20','Warm-Up\x20Time','sqrt','markAnalysisDone','system.adapter.','[DiseaseScore]\x20Gespeichert:\x20','analysis.health.sleepValidation','analysis.prediction.trackerConfidence','min','door','winstart','_motionAnchor','mkdirSync','sexTrainingLabels','weeklyBriefingJob','sleepWindowStart','[History]\x20Sleep\x20FROZEN:\x20','dementia','analysis.activity.roomStats','bin','fenster','setStateAsync','personCountAfter','vibration_trigger','analysisHistory','nocturiaCount','start','T00:00:00','healthProfiles','labels_typed','[OC-SEX-RA]\x20','startMs','cancel','analysis.training.triggerEnergy','rooms','sensorLastValues','garminPersonAssignment','intimacyEvents','results','\x20nights=','hoch','getHours','analysis.sleep.personWakeOverrides','join','Score=','instance','isKitchenSensor','\x20dur=','garmin.0.dailysleep.dailySleepDTO.sleepScores.overall.value','initHistory','lastAlertState','kontakt','wakeConfirmed','analysis.automation.targetValue','isPrimaryHallway','getForeignObjectsAsync','sensors','avgTrigger','\x20cal=','Verbindung\x20erfolgreich:\x20','Sensor\x20Battery\x20Status\x20(JSON)','getGenerativeModel','common','garminTs','isFP2Bed','[Drift]\x20Scores\x20?\x20Aktivit?t:\x20','infrasoundSensorId','NULL','analysis.trigger','existsSync','\x20?\x20','bootTime','triggerGaitAnalysis\x20error:\x20','info','onMessage','Unbekannt','initZombies','pythonBridge\x20command\x20failed:\x20','LOWBAT_ALARM','vibration_alone','getSexMonthSummary','LTM.trainingData.sequences','trigCnt','🔋\x20NUUKANNI:\x20Batterie\x20fast\x20leer','_maxPersonsToday','health','onReady','pwaPort','LTM.baselineStatus','9eApgTA','processSensorEvent','INSUFFICIENT_DATA','maxPersonsDetected','x)\x20calibB=','vibrationBedEventsTotal','depression','isPersonPresenceActivity','loxone.','message','shift','Weekly','./lib/python_bridge','?C\x20(Innen:\x20','scheduleJob','daswetter.0','sleepStartSource','send','mittel','updateHealthVector','[OC-SEX]\x20pyClassifier\x20aus\x20JSON\x20erhalten\x20(Neustart-Schutz,\x20trained=','status_msg','sleepStartOverridden','[OC-SEX]\x20removeSingleIntimacyEvent(','heiter','./lib/notifications','[ScoreMigration]\x20','Gemini\x20Report\x20Day','No\x20topology\x20data\x20found','timestamp','garminSleepEndStateId','path','triggerBriefing','wakeConf','ms)\x20->\x20mind.\x202\x20Personen','garmin.0.dailysleep.dailySleepDTO.sleepStartTimestampGMT','\x20FP2-Solo-Dropout(s)\x20<\x20','aura','system.adapter.ical.','LOWBAT','analysis.health.disease.scores','couple','vib_refined','[Wake]\x20Garmin\x20ausserhalb\x2003-14h:\x20','executeAutomationAction','analyzeWindowOpening\x20error:\x20','\x20calibB=','trim','.isOnline','sleepScore','enabled','?\x20Replay\x20skipped:\x20No\x20events\x20in\x20memory.','security','\x20bedPresMin=','Adapter','4853592SMDnXq','analysis.health.sleepCalibrationLog','last_outside','infrasoundLocked','slice','search','triggerInfrasoundCorrelation','avgStrength','moisture','\x20History-Dateien\x20aktualisiert.','extendForeignObject','replayTodayEvents','json','steps','historyJob','[SleepStart]\x20Garmin\x20auf\x20Frozen\x20(automatisch):\x20','variance','system.personCount.sensorActivity','initSchedules','bat.value','\x20|\x20Gait:\x20','[OC-SEX-RA]\x20Calib:\x20','wakeSource','lightOn','[OC-23]\x20Override-Fehler:\x20','sendTo','round','diabetes1','null','ANALYZE_SCREENING','min\x20<\x20180,\x20FP2-sleepWindow\x20verworfen','getFullYear','sensorAlertSent','true','stringify','[OC-SEX]\x20Dedup-Fehler:\x20','):\x20','batteryStateId','sleepWindowEnd','ANALYZE_GAIT','disease','[OC-SEX-PY]\x20Session\x20','wakeTs','tier','custom','hints','setPresence','toLocaleDateString',',\x20calibB=','[Per-Person\x20Watch]\x20','battery_low','all','analysis.visualization.pulse','state','triggerEnergyPrediction','max','system.personData','\x20Slots\x20(','DAY','pyConf',':\x20Temp-Differenz\x20','location','TRAIN_SECURITY','catch','bipolar','node-schedule','garmin.0.dailysleep.dailySleepDTO.remSleepSeconds','name','subscribeStates','fp2WakeTs','[Screening]\x20','Sleep\x20Calibration\x20Log\x20(JSON)\x20-\x20Sensorquellen\x20vs\x20Garmin','system.sensorStatus','\x20(Bewohner\x20anwesend\x20-\x20normal)','??\x20Ganggeschwindigkeit\x20steigt\x20(Score\x20','analysis.drift.lastAlarmDate','Per-Person\x20Wake\x20Overrides\x20(JSON)','\x20Kalender-Adapter\x20gefunden.','[OC-SEX]\x20Calib-Label:\x20','uncalibrated','(((.+)+)+)+$','Onset\x20trusted:\x20','\x20Events\x20aus\x20','garminScore','bacnet.','isGracePeriodActive','_features','Gemini\x20Report\x20Night','pulse','Niemand','[OC-7\x20Debug]\x20stages=','createDailyDigest','\x20behalten','analysis.health.sleepScoreHistory','\x20Events\x20geloescht','temp','string','getEnums','Ungueltige\x20Override-Daten','min\x20adj=','.last_seen','bathAfter','[OC-7]\x20Garmin\x20Wake\x20vorab\x20(Reihenfolge-Fix):\x20','analysis.automation.description','score','strMax','alarm','text','temperature','battery_level','person','garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT','subscribeForeignStatesAsync','[PersonCount]\x20Reset\x20auf\x20Config-Baseline:\x20','[OC-SEX]\x20Gap-Merge(daily):\x20','[Wake]\x20Garmin-Override\x20(global):\x20','cardiovascular','[Drift]\x20??\x20Alarm\x20ausgel?st:\x20','onUnload','analysis.triggerWeeklyBriefing','garmin','initSystemConfig','feature_importances','vibration','analysis.energy.warmupSources','rawEventLog','manual','personTag','History-Verzeichnis\x20nicht\x20gefunden','ltmJob','[FROZEN-Fix]\x20Garmin\x20verschob\x20Start\x20um\x20','subscribeForeignStates','system.householdType','peakMax','hm-rega.','de-DE','\x20Labels:\x20calibA=','[OC-SEX]\x20','analysis.training.triggerTopology','response','\x20Session(s)','floor','devices','\x20<->\x20','labels','triggerHealth\x20error:\x20','BatteryLevel','%\x20rem='];a0_0x5d7f=function(){return _0x390e89;};return a0_0x5d7f();}var a0_0x44e735=a0_0x5e53;(function(_0x40b83f,_0x44dc9e){var _0x32ae27=a0_0x5e53,_0x43d762=_0x40b83f();while(!![]){try{var _0x1cd29a=parseInt(_0x32ae27(0x40c))/0x1+-parseInt(_0x32ae27(0x21a))/0x2*(parseInt(_0x32ae27(0x442))/0x3)+parseInt(_0x32ae27(0x310))/0x4+-parseInt(_0x32ae27(0x266))/0x5+-parseInt(_0x32ae27(0x21c))/0x6+parseInt(_0x32ae27(0x3fb))/0x7*(parseInt(_0x32ae27(0x260))/0x8)+parseInt(_0x32ae27(0x2d9))/0x9*(-parseInt(_0x32ae27(0x497))/0xa);if(_0x1cd29a===_0x44dc9e)break;else _0x43d762['push'](_0x43d762['shift']());}catch(_0xcadf2d){_0x43d762['push'](_0x43d762['shift']());}}}(a0_0x5d7f,0xa86f4));var a0_0x3010d9=(function(){var _0x569276=!![];return function(_0x3c17a0,_0x2d7bce){var _0x21a3ac=_0x569276?function(){var _0x97a8b4=a0_0x5e53;if(_0x2d7bce){var _0x25000e=_0x2d7bce[_0x97a8b4(0x409)](_0x3c17a0,arguments);return _0x2d7bce=null,_0x25000e;}}:function(){};return _0x569276=![],_0x21a3ac;};}()),a0_0x380cb3=a0_0x3010d9(this,function(){var _0x1e0e35=a0_0x5e53;return a0_0x380cb3[_0x1e0e35(0x175)]()[_0x1e0e35(0x315)](_0x1e0e35(0x360))[_0x1e0e35(0x175)]()[_0x1e0e35(0x15a)](a0_0x380cb3)[_0x1e0e35(0x315)](_0x1e0e35(0x360));});a0_0x380cb3();'use strict';function a0_0x5e53(_0x8bfd93,_0x4913fd){var _0x160d8b=a0_0x5d7f();return a0_0x5e53=function(_0x380cb3,_0x3010d9){_0x380cb3=_0x380cb3-0x12e;var _0x5d7fb3=_0x160d8b[_0x380cb3];return _0x5d7fb3;},a0_0x5e53(_0x8bfd93,_0x4913fd);}const utils=require(a0_0x44e735(0x3dd)),{GoogleGenerativeAI}=require('@google/generative-ai'),path=require(a0_0x44e735(0x2f8)),fs=require('fs'),installer=require('./lib/installer'),scanner=require(a0_0x44e735(0x18a)),schedulers=require(a0_0x44e735(0x416)),topology=require(a0_0x44e735(0x1ff)),setup=require(a0_0x44e735(0x233)),recorder=require(a0_0x44e735(0x462)),{isActiveValue,toPersonCount}=recorder,pythonBridge=require(a0_0x44e735(0x2e5)),aiAgent=require(a0_0x44e735(0x3e1)),deadMan=require(a0_0x44e735(0x3c0)),automation=require(a0_0x44e735(0x467)),notifications=require(a0_0x44e735(0x2f2)),pwaServer=require(a0_0x44e735(0x1ce)),cloudflareTunnel=require(a0_0x44e735(0x3ad)),GEMINI_MODEL=a0_0x44e735(0x145);function computePersonSleep(_0x3a209d){var _0x34e454=a0_0x44e735,_0x263869=_0x3a209d[_0x34e454(0x1e8)],_0x182558=_0x3a209d[_0x34e454(0x38f)]||null,_0x32a958=_0x3a209d['fp2RawStart']||null,_0x125fdf=_0x3a209d[_0x34e454(0x2bf)]||null,_0x9a4860=_0x3a209d[_0x34e454(0x424)]||null,_0x229bf8=_0x3a209d[_0x34e454(0x355)]||null,_0x501f09=_0x3a209d[_0x34e454(0x216)],_0x5c176a=_0x3a209d['wakeHardCap'],_0x4f090b=_0x3a209d[_0x34e454(0x4b5)]||null,_0x4c342a=_0x3a209d['wakeOverride']||null,_0x1b431c=_0x3a209d['existingSnap']||null,_0x723b2f=_0x3a209d[_0x34e454(0x276)],_0x2c45b3=_0x3a209d[_0x34e454(0x161)]||new Set(),_0x378bd0=_0x3a209d[_0x34e454(0x1c0)],_0x230dca=_0x182558?_0x34e454(0x460)+_0x182558+']\x20':_0x34e454(0x1ca),_0x3f6646=function(_0x2b1341){var _0x33bb4f=_0x34e454;return!_0x182558||_0x2b1341[_0x33bb4f(0x38f)]===_0x182558;},_0x2ca9b7=function(_0x412b2d){var _0x435abc=_0x34e454;return!!(_0x182558&&_0x412b2d['personTag']&&_0x412b2d[_0x435abc(0x38f)]!==_0x182558);},_0x28dce=(function(){var _0xd18e7e=_0x34e454,_0x19f323=new Date(_0x501f09);_0x19f323[_0xd18e7e(0x254)](0x12,0x0,0x0,0x0);if(_0x19f323['getTime']()>_0x501f09['getTime']())_0x19f323[_0xd18e7e(0x3c4)](_0x19f323['getDate']()-0x1);return _0x19f323[_0xd18e7e(0x16f)]();}()),_0xbb0d5f=_0x263869[_0x34e454(0x44d)](function(_0x3946a4){var _0x500818=_0x34e454;return _0x3f6646(_0x3946a4)&&(_0x3946a4[_0x500818(0x1c3)]||_0x3946a4[_0x500818(0x2c0)]||_0x3946a4[_0x500818(0x17c)])&&(_0x3946a4[_0x500818(0x2f6)]||0x0)>=_0x28dce;})[_0x34e454(0x21b)](function(_0x28d38d,_0x30ebde){var _0x520fcc=_0x34e454;return(_0x28d38d[_0x520fcc(0x2f6)]||0x0)-(_0x30ebde[_0x520fcc(0x2f6)]||0x0);}),_0x1b71ae=function(_0x2d3d3a){var _0xd2da5f=_0x34e454,_0x2c5e9e=_0x2d3d3a+0x3*0x36ee80,_0x2bf493=_0x263869[_0xd2da5f(0x44d)](function(_0x3437ed){var _0x1014dd=_0xd2da5f;return _0x3f6646(_0x3437ed)&&_0x3437ed[_0x1014dd(0x17c)]&&!_0x3437ed[_0x1014dd(0x3d7)]&&isActiveValue(_0x3437ed[_0x1014dd(0x49d)])&&(_0x3437ed['timestamp']||0x0)>=_0x2d3d3a&&(_0x3437ed[_0x1014dd(0x2f6)]||0x0)<=_0x2c5e9e;})[_0xd2da5f(0x21b)](function(_0x5e62ed,_0x1823c4){var _0x5a7c12=_0xd2da5f;return(_0x5e62ed[_0x5a7c12(0x2f6)]||0x0)-(_0x1823c4[_0x5a7c12(0x2f6)]||0x0);});for(var _0x56b639=0x0;_0x56b639<_0x2bf493[_0xd2da5f(0x1e0)];_0x56b639++){var _0x3a150e=_0x2bf493[_0x56b639][_0xd2da5f(0x2f6)]||0x0,_0x1414d2=_0x56b639<_0x2bf493[_0xd2da5f(0x1e0)]-0x1?_0x2bf493[_0x56b639+0x1][_0xd2da5f(0x2f6)]||0x0:_0x2c5e9e;if((_0x1414d2-_0x3a150e)/0xea60>=0x14)return _0x3a150e;}return null;},_0x5c61f5=(function(){var _0x46183a=_0x34e454;if(!_0x32a958)return null;var _0x12cf67=_0xbb0d5f['filter'](function(_0x2b09d2){var _0x3e3cf7=a0_0x5e53,_0x5c7d2c=new Date(_0x2b09d2[_0x3e3cf7(0x2f6)]||0x0)[_0x3e3cf7(0x2a9)]();return _0x2b09d2[_0x3e3cf7(0x2c0)]&&(_0x5c7d2c>=0x15||_0x5c7d2c<0x2);});for(var _0x385913=_0x12cf67['length']-0x1;_0x385913>=0x0;_0x385913--){var _0x20a79a=_0x12cf67[_0x385913][_0x46183a(0x2f6)]||0x0,_0x6563e9=null;for(var _0x431a78=0x0;_0x431a78<_0xbb0d5f[_0x46183a(0x1e0)];_0x431a78++){if((_0xbb0d5f[_0x431a78][_0x46183a(0x2f6)]||0x0)>_0x20a79a){_0x6563e9=_0xbb0d5f[_0x431a78][_0x46183a(0x2f6)]||0x0;break;}}if((_0x6563e9!==null?_0x6563e9:Infinity)-_0x20a79a>0x3c*0x3c*0x3e8)return _0x20a79a;}return _0x32a958;}()),_0x3bb691=(function(){var _0x37339=_0x34e454,_0xca766f=null,_0x1d408e=_0x501f09[_0x37339(0x16f)]()+0xa*0x36ee80,_0x48c891=_0x263869[_0x37339(0x44d)](function(_0x3daa1c){var _0x3fdbc7=_0x37339;return _0x3f6646(_0x3daa1c)&&_0x3daa1c['isBedroomMotion']&&!_0x3daa1c[_0x3fdbc7(0x2c0)]&&isActiveValue(_0x3daa1c[_0x3fdbc7(0x49d)]);})[_0x37339(0x21b)](function(_0x1e673a,_0x2862c2){var _0x29526b=_0x37339;return(_0x1e673a[_0x29526b(0x2f6)]||0x0)-(_0x2862c2[_0x29526b(0x2f6)]||0x0);});for(var _0x2ddac2=0x0;_0x2ddac2<_0x48c891['length'];_0x2ddac2++){var _0x5d88e3=new Date(_0x48c891[_0x2ddac2][_0x37339(0x2f6)]||0x0)[_0x37339(0x2a9)]();if(!(_0x5d88e3>=0x12||_0x5d88e3<0x3))continue;var _0x4eddef=_0x2ddac2<_0x48c891[_0x37339(0x1e0)]-0x1?_0x48c891[_0x2ddac2+0x1][_0x37339(0x2f6)]||0x0:_0x1d408e;if((_0x4eddef-(_0x48c891[_0x2ddac2][_0x37339(0x2f6)]||0x0))/0xea60>=0x1e)_0xca766f=_0x48c891[_0x2ddac2][_0x37339(0x2f6)]||0x0;}return _0xca766f;}()),_0x39d4dc=(function(){var _0x3a1512=_0x34e454,_0x3edf55=_0x501f09[_0x3a1512(0x16f)]()+0xa*0x36ee80,_0xc39f43=_0x263869[_0x3a1512(0x44d)](function(_0x4ef426){var _0x33c372=_0x3a1512;if(_0x2ca9b7(_0x4ef426))return![];if(_0x4ef426[_0x33c372(0x2c0)]||_0x4ef426[_0x33c372(0x17c)]||_0x4ef426[_0x33c372(0x1c3)]||_0x4ef426[_0x33c372(0x16e)])return![];return(_0x4ef426['type']===_0x33c372(0x14d)||_0x4ef426[_0x33c372(0x132)]==='presence_radar_bool')&&isActiveValue(_0x4ef426[_0x33c372(0x49d)]);})['sort'](function(_0x1d2b38,_0x4afee8){var _0x33b4b6=_0x3a1512;return(_0x1d2b38[_0x33b4b6(0x2f6)]||0x0)-(_0x4afee8[_0x33b4b6(0x2f6)]||0x0);});for(var _0x417578=0x0;_0x417578<_0xc39f43[_0x3a1512(0x1e0)];_0x417578++){var _0x3559a1=_0xc39f43[_0x417578]['timestamp']||0x0,_0x316190=_0x417578<_0xc39f43[_0x3a1512(0x1e0)]-0x1?_0xc39f43[_0x417578+0x1][_0x3a1512(0x2f6)]||0x0:_0x3edf55;if(_0x316190-_0x3559a1>=0x3c*0x3c*0x3e8)return _0x3559a1;}return null;}()),_0x1b258d=_0x5c61f5?_0x1b71ae(_0x5c61f5):null,_0x2609b7=_0x5c61f5||null,_0x4b7717=_0x3bb691?_0x1b71ae(_0x3bb691):null,_0x501bc7=_0x3bb691||null,_0x434704=(function(){var _0x5cb477=_0x34e454,_0x12abf9=_0x501f09[_0x5cb477(0x16f)]()+0xa*0x36ee80,_0x33e807=_0x263869[_0x5cb477(0x44d)](function(_0x2ea0b3){var _0x49572e=_0x5cb477;if(!_0x3f6646(_0x2ea0b3)||!_0x2ea0b3[_0x49572e(0x17c)])return![];if(!(isActiveValue(_0x2ea0b3[_0x49572e(0x49d)])||toPersonCount(_0x2ea0b3[_0x49572e(0x49d)])>0x0))return![];var _0x26c5b9=new Date(_0x2ea0b3[_0x49572e(0x2f6)]||0x0)[_0x49572e(0x2a9)]();return _0x26c5b9>=0x15||_0x26c5b9<0x4;})[_0x5cb477(0x21b)](function(_0x2cb6aa,_0xd885a3){var _0x11c24c=_0x5cb477;return(_0x2cb6aa[_0x11c24c(0x2f6)]||0x0)-(_0xd885a3[_0x11c24c(0x2f6)]||0x0);});for(var _0x3bb545=0x0;_0x3bb545<_0x33e807[_0x5cb477(0x1e0)];_0x3bb545++){var _0x27077f=_0x33e807[_0x3bb545]['timestamp']||0x0,_0x11f2e5=_0x3bb545<_0x33e807[_0x5cb477(0x1e0)]-0x1?_0x33e807[_0x3bb545+0x1]['timestamp']||0x0:_0x12abf9;if((_0x11f2e5-_0x27077f)/0xea60>=0x14)return _0x27077f;}return null;}()),_0x1656a7=(function(){var _0x144e7b=_0x34e454,_0x45535e=_0x501f09[_0x144e7b(0x16f)]()+0xa*0x36ee80,_0xcac8ed=_0x263869[_0x144e7b(0x44d)](function(_0x13528d){var _0x9118ba=_0x144e7b;if(!_0x3f6646(_0x13528d))return![];if(!(_0x13528d[_0x9118ba(0x2c0)]||_0x13528d[_0x9118ba(0x17c)]&&!_0x13528d[_0x9118ba(0x3d7)]))return![];var _0x10bf42=new Date(_0x13528d['timestamp']||0x0)[_0x9118ba(0x2a9)]();return _0x10bf42>=0x15||_0x10bf42<0x4;})['sort'](function(_0x1b6e16,_0x12d6f8){var _0x5a8e85=_0x144e7b;return(_0x1b6e16[_0x5a8e85(0x2f6)]||0x0)-(_0x12d6f8[_0x5a8e85(0x2f6)]||0x0);});for(var _0x1d8290=0x0;_0x1d8290<_0xcac8ed[_0x144e7b(0x1e0)];_0x1d8290++){var _0x3709db=_0xcac8ed[_0x1d8290][_0x144e7b(0x2f6)]||0x0,_0x2d46fc=_0x1d8290<_0xcac8ed[_0x144e7b(0x1e0)]-0x1?_0xcac8ed[_0x1d8290+0x1]['timestamp']||0x0:_0x45535e;if(_0x2d46fc-_0x3709db>=0x3c*0x3c*0x3e8)return _0x3709db;}return null;}()),_0x295b92=(function(){var _0x4fd989=_0x34e454;if(_0x32a958||_0x39d4dc||_0x3bb691)return null;var _0x7dc041=_0x263869[_0x4fd989(0x44d)](function(_0x4d4f14){var _0x102ea0=_0x4fd989;if(!_0x3f6646(_0x4d4f14))return![];if(_0x4d4f14[_0x102ea0(0x1c3)]||_0x4d4f14[_0x102ea0(0x2c0)]||_0x4d4f14['isVibrationBed']||_0x4d4f14[_0x102ea0(0x16e)])return![];var _0x10e49e=new Date(_0x4d4f14['timestamp']||0x0)[_0x102ea0(0x2a9)]();return(_0x10e49e>=0x12||_0x10e49e<0x2)&&isActiveValue(_0x4d4f14[_0x102ea0(0x49d)]);})[_0x4fd989(0x21b)](function(_0x58fe19,_0x373b50){var _0x1d7ab2=_0x4fd989;return(_0x58fe19[_0x1d7ab2(0x2f6)]||0x0)-(_0x373b50['timestamp']||0x0);}),_0x35c379=_0x7dc041[_0x4fd989(0x44d)](function(_0x10a70d){var _0x169eab=_0x4fd989,_0x3970f1=new Date(_0x10a70d[_0x169eab(0x2f6)]||0x0)[_0x169eab(0x2a9)]();return _0x3970f1>=0x12||_0x3970f1<0x2;});for(var _0xdc212c=_0x35c379['length']-0x1;_0xdc212c>=0x0;_0xdc212c--){var _0x3e5236=_0x35c379[_0xdc212c][_0x4fd989(0x2f6)]||0x0,_0x38d808=_0x7dc041[_0x4fd989(0x1cd)](function(_0x1b7604){var _0x329f18=_0x4fd989;return(_0x1b7604[_0x329f18(0x2f6)]||0x0)>_0x3e5236&&(_0x1b7604[_0x329f18(0x2f6)]||0x0)<=_0x3e5236+0x1e*0x3c*0x3e8;});if(!_0x38d808)for(var _0x580ba6=0x0;_0x580ba6<_0xbb0d5f['length'];_0x580ba6++){if((_0xbb0d5f[_0x580ba6]['timestamp']||0x0)>_0x3e5236&&isActiveValue(_0xbb0d5f[_0x580ba6][_0x4fd989(0x49d)]))return _0xbb0d5f[_0x580ba6]['timestamp']||0x0;}}return null;}()),_0x4c8b61=null,_0x557b2f=_0x34e454(0x28a),_0x54e988=![],_0x5b0ead=_0x501f09[_0x34e454(0x16f)](),_0x3a410b=_0x5b0ead+0xa*0x36ee80;if(_0x4f090b&&_0x4f090b[_0x34e454(0x179)]===_0x723b2f&&_0x4f090b['ts']&&_0x4f090b['ts']>=_0x5b0ead&&_0x4f090b['ts']<=_0x3a410b){_0x4c8b61=_0x4f090b['ts'],_0x557b2f=_0x4f090b['source']||_0x34e454(0x436),_0x54e988=!![];if(_0x378bd0)_0x378bd0[_0x34e454(0x2c9)](_0x230dca+_0x34e454(0x44f)+_0x557b2f+_0x34e454(0x172)+new Date(_0x4c8b61)[_0x34e454(0x1e4)]());}if(!_0x54e988){var _0x49ef39=[{'source':_0x34e454(0x388),'ts':_0x125fdf,'prio':0x0},{'source':_0x34e454(0x1b1),'ts':_0x1b258d,'prio':0x1},{'source':_0x34e454(0x3bc),'ts':_0x2609b7,'prio':0x2},{'source':'vib_refined','ts':_0x434704,'prio':0x3},{'source':_0x34e454(0x182),'ts':_0x4b7717,'prio':0x4},{'source':_0x34e454(0x19f),'ts':_0x1656a7,'prio':0x5},{'source':'motion','ts':_0x501bc7,'prio':0x6},{'source':_0x34e454(0x312),'ts':_0x295b92,'prio':0x7},{'source':_0x34e454(0x4b0),'ts':_0x39d4dc,'prio':0x8}][_0x34e454(0x44d)](function(_0x23668c){return _0x23668c['ts']!=null;});if(_0x49ef39[_0x34e454(0x1e0)]>0x0){var _0xf66daf=_0x49ef39[_0x34e454(0x44d)](function(_0x2c6165){var _0x4ac6c2=_0x34e454;return _0x2c6165[_0x4ac6c2(0x4ad)]<=0x2;});if(_0xf66daf['length']>0x0){var _0x18b619=_0xf66daf[0x0];_0x4c8b61=_0x18b619['ts'],_0x557b2f=_0x18b619[_0x34e454(0x142)];if(_0x378bd0)_0x378bd0[_0x34e454(0x2c9)](_0x230dca+_0x34e454(0x361)+_0x18b619['source']+'\x20@\x20'+new Date(_0x4c8b61)[_0x34e454(0x1e4)]());}else{var _0x1b6cb7=0x5a*0x3c*0x3e8,_0x261469=null,_0x30000a=0x0;for(var _0x16948b=0x0;_0x16948b<_0x49ef39[_0x34e454(0x1e0)];_0x16948b++){var _0x115d2e=_0x49ef39[_0x16948b]['ts'],_0x504714=_0x49ef39[_0x34e454(0x44d)](function(_0x1c61ec){var _0xb433b9=_0x34e454;return Math[_0xb433b9(0x1a2)](_0x1c61ec['ts']-_0x115d2e)<=_0x1b6cb7;});(_0x504714[_0x34e454(0x1e0)]>_0x30000a||_0x504714[_0x34e454(0x1e0)]===_0x30000a&&(!_0x261469||_0x115d2e<_0x261469[0x0]['ts']))&&(_0x30000a=_0x504714['length'],_0x261469=_0x504714);}if(_0x261469&&_0x261469[_0x34e454(0x1e0)]>0x0){_0x261469[_0x34e454(0x21b)](function(_0x27a1e2,_0x58b03f){var _0x2f84a0=_0x34e454;return _0x27a1e2['prio']-_0x58b03f[_0x2f84a0(0x4ad)];});var _0x211d06=_0x261469[0x0];_0x4c8b61=_0x211d06['ts'],_0x557b2f=_0x211d06[_0x34e454(0x142)];if(_0x378bd0){_0x378bd0[_0x34e454(0x277)](_0x230dca+'Onset\x20Cluster\x20'+_0x261469['length']+'/'+_0x49ef39[_0x34e454(0x1e0)]+':\x20'+_0x211d06[_0x34e454(0x142)]+_0x34e454(0x273)+new Date(_0x4c8b61)[_0x34e454(0x40a)]());var _0x936c7c=_0x49ef39['filter'](function(_0x44d769){return _0x261469['indexOf'](_0x44d769)<0x0;});if(_0x936c7c[_0x34e454(0x1e0)]>0x0)_0x378bd0[_0x34e454(0x277)](_0x230dca+'Onset\x20Ausreisser:\x20'+_0x936c7c['map'](function(_0x413d35){var _0x529ccc=_0x34e454;return _0x413d35[_0x529ccc(0x142)]+'@'+new Date(_0x413d35['ts'])[_0x529ccc(0x40a)]();})[_0x34e454(0x2ab)](',\x20'));}}}}}var _0x3741e8=[{'source':_0x34e454(0x388),'ts':_0x125fdf},{'source':_0x34e454(0x1b1),'ts':_0x1b258d},{'source':_0x34e454(0x3bc),'ts':_0x2609b7},{'source':_0x34e454(0x182),'ts':_0x4b7717},{'source':_0x34e454(0x14d),'ts':_0x501bc7},{'source':'vib_refined','ts':_0x434704},{'source':_0x34e454(0x19f),'ts':_0x1656a7},{'source':_0x34e454(0x312),'ts':_0x295b92},{'source':_0x34e454(0x4b0),'ts':_0x39d4dc||null},{'source':'fixed','ts':_0x5b0ead+0x2*0x36ee80}],_0x209c3d=(function(){var _0x242362=_0x34e454,_0x578ec8=new Date(_0x501f09);return _0x578ec8[_0x242362(0x3c4)](_0x578ec8['getDate']()+0x1),_0x578ec8['setHours'](0x4,0x0,0x0,0x0),_0x578ec8[_0x242362(0x16f)]();}()),_0x28717b=(_0x32a958||_0x4c8b61||0x0)+0x3*0x36ee80,_0x30ef95=_0x263869[_0x34e454(0x44d)](function(_0xaf8125){var _0xca4ead=_0x34e454;if(_0xaf8125[_0xca4ead(0x2c0)]||_0xaf8125[_0xca4ead(0x17c)]||_0xaf8125[_0xca4ead(0x16e)]||_0xaf8125[_0xca4ead(0x1c3)])return![];if(_0x2ca9b7(_0xaf8125))return![];return(_0xaf8125[_0xca4ead(0x132)]===_0xca4ead(0x14d)||_0xaf8125['type']==='presence_radar_bool')&&(_0xaf8125['timestamp']||0x0)>=_0x209c3d&&(_0xaf8125['timestamp']||0x0)>=_0x28717b&&(_0xaf8125[_0xca4ead(0x2f6)]||0x0)<=_0x5c176a;})[_0x34e454(0x21b)](function(_0x355b37,_0x1ffef1){var _0x2f4599=_0x34e454;return(_0x355b37[_0x2f4599(0x2f6)]||0x0)-(_0x1ffef1[_0x2f4599(0x2f6)]||0x0);}),_0x6821f7=_0xbb0d5f[_0x34e454(0x1cd)](function(_0x3b48b1){var _0x393393=_0x34e454;return _0x3b48b1[_0x393393(0x17c)]&&!_0x3b48b1[_0x393393(0x3d7)]&&isActiveValue(_0x3b48b1[_0x393393(0x49d)])&&(_0x3b48b1['timestamp']||0x0)>=_0x209c3d;}),_0x39abe3=_0xbb0d5f[_0x34e454(0x44d)](function(_0x2fe885){var _0x5c7379=_0x34e454;if((_0x2fe885[_0x5c7379(0x2f6)]||0x0)<_0x209c3d||(_0x2fe885[_0x5c7379(0x2f6)]||0x0)>_0x5c176a)return![];if(_0x2fe885[_0x5c7379(0x2c0)])return!![];if(_0x2fe885[_0x5c7379(0x1c3)]&&isActiveValue(_0x2fe885['value']))return!![];if(_0x2fe885[_0x5c7379(0x17c)]&&!_0x2fe885[_0x5c7379(0x3d7)]&&isActiveValue(_0x2fe885[_0x5c7379(0x49d)]))return!![];if(_0x2fe885[_0x5c7379(0x3d7)]&&!_0x6821f7)return!![];return![];}),_0x485f81=_0x39abe3[_0x34e454(0x44d)](function(_0x280348,_0x2bf7d8){var _0x2818de=_0x34e454;if(_0x280348[_0x2818de(0x2c0)])return!![];var _0xd4e43c=_0x280348['timestamp']||0x0;if(new Date(_0xd4e43c)[_0x2818de(0x2a9)]()<0xa)return!![];var _0x101e19=_0x2bf7d8>0x0?_0x39abe3[_0x2bf7d8-0x1][_0x2818de(0x2f6)]||0x0:0x0,_0x4d81e7=_0x2bf7d8<_0x39abe3[_0x2818de(0x1e0)]-0x1?_0x39abe3[_0x2bf7d8+0x1][_0x2818de(0x2f6)]||0x0:Infinity;return _0xd4e43c-_0x101e19<=0xf*0x3c*0x3e8||_0x4d81e7-_0xd4e43c<=0xf*0x3c*0x3e8;}),_0x585c78=![];_0x229bf8&&(_0x585c78=_0x263869[_0x34e454(0x1cd)](function(_0x123f32){var _0x5e433d=_0x34e454;return _0x123f32[_0x5e433d(0x17c)]&&_0x3f6646(_0x123f32)&&(isActiveValue(_0x123f32[_0x5e433d(0x49d)])||toPersonCount(_0x123f32[_0x5e433d(0x49d)])>0x0)&&(_0x123f32[_0x5e433d(0x2f6)]||0x0)>=_0x229bf8-0x1e*0x3c*0x3e8&&(_0x123f32[_0x5e433d(0x2f6)]||0x0)<=_0x229bf8;}));var _0x1efd34=null,_0x433bda=null,_0x4abe25=_0x263869[_0x34e454(0x44d)](function(_0x2ac9fa){var _0x16b89a=_0x34e454,_0x2e9f0f=_0x2ac9fa[_0x16b89a(0x2f6)]||0x0;return _0x2ac9fa[_0x16b89a(0x17c)]&&_0x3f6646(_0x2ac9fa)&&(isActiveValue(_0x2ac9fa[_0x16b89a(0x49d)])||toPersonCount(_0x2ac9fa[_0x16b89a(0x49d)])>0x0)&&_0x2e9f0f>=_0x209c3d&&_0x2e9f0f>=_0x28717b&&_0x2e9f0f<=_0x5c176a;})['sort'](function(_0x2639ec,_0x129f6e){var _0x2ade61=_0x34e454;return(_0x2639ec['timestamp']||0x0)-(_0x129f6e[_0x2ade61(0x2f6)]||0x0);});for(var _0x56584e=0x0;_0x56584e<_0x4abe25[_0x34e454(0x1e0)];_0x56584e++){var _0x5dc1ad=_0x4abe25[_0x56584e][_0x34e454(0x2f6)]||0x0,_0xdf346e=_0x4abe25[_0x56584e+0x1]?_0x4abe25[_0x56584e+0x1]['timestamp']||0x0:null;(!_0xdf346e||_0xdf346e-_0x5dc1ad>=0x2d*0x3c*0x3e8)&&(_0x1efd34=_0x5dc1ad);}if(_0x229bf8&&_0x4abe25[_0x34e454(0x1e0)]>0x0){var _0x28dcad=_0x4abe25['filter'](function(_0x2b91e3){var _0x389cd2=_0x34e454;return(_0x2b91e3[_0x389cd2(0x2f6)]||0x0)<=_0x229bf8;});if(_0x28dcad[_0x34e454(0x1e0)]>0x0)_0x433bda=_0x28dcad[_0x28dcad[_0x34e454(0x1e0)]-0x1][_0x34e454(0x2f6)]||null;}var _0x30eba0=null;if(_0x229bf8){var _0x2bbcc2=_0x263869[_0x34e454(0x44d)](function(_0x10ef2c){var _0x5e06dd=_0x34e454;return!_0x10ef2c['isFP2Bed']&&!_0x10ef2c[_0x5e06dd(0x17c)]&&!_0x10ef2c['isBathroomSensor']&&!_0x10ef2c[_0x5e06dd(0x1c3)]&&(_0x10ef2c[_0x5e06dd(0x132)]===_0x5e06dd(0x14d)||_0x10ef2c[_0x5e06dd(0x132)]===_0x5e06dd(0x261))&&!_0x2ca9b7(_0x10ef2c)&&(_0x10ef2c[_0x5e06dd(0x2f6)]||0x0)>=_0x229bf8&&(_0x10ef2c['timestamp']||0x0)<=_0x229bf8+0x3c*0x3c*0x3e8;})[_0x34e454(0x21b)](function(_0x42bf15,_0x226a49){var _0x1103f6=_0x34e454;return(_0x42bf15[_0x1103f6(0x2f6)]||0x0)-(_0x226a49['timestamp']||0x0);});if(_0x2bbcc2[_0x34e454(0x1e0)]>0x0)_0x30eba0=_0x2bbcc2[0x0][_0x34e454(0x2f6)]||null;}var _0x3bb7a5=null;_0x229bf8&&_0x433bda&&Math[_0x34e454(0x1a2)](_0x433bda-_0x229bf8)<=0xc*0x3c*0x3e8&&_0x585c78&&(_0x3bb7a5=Math[_0x34e454(0x288)](_0x229bf8,_0x433bda));var _0x1f546e=null,_0x4b399a=_0x263869[_0x34e454(0x44d)](function(_0x263bb6){var _0x14c76a=_0x34e454;return _0x263bb6['isBedroomMotion']&&_0x3f6646(_0x263bb6)&&!_0x2ca9b7(_0x263bb6)&&(_0x263bb6['timestamp']||0x0)>=_0x209c3d&&(_0x263bb6[_0x14c76a(0x2f6)]||0x0)>=_0x28717b&&(_0x263bb6[_0x14c76a(0x2f6)]||0x0)<=_0x5c176a;})[_0x34e454(0x21b)](function(_0x50c573,_0x323642){var _0xa1de0c=_0x34e454;return(_0x50c573[_0xa1de0c(0x2f6)]||0x0)-(_0x323642['timestamp']||0x0);});if(_0x4b399a['length']>0x0){var _0x451525=_0x4b399a[0x0][_0x34e454(0x2f6)]||0x0,_0x1037b9=_0x4abe25['some'](function(_0x569e04){var _0x370b34=_0x34e454;return(_0x569e04[_0x370b34(0x2f6)]||0x0)>=_0x451525-0x1e*0x3c*0x3e8&&(_0x569e04[_0x370b34(0x2f6)]||0x0)<=_0x451525;});if(_0x1037b9)_0x1f546e=_0x451525;}var _0x5596eb=null,_0x377b9e=null,_0x677956=null;if(_0x9a4860){_0x377b9e=_0x9a4860,_0x677956=_0x34e454(0x388);if(_0x378bd0)_0x378bd0[_0x34e454(0x2c9)](_0x230dca+'Wake\x20Garmin:\x20'+new Date(_0x377b9e)[_0x34e454(0x1e4)]());}!_0x377b9e&&_0x3bb7a5&&(_0x377b9e=_0x3bb7a5,_0x677956=_0x34e454(0x1b1));if(!_0x377b9e&&_0x229bf8){_0x377b9e=_0x229bf8,_0x677956=_0x34e454(0x3bc);if(_0x378bd0)_0x378bd0[_0x34e454(0x277)](_0x230dca+'Wake\x20FP2:\x20'+new Date(_0x377b9e)[_0x34e454(0x1e4)]());}!_0x377b9e&&_0x30eba0&&(_0x377b9e=_0x30eba0,_0x677956='fp2_other');if(!_0x377b9e&&_0x30ef95[_0x34e454(0x1e0)]>0x0){var _0xf63b61=0x0;while(_0xf63b61<_0x30ef95['length']){var _0x5319a8=_0x30ef95[_0xf63b61]['timestamp']||0x0,_0xebed14=null;for(var _0x397418=0x0;_0x397418<_0x485f81[_0x34e454(0x1e0)];_0x397418++){if((_0x485f81[_0x397418]['timestamp']||0x0)>_0x5319a8+0x2*0x3c*0x3e8){_0xebed14=_0x485f81[_0x397418];break;}}if(!_0xebed14){_0x377b9e=_0x5319a8,_0x677956='other',_0x5596eb=_0x5319a8;break;}var _0x52e42a=-0x1;for(var _0x517a45=_0xf63b61+0x1;_0x517a45<_0x30ef95['length'];_0x517a45++){if((_0x30ef95[_0x517a45][_0x34e454(0x2f6)]||0x0)>(_0xebed14['timestamp']||0x0)+0x2*0x3c*0x3e8){_0x52e42a=_0x517a45;break;}}if(_0x52e42a===-0x1){_0x377b9e=null;break;}_0xf63b61=_0x52e42a;}}!_0x377b9e&&_0x1f546e&&(_0x377b9e=_0x1f546e,_0x677956=_0x34e454(0x182));!_0x377b9e&&_0x1efd34&&(_0x377b9e=_0x1efd34,_0x677956=_0x34e454(0x2cf));_0x377b9e===null&&_0x485f81[_0x34e454(0x1e0)]>0x0&&(_0x377b9e=_0x485f81[_0x485f81[_0x34e454(0x1e0)]-0x1][_0x34e454(0x2f6)]||null,_0x677956=_0x34e454(0x14d));if(!_0x9a4860&&_0x1b431c&&_0x1b431c[_0x34e454(0x336)]){var _0x292581=new Date(_0x1b431c['sleepWindowEnd'])['getHours'](),_0x42d08d=Date['now']()-_0x1b431c['sleepWindowEnd'];if(_0x292581>=0x5&&_0x42d08d>0x2*0x36ee80){_0x377b9e=_0x1b431c['sleepWindowEnd'],_0x677956=_0x1b431c[_0x34e454(0x326)]||_0x677956;if(_0x378bd0)_0x378bd0[_0x34e454(0x2c9)](_0x230dca+'Wake\x20FROZEN:\x20'+new Date(_0x377b9e)[_0x34e454(0x40a)]());}}var _0x1b6d61=![];if(_0x4c342a&&_0x4c342a[_0x34e454(0x179)]===_0x723b2f&&_0x4c342a['ts']){_0x377b9e=_0x4c342a['ts'],_0x677956=_0x4c342a[_0x34e454(0x142)]||_0x34e454(0x436),_0x1b6d61=!![];if(_0x378bd0)_0x378bd0['info'](_0x230dca+'Wake\x20Override:\x20'+_0x677956+_0x34e454(0x172)+new Date(_0x377b9e)[_0x34e454(0x1e4)]());}var _0xe443d5=[{'source':'garmin','ts':_0x9a4860||null},{'source':_0x34e454(0x1b1),'ts':_0x3bb7a5||null},{'source':_0x34e454(0x3bc),'ts':_0x229bf8||null},{'source':'fp2_other','ts':_0x30eba0||null},{'source':_0x34e454(0x3bd),'ts':_0x5596eb||null},{'source':'motion_vib','ts':_0x1f546e||null},{'source':_0x34e454(0x2cf),'ts':_0x1efd34||null},{'source':'vibration','ts':_0x433bda||null},{'source':'motion','ts':_0x677956===_0x34e454(0x14d)?_0x377b9e:null},{'source':_0x34e454(0x436),'ts':_0x1b6d61?_0x377b9e:null}],_0x57ee7b=_0x377b9e?_0x677956===_0x34e454(0x388)||_0x677956===_0x34e454(0x3bc)?_0x34e454(0x2a8):_0x677956===_0x34e454(0x3bd)?_0x34e454(0x2eb):'niedrig':_0x34e454(0x1c7),_0x2a8a0b=!!(_0x377b9e&&new Date()[_0x34e454(0x2a9)]()>=0xa&&Date['now']()-_0x377b9e>=0x36ee80),_0xba8720=_0x4c8b61||_0x32a958||_0x501f09['getTime'](),_0x32ab4e=_0x377b9e||Date[_0x34e454(0x1ae)](),_0x5313ff=_0xba8720<=_0x32ab4e?_0xbb0d5f[_0x34e454(0x44d)](function(_0xf8e79c){var _0x5f4a2c=_0x34e454,_0xb68127=_0xf8e79c[_0x5f4a2c(0x2f6)]||0x0;return _0xb68127>=_0xba8720&&_0xb68127<=_0x32ab4e;}):_0xbb0d5f[_0x34e454(0x44d)](function(_0x125a87){var _0x388f03=_0x34e454,_0xc0ea7f=_0x125a87[_0x388f03(0x2f6)]||0x0;return _0xc0ea7f>=(_0x32a958||_0x501f09[_0x388f03(0x16f)]())&&_0xc0ea7f<=_0x32ab4e;}),_0x5c27e6=_0x5313ff[_0x34e454(0x1e0)]===0x0,_0x30d38a=[],_0x24f7dc=_0x4c8b61||_0x32a958||_0x501f09[_0x34e454(0x16f)](),_0x4f46ad=_0x377b9e||Date[_0x34e454(0x1ae)]();if(_0x24f7dc<_0x4f46ad){var _0x4eab09=_0x263869[_0x34e454(0x44d)](function(_0x1afd17){var _0x36eefc=_0x34e454,_0x48f71f=_0x1afd17['timestamp']||0x0;if(_0x48f71f<_0x24f7dc||_0x48f71f>_0x4f46ad)return![];if(_0x1afd17['isFP2Bed']||_0x1afd17['isVibrationBed']||_0x1afd17[_0x36eefc(0x1c3)])return![];if(_0x2ca9b7(_0x1afd17))return![];return(_0x1afd17[_0x36eefc(0x132)]===_0x36eefc(0x14d)||_0x1afd17[_0x36eefc(0x132)]===_0x36eefc(0x261))&&isActiveValue(_0x1afd17[_0x36eefc(0x49d)]);})[_0x34e454(0x21b)](function(_0x52ad08,_0x4c4041){var _0x34364a=_0x34e454;return(_0x52ad08[_0x34364a(0x2f6)]||0x0)-(_0x4c4041[_0x34364a(0x2f6)]||0x0);}),_0x1944be=null,_0x2188f0=0x5*0x3c*0x3e8,_0x6d30c=0x3*0x3c*0x3e8,_0x49fd32=function(_0x23cca1){var _0x483b60=_0x34e454,_0xebf25f=Math[_0x483b60(0x347)](0x1,Math[_0x483b60(0x32a)]((_0x23cca1[_0x483b60(0x27b)]-_0x23cca1[_0x483b60(0x29a)])/0xea60));if(_0x23cca1['hasBath']){_0x30d38a[_0x483b60(0x400)]({'start':_0x23cca1[_0x483b60(0x29a)],'end':_0x23cca1[_0x483b60(0x27b)],'duration':_0xebf25f,'type':_0x483b60(0x44b),'confirmed':!![],'sensors':_0x23cca1[_0x483b60(0x2b8)]||[]});if(_0x23cca1[_0x483b60(0x162)])_0x30d38a[_0x483b60(0x400)]({'start':_0x23cca1['start'],'end':_0x23cca1[_0x483b60(0x27b)],'duration':_0xebf25f,'type':_0x483b60(0x1fb),'confirmed':!![],'sensors':_0x23cca1[_0x483b60(0x2b8)]||[]});}else _0x30d38a[_0x483b60(0x400)]({'start':_0x23cca1[_0x483b60(0x29a)],'end':_0x23cca1[_0x483b60(0x27b)],'duration':_0xebf25f,'type':_0x483b60(0x1fb),'confirmed':!![],'sensors':_0x23cca1[_0x483b60(0x2b8)]||[]});};_0x4eab09[_0x34e454(0x3b3)](function(_0x160c00){var _0x5c9625=_0x34e454,_0x89656e=_0x160c00[_0x5c9625(0x2f6)]||0x0,_0x255aef=_0x160c00['isBathroomSensor']||_0x2c45b3[_0x5c9625(0x245)](_0x160c00['id']);if(!_0x1944be)_0x1944be={'start':_0x89656e,'end':_0x89656e+_0x6d30c,'hasBath':_0x255aef,'hasOther':!_0x255aef,'sensors':[{'name':_0x160c00[_0x5c9625(0x353)]||_0x160c00['id'],'location':_0x160c00[_0x5c9625(0x34d)]||'','isBathroomSensor':_0x255aef,'timestamp':_0x89656e}]};else{if(_0x89656e<=_0x1944be[_0x5c9625(0x27b)]+_0x2188f0){_0x1944be[_0x5c9625(0x27b)]=_0x89656e+_0x6d30c;if(_0x255aef)_0x1944be['hasBath']=!![];else _0x1944be[_0x5c9625(0x162)]=!![];var _0x3df99a=_0x160c00['name']||_0x160c00['id'];if(!_0x1944be[_0x5c9625(0x2b8)]['some'](function(_0x73d97c){var _0x3e1770=_0x5c9625;return _0x73d97c[_0x3e1770(0x353)]===_0x3df99a;}))_0x1944be[_0x5c9625(0x2b8)][_0x5c9625(0x400)]({'name':_0x3df99a,'location':_0x160c00[_0x5c9625(0x34d)]||'','isBathroomSensor':_0x255aef,'timestamp':_0x89656e});}else _0x49fd32(_0x1944be),_0x1944be={'start':_0x89656e,'end':_0x89656e+_0x6d30c,'hasBath':_0x255aef,'hasOther':!_0x255aef,'sensors':[{'name':_0x160c00['name']||_0x160c00['id'],'location':_0x160c00['location']||'','isBathroomSensor':_0x255aef,'timestamp':_0x89656e}]};}});if(_0x1944be)_0x49fd32(_0x1944be);}var _0x5a94a3=[],_0x1ca82a=_0x4c8b61||_0x32a958||_0x501f09['getTime'](),_0x32f4ef=_0x377b9e||(_0x5c176a&&_0x5c176a<Date[_0x34e454(0x1ae)]()?_0x5c176a:null),_0x363fdb=null,_0x24b5e2=null;if(!_0x5c27e6&&_0x1ca82a&&_0x32f4ef&&_0x32f4ef>_0x1ca82a){var _0x46e2ce=0x5*0x3c*0x3e8,_0x2d55d0=Math[_0x34e454(0x3b8)]((_0x32f4ef-_0x1ca82a)/_0x46e2ce),_0x2afc3c=_0x263869[_0x34e454(0x44d)](function(_0x378088){var _0x1b61d7=_0x34e454;return _0x3f6646(_0x378088)&&_0x378088[_0x1b61d7(0x17c)]&&(_0x378088[_0x1b61d7(0x2f6)]||0x0)>=_0x1ca82a&&(_0x378088[_0x1b61d7(0x2f6)]||0x0)<=_0x32f4ef&&(isActiveValue(_0x378088[_0x1b61d7(0x49d)])||toPersonCount(_0x378088['value'])>0x0);}),_0x4b096e=_0x263869[_0x34e454(0x44d)](function(_0xb888ae){var _0x1c6074=_0x34e454;return _0x3f6646(_0xb888ae)&&_0xb888ae[_0x1c6074(0x3d7)]&&(_0xb888ae['timestamp']||0x0)>=_0x1ca82a&&(_0xb888ae[_0x1c6074(0x2f6)]||0x0)<=_0x32f4ef;}),_0x55c247=0x0,_0x4f3687=0x0,_0x3de9ce=0x0,_0x36faf9=0x0,_0x383c9b=0x0;for(var _0x10c0f3=0x0;_0x10c0f3<_0x2d55d0;_0x10c0f3++){var _0x77caf5=_0x1ca82a+_0x10c0f3*_0x46e2ce,_0x2a2d31=_0x77caf5+_0x46e2ce,_0x308d14=_0x2afc3c[_0x34e454(0x44d)](function(_0x44b852){return(_0x44b852['timestamp']||0x0)>=_0x77caf5&&(_0x44b852['timestamp']||0x0)<_0x2a2d31;})['length'],_0x45500b=_0x4b096e[_0x34e454(0x44d)](function(_0x5f1c18){var _0xa230db=_0x34e454;return(_0x5f1c18['timestamp']||0x0)>=_0x77caf5&&(_0x5f1c18[_0xa230db(0x2f6)]||0x0)<_0x2a2d31;})[_0x34e454(0x1cc)](function(_0x524568){var _0x10872=_0x34e454;return typeof _0x524568[_0x10872(0x49d)]==='number'?_0x524568[_0x10872(0x49d)]:parseFloat(_0x524568[_0x10872(0x49d)])||0x0;}),_0x5b4546=_0x45500b[_0x34e454(0x1e0)]>0x0?Math[_0x34e454(0x347)][_0x34e454(0x409)](null,_0x45500b):0x0,_0x13af6e=(_0x77caf5-_0x1ca82a)/0x36ee80,_0x58bc2b;if(_0x308d14===0x0)_0x55c247++,_0x58bc2b=_0x55c247>=0x5?_0x34e454(0x27c):_0x34e454(0x3bb);else{if(_0x308d14>=0x5||_0x5b4546>0x1c)_0x55c247=0x0,_0x58bc2b=_0x34e454(0x1e7);else _0x308d14>=0x2&&_0x13af6e>=2.5&&_0x5b4546>=0xc&&_0x5b4546<=0x1c?(_0x55c247=0x0,_0x58bc2b='rem'):(_0x55c247=0x0,_0x58bc2b='light');}_0x5a94a3[_0x34e454(0x400)]({'t':_0x10c0f3*0x5,'s':_0x58bc2b});if(_0x58bc2b==='deep')_0x4f3687+=0x12c;else{if(_0x58bc2b===_0x34e454(0x3bb))_0x3de9ce+=0x12c;else{if(_0x58bc2b===_0x34e454(0x19b))_0x36faf9+=0x12c;else _0x383c9b+=0x12c;}}}if(_0x378bd0)_0x378bd0[_0x34e454(0x277)](_0x230dca+_0x34e454(0x3d4)+_0x5a94a3[_0x34e454(0x1e0)]+_0x34e454(0x349)+new Date(_0x1ca82a)[_0x34e454(0x40a)]()+'-'+new Date(_0x32f4ef)[_0x34e454(0x40a)]()+')');var _0x5b85d4=_0x4f3687+_0x3de9ce+_0x36faf9+_0x383c9b,_0x46884a=(_0x32f4ef-_0x1ca82a)/0xea60,_0x1f45d1=Math[_0x34e454(0x347)](0x14,Math[_0x34e454(0x288)](0x5f,0x19+0.12*_0x46884a)),_0x3f6914=0x0;if(_0x5b85d4>0x0){var _0x4598e3=_0x36faf9/_0x5b85d4,_0x15e119=_0x383c9b/_0x5b85d4,_0x116e95=Math[_0x34e454(0x288)](0x1,_0x5b85d4/0x3c/Math['max'](0x1,_0x46884a));_0x3f6914=Math['max'](-0x8,Math[_0x34e454(0x288)](0x8,Math[_0x34e454(0x32a)]((_0x4598e3*0x1e-_0x15e119*0x32)*_0x116e95)));}_0x24b5e2=Math[_0x34e454(0x32a)](Math[_0x34e454(0x347)](0x0,_0x1f45d1+_0x3f6914)),_0x363fdb=Math[_0x34e454(0x32a)](Math[_0x34e454(0x347)](0x0,Math['min'](0x64,_0x24b5e2)));if(_0x378bd0)_0x378bd0[_0x34e454(0x277)](_0x230dca+_0x34e454(0x2ac)+_0x363fdb+_0x34e454(0x2af)+Math[_0x34e454(0x32a)](_0x46884a)+_0x34e454(0x373)+_0x3f6914);}return{'sleepWindowStart':_0x4c8b61,'sleepWindowEnd':_0x377b9e,'sleepStartSource':_0x557b2f,'allSleepStartSources':_0x3741e8,'sleepStartOverridden':_0x54e988,'wakeSource':_0x677956||null,'allWakeSources':_0xe443d5,'wakeConf':_0x57ee7b,'wakeConfirmed':_0x2a8a0b,'wakeOverridden':_0x1b6d61,'bedWasEmpty':_0x5c27e6,'outsideBedEvents':_0x30d38a,'sleepStages':_0x5a94a3,'stagesWindowStart':_0x1ca82a,'sleepScore':_0x363fdb,'sleepScoreRaw':_0x24b5e2,'_motionAnchor':_0x3bb691,'_hausStillTs':_0x39d4dc};}class CogniLiving extends utils[a0_0x44e735(0x30f)]{constructor(_0x35e848){var _0x315b45=a0_0x44e735;super({..._0x35e848,'name':_0x315b45(0x41e)}),this['eventHistory']=[],this[_0x315b45(0x298)]=[],this[_0x315b45(0x38d)]=[],this[_0x315b45(0x43e)]=[],this[_0x315b45(0x2a3)]={},this[_0x315b45(0x1e1)]={'latitude':0x0,'longitude':0x0,'city':''},this[_0x315b45(0x1a9)]=!![],this[_0x315b45(0x27e)]=null,this[_0x315b45(0x1a8)]=null,this[_0x315b45(0x365)]=![],this['genAI']=null,this[_0x315b45(0x3d1)]=null,this[_0x315b45(0x3f1)]=setup[_0x315b45(0x272)][_0x315b45(0x45e)],this['isProVersion']=![],this[_0x315b45(0x2b2)]=![],this[_0x315b45(0x46e)]=null,this[_0x315b45(0x3aa)]=null,this[_0x315b45(0x232)]=null,this[_0x315b45(0x391)]=null,this['modeResetJob']=null,this[_0x315b45(0x3da)]=null,this[_0x315b45(0x473)]=null,this[_0x315b45(0x28e)]=null,this[_0x315b45(0x31e)]=null,this[_0x315b45(0x41b)]=null,this['healthTrendInterval']=null,this[_0x315b45(0x42a)]=null,this[_0x315b45(0x428)]=![],this['lastTrackerEventTime']=Date['now'](),this[_0x315b45(0x49f)]=null,this['bootTime']=Date[_0x315b45(0x1ae)](),this[_0x315b45(0x313)]=![],this[_0x315b45(0x217)]=[],this['sensorLastSeen']={},this[_0x315b45(0x330)]={},this['sensorCheckInterval']=null,this['batteryStates']={},this['batteryDiscoveryInterval']=null,this['_lastBatteryPushoverDay']=null,this[_0x315b45(0x47c)]={'health':!![],'security':!![],'energy':!![],'comfort':!![]},this['on'](_0x315b45(0x22c),this[_0x315b45(0x2d6)][_0x315b45(0x490)](this)),this['on'](_0x315b45(0x3c5),this[_0x315b45(0x214)][_0x315b45(0x490)](this)),this['on'](_0x315b45(0x23b),this[_0x315b45(0x386)][_0x315b45(0x490)](this)),this['on'](_0x315b45(0x2e2),this[_0x315b45(0x2ca)][_0x315b45(0x490)](this));}async[a0_0x44e735(0x2d6)](){var _0x532f40=a0_0x44e735;this[_0x532f40(0x1c0)][_0x532f40(0x2c9)]('cogni-living\x20adapter\x20starting\x20(v'+this['version']+_0x532f40(0x1fe));if(this[_0x532f40(0x19e)][_0x532f40(0x3a8)]!==undefined)this[_0x532f40(0x47c)]['health']=this[_0x532f40(0x19e)][_0x532f40(0x3a8)];if(this[_0x532f40(0x19e)][_0x532f40(0x46b)]!==undefined)this[_0x532f40(0x47c)][_0x532f40(0x30d)]=this['config']['moduleSecurity'];if(this['config'][_0x532f40(0x221)]!==undefined)this[_0x532f40(0x47c)]['energy']=this[_0x532f40(0x19e)]['moduleEnergy'];if(this[_0x532f40(0x19e)][_0x532f40(0x3f5)]!==undefined)this[_0x532f40(0x47c)]['comfort']=this[_0x532f40(0x19e)]['moduleComfort'];if(this[_0x532f40(0x19e)][_0x532f40(0x1eb)])this[_0x532f40(0x47c)]={...this['activeModules'],...this[_0x532f40(0x19e)][_0x532f40(0x1eb)]};this[_0x532f40(0x19a)]();}async['startSystem'](){var _0x202bf7=a0_0x44e735;await setup[_0x202bf7(0x2cc)](this);try{this[_0x202bf7(0x454)]=await setup[_0x202bf7(0x3f8)](this[_0x202bf7(0x19e)][_0x202bf7(0x1bc)]);}catch(_0x13793b){}if(!this['config'][_0x202bf7(0x434)]||this['config'][_0x202bf7(0x434)]<0.1)this[_0x202bf7(0x19e)][_0x202bf7(0x434)]=0xc;await setup[_0x202bf7(0x2b1)](this),await setup[_0x202bf7(0x389)](this),topology['updateTopology'](this);try{const _0x472fc9=await this['getStateAsync'](_0x202bf7(0x4a8)),_0x710dc6=await this['getStateAsync'](_0x202bf7(0x38c));_0x472fc9&&_0x472fc9[_0x202bf7(0x24d)]&&_0x710dc6&&_0x710dc6['val']&&(Date[_0x202bf7(0x1ae)]()-_0x472fc9['ts']<0x4*0xe10*0x3e8&&(this['memoryCache']={'times':JSON[_0x202bf7(0x46f)](_0x472fc9[_0x202bf7(0x24d)]),'sources':JSON['parse'](_0x710dc6[_0x202bf7(0x24d)])}));}catch(_0x4bfe40){}if(this[_0x202bf7(0x19e)]['geminiApiKey'])try{this[_0x202bf7(0x213)]=new GoogleGenerativeAI(this[_0x202bf7(0x19e)][_0x202bf7(0x413)]),this[_0x202bf7(0x3d1)]=this['genAI'][_0x202bf7(0x2bd)]({'model':GEMINI_MODEL,'generationConfig':{'responseMimeType':_0x202bf7(0x4a0)}});}catch(_0x64ec24){this[_0x202bf7(0x1c0)][_0x202bf7(0x479)](_0x202bf7(0x184)+_0x64ec24[_0x202bf7(0x2e2)]);}await setup['createAllObjects'](this),await this[_0x202bf7(0x4a2)](),schedulers[_0x202bf7(0x322)](this),this[_0x202bf7(0x186)]()[_0x202bf7(0x34f)](_0xee6f4f=>this[_0x202bf7(0x1c0)][_0x202bf7(0x1d2)](_0x202bf7(0x2f3)+_0xee6f4f[_0x202bf7(0x2e2)])),await this[_0x202bf7(0x1d5)](_0x202bf7(0x344),{'type':'state','common':{'name':_0x202bf7(0x48f),'type':_0x202bf7(0x435),'role':_0x202bf7(0x49d),'read':!![],'write':![]},'native':{}}),await this['setObjectNotExistsAsync'](_0x202bf7(0x292),{'type':_0x202bf7(0x345),'common':{'name':_0x202bf7(0x43b),'type':_0x202bf7(0x370),'role':_0x202bf7(0x31c),'read':!![],'write':![],'def':_0x202bf7(0x3d5)},'native':{}}),await this[_0x202bf7(0x1d5)](_0x202bf7(0x13a),{'type':_0x202bf7(0x345),'common':{'name':_0x202bf7(0x24a),'type':_0x202bf7(0x370),'role':_0x202bf7(0x31c),'read':!![],'write':![],'def':'{\x22history\x22:{}}'},'native':{}}),await this[_0x202bf7(0x1d5)](_0x202bf7(0x22b),{'type':_0x202bf7(0x345),'common':{'name':_0x202bf7(0x367),'type':_0x202bf7(0x370),'role':_0x202bf7(0x37b),'read':!![],'write':![],'def':'Warte\x20auf\x20Analyse...'},'native':{}}),await this[_0x202bf7(0x1d5)](_0x202bf7(0x149),{'type':_0x202bf7(0x345),'common':{'name':_0x202bf7(0x2f4),'type':_0x202bf7(0x370),'role':'text','read':!![],'write':![],'def':_0x202bf7(0x3d9)},'native':{}}),await this[_0x202bf7(0x1d5)]('analysis.health.todayVector',{'type':_0x202bf7(0x345),'common':{'name':'Daily\x20Activity\x20Vector\x20(48x30min)','type':_0x202bf7(0x370),'role':_0x202bf7(0x31c),'read':!![],'write':![],'def':'[]'},'native':{}}),await this[_0x202bf7(0x1d5)](_0x202bf7(0x3e9),{'type':_0x202bf7(0x345),'common':{'name':_0x202bf7(0x450),'type':_0x202bf7(0x370),'role':_0x202bf7(0x31c),'read':!![],'write':![],'def':'[]'},'native':{}}),await this[_0x202bf7(0x1d5)](_0x202bf7(0x474),{'type':_0x202bf7(0x345),'common':{'name':'General\x20Activity\x20Trend','type':_0x202bf7(0x435),'role':_0x202bf7(0x49d),'unit':'%','read':!![],'write':![]},'native':{}}),await this[_0x202bf7(0x1d5)]('analysis.health.disease.scores',{'type':_0x202bf7(0x345),'common':{'name':_0x202bf7(0x42e),'type':_0x202bf7(0x370),'role':'json','read':!![],'write':![],'def':'{}'},'native':{}});for(const _0xc8fe2c of[_0x202bf7(0x146),_0x202bf7(0x291),_0x202bf7(0x3ba),'depression',_0x202bf7(0x452),'sleepDisorder',_0x202bf7(0x384),'parkinson',_0x202bf7(0x180),'socialIsolation',_0x202bf7(0x49c),'diabetes1','longCovid',_0x202bf7(0x350)]){await this['setObjectNotExistsAsync']('analysis.health.disease.'+_0xc8fe2c,{'type':_0x202bf7(0x345),'common':{'name':'Disease\x20Risk:\x20'+_0xc8fe2c,'type':_0x202bf7(0x435),'role':_0x202bf7(0x49d),'unit':'%','read':!![],'write':![],'def':0x0},'native':{}});}await this[_0x202bf7(0x1d5)]('analysis.health.screening.hints',{'type':_0x202bf7(0x345),'common':{'name':'Proactive\x20Screening\x20Hints\x20(JSON)','type':'string','role':_0x202bf7(0x31c),'read':!![],'write':![],'def':'{}'},'native':{}}),await this[_0x202bf7(0x1d5)](_0x202bf7(0x311),{'type':'state','common':{'name':_0x202bf7(0x357),'type':_0x202bf7(0x370),'role':_0x202bf7(0x31c),'read':!![],'write':![],'def':'[]'},'native':{}}),await this['setObjectNotExistsAsync'](_0x202bf7(0x26f),{'type':_0x202bf7(0x345),'common':{'name':_0x202bf7(0x47b),'type':'string','role':_0x202bf7(0x31c),'read':!![],'write':!![],'def':_0x202bf7(0x32c)},'native':{}}),await this[_0x202bf7(0x1d5)](_0x202bf7(0x219),{'type':_0x202bf7(0x345),'common':{'name':'Per-Person\x20Sleep\x20Start\x20Overrides\x20(JSON)','type':_0x202bf7(0x370),'role':_0x202bf7(0x31c),'read':!![],'write':!![],'def':_0x202bf7(0x32c)},'native':{}}),await this[_0x202bf7(0x1d5)](_0x202bf7(0x45c),{'type':_0x202bf7(0x345),'common':{'name':_0x202bf7(0x168),'type':_0x202bf7(0x370),'role':'json','read':!![],'write':!![],'def':_0x202bf7(0x32c)},'native':{}}),await this['setObjectNotExistsAsync'](_0x202bf7(0x2aa),{'type':_0x202bf7(0x345),'common':{'name':_0x202bf7(0x35c),'type':_0x202bf7(0x370),'role':'json','read':!![],'write':!![],'def':_0x202bf7(0x32c)},'native':{}}),await this[_0x202bf7(0x1d5)](_0x202bf7(0x196),{'type':'state','common':{'name':_0x202bf7(0x2bc),'type':_0x202bf7(0x370),'role':_0x202bf7(0x31c),'read':!![],'write':![],'def':'{}'},'native':{}}),await this[_0x202bf7(0x1d5)](_0x202bf7(0x358),{'type':'state','common':{'name':_0x202bf7(0x3fa),'type':_0x202bf7(0x370),'role':_0x202bf7(0x31c),'read':!![],'write':![],'def':'{}'},'native':{}}),await this[_0x202bf7(0x1d5)]('system.currentPersonCount',{'type':_0x202bf7(0x345),'common':{'name':'Aktuelle\x20Personenanzahl\x20im\x20Haus','type':'number','role':_0x202bf7(0x49d),'unit':_0x202bf7(0x425),'read':!![],'write':![],'def':0x1,'desc':_0x202bf7(0x1e3)},'native':{}}),await this[_0x202bf7(0x1d5)]('system.personCount.heuristicDetection',{'type':'state','common':{'name':_0x202bf7(0x4a5),'type':'string','role':'json','read':!![],'write':![],'def':'{}','desc':_0x202bf7(0x415)},'native':{}}),await this[_0x202bf7(0x1d5)]('system.personCount.sensorActivity',{'type':_0x202bf7(0x345),'common':{'name':_0x202bf7(0x25d),'type':'string','role':_0x202bf7(0x31c),'read':!![],'write':![],'def':'{}','desc':'Jede\x20steigende\x20Flanke\x20eines\x20person-relevanten\x20Sensors\x20(isPersonPresenceActivity).\x20Kein\x20Licht,\x20kein\x20Temperatur.'},'native':{}}),await this[_0x202bf7(0x1d5)](_0x202bf7(0x3a6),{'type':'state','common':{'name':'Sensor-Konfiguration\x20(Uebersicht)','type':_0x202bf7(0x370),'role':_0x202bf7(0x31c),'read':!![],'write':![],'def':'[]','desc':_0x202bf7(0x3fc)},'native':{}}),await this['setObjectNotExistsAsync'](_0x202bf7(0x394),{'type':_0x202bf7(0x345),'common':{'name':'Haushaltstyp','type':_0x202bf7(0x370),'role':_0x202bf7(0x37b),'states':{'single':_0x202bf7(0x189),'multi':'Mehrpersonenhaushalt'},'read':!![],'write':![],'def':_0x202bf7(0x1f2)},'native':{}}),await this[_0x202bf7(0x1d5)](_0x202bf7(0x348),{'type':_0x202bf7(0x345),'common':{'name':_0x202bf7(0x487),'type':_0x202bf7(0x370),'role':_0x202bf7(0x31c),'read':!![],'write':![],'def':'{}'},'native':{}}),await this['setObjectNotExistsAsync']('analysis.energy.warmupTimes',{'type':'state','common':{'name':_0x202bf7(0x281),'type':_0x202bf7(0x370),'role':_0x202bf7(0x31c),'read':!![],'write':![]},'native':{}});try{const _0xa0d920=await this['getStateAsync'](_0x202bf7(0x3a7));if(_0xa0d920&&_0xa0d920['val']){this[_0x202bf7(0x429)]=JSON[_0x202bf7(0x46f)](_0xa0d920['val']);if(this[_0x202bf7(0x454)]){const _0x2387a5=await this[_0x202bf7(0x205)](_0x202bf7(0x25a));if(_0x2387a5&&_0x2387a5[_0x202bf7(0x24d)])this[_0x202bf7(0x38d)]=JSON[_0x202bf7(0x46f)](_0x2387a5[_0x202bf7(0x24d)]);}this['log']['info'](_0x202bf7(0x49b)+this[_0x202bf7(0x429)][_0x202bf7(0x1e0)]+'\x20events\x20from\x20standard\x20storage.');}}catch(_0x350a35){this['eventHistory']=[];}try{const _0x17cc5a=await this[_0x202bf7(0x205)](_0x202bf7(0x1f6));if(_0x17cc5a&&_0x17cc5a[_0x202bf7(0x24d)])this[_0x202bf7(0x43e)]=JSON['parse'](_0x17cc5a[_0x202bf7(0x24d)]);}catch(_0x4b9869){this[_0x202bf7(0x43e)]=[];}const _0x3f0269=this[_0x202bf7(0x43e)][_0x202bf7(0x1e0)]>=(this['config'][_0x202bf7(0x426)]||0x7)?'Aktiv\x20('+this[_0x202bf7(0x43e)][_0x202bf7(0x1e0)]+_0x202bf7(0x18e):_0x202bf7(0x4b3)+this['dailyDigests'][_0x202bf7(0x1e0)]+'/'+(this[_0x202bf7(0x19e)][_0x202bf7(0x426)]||0x7)+')';await this[_0x202bf7(0x295)](_0x202bf7(0x2d8),{'val':_0x3f0269,'ack':!![]}),this[_0x202bf7(0x354)](_0x202bf7(0x2c4)),this[_0x202bf7(0x354)](_0x202bf7(0x15f)),this[_0x202bf7(0x354)](_0x202bf7(0x491)),this[_0x202bf7(0x354)](_0x202bf7(0x3de)),this[_0x202bf7(0x354)](_0x202bf7(0x387));this[_0x202bf7(0x19e)][_0x202bf7(0x230)]&&this[_0x202bf7(0x19e)][_0x202bf7(0x2c2)]&&this[_0x202bf7(0x47c)]['security']&&this[_0x202bf7(0x393)](this[_0x202bf7(0x19e)][_0x202bf7(0x2c2)]);const _0x56c7af=this['config'][_0x202bf7(0x39e)];if(_0x56c7af)for(const _0xa6fd61 of _0x56c7af){await this[_0x202bf7(0x380)](_0xa6fd61['id']);}try{const _0x45879b=(this[_0x202bf7(0x19e)]['devices']||[])[_0x202bf7(0x1cc)](function(_0x447796){var _0x89c40=_0x202bf7;return{'id':_0x447796['id']||'','bezeichnung':_0x447796[_0x89c40(0x353)]||'','ort':_0x447796[_0x89c40(0x34d)]||'','typ':_0x447796[_0x89c40(0x132)]||'','funktion':_0x447796[_0x89c40(0x40b)]||'','isBathroomSensor':!!(_0x447796[_0x89c40(0x40b)]===_0x89c40(0x44b)||_0x447796[_0x89c40(0x16e)]),'isKitchenSensor':!!(_0x447796[_0x89c40(0x40b)]==='kitchen'||_0x447796[_0x89c40(0x2ae)]),'isFP2Bed':!!(_0x447796[_0x89c40(0x40b)]==='bed'&&(_0x447796['type']||'')['toLowerCase']()==='presence_radar_bool'),'isVibrationBed':!!(_0x447796['sensorFunction']===_0x89c40(0x1ef)&&['vibration_trigger',_0x89c40(0x23f)][_0x89c40(0x256)]((_0x447796[_0x89c40(0x132)]||'')[_0x89c40(0x1f3)]())),'isBedroomMotion':!!(_0x447796[_0x89c40(0x40b)]===_0x89c40(0x1ef)&&(_0x447796[_0x89c40(0x132)]||'')[_0x89c40(0x1f3)]()===_0x89c40(0x14d))};});await this[_0x202bf7(0x295)]('system.config.sensorList',{'val':JSON['stringify'](_0x45879b,null,0x2),'ack':!![]});}catch(_0x276c0f){this[_0x202bf7(0x1c0)][_0x202bf7(0x1d2)](_0x202bf7(0x274)+_0x276c0f[_0x202bf7(0x2e2)]);}const _0x4f7c4d=this[_0x202bf7(0x19e)]['presenceDevices'];if(_0x4f7c4d)for(const _0x168c26 of _0x4f7c4d){await this[_0x202bf7(0x380)](_0x168c26);}try{const _0x3cc59d=this[_0x202bf7(0x19e)][_0x202bf7(0x39e)]||[];for(const _0x55e511 of _0x3cc59d){if(!_0x55e511['id'])continue;try{const _0x1022dd=await this['getForeignStateAsync'](_0x55e511['id']);_0x1022dd&&_0x1022dd[_0x202bf7(0x24d)]!==undefined&&_0x1022dd['val']!==null&&(this[_0x202bf7(0x2a3)][_0x55e511['id']]=_0x1022dd[_0x202bf7(0x24d)]);}catch(_0x1369ab){}}this[_0x202bf7(0x1c0)][_0x202bf7(0x2c9)](_0x202bf7(0x3ff)+_0x3cc59d[_0x202bf7(0x1e0)]+'\x20devices\x20(duplicate\x20filter\x20ready).');}catch(_0x162945){this[_0x202bf7(0x1c0)][_0x202bf7(0x1d2)](_0x202bf7(0x3e7)+_0x162945[_0x202bf7(0x2e2)]);}const _0x1240da=require(_0x202bf7(0x351));if(this['historyJob'])this[_0x202bf7(0x31e)][_0x202bf7(0x2a0)]();this[_0x202bf7(0x31e)]=_0x1240da[_0x202bf7(0x2e7)]({'hour':0x17,'minute':0x3b,'second':0x3b},()=>{var _0x117178=_0x202bf7;this[_0x117178(0x4a9)]();}),setTimeout(()=>this['replayTodayEvents'](),0x1388),setTimeout(()=>this[_0x202bf7(0x4a9)]()['catch'](_0x4f889c=>{}),0x15f90);var _0x3afd51={'single':_0x202bf7(0x1f2),'couple':'multi','family':'multi'},_0x258529=this['config'][_0x202bf7(0x169)]||_0x202bf7(0x1f2),_0x23d372=_0x3afd51[_0x258529]||'single',_0x3343ce=_0x258529===_0x202bf7(0x1f2)?0x1:_0x258529===_0x202bf7(0x302)?0x2:0x3;this[_0x202bf7(0x295)]('system.householdType',{'val':_0x23d372,'ack':!![]})['catch'](function(){}),this['setStateAsync'](_0x202bf7(0x21f),{'val':_0x3343ce,'ack':!![]})[_0x202bf7(0x34f)](function(){}),this[_0x202bf7(0x1c0)]['info'](_0x202bf7(0x438)+_0x258529+'\x20->\x20householdType='+_0x23d372+_0x202bf7(0x14f)+_0x3343ce);this[_0x202bf7(0x429)]&&this[_0x202bf7(0x429)]['length']>0x0&&this[_0x202bf7(0x429)][_0x202bf7(0x3b3)](function(_0x4d3156){var _0x4664b1=_0x202bf7;if(_0x4d3156['id']&&_0x4d3156[_0x4664b1(0x2f6)]){var _0x3d9eac=this[_0x4664b1(0x3d3)][_0x4d3156['id']];if(!_0x3d9eac||_0x4d3156[_0x4664b1(0x2f6)]>_0x3d9eac)this[_0x4664b1(0x3d3)][_0x4d3156['id']]=_0x4d3156[_0x4664b1(0x2f6)];}}[_0x202bf7(0x490)](this));if(this[_0x202bf7(0x47d)])clearInterval(this[_0x202bf7(0x47d)]);if(this[_0x202bf7(0x253)])clearInterval(this[_0x202bf7(0x253)]);this[_0x202bf7(0x47d)]=setInterval(()=>{var _0x4865b5=_0x202bf7;this[_0x4865b5(0x419)]();},0x3c*0x3c*0x3e8);if(this[_0x202bf7(0x3df)])clearInterval(this['hourlySaveInterval']);this['hourlySaveInterval']=setInterval(()=>{var _0x3eb08a=_0x202bf7;this[_0x3eb08a(0x4a9)]()[_0x3eb08a(0x34f)](_0x213018=>{});},0x3c*0x3c*0x3e8),setTimeout(()=>this['checkSensorHealth'](),0x5*0x3c*0x3e8);if(this['batteryDiscoveryInterval'])clearInterval(this['batteryDiscoveryInterval']);this[_0x202bf7(0x176)]()[_0x202bf7(0x451)](()=>this[_0x202bf7(0x48e)]())[_0x202bf7(0x34f)](_0x335546=>this[_0x202bf7(0x1c0)][_0x202bf7(0x1d2)](_0x202bf7(0x3f7)+_0x335546[_0x202bf7(0x2e2)])),this[_0x202bf7(0x253)]=setInterval(async()=>{var _0x32edaf=_0x202bf7;try{await this['discoverBatteryStates'](),await this[_0x32edaf(0x48e)]();}catch(_0x17505a){}},0xc*0x3c*0x3c*0x3e8);if(this[_0x202bf7(0x42a)])clearInterval(this['roomIntegratorTimer']);this[_0x202bf7(0x1cf)](),this[_0x202bf7(0x42a)]=setInterval(async()=>{var _0x2a5677=_0x202bf7;await this[_0x2a5677(0x1cf)]();},0x3c*0x3e8);if(this['healthTrendInterval'])clearInterval(this[_0x202bf7(0x444)]);this[_0x202bf7(0x444)]=setInterval(()=>{var _0x55a8d=_0x202bf7;this[_0x55a8d(0x454)]&&this[_0x55a8d(0x47c)][_0x55a8d(0x2d5)]&&this['runPythonHealthCheck']();},0x4*0x3c*0x3c*0x3e8);if(this['analysisTimer'])clearInterval(this[_0x202bf7(0x46e)]);this['activeModules']['energy']&&(this[_0x202bf7(0x46e)]=setInterval(()=>{var _0x552386=_0x202bf7;this[_0x552386(0x346)]();},0x3c*0x3c*0x3e8),setTimeout(()=>this['triggerEnergyPrediction'](),0x2710));if(this[_0x202bf7(0x3aa)])clearInterval(this[_0x202bf7(0x3aa)]);this['config'][_0x202bf7(0x19d)]&&this['activeModules'][_0x202bf7(0x496)]&&(this['calendarCheckTimer']=setInterval(()=>{var _0x2baafa=_0x202bf7;automation[_0x2baafa(0x472)](this);},0x2*0x3c*0x3e8),setTimeout(()=>automation[_0x202bf7(0x472)](this),0x3a98));if(this[_0x202bf7(0x232)])clearInterval(this[_0x202bf7(0x232)]);this['config'][_0x202bf7(0x207)]&&this[_0x202bf7(0x19e)][_0x202bf7(0x207)][_0x202bf7(0x1e0)]>0x0&&(this[_0x202bf7(0x232)]=setInterval(async()=>{var _0x59b782=_0x202bf7;await this[_0x59b782(0x3ef)]();},0x3c*0x3e8),setTimeout(async()=>await this[_0x202bf7(0x3ef)](),0x1388));const _0x24915c=path['join'](__dirname,'.venv',_0x202bf7(0x293),'python');pythonBridge[_0x202bf7(0x1d7)](this,_0x24915c),this['_startFamilyApp']();}async['_startFamilyApp'](){var _0x11012e=a0_0x44e735;if(!this[_0x11012e(0x19e)]['pwaEnabled'])return;try{await pwaServer[_0x11012e(0x29a)](this);if(this['config'][_0x11012e(0x463)]){const _0x106bbf=this['config'][_0x11012e(0x2d7)]||0x1f9f,_0x5f26aa=await cloudflareTunnel['start'](this,_0x106bbf);_0x5f26aa&&this[_0x11012e(0x1c0)][_0x11012e(0x2c9)]('[PWA]\x20??\x20Cloudflare\x20URL:\x20'+_0x5f26aa+_0x11012e(0x480)+(this[_0x11012e(0x19e)][_0x11012e(0x412)]||''));}}catch(_0x190967){this[_0x11012e(0x1c0)][_0x11012e(0x479)]('[PWA]\x20Startup\x20error:\x20'+_0x190967[_0x11012e(0x2e2)]);}}async[a0_0x44e735(0x419)](){var _0x3789cd=a0_0x44e735,_0x3324f1=this,_0x2a6636=Date['now'](),_0x20978a=this['config']['devices']||[],_0x2ceefb={'motion':0x7*0x18*0x36ee80,'presence_radar':0x7*0x18*0x36ee80,'vibration':0x7*0x18*0x36ee80,'door':0x7*0x18*0x36ee80,'temperature':0x6*0x36ee80,'light':0x8*0x36ee80,'dimmer':0x8*0x36ee80,'moisture':0x8*0x36ee80},_0x31b478=0x7*0x18*0x36ee80,_0x1849aa=0x18*0x36ee80,_0x2776ce=['knx.',_0x3789cd(0x2e1),_0x3789cd(0x364),_0x3789cd(0x3cc)],_0x416de8=[],_0x57d2c0=[];for(var _0x2e401f=0x0;_0x2e401f<_0x20978a['length'];_0x2e401f++){var _0x90b5d0=_0x20978a[_0x2e401f];if(!_0x90b5d0['id'])continue;var _0x54b8c2=_0x2776ce[_0x3789cd(0x1cd)](function(_0x450d2e){var _0x5d2264=_0x3789cd;return _0x90b5d0['id']['toLowerCase']()[_0x5d2264(0x267)](_0x450d2e);});if(_0x54b8c2)continue;var _0x33032e=_0x3324f1[_0x3789cd(0x3d3)][_0x90b5d0['id']]||0x0;try{var _0x5156c4=await _0x3324f1[_0x3789cd(0x1f4)](_0x90b5d0['id']);if(_0x5156c4&&_0x5156c4['ts']&&_0x5156c4['ts']>_0x33032e)_0x33032e=_0x5156c4['ts'];}catch(_0x2bb32d){}if(!_0x33032e)continue;var _0x553302=_0x2ceefb[_0x90b5d0[_0x3789cd(0x132)]]||_0x31b478,_0x11e25e=_0x2a6636-_0x33032e,_0x5d576f=Math[_0x3789cd(0x32a)](_0x11e25e/0x57e40)/0xa,_0x1567f3=_0x11e25e>_0x553302;_0x57d2c0[_0x3789cd(0x400)]({'id':_0x90b5d0['id'],'name':_0x90b5d0[_0x3789cd(0x353)]||_0x90b5d0['id'],'location':_0x90b5d0['location']||'','type':_0x90b5d0[_0x3789cd(0x132)]||'','lastSeen':_0x33032e,'sinceH':_0x5d576f,'status':_0x1567f3?_0x3789cd(0x195):'ok'});if(_0x1567f3){var _0x3c4929=_0x3324f1[_0x3789cd(0x330)][_0x90b5d0['id']]||0x0;if(_0x2a6636-_0x3c4929>_0x1849aa){_0x3324f1['sensorAlertSent'][_0x90b5d0['id']]=_0x2a6636;var _0x43102e=Math[_0x3789cd(0x32a)](_0x11e25e/0x36ee80);_0x416de8['push']((_0x90b5d0[_0x3789cd(0x353)]||_0x90b5d0['id'])+'\x20('+(_0x90b5d0[_0x3789cd(0x34d)]||'?')+_0x3789cd(0x3a4)+_0x43102e+_0x3789cd(0x215));}}}var _0x6087d4=_0x57d2c0[_0x3789cd(0x44d)](function(_0x46fa3d){var _0x33e566=_0x3789cd;return _0x46fa3d[_0x33e566(0x3b4)]===_0x33e566(0x195);})[_0x3789cd(0x1e0)];try{await this[_0x3789cd(0x295)](_0x3789cd(0x358),{'val':JSON[_0x3789cd(0x332)]({'timestamp':_0x2a6636,'sensors':_0x57d2c0,'offlineCount':_0x6087d4}),'ack':!![]});}catch(_0xbb6140){}if(_0x416de8[_0x3789cd(0x1e0)]>0x0){var _0x6e9c03=_0x3789cd(0x222)+_0x416de8[_0x3789cd(0x2ab)]('\x0a');this[_0x3789cd(0x1c0)][_0x3789cd(0x1d2)](_0x3789cd(0x249)+_0x416de8[_0x3789cd(0x2ab)](',\x20'));try{setup['sendNotification'](this,_0x6e9c03,!![],![],'??\x20NUUKANNI:\x20Sensor-Ausfall');}catch(_0x716e79){}}try{await this[_0x3789cd(0x48e)]();}catch(_0x189491){}}async[a0_0x44e735(0x176)](){var _0x20894f=a0_0x44e735,_0x47e7a8=this,_0x5ccd74=this[_0x20894f(0x19e)][_0x20894f(0x39e)]||[],_0x4c4bc9=[_0x20894f(0x44e),_0x20894f(0x3c6),_0x20894f(0x342),'lowBattery','Battery','battery_percentage',_0x20894f(0x37d),_0x20894f(0x3f4),_0x20894f(0x4a3),_0x20894f(0x3a2),_0x20894f(0x457),'Bat.percent',_0x20894f(0x323),_0x20894f(0x1df),_0x20894f(0x443)],_0xfc6404=[_0x20894f(0x209),_0x20894f(0x2e1),_0x20894f(0x364),_0x20894f(0x3cc)],_0x455294=['motion','vibration',_0x20894f(0x297),_0x20894f(0x23f),_0x20894f(0x41d),_0x20894f(0x261),_0x20894f(0x318),'door','temperature'];for(var _0x33f24c=0x0;_0x33f24c<_0x5ccd74[_0x20894f(0x1e0)];_0x33f24c++){var _0x590f31=_0x5ccd74[_0x33f24c];if(!_0x590f31['id'])continue;var _0x1f3cfa=_0xfc6404[_0x20894f(0x1cd)](function(_0x4ae5c7){var _0x3ba1fb=_0x20894f;return _0x590f31['id'][_0x3ba1fb(0x1f3)]()[_0x3ba1fb(0x267)](_0x4ae5c7);});if(_0x1f3cfa)continue;if(_0x455294[_0x20894f(0x3f2)](_0x590f31[_0x20894f(0x132)]||'motion')===-0x1)continue;var _0x4d3abc=null,_0x5be534=_0x20894f(0x12e);_0x590f31['batteryStateId']&&_0x590f31[_0x20894f(0x335)]['trim']()&&(_0x4d3abc=_0x590f31['batteryStateId'][_0x20894f(0x308)](),_0x5be534=_0x20894f(0x38e));if(!_0x4d3abc)try{var _0x2c08a6=await _0x47e7a8[_0x20894f(0x3e8)](_0x590f31['id']);if(_0x2c08a6&&_0x2c08a6['common']&&_0x2c08a6[_0x20894f(0x2be)][_0x20894f(0x499)]&&_0x2c08a6[_0x20894f(0x2be)][_0x20894f(0x499)]['id']){var _0x3f1a07=typeof _0x2c08a6[_0x20894f(0x2be)][_0x20894f(0x499)]['id']===_0x20894f(0x3ea)?_0x2c08a6[_0x20894f(0x2be)]['alias']['id']['read']||_0x2c08a6[_0x20894f(0x2be)][_0x20894f(0x499)]['id'][_0x20894f(0x411)]:_0x2c08a6[_0x20894f(0x2be)]['alias']['id'];if(_0x3f1a07){var _0x400258=String(_0x3f1a07)[_0x20894f(0x1d0)]('.');_0x400258[_0x20894f(0x247)]();var _0x334801=_0x400258[_0x20894f(0x2ab)]('.');for(var _0x5eb97b=0x0;_0x5eb97b<_0x4c4bc9['length'];_0x5eb97b++){try{var _0x1f1a6e=await _0x47e7a8[_0x20894f(0x1f4)](_0x334801+'.'+_0x4c4bc9[_0x5eb97b]);if(_0x1f1a6e!==null&&_0x1f1a6e!==undefined){_0x4d3abc=_0x334801+'.'+_0x4c4bc9[_0x5eb97b],_0x5be534='alias';break;}}catch(_0xb071db){}}}}}catch(_0x5da0dc){}if(!_0x4d3abc)try{var _0x12e372=_0x590f31['id'][_0x20894f(0x1d0)]('.'),_0x561050=Math[_0x20894f(0x288)](0x3,_0x12e372[_0x20894f(0x1e0)]-0x3);_0x92f5e6:for(var _0x56f293=0x1;_0x56f293<=_0x561050;_0x56f293++){var _0x16ae0e=_0x12e372[_0x20894f(0x314)](0x0,_0x12e372[_0x20894f(0x1e0)]-_0x56f293)['join']('.');for(var _0x5489df=0x0;_0x5489df<_0x4c4bc9['length'];_0x5489df++){try{var _0x3dae56=await _0x47e7a8[_0x20894f(0x1f4)](_0x16ae0e+'.'+_0x4c4bc9[_0x5489df]);if(_0x3dae56!==null&&_0x3dae56!==undefined){_0x4d3abc=_0x16ae0e+'.'+_0x4c4bc9[_0x5489df],_0x5be534='auto';break _0x92f5e6;}}catch(_0x18d285){}}}}catch(_0x5ea7db){}if(!_0x4d3abc)try{var _0x2331f=[_0x20894f(0x191),_0x20894f(0x1c4),_0x20894f(0x396)],_0x477d79=_0x2331f[_0x20894f(0x1cd)](function(_0x3416cb){var _0xbc5bc1=_0x20894f;return _0x590f31['id'][_0xbc5bc1(0x1f3)]()[_0xbc5bc1(0x267)](_0x3416cb);});if(_0x477d79){var _0x3fcee7=_0x590f31['id'][_0x20894f(0x3e4)](/^([\w-]+\.\d+\.[^:]+):(\d+)\./),_0x39f8a1=!_0x3fcee7&&_0x590f31['id'][_0x20894f(0x3e4)](/^([\w-]+\.\d+\.[^\.]+)\.\d+\./),_0x148286=_0x3fcee7?_0x3fcee7[0x1]+':0':_0x39f8a1?_0x39f8a1[0x1]+'.0':null;if(_0x148286){var _0x5797c2=[_0x20894f(0x42b),_0x20894f(0x43f),_0x20894f(0x300),_0x20894f(0x2ce)];for(var _0x11ab27=0x0;_0x11ab27<_0x5797c2[_0x20894f(0x1e0)];_0x11ab27++){try{var _0x3749ed=await _0x47e7a8['getForeignStateAsync'](_0x148286+'.'+_0x5797c2[_0x11ab27]);if(_0x3749ed!==null&&_0x3749ed!==undefined){_0x4d3abc=_0x148286+'.'+_0x5797c2[_0x11ab27],_0x5be534=_0x20894f(0x486);break;}}catch(_0x154edc){}}}}}catch(_0x42c81b){}if(_0x4d3abc){if(!_0x47e7a8[_0x20894f(0x470)][_0x590f31['id']])_0x47e7a8[_0x20894f(0x470)][_0x590f31['id']]={};_0x47e7a8[_0x20894f(0x470)][_0x590f31['id']][_0x20894f(0x27a)]=_0x4d3abc,_0x47e7a8[_0x20894f(0x470)][_0x590f31['id']][_0x20894f(0x142)]=_0x5be534,_0x47e7a8[_0x20894f(0x1c0)][_0x20894f(0x277)](_0x20894f(0x14b)+(_0x590f31['name']||_0x590f31['id'])+':\x20'+_0x4d3abc+'\x20('+_0x5be534+')');}else delete _0x47e7a8[_0x20894f(0x470)][_0x590f31['id']];}}async[a0_0x44e735(0x48e)](){var _0x2b2356=a0_0x44e735,_0x272295=this,_0x28bcc8=Date[_0x2b2356(0x1ae)](),_0x4f35fa=[],_0x309f47=this['config'][_0x2b2356(0x39e)]||[];for(var _0x574d43 in _0x272295[_0x2b2356(0x470)]){var _0x38aa0b=_0x272295[_0x2b2356(0x470)][_0x574d43];if(!_0x38aa0b||!_0x38aa0b[_0x2b2356(0x27a)])continue;try{var _0x9a6e34=await _0x272295[_0x2b2356(0x1f4)](_0x38aa0b[_0x2b2356(0x27a)]);if(!_0x9a6e34||_0x9a6e34[_0x2b2356(0x24d)]===null||_0x9a6e34[_0x2b2356(0x24d)]===undefined)continue;var _0x514ad4=null,_0xad52bb=![],_0x23b99f=![];if(typeof _0x9a6e34[_0x2b2356(0x24d)]===_0x2b2356(0x1de))_0xad52bb=_0x9a6e34['val'],_0x23b99f=_0x9a6e34['val'],_0x514ad4=_0x9a6e34[_0x2b2356(0x24d)]?0x5:0x50;else typeof _0x9a6e34[_0x2b2356(0x24d)]==='number'&&(_0x9a6e34[_0x2b2356(0x24d)]>=0x0&&_0x9a6e34[_0x2b2356(0x24d)]<=0x64&&(_0x514ad4=_0x9a6e34[_0x2b2356(0x24d)],_0xad52bb=_0x514ad4<=0x14,_0x23b99f=_0x514ad4<=0xa));_0x38aa0b['level']=_0x514ad4,_0x38aa0b[_0x2b2356(0x14c)]=_0xad52bb,_0x38aa0b['isCritical']=_0x23b99f;if(_0x23b99f){var _0x13c8dc=_0x309f47[_0x2b2356(0x248)](function(_0x97a40e){return _0x97a40e['id']===_0x574d43;}),_0x28ccd7=_0x13c8dc&&_0x13c8dc['name']?_0x13c8dc[_0x2b2356(0x353)]:_0x574d43,_0x4cdfe1=_0x13c8dc&&_0x13c8dc[_0x2b2356(0x34d)]?_0x13c8dc['location']:'?';_0x4f35fa[_0x2b2356(0x400)](_0x28ccd7+'\x20('+_0x4cdfe1+'):\x20'+(_0x514ad4!==null?_0x514ad4+'%':'kritisch'));}}catch(_0x26e986){}}try{var _0x472269=Object[_0x2b2356(0x3a5)](_0x272295[_0x2b2356(0x470)])[_0x2b2356(0x1cc)](function(_0x51aae6){var _0x58624a=_0x2b2356,_0x6646d6=_0x272295[_0x58624a(0x470)][_0x51aae6];return{'id':_0x51aae6,'stateId':_0x6646d6[_0x58624a(0x27a)],'level':_0x6646d6[_0x58624a(0x44c)]!==undefined?_0x6646d6['level']:null,'isLow':_0x6646d6[_0x58624a(0x14c)]||![],'isCritical':_0x6646d6[_0x58624a(0x3d8)]||![],'source':_0x6646d6[_0x58624a(0x142)]||_0x58624a(0x263)};});await _0x272295[_0x2b2356(0x295)](_0x2b2356(0x196),{'val':JSON['stringify']({'timestamp':_0x28bcc8,'sensors':_0x472269}),'ack':!![]});}catch(_0x559f15){}var _0x362515=new Date(_0x28bcc8)['getHours'](),_0x313177=new Date(_0x28bcc8)[_0x2b2356(0x47f)]();if(_0x4f35fa[_0x2b2356(0x1e0)]>0x0&&_0x362515>=0x9&&_0x272295[_0x2b2356(0x3e0)]!==_0x313177){_0x272295[_0x2b2356(0x3e0)]=_0x313177;var _0x2062b0='🔋\x20Batterie-Warnung:\x0a'+_0x4f35fa[_0x2b2356(0x2ab)]('\x0a');_0x272295[_0x2b2356(0x1c0)]['warn'](_0x2b2356(0x45a)+_0x4f35fa[_0x2b2356(0x2ab)](',\x20'));try{setup[_0x2b2356(0x464)](_0x272295,_0x2062b0,!![],![],_0x2b2356(0x2d3));}catch(_0x29aad3){}}}[a0_0x44e735(0x386)](_0xdf6235){var _0x19ae51=a0_0x44e735;if(this['historyJob'])this[_0x19ae51(0x31e)][_0x19ae51(0x2a0)]();this[_0x19ae51(0x4a9)]()[_0x19ae51(0x451)](async()=>{var _0x90a829=_0x19ae51;if(this[_0x90a829(0x46e)])clearInterval(this[_0x90a829(0x46e)]);if(this[_0x90a829(0x3aa)])clearInterval(this[_0x90a829(0x3aa)]);if(this[_0x90a829(0x232)])clearInterval(this[_0x90a829(0x232)]);if(this[_0x90a829(0x42a)])clearInterval(this[_0x90a829(0x42a)]);if(this[_0x90a829(0x47d)])clearInterval(this[_0x90a829(0x47d)]);if(this[_0x90a829(0x3df)])clearInterval(this[_0x90a829(0x3df)]);recorder[_0x90a829(0x404)](this),pythonBridge[_0x90a829(0x241)](this),cloudflareTunnel[_0x90a829(0x1ac)](),await pwaServer[_0x90a829(0x1ac)](),_0xdf6235();});}async[a0_0x44e735(0x31b)](){var _0x48ca0e=a0_0x44e735;if(!this['eventHistory']||this['eventHistory'][_0x48ca0e(0x1e0)]===0x0){this['log'][_0x48ca0e(0x1d2)](_0x48ca0e(0x30c));return;}this[_0x48ca0e(0x1c0)]['info']('?\x20Replaying\x20'+this[_0x48ca0e(0x429)][_0x48ca0e(0x1e0)]+_0x48ca0e(0x15d));const _0x1e8bf0=new Date()[_0x48ca0e(0x254)](0x0,0x0,0x0,0x0),_0xad34d7=_0x48ca0e(0x13a);let _0xdcaa44={'history':{},'date':new Date()[_0x48ca0e(0x33f)]()};const _0x4c5802='analysis.health.todayVector',_0x362031=_0x48ca0e(0x3e9);let _0x44f177=new Array(0x30)[_0x48ca0e(0x21d)](0x0),_0x1c097d=Array['from']({'length':0x30},()=>[]);const _0x129671=new Set((this[_0x48ca0e(0x19e)][_0x48ca0e(0x39e)]||[])['filter'](_0x6d89d3=>_0x6d89d3['excludeFromActivity'])[_0x48ca0e(0x1cc)](_0x4774d7=>_0x4774d7['id']));this[_0x48ca0e(0x429)][_0x48ca0e(0x3b3)](_0x19b8a4=>{var _0x365d1e=_0x48ca0e;if(_0x19b8a4[_0x365d1e(0x2f6)]>=_0x1e8bf0){if(_0x19b8a4[_0x365d1e(0x1db)]||_0x129671['has'](_0x19b8a4['id']))return;if(recorder[_0x365d1e(0x164)](_0x19b8a4[_0x365d1e(0x132)],_0x19b8a4[_0x365d1e(0x49d)])){const _0x4da8e8=new Date(_0x19b8a4[_0x365d1e(0x2f6)]),_0x361a0c=_0x4da8e8[_0x365d1e(0x2a9)]()*0x2+(_0x4da8e8[_0x365d1e(0x481)]()>=0x1e?0x1:0x0);if(_0x361a0c<0x30){_0x44f177[_0x361a0c]++;const _0x3c2886=_0x19b8a4['location']||_0x19b8a4[_0x365d1e(0x353)]||'?';let _0x2b660c=_0x1c097d[_0x361a0c];!_0x2b660c[_0x365d1e(0x256)](_0x3c2886)&&_0x2b660c['push'](_0x3c2886);}const _0xe1b635=_0x4da8e8['getHours']();let _0x51d1f1=_0x19b8a4[_0x365d1e(0x34d)]||_0x365d1e(0x42f);const _0x215a6e=(this[_0x365d1e(0x19e)][_0x365d1e(0x39e)]||[])[_0x365d1e(0x248)](_0x36a6ac=>_0x36a6ac[_0x365d1e(0x34d)]===_0x51d1f1);if(_0x215a6e)_0x51d1f1=_0x215a6e[_0x365d1e(0x34d)];if(!_0xdcaa44[_0x365d1e(0x20a)][_0x51d1f1])_0xdcaa44[_0x365d1e(0x20a)][_0x51d1f1]=new Array(0x18)[_0x365d1e(0x21d)](0x0);if(_0xdcaa44[_0x365d1e(0x20a)][_0x51d1f1][_0xe1b635]<0x3c)_0xdcaa44[_0x365d1e(0x20a)][_0x51d1f1][_0xe1b635]++;}}});const _0x4361fb=await this['getStateAsync'](_0xad34d7);(!_0x4361fb||!_0x4361fb[_0x48ca0e(0x24d)]||_0x4361fb[_0x48ca0e(0x24d)]==='{}'||_0x4361fb[_0x48ca0e(0x24d)][_0x48ca0e(0x256)](_0x48ca0e(0x265)))&&await this[_0x48ca0e(0x295)](_0xad34d7,{'val':JSON[_0x48ca0e(0x332)](_0xdcaa44),'ack':!![]}),await this['setStateAsync'](_0x4c5802,{'val':JSON[_0x48ca0e(0x332)](_0x44f177),'ack':!![]}),await this[_0x48ca0e(0x295)](_0x362031,{'val':JSON[_0x48ca0e(0x332)](_0x1c097d),'ack':!![]}),this['log'][_0x48ca0e(0x2c9)](_0x48ca0e(0x3ac));}async[a0_0x44e735(0x186)](){var _0xac76dd=a0_0x44e735;try{const _0x16cff2=utils[_0xac76dd(0x476)](),_0x4ba312=require(_0xac76dd(0x2f8))[_0xac76dd(0x2ab)](_0x16cff2,_0xac76dd(0x41e),_0xac76dd(0x20a));if(!require('fs')[_0xac76dd(0x2c5)](_0x4ba312))return;const _0x4f8a71=require('fs')[_0xac76dd(0x418)](_0x4ba312)['filter'](function(_0x275bfa){var _0x5b1ace=_0xac76dd;return _0x275bfa[_0x5b1ace(0x26b)](_0x5b1ace(0x461));});var _0x1528e5=0x0;for(var _0x263001=0x0;_0x263001<_0x4f8a71[_0xac76dd(0x1e0)];_0x263001++){try{var _0x994124=require(_0xac76dd(0x2f8))[_0xac76dd(0x2ab)](_0x4ba312,_0x4f8a71[_0x263001]),_0x5bfef5=JSON['parse'](require('fs')[_0xac76dd(0x3b1)](_0x994124,_0xac76dd(0x449)));if(_0x5bfef5['sleepScoreCalStatus']!==undefined)continue;if(!_0x5bfef5[_0xac76dd(0x28f)]||!_0x5bfef5[_0xac76dd(0x336)])continue;if(_0x5bfef5['bedWasEmpty']){_0x5bfef5[_0xac76dd(0x26e)]=_0xac76dd(0x35f),require('fs')[_0xac76dd(0x492)](_0x994124,JSON[_0xac76dd(0x332)](_0x5bfef5));continue;}var _0x2be8fa=(_0x5bfef5[_0xac76dd(0x336)]-_0x5bfef5['sleepWindowStart'])/0xea60,_0x2d710=Math[_0xac76dd(0x347)](0x14,Math['min'](0x5f,0x19+0.12*_0x2be8fa)),_0x2e1f9f=0x0;if(_0x5bfef5['sleepStages']&&_0x5bfef5[_0xac76dd(0x3c8)][_0xac76dd(0x1e0)]>0x0){var _0x475bc0=0x0,_0xecc04c=0x0,_0x4316e4=0x0,_0x281ddd=0x0;_0x5bfef5[_0xac76dd(0x3c8)][_0xac76dd(0x3b3)](function(_0x1d6f8b){var _0x26c0f3=_0xac76dd;_0x281ddd+=0x12c;if(_0x1d6f8b['s']==='deep')_0x475bc0+=0x12c;else{if(_0x1d6f8b['s']===_0x26c0f3(0x19b))_0xecc04c+=0x12c;else{if(_0x1d6f8b['s']==='wake')_0x4316e4+=0x12c;}}});if(_0x281ddd>0x0){var _0x4e5fdc=Math['min'](0x1,_0x281ddd/0x3c/Math[_0xac76dd(0x347)](0x1,_0x2be8fa));_0x2e1f9f=Math[_0xac76dd(0x347)](-0x8,Math[_0xac76dd(0x288)](0x8,Math[_0xac76dd(0x32a)]((_0xecc04c/_0x281ddd*0x1e-_0x4316e4/_0x281ddd*0x32)*_0x4e5fdc)));}}var _0x4efe56=Math[_0xac76dd(0x32a)](Math[_0xac76dd(0x347)](0x0,Math[_0xac76dd(0x288)](0x64,_0x2d710+_0x2e1f9f)));_0x5bfef5['sleepScore']=_0x4efe56,_0x5bfef5['sleepScoreRaw']=_0x4efe56,_0x5bfef5['sleepScoreCal']=null,_0x5bfef5[_0xac76dd(0x270)]=0x0,_0x5bfef5[_0xac76dd(0x26e)]='uncalibrated',require('fs')[_0xac76dd(0x492)](_0x994124,JSON[_0xac76dd(0x332)](_0x5bfef5)),_0x1528e5++;}catch(_0xb7d133){this['log'][_0xac76dd(0x1d2)](_0xac76dd(0x456)+_0x4f8a71[_0x263001]+':\x20'+_0xb7d133[_0xac76dd(0x2e2)]);}}if(_0x1528e5>0x0)this[_0xac76dd(0x1c0)]['info'](_0xac76dd(0x206)+_0x1528e5+_0xac76dd(0x319));try{var _0x4c0a5c=await this['getStateAsync'](_0xac76dd(0x36d)),_0x33a27d=[];if(_0x4c0a5c&&_0x4c0a5c[_0xac76dd(0x24d)])try{_0x33a27d=JSON['parse'](_0x4c0a5c[_0xac76dd(0x24d)]);}catch(_0x29e3a9){}var _0x462238=new Set(_0x33a27d['map'](function(_0xd906f9){var _0x1035ef=_0xac76dd;return _0xd906f9[_0x1035ef(0x179)];})),_0x279c5f=[];for(var _0x115b9b=0x0;_0x115b9b<_0x4f8a71['length'];_0x115b9b++){try{var _0x20206c=require(_0xac76dd(0x2f8))[_0xac76dd(0x2ab)](_0x4ba312,_0x4f8a71[_0x115b9b]),_0x349ab2=JSON[_0xac76dd(0x46f)](require('fs')[_0xac76dd(0x3b1)](_0x20206c,_0xac76dd(0x449))),_0xc227b5=_0x4f8a71[_0x115b9b][_0xac76dd(0x3af)](_0xac76dd(0x461),'');_0x349ab2['sleepScore']!==null&&_0x349ab2[_0xac76dd(0x30a)]!==undefined&&!_0x462238['has'](_0xc227b5)&&_0x279c5f[_0xac76dd(0x400)]({'date':_0xc227b5,'aura':_0x349ab2[_0xac76dd(0x30a)],'garmin':_0x349ab2[_0xac76dd(0x363)]||null});}catch(_0x3071ea){}}if(_0x279c5f[_0xac76dd(0x1e0)]>0x0){var _0x1aae45=_0x33a27d[_0xac76dd(0x1a1)](_0x279c5f)['sort'](function(_0x6bdfa3,_0x1633b2){var _0x21cf39=_0xac76dd;return _0x6bdfa3[_0x21cf39(0x179)][_0x21cf39(0x187)](_0x1633b2['date']);});if(_0x1aae45[_0xac76dd(0x1e0)]>0x3c)_0x1aae45=_0x1aae45['slice'](_0x1aae45[_0xac76dd(0x1e0)]-0x3c);await this[_0xac76dd(0x295)]('analysis.health.sleepScoreHistory',{'val':JSON['stringify'](_0x1aae45),'ack':!![]}),this[_0xac76dd(0x1c0)][_0xac76dd(0x2c9)](_0xac76dd(0x18c)+_0x279c5f['length']+_0xac76dd(0x1b6)+_0x1aae45[_0xac76dd(0x44d)](function(_0x37ec6f){return _0x37ec6f['garmin']!==null;})[_0xac76dd(0x1e0)]+_0xac76dd(0x1ec));}}catch(_0x768f49){this[_0xac76dd(0x1c0)][_0xac76dd(0x1d2)](_0xac76dd(0x1a0)+_0x768f49['message']);}}catch(_0x356a10){this[_0xac76dd(0x1c0)][_0xac76dd(0x1d2)](_0xac76dd(0x150)+_0x356a10[_0xac76dd(0x2e2)]);}}async[a0_0x44e735(0x4a9)](_0x5019f2){var _0x452f4a=a0_0x44e735;try{const _0x13cc6b=await this[_0x452f4a(0x205)](_0x452f4a(0x2d1));this[_0x452f4a(0x257)]=_0x13cc6b&&_0x13cc6b[_0x452f4a(0x24d)]?_0x13cc6b[_0x452f4a(0x24d)]:null;}catch(_0x278483){this[_0x452f4a(0x257)]=null;}if(!this[_0x452f4a(0x47c)][_0x452f4a(0x2d5)])return;const _0x1b726c=new Date(),_0x1410d5=_0x1b726c[_0x452f4a(0x32f)]()+'-'+String(_0x1b726c['getMonth']()+0x1)['padStart'](0x2,'0')+'-'+String(_0x1b726c[_0x452f4a(0x414)]())[_0x452f4a(0x18d)](0x2,'0');this[_0x452f4a(0x1c0)]['debug']('??\x20Saving\x20Daily\x20History\x20for\x20'+_0x1410d5+_0x452f4a(0x140));try{const [_0x459a97,_0x513b01,_0x3a7375,_0x42c557,_0x39559f,_0xd81b80]=await Promise[_0x452f4a(0x343)]([this[_0x452f4a(0x205)](_0x452f4a(0x13a)),this[_0x452f4a(0x205)](_0x452f4a(0x22b)),this[_0x452f4a(0x205)]('analysis.health.geminiDay'),this[_0x452f4a(0x205)](_0x452f4a(0x3b5)),this[_0x452f4a(0x205)](_0x452f4a(0x1e2)),this[_0x452f4a(0x205)](_0x452f4a(0x474))]),_0x5b0fac=new Date()[_0x452f4a(0x254)](0x0,0x0,0x0,0x0),_0x582350=this[_0x452f4a(0x429)][_0x452f4a(0x44d)](_0x37c3cd=>{var _0x4be335=_0x452f4a;const _0x52dcbf=_0x37c3cd['timestamp']||_0x37c3cd['ts']||0x0;if(_0x52dcbf<_0x5b0fac)return![];const _0xf8d294=_0x37c3cd[_0x4be335(0x132)]===_0x4be335(0x289),_0x3c597e=_0x37c3cd['value']===!![]||_0x37c3cd[_0x4be335(0x49d)]===0x1||_0x37c3cd[_0x4be335(0x49d)]===_0x4be335(0x331)||_0x37c3cd['value']===_0x4be335(0x47e);return _0xf8d294&&_0x3c597e;})['length'],_0x3e3d34=0x5*0x3c*0x3e8,_0x5185d9=this[_0x452f4a(0x429)][_0x452f4a(0x44d)](_0x3145c3=>{var _0x300706=_0x452f4a;const _0x32860b=_0x3145c3[_0x300706(0x2f6)]||_0x3145c3['ts']||0x0;return _0x32860b>=_0x5b0fac&&_0x3145c3['type']==='door';})['sort']((_0x55637d,_0x4a5248)=>(_0x55637d[_0x452f4a(0x2f6)]||_0x55637d['ts']||0x0)-(_0x4a5248['timestamp']||_0x4a5248['ts']||0x0)),_0x4afd40={};let _0x1d7c47=0x0;for(const _0x443d44 of _0x5185d9){const _0x514115=_0x443d44[_0x452f4a(0x2f6)]||_0x443d44['ts']||0x0,_0x3387d4=_0x443d44[_0x452f4a(0x49d)]===!![]||_0x443d44['value']===0x1||_0x443d44[_0x452f4a(0x49d)]===_0x452f4a(0x331)||_0x443d44[_0x452f4a(0x49d)]===_0x452f4a(0x47e);if(_0x3387d4)_0x4afd40[_0x443d44['id']]=_0x514115;else{if(_0x4afd40[_0x443d44['id']]&&_0x514115-_0x4afd40[_0x443d44['id']]>=_0x3e3d34)_0x1d7c47++;delete _0x4afd40[_0x443d44['id']];}}for(const _0x45772a of Object[_0x452f4a(0x26c)](_0x4afd40)){if(Date[_0x452f4a(0x1ae)]()-_0x45772a>=_0x3e3d34)_0x1d7c47++;}let _0x43a274=0x55;if(_0xd81b80&&_0xd81b80[_0x452f4a(0x24d)]!==undefined)_0x43a274=Math[_0x452f4a(0x288)](0x64,Math['max'](0x14,Math[_0x452f4a(0x32a)](0x50+Number(_0xd81b80[_0x452f4a(0x24d)])*0x5)));const _0x4f79a6=this[_0x452f4a(0x429)][_0x452f4a(0x44d)](_0x11d3e8=>_0x11d3e8['timestamp']>=_0x5b0fac),_0x25b3e7=utils[_0x452f4a(0x476)](),_0x13d31e=path[_0x452f4a(0x2ab)](_0x25b3e7,_0x452f4a(0x41e),_0x452f4a(0x20a),_0x1410d5+_0x452f4a(0x461));let _0x2cffaa=null;try{if(fs['existsSync'](_0x13d31e))_0x2cffaa=JSON[_0x452f4a(0x46f)](fs[_0x452f4a(0x3b1)](_0x13d31e,_0x452f4a(0x449)));}catch(_0x24b35d){}const _0x144b98=!!(_0x2cffaa&&_0x2cffaa[_0x452f4a(0x495)]&&_0x2cffaa[_0x452f4a(0x28f)]&&_0x2cffaa[_0x452f4a(0x336)]&&new Date(_0x2cffaa[_0x452f4a(0x336)])[_0x452f4a(0x2a9)]()<0xe&&Object['keys'](_0x2cffaa[_0x452f4a(0x495)])[_0x452f4a(0x1cd)](function(_0x5ac27e){var _0x5c56d3=_0x452f4a,_0x3cd61b=_0x2cffaa[_0x5c56d3(0x495)][_0x5ac27e];return _0x3cd61b&&_0x3cd61b[_0x5c56d3(0x2b4)]===!![];})),_0x3a949e=!!(_0x2cffaa&&_0x2cffaa['sleepWindowStart']&&_0x2cffaa[_0x452f4a(0x336)]&&new Date(_0x2cffaa[_0x452f4a(0x336)])[_0x452f4a(0x2a9)]()<0xe&&(_0x2cffaa[_0x452f4a(0x3c8)]&&_0x2cffaa[_0x452f4a(0x3c8)]['length']>0x0||_0x144b98)),_0x5ad6fc=new Date();_0x5ad6fc['setHours'](0x12,0x0,0x0,0x0);new Date()[_0x452f4a(0x2a9)]()<0x12&&_0x5ad6fc[_0x452f4a(0x3c4)](_0x5ad6fc['getDate']()-0x1);const _0x4d0488=_0x5ad6fc[_0x452f4a(0x32f)]()+'-'+String(_0x5ad6fc['getMonth']()+0x1)[_0x452f4a(0x18d)](0x2,'0')+'-'+String(_0x5ad6fc[_0x452f4a(0x414)]())[_0x452f4a(0x18d)](0x2,'0'),_0x54a4d3=this['eventHistory'][_0x452f4a(0x44d)](_0x1f98c0=>(_0x1f98c0[_0x452f4a(0x2f6)]||0x0)>=_0x5ad6fc['getTime']());try{const _0x50fb25=this[_0x452f4a(0x429)][_0x452f4a(0x41c)]((_0x47d6fe,_0x3f5a66)=>Math[_0x452f4a(0x288)](_0x47d6fe,_0x3f5a66[_0x452f4a(0x2f6)]||Infinity),Infinity);if(_0x50fb25>_0x5ad6fc[_0x452f4a(0x16f)]()+0xea60){const _0x5b2887=path[_0x452f4a(0x2ab)](utils[_0x452f4a(0x476)](),'cogni-living',_0x452f4a(0x20a),_0x4d0488+_0x452f4a(0x461));if(fs[_0x452f4a(0x2c5)](_0x5b2887)){const _0x569d11=JSON['parse'](fs['readFileSync'](_0x5b2887,'utf8')),_0x343574=(_0x569d11[_0x452f4a(0x429)]||[])[_0x452f4a(0x44d)](_0x1ef5c4=>{var _0x3a0e95=_0x452f4a;const _0x3bc245=_0x1ef5c4[_0x3a0e95(0x2f6)]||0x0;return _0x3bc245>=_0x5ad6fc[_0x3a0e95(0x16f)]()&&_0x3bc245<_0x50fb25;});_0x343574[_0x452f4a(0x1e0)]>0x0&&(_0x54a4d3[_0x452f4a(0x400)](..._0x343574),_0x54a4d3[_0x452f4a(0x21b)]((_0x4d68f8,_0x35b742)=>(_0x4d68f8['timestamp']||0x0)-(_0x35b742['timestamp']||0x0)),this['log']['info'](_0x452f4a(0x22e)+_0x343574[_0x452f4a(0x1e0)]+_0x452f4a(0x362)+_0x4d0488+_0x452f4a(0x211)));}}}catch(_0x30875c){this[_0x452f4a(0x1c0)]['debug'](_0x452f4a(0x402)+_0x30875c[_0x452f4a(0x2e2)]);}const _0x32f1d4=_0x459a97?.[_0x452f4a(0x24d)]?JSON[_0x452f4a(0x46f)](_0x459a97[_0x452f4a(0x24d)]):{},_0x586517={};if(_0x32f1d4[_0x452f4a(0x20a)])for(const [_0x3ba08c,_0x5c5595]of Object[_0x452f4a(0x432)](_0x32f1d4[_0x452f4a(0x20a)])){Array[_0x452f4a(0x20b)](_0x5c5595)&&(_0x586517[_0x3ba08c]=_0x5c5595[_0x452f4a(0x41c)]((_0x2c2a51,_0x5a1038)=>_0x2c2a51+(_0x5a1038||0x0),0x0));}try{let _0x2aff70={'today':{},'yesterday':{},'date':''};const _0x3520cb=await this[_0x452f4a(0x205)](_0x452f4a(0x292));if(_0x3520cb&&_0x3520cb[_0x452f4a(0x24d)])_0x2aff70=JSON[_0x452f4a(0x46f)](_0x3520cb['val']);_0x2aff70['today']=_0x586517,_0x2aff70[_0x452f4a(0x179)]=_0x1410d5,await this[_0x452f4a(0x295)]('analysis.activity.roomStats',{'val':JSON[_0x452f4a(0x332)](_0x2aff70),'ack':!![]});}catch(_0x22561d){}var _0x1ca151=this[_0x452f4a(0x19e)][_0x452f4a(0x169)]||'single',_0x41f9d7=_0x1ca151===_0x452f4a(0x1f2)?0x1:_0x1ca151===_0x452f4a(0x302)?0x2:0x3;const _0x54bfbb=this['_maxPersonsToday']||_0x41f9d7,_0x46c4ad=(function(){var _0xd19e50=_0x452f4a,_0x28a50b=null,_0x219bfb=0x0,_0x456fc8=_0x54a4d3[_0xd19e50(0x44d)](function(_0x227612){return _0x227612['isFP2Bed'];})[_0xd19e50(0x21b)](function(_0x282202,_0x4b38a9){var _0x140f18=_0xd19e50;return(_0x282202[_0x140f18(0x2f6)]||0x0)-(_0x4b38a9[_0x140f18(0x2f6)]||0x0);});_0x456fc8[_0xd19e50(0x3b3)](function(_0x27f4fe){var _0x4f42b2=_0xd19e50,_0x5e59be=isActiveValue(_0x27f4fe[_0x4f42b2(0x49d)])||toPersonCount(_0x27f4fe[_0x4f42b2(0x49d)])>0x0;if(_0x5e59be&&!_0x28a50b)_0x28a50b=_0x27f4fe['timestamp']||0x0;else!_0x5e59be&&_0x28a50b&&(_0x219bfb+=((_0x27f4fe['timestamp']||0x0)-_0x28a50b)/0xea60,_0x28a50b=null);});if(_0x28a50b)_0x219bfb+=(Date[_0xd19e50(0x1ae)]()-_0x28a50b)/0xea60;return Math[_0xd19e50(0x32a)](_0x219bfb);}()),_0x75d43f=(function(){var _0x13a180=_0x452f4a,_0x37667e=_0x54a4d3[_0x13a180(0x44d)](function(_0x400d53){var _0xf2d7e=_0x13a180;return _0x400d53[_0xf2d7e(0x2c0)];})[_0x13a180(0x21b)](function(_0x2f58f6,_0x4604d1){var _0x522669=_0x13a180;return(_0x2f58f6['timestamp']||0x0)-(_0x4604d1[_0x522669(0x2f6)]||0x0);});if(_0x37667e[_0x13a180(0x1e0)]===0x0)return{'start':null,'end':null};var _0x5c46f8=0x1e*0x3c*0x3e8,_0x267209=[],_0x299338=null;for(var _0x21f357=0x0;_0x21f357<_0x37667e[_0x13a180(0x1e0)];_0x21f357++){var _0x5f4164=_0x37667e[_0x21f357],_0x235d9a=isActiveValue(_0x5f4164[_0x13a180(0x49d)])||toPersonCount(_0x5f4164[_0x13a180(0x49d)])>0x0,_0x1b02ef=new Date(_0x5f4164[_0x13a180(0x2f6)]||0x0)[_0x13a180(0x2a9)]();if(_0x235d9a&&!_0x299338&&(_0x1b02ef>=0x12||_0x1b02ef<0x3))_0x299338=_0x5f4164[_0x13a180(0x2f6)]||0x0;else!_0x235d9a&&_0x299338&&(_0x267209['push']({'start':_0x299338,'end':_0x5f4164[_0x13a180(0x2f6)]||0x0}),_0x299338=null);}if(_0x299338)_0x267209[_0x13a180(0x400)]({'start':_0x299338,'end':Date[_0x13a180(0x1ae)]()});var _0x2efcbf=[];for(var _0x6be9ce=0x0;_0x6be9ce<_0x267209[_0x13a180(0x1e0)];_0x6be9ce++){var _0x4c07eb=_0x267209[_0x6be9ce];if(_0x4c07eb[_0x13a180(0x27b)]-_0x4c07eb[_0x13a180(0x29a)]<0xa*0xea60)continue;if(_0x2efcbf[_0x13a180(0x1e0)]===0x0)_0x2efcbf['push']({'start':_0x4c07eb[_0x13a180(0x29a)],'end':_0x4c07eb[_0x13a180(0x27b)]});else{var _0x5ef4de=_0x2efcbf[_0x2efcbf[_0x13a180(0x1e0)]-0x1];_0x4c07eb[_0x13a180(0x29a)]-_0x5ef4de[_0x13a180(0x27b)]<=_0x5c46f8?_0x5ef4de[_0x13a180(0x27b)]=_0x4c07eb[_0x13a180(0x27b)]:_0x2efcbf[_0x13a180(0x400)]({'start':_0x4c07eb[_0x13a180(0x29a)],'end':_0x4c07eb[_0x13a180(0x27b)]});}}if(_0x2efcbf[_0x13a180(0x1e0)]===0x0)return{'start':null,'end':null};var _0x429676=_0x2efcbf[_0x13a180(0x41c)](function(_0x266388,_0x3a3bee){var _0x8a197=_0x13a180;return _0x3a3bee[_0x8a197(0x27b)]-_0x3a3bee[_0x8a197(0x29a)]>_0x266388['end']-_0x266388[_0x8a197(0x29a)]?_0x3a3bee:_0x266388;},_0x2efcbf[0x0]),_0x37d375=_0x429676[_0x13a180(0x29a)];if(!_0x37d375)return{'start':null,'end':null};var _0x67be00=null,_0x4961f3=null,_0xc9261c=null;for(var _0x51a213=0x0;_0x51a213<_0x37667e[_0x13a180(0x1e0)];_0x51a213++){var _0x163c37=_0x37667e[_0x51a213];if((_0x163c37['timestamp']||0x0)<_0x37d375)continue;var _0x3363a8=isActiveValue(_0x163c37['value'])||toPersonCount(_0x163c37[_0x13a180(0x49d)])>0x0,_0x36bb9c=new Date(_0x163c37['timestamp']||0x0)['getHours']();if(!_0x3363a8&&(_0x36bb9c>=0x4&&_0x36bb9c<=0xe)){if(!_0x4961f3)_0x4961f3=_0x163c37[_0x13a180(0x2f6)]||0x0;}else{if(_0x3363a8&&_0x4961f3){var _0x3b201e=((_0x163c37['timestamp']||0x0)-_0x4961f3)/0xea60;if(_0x3b201e>=0xf){_0xc9261c=_0x4961f3,_0x67be00=_0x4961f3+_0x3b201e*0xea60,_0x4961f3=null;break;}_0x4961f3=null;}}}if(_0x4961f3){var _0x16e705=(Date[_0x13a180(0x1ae)]()-_0x4961f3)/0xea60;_0x16e705>=0xf&&(_0xc9261c=_0x4961f3,_0x67be00=Date[_0x13a180(0x1ae)]());}return{'start':_0x37d375,'end':_0x67be00,'firstEmpty':_0xc9261c};}());_0x46c4ad<0xb4&&_0x75d43f['start']!==null&&(_0x75d43f[_0x452f4a(0x29a)]=null,_0x75d43f['end']=null,this['log']['debug'](_0x452f4a(0x255)+_0x46c4ad+_0x452f4a(0x32e)));var _0x25e7a6=_0x75d43f[_0x452f4a(0x29a)]!==null,_0x2d8ef5=_0x75d43f[_0x452f4a(0x29a)]||null,_0x4577bd=null,_0x399cf6=null,_0x282a6e=(this[_0x452f4a(0x19e)]['garminSleepStartStateId']||'')[_0x452f4a(0x308)]()||_0x452f4a(0x2fc);try{var _0x485a3c=await this['getForeignStateAsync'](_0x282a6e);if(_0x485a3c&&_0x485a3c[_0x452f4a(0x24d)]!=null){var _0x4e722b=Number(_0x485a3c[_0x452f4a(0x24d)]);if(!isNaN(_0x4e722b)&&_0x4e722b>0x0){var _0x385b77=new Date(_0x4e722b)[_0x452f4a(0x2a9)](),_0x2178f6=_0x385b77>=0x12||_0x385b77<0x4,_0x143e3b=!_0x2d8ef5||Math[_0x452f4a(0x1a2)](_0x4e722b-_0x2d8ef5)<=0x3*0x36ee80,_0xba4382=_0x4e722b>=_0x5ad6fc[_0x452f4a(0x16f)]()-0x2*0x36ee80&&_0x4e722b<=_0x5ad6fc['getTime']()+0x10*0x36ee80;_0x2178f6&&_0x143e3b&&_0xba4382?(_0x4577bd=_0x4e722b,this[_0x452f4a(0x1c0)][_0x452f4a(0x277)](_0x452f4a(0x3e3)+new Date(_0x4577bd)['toISOString']())):this[_0x452f4a(0x1c0)]['debug']('[SleepStart]\x20Garmin\x20ausserhalb\x20Plausibilitaetsfenster:\x20'+new Date(_0x4e722b)[_0x452f4a(0x1e4)]());}}}catch(_0x3635ae){this[_0x452f4a(0x1c0)][_0x452f4a(0x277)](_0x452f4a(0x43c)+_0x3635ae['message']);}var _0x397fed=computePersonSleep({'allEvents':_0x54a4d3,'personTag':null,'fp2RawStart':_0x2d8ef5,'garminTs':_0x4577bd,'garminWakeTs':null,'fp2WakeTs':_0x75d43f[_0x452f4a(0x1f1)]||null,'searchBase':_0x5ad6fc,'wakeHardCap':(function(){var _0x375183=_0x452f4a,_0x479c8d=new Date();return _0x479c8d[_0x375183(0x254)](0xc,0x0,0x0,0x0),_0x479c8d[_0x375183(0x16f)]();}()),'startOverride':null,'wakeOverride':null,'existingSnap':null,'sleepDate':_0x4d0488,'bathroomIds':new Set((this[_0x452f4a(0x19e)][_0x452f4a(0x39e)]||[])['filter'](function(_0x227657){var _0x5a48c8=_0x452f4a;return _0x227657[_0x5a48c8(0x16e)]||_0x227657[_0x5a48c8(0x40b)]===_0x5a48c8(0x44b);})[_0x452f4a(0x1cc)](function(_0x55f7f6){return _0x55f7f6['id'];})),'log':this['log']}),_0x4c4d27=function(_0x5647d8){var _0x12dd2c=_0x452f4a;return(_0x397fed[_0x12dd2c(0x225)][_0x12dd2c(0x248)](function(_0x21a156){var _0x5aa66d=_0x12dd2c;return _0x21a156[_0x5aa66d(0x142)]===_0x5647d8;})||{})['ts']||null;};_0x399cf6=_0x4c4d27('vib_refined');var _0x545fa1=_0x4c4d27(_0x452f4a(0x182)),_0x3dcc24=_0x4c4d27(_0x452f4a(0x312)),_0x2003db={'start':_0x397fed[_0x452f4a(0x28b)],'end':null},_0xa4280d={'start':_0x397fed['_hausStillTs'],'end':null},_0x539004=_0x397fed[_0x452f4a(0x225)],_0x4d9bb9=_0x397fed[_0x452f4a(0x181)]||_0x452f4a(0x25e),_0x1cc526=![];try{var _0x3c2789=_0x5019f2?JSON[_0x452f4a(0x332)](_0x5019f2):(await this[_0x452f4a(0x205)](_0x452f4a(0x26f)))?.[_0x452f4a(0x24d)];if(_0x3c2789&&_0x3c2789!=='null'){var _0x11cc0e=JSON[_0x452f4a(0x46f)](_0x3c2789),_0x2e592e=_0x5ad6fc['getTime'](),_0x1f9f7d=_0x5ad6fc[_0x452f4a(0x16f)]()+0xa*0x36ee80,_0x27ab3b=[_0x452f4a(0x388),_0x452f4a(0x1b1),_0x452f4a(0x3bc),_0x452f4a(0x182),_0x452f4a(0x4b0),_0x452f4a(0x14d),'fixed'];_0x11cc0e&&_0x11cc0e[_0x452f4a(0x179)]===_0x4d0488&&_0x11cc0e[_0x452f4a(0x142)]&&_0x27ab3b[_0x452f4a(0x3f2)](_0x11cc0e['source'])>=0x0&&_0x11cc0e['ts']&&_0x11cc0e['ts']>=_0x2e592e&&_0x11cc0e['ts']<=_0x1f9f7d&&(_0x75d43f[_0x452f4a(0x29a)]=_0x11cc0e['ts'],_0x4d9bb9=_0x11cc0e[_0x452f4a(0x142)],_0x1cc526=!![],this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)](_0x452f4a(0x137)+_0x11cc0e['source']+'\x20=\x20'+new Date(_0x11cc0e['ts'])[_0x452f4a(0x1e4)]()));}}catch(_0x175e02){this[_0x452f4a(0x1c0)][_0x452f4a(0x1d2)](_0x452f4a(0x328)+_0x175e02[_0x452f4a(0x2e2)]);}var _0x378fbe={};try{var _0x2e2493=(await this['getStateAsync']('analysis.sleep.personStartOverrides'))?.['val'];if(_0x2e2493&&_0x2e2493!=='null'){var _0x2b47d7=JSON[_0x452f4a(0x46f)](_0x2e2493);if(_0x2b47d7&&typeof _0x2b47d7==='object')_0x378fbe=_0x2b47d7;}}catch(_0x552a3a){this['log']['warn']('[Per-Person\x20Override]\x20Lesefehler:\x20'+_0x552a3a[_0x452f4a(0x2e2)]);}var _0x3ef701={};try{var _0x55ff77=(await this['getStateAsync'](_0x452f4a(0x2aa)))?.['val'];if(_0x55ff77&&_0x55ff77!=='null'){var _0x2331d8=JSON[_0x452f4a(0x46f)](_0x55ff77);if(_0x2331d8&&typeof _0x2331d8===_0x452f4a(0x3ea))_0x3ef701=_0x2331d8;}}catch(_0x206405){this['log'][_0x452f4a(0x1d2)]('[Per-Person\x20Wake-Override]\x20Lesefehler:\x20'+_0x206405['message']);}if(!_0x1cc526){if(!_0x3a949e){if(_0x4577bd)_0x75d43f[_0x452f4a(0x29a)]=_0x4577bd,_0x4d9bb9=_0x452f4a(0x388),this[_0x452f4a(0x1c0)]['info'](_0x452f4a(0x46c)+new Date(_0x4577bd)[_0x452f4a(0x1e4)]());else{if(_0x399cf6)_0x75d43f[_0x452f4a(0x29a)]=_0x399cf6,_0x4d9bb9='fp2_vib',this[_0x452f4a(0x1c0)]['info'](_0x452f4a(0x407)+new Date(_0x399cf6)[_0x452f4a(0x1e4)]());else _0x545fa1&&(_0x2003db[_0x452f4a(0x29a)]=_0x545fa1,_0x4d9bb9='motion_vib',this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)](_0x452f4a(0x183)+new Date(_0x545fa1)[_0x452f4a(0x1e4)]()));}}else _0x4d9bb9=_0x2cffaa[_0x452f4a(0x2e9)]||_0x4d9bb9,_0x4577bd&&(_0x75d43f[_0x452f4a(0x29a)]=_0x4577bd,_0x4d9bb9=_0x452f4a(0x388),this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)](_0x452f4a(0x431)+new Date(_0x4577bd)['toISOString']()));}var _0x22e1cf=_0x75d43f[_0x452f4a(0x29a)]?_0x75d43f:_0x397fed[_0x452f4a(0x28f)]?{'start':_0x397fed[_0x452f4a(0x28f)],'end':_0x75d43f[_0x452f4a(0x27b)]||null,'firstEmpty':null}:_0xa4280d['start']?_0xa4280d:_0x2003db['start']?_0x2003db:(function(){var _0x1b7878=_0x452f4a,_0x370e79=_0x5ad6fc['getTime']()+0x2*0x36ee80,_0x17816f=_0x370e79+0xd*0x36ee80;if(_0x370e79>Date['now']())return{'start':null,'end':null};if(_0x17816f>Date[_0x1b7878(0x1ae)]())_0x17816f=Date[_0x1b7878(0x1ae)]();return{'start':_0x370e79,'end':_0x17816f};}()),_0x1fd156=_0x75d43f[_0x452f4a(0x1f1)]||null;if(_0x22e1cf[_0x452f4a(0x29a)]&&!_0x3a949e)try{var _0x920377=(this['config'][_0x452f4a(0x2f7)]||'')['trim']()||_0x452f4a(0x37f),_0x37643c=await this[_0x452f4a(0x1f4)](_0x920377);if(_0x37643c&&_0x37643c['val']!=null){var _0x4e9982=Number(_0x37643c['val']);if(!isNaN(_0x4e9982)&&_0x4e9982>0x0){var _0x1ec5e8=new Date(_0x4e9982)['getUTCHours'](),_0x2805d7=_0x4e9982>=_0x22e1cf[_0x452f4a(0x29a)]&&_0x4e9982<=_0x22e1cf[_0x452f4a(0x29a)]+0x14*0x36ee80;_0x1ec5e8>=0x3&&_0x1ec5e8<0xe&&_0x2805d7&&((!_0x22e1cf[_0x452f4a(0x27b)]||_0x4e9982<_0x22e1cf['end'])&&(_0x22e1cf[_0x452f4a(0x27b)]=_0x4e9982,this[_0x452f4a(0x1c0)][_0x452f4a(0x277)](_0x452f4a(0x376)+new Date(_0x4e9982)[_0x452f4a(0x1e4)]())));}}}catch(_0x3271e5){}var _0xa9797=null,_0xa0ffc0=null,_0x43c6a0=null,_0x353e57=0x0,_0x49ac16=_0x452f4a(0x35f),_0x3ce386=[],_0x5ee002=![];if(_0x3a949e){!_0x1cc526?(_0x75d43f['end']=_0x2cffaa[_0x452f4a(0x336)],_0x4577bd?(_0x22e1cf={'start':_0x75d43f[_0x452f4a(0x29a)],'end':_0x2cffaa[_0x452f4a(0x336)]},this[_0x452f4a(0x1c0)]['info'](_0x452f4a(0x31f)+new Date(_0x75d43f[_0x452f4a(0x29a)])['toISOString']())):(_0x75d43f['start']=_0x2cffaa[_0x452f4a(0x28f)],_0x22e1cf={'start':_0x2cffaa['sleepWindowStart'],'end':_0x2cffaa[_0x452f4a(0x336)]})):(_0x75d43f[_0x452f4a(0x27b)]=_0x2cffaa[_0x452f4a(0x336)],_0x22e1cf={'start':_0x75d43f['start'],'end':_0x2cffaa['sleepWindowEnd']},this[_0x452f4a(0x1c0)]['info'](_0x452f4a(0x16d)+new Date(_0x75d43f[_0x452f4a(0x29a)])[_0x452f4a(0x1e4)]()+_0x452f4a(0x1af)+new Date(_0x2cffaa[_0x452f4a(0x336)])[_0x452f4a(0x1e4)]()));var _0x335c02=_0x4577bd&&_0x2cffaa[_0x452f4a(0x28f)]?Math[_0x452f4a(0x1a2)](_0x4577bd-_0x2cffaa['sleepWindowStart']):0x0,_0x131ee0=_0x22e1cf[_0x452f4a(0x27b)]||_0x2cffaa[_0x452f4a(0x336)]||0x0,_0x267684=_0x131ee0>0x0&&Date['now']()<_0x131ee0+0x1e*0x3c*0x3e8;if(_0x335c02>0x5*0x3c*0x3e8||_0x267684){if(_0x267684)this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)](_0x452f4a(0x48c)+new Date(_0x131ee0)[_0x452f4a(0x40a)]()+')');else this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)](_0x452f4a(0x392)+Math['round'](_0x335c02/0xea60)+_0x452f4a(0x1c2));_0x5ee002=!![];}else _0x144b98&&_0x841bfd>0x0?(this['log'][_0x452f4a(0x2c9)](_0x452f4a(0x43d)+_0x841bfd+_0x452f4a(0x440)),_0x5ee002=!![]):(_0x3ce386=_0x2cffaa['sleepStages']||[],_0xa9797=_0x2cffaa[_0x452f4a(0x30a)]!==undefined?_0x2cffaa[_0x452f4a(0x30a)]:null,_0xa0ffc0=_0x2cffaa[_0x452f4a(0x1ed)]!==undefined?_0x2cffaa[_0x452f4a(0x1ed)]:null,this['log'][_0x452f4a(0x2c9)](_0x452f4a(0x290)+new Date(_0x2cffaa[_0x452f4a(0x28f)])['toLocaleTimeString']()+'-'+new Date(_0x2cffaa[_0x452f4a(0x336)])[_0x452f4a(0x40a)]()+_0x452f4a(0x30e)+_0x2cffaa['bedPresenceMinutes']));}var _0x1fb9dd=_0x2003db[_0x452f4a(0x29a)]!==null,_0x4dd25c=_0xa4280d[_0x452f4a(0x29a)]!==null,_0xc4d089=_0x3a949e?_0x2cffaa['sleepWindowSource']||_0x397fed[_0x452f4a(0x181)]||_0x452f4a(0x25e):_0x397fed[_0x452f4a(0x181)]||'fixed',_0x14a3d6=[];if(!_0x3a949e&&_0x2cffaa&&_0x2cffaa[_0x452f4a(0x495)]){var _0x44557e=Object[_0x452f4a(0x3a5)](_0x2cffaa[_0x452f4a(0x495)])[_0x452f4a(0x1cc)](function(_0x5b0e5f){var _0x2c7ecb=_0x452f4a,_0x4001d9=_0x2cffaa['personData'][_0x5b0e5f];return _0x4001d9&&_0x4001d9[_0x2c7ecb(0x2b4)]&&_0x4001d9['sleepWindowEnd']&&new Date(_0x4001d9['sleepWindowEnd'])[_0x2c7ecb(0x2a9)]()<0xe?_0x4001d9[_0x2c7ecb(0x336)]:null;})['filter'](Boolean)[_0x452f4a(0x21b)](function(_0x1b12b4,_0x46c7e6){return _0x1b12b4-_0x46c7e6;});if(_0x44557e[_0x452f4a(0x1e0)]>0x0){var _0x41d41b=_0x44557e[_0x44557e['length']-0x1];!_0x22e1cf[_0x452f4a(0x27b)]&&(_0x22e1cf[_0x452f4a(0x27b)]=_0x41d41b,this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)]('[OC-7]\x20Multi-Person-Wake-Fallback:\x20sleepWindowEnd='+new Date(_0x41d41b)[_0x452f4a(0x40a)]()+'\x20('+_0x44557e[_0x452f4a(0x1e0)]+_0x452f4a(0x15c)));if(_0x22e1cf[_0x452f4a(0x29a)]&&_0x22e1cf['end']&&_0x22e1cf[_0x452f4a(0x29a)]>_0x22e1cf[_0x452f4a(0x27b)]){var _0x67882e=null,_0x204283=_0x5ad6fc[_0x452f4a(0x16f)]()+0x6*0x36ee80;Object[_0x452f4a(0x3a5)](_0x2cffaa['personData'])['forEach'](function(_0x493352){var _0x10dcbd=_0x452f4a,_0x4e92dd=_0x2cffaa[_0x10dcbd(0x495)][_0x493352];if(!_0x4e92dd||!_0x4e92dd[_0x10dcbd(0x225)])return;_0x4e92dd[_0x10dcbd(0x225)][_0x10dcbd(0x3b3)](function(_0x34e2f9){var _0xbdddf2=_0x10dcbd;if(!_0x34e2f9['ts']||_0x34e2f9['source']===_0xbdddf2(0x28a))return;var _0x597cb3=new Date(_0x34e2f9['ts'])[_0xbdddf2(0x2a9)]();if((_0x597cb3>=0x12||_0x597cb3<0x4)&&_0x34e2f9['ts']<_0x204283+0x4*0x36ee80){if(!_0x67882e||_0x34e2f9['ts']<_0x67882e)_0x67882e=_0x34e2f9['ts'];}});});var _0x280b68=_0x67882e||_0x5ad6fc['getTime']();_0x22e1cf[_0x452f4a(0x29a)]=_0x280b68,_0x75d43f[_0x452f4a(0x29a)]=_0x280b68,this[_0x452f4a(0x1c0)]['info']('[OC-7]\x20Multi-Person-Start-Korrektur:\x20sleepWindowStart='+new Date(_0x280b68)[_0x452f4a(0x40a)]()+(_0x67882e?_0x452f4a(0x15e):_0x452f4a(0x3e6)));}}}if(_0x22e1cf[_0x452f4a(0x29a)]&&_0x22e1cf[_0x452f4a(0x27b)]){var _0xf3815=_0x54a4d3[_0x452f4a(0x44d)](function(_0x3de506){var _0x4b6630=_0x452f4a;return _0x3de506[_0x4b6630(0x2c0)];})['sort'](function(_0x52f5fa,_0x5d830b){var _0x23c35f=_0x452f4a;return(_0x52f5fa[_0x23c35f(0x2f6)]||0x0)-(_0x5d830b[_0x23c35f(0x2f6)]||0x0);}),_0xfacfd3=![],_0xf72a69=null,_0x205e6c=[];_0xf3815[_0x452f4a(0x3b3)](function(_0x128774){var _0xb852aa=_0x452f4a,_0x537d48=_0x128774[_0xb852aa(0x2f6)]||0x0;if(_0x537d48<_0x22e1cf[_0xb852aa(0x29a)]||_0x537d48>_0x22e1cf[_0xb852aa(0x27b)])return;var _0x3d677d=isActiveValue(_0x128774[_0xb852aa(0x49d)])||toPersonCount(_0x128774[_0xb852aa(0x49d)])>0x0;if(!_0x3d677d&&!_0xfacfd3)_0xfacfd3=!![],_0xf72a69=_0x537d48;else{if(_0x3d677d&&_0xfacfd3&&_0xf72a69){_0xfacfd3=![];var _0x4fa17f=Math['round']((_0x537d48-_0xf72a69)/0xea60);if(_0x4fa17f>=0x1)_0x205e6c[_0xb852aa(0x400)]({'start':_0xf72a69,'end':_0x537d48,'duration':_0x4fa17f});_0xf72a69=null;}}});if(_0xfacfd3&&_0xf72a69){var _0x2bf111=Math[_0x452f4a(0x32a)]((_0x22e1cf['end']-_0xf72a69)/0xea60);if(_0x2bf111>=0x1)_0x205e6c[_0x452f4a(0x400)]({'start':_0xf72a69,'end':_0x22e1cf[_0x452f4a(0x27b)],'duration':_0x2bf111});}var _0x473a49=new Set((this[_0x452f4a(0x19e)][_0x452f4a(0x39e)]||[])[_0x452f4a(0x44d)](function(_0x388e2f){var _0x32717e=_0x452f4a;return _0x388e2f[_0x32717e(0x16e)]||_0x388e2f[_0x32717e(0x40b)]===_0x32717e(0x44b);})['map'](function(_0x1e35b1){return _0x1e35b1['id'];})),_0x4c67d6=new Set((this['config'][_0x452f4a(0x39e)]||[])[_0x452f4a(0x44d)](function(_0x41f976){var _0x2c5476=_0x452f4a;return _0x41f976[_0x2c5476(0x2ae)]||_0x41f976[_0x2c5476(0x40b)]==='kitchen';})['map'](function(_0x1eae30){return _0x1eae30['id'];})),_0x432fd3=0x5*0x3c*0x3e8,_0x1aada3=0x3*0x3c*0x3e8,_0x3646c9=this['config'][_0x452f4a(0x169)]||_0x452f4a(0x1f2),_0xb9a306=_0x3646c9===_0x452f4a(0x302)||_0x3646c9===_0x452f4a(0x22d),_0x16060d=_0x205e6c[_0x452f4a(0x1e0)]>0x0,_0x170d18=this[_0x452f4a(0x19e)][_0x452f4a(0x39e)]||[],_0x402205=null;try{var _0x3f32a0=await this[_0x452f4a(0x205)](_0x452f4a(0x406));if(_0x3f32a0&&_0x3f32a0[_0x452f4a(0x24d)]){var _0x50f301=JSON[_0x452f4a(0x46f)](_0x3f32a0[_0x452f4a(0x24d)]),_0x1a0324=_0x50f301['rooms']||[],_0x3a91f3=_0x50f301[_0x452f4a(0x469)]||[];if(_0x1a0324['length']>0x0){var _0x195561=new Set(_0x170d18[_0x452f4a(0x44d)](function(_0x5a1480){var _0x2c1013=_0x452f4a;return _0x5a1480[_0x2c1013(0x2c0)]||_0x5a1480['isVibrationBed']||_0x5a1480[_0x2c1013(0x40b)]==='bed';})[_0x452f4a(0x1cc)](function(_0x4eed05){var _0xa3d249=_0x452f4a;return(_0x4eed05[_0xa3d249(0x34d)]||'')[_0xa3d249(0x308)]();})['filter'](function(_0x1d0829){return _0x1d0829['length']>0x0;}));if(_0x195561['size']>0x0){_0x402205=new Set(_0x195561);var _0x24d9ae=Array[_0x452f4a(0x200)](_0x195561);for(var _0xf80ffb=0x0;_0xf80ffb<0x2;_0xf80ffb++){var _0x5cb69c=[];_0x24d9ae[_0x452f4a(0x3b3)](function(_0x401c44){var _0x1e26b4=_0x452f4a,_0x1e5fa8=_0x1a0324[_0x1e26b4(0x3f2)](_0x401c44);if(_0x1e5fa8===-0x1)return;for(var _0x2a6da9=0x0;_0x2a6da9<_0x1a0324[_0x1e26b4(0x1e0)];_0x2a6da9++){_0x3a91f3[_0x1e5fa8]&&_0x3a91f3[_0x1e5fa8][_0x2a6da9]===0x1&&!_0x402205[_0x1e26b4(0x245)](_0x1a0324[_0x2a6da9])&&(_0x402205[_0x1e26b4(0x1d3)](_0x1a0324[_0x2a6da9]),_0x5cb69c[_0x1e26b4(0x400)](_0x1a0324[_0x2a6da9]));}}),_0x24d9ae=_0x5cb69c;}}}}}catch(_0x46b09b){this['log'][_0x452f4a(0x277)]('[OC-7]\x20Topology\x20load\x20failed:\x20'+(_0x46b09b[_0x452f4a(0x2e2)]||_0x46b09b));}var _0x5bb68e=_0x54a4d3[_0x452f4a(0x44d)](function(_0xb50bb6){var _0x390aa6=_0x452f4a,_0x50e84f=_0xb50bb6[_0x390aa6(0x2f6)]||0x0;if(_0x50e84f<_0x22e1cf[_0x390aa6(0x29a)]||_0x50e84f>_0x22e1cf[_0x390aa6(0x27b)])return![];var _0x28bcb2=_0xb50bb6[_0x390aa6(0x2c0)]||_0xb50bb6['isVibrationBed']||_0xb50bb6[_0x390aa6(0x1c3)];if(_0x28bcb2)return![];if(_0x402205&&_0x402205[_0x390aa6(0x224)]>0x0){var _0x435278=(_0xb50bb6[_0x390aa6(0x34d)]||'')[_0x390aa6(0x308)]();if(_0x435278&&!_0x402205[_0x390aa6(0x245)](_0x435278))return![];}return(_0xb50bb6[_0x390aa6(0x132)]===_0x390aa6(0x14d)||_0xb50bb6[_0x390aa6(0x132)]===_0x390aa6(0x261))&&isActiveValue(_0xb50bb6['value']);})[_0x452f4a(0x21b)](function(_0x483f3d,_0x201062){var _0x31b6c5=_0x452f4a;return(_0x483f3d[_0x31b6c5(0x2f6)]||0x0)-(_0x201062['timestamp']||0x0);}),_0x118799=[],_0x535b1a=null;_0x5bb68e[_0x452f4a(0x3b3)](function(_0x1933b7){var _0x2d65a5=_0x452f4a,_0x7e9f0d=_0x1933b7[_0x2d65a5(0x2f6)]||0x0,_0x11c5e2=_0x1933b7[_0x2d65a5(0x16e)]||_0x473a49[_0x2d65a5(0x245)](_0x1933b7['id']),_0x19ff00=!_0x11c5e2;if(!_0x535b1a)_0x535b1a={'start':_0x7e9f0d,'end':_0x7e9f0d+_0x1aada3,'hasBath':_0x11c5e2,'hasOther':_0x19ff00,'sensors':[{'name':_0x1933b7[_0x2d65a5(0x353)]||_0x1933b7['id'],'location':_0x1933b7[_0x2d65a5(0x34d)]||'','isBathroomSensor':_0x11c5e2,'timestamp':_0x7e9f0d}]};else{if(_0x7e9f0d<=_0x535b1a[_0x2d65a5(0x27b)]+_0x432fd3){_0x535b1a[_0x2d65a5(0x27b)]=_0x7e9f0d+_0x1aada3;if(_0x11c5e2)_0x535b1a[_0x2d65a5(0x199)]=!![];if(_0x19ff00)_0x535b1a['hasOther']=!![];var _0xe6d39d=_0x1933b7[_0x2d65a5(0x353)]||_0x1933b7['id'];if(!_0x535b1a[_0x2d65a5(0x2b8)][_0x2d65a5(0x1cd)](function(_0x2caf41){var _0x508b88=_0x2d65a5;return _0x2caf41[_0x508b88(0x353)]===_0xe6d39d;}))_0x535b1a[_0x2d65a5(0x2b8)][_0x2d65a5(0x400)]({'name':_0xe6d39d,'location':_0x1933b7[_0x2d65a5(0x34d)]||'','isBathroomSensor':_0x11c5e2,'timestamp':_0x7e9f0d});}else _0x118799[_0x2d65a5(0x400)](_0x535b1a),_0x535b1a={'start':_0x7e9f0d,'end':_0x7e9f0d+_0x1aada3,'hasBath':_0x11c5e2,'hasOther':_0x19ff00,'sensors':[{'name':_0x1933b7['name']||_0x1933b7['id'],'location':_0x1933b7[_0x2d65a5(0x34d)]||'','isBathroomSensor':_0x11c5e2,'timestamp':_0x7e9f0d}]};}});if(_0x535b1a)_0x118799[_0x452f4a(0x400)](_0x535b1a);var _0x14c406=0x5,_0x5646a9=0x0,_0x2a0ee4=[];_0x205e6c[_0x452f4a(0x3b3)](function(_0x4d0d65){var _0x5cfbba=_0x452f4a,_0x26f84c=_0x54a4d3[_0x5cfbba(0x1cd)](function(_0x2a55ff){var _0x1adbf6=_0x5cfbba;return(_0x2a55ff[_0x1adbf6(0x16e)]||_0x473a49[_0x1adbf6(0x245)](_0x2a55ff['id']))&&(_0x2a55ff[_0x1adbf6(0x2f6)]||0x0)>=_0x4d0d65[_0x1adbf6(0x29a)]-0x2*0x3c*0x3e8&&(_0x2a55ff[_0x1adbf6(0x2f6)]||0x0)<=_0x4d0d65['end'];}),_0x20b50c=_0x54a4d3[_0x5cfbba(0x1cd)](function(_0xc96f1d){var _0x380778=_0x5cfbba,_0x3313a9=_0xc96f1d[_0x380778(0x2f6)]||0x0;if(_0x3313a9<_0x4d0d65['start']-0x2*0x3c*0x3e8||_0x3313a9>_0x4d0d65[_0x380778(0x27b)]+0x2*0x3c*0x3e8)return![];if(_0xc96f1d[_0x380778(0x2c0)]||_0xc96f1d[_0x380778(0x17c)]||_0xc96f1d['isBedroomMotion'])return![];if(_0x402205&&_0x402205['size']>0x0&&(_0xc96f1d[_0x380778(0x34d)]||'')[_0x380778(0x308)]()&&!_0x402205[_0x380778(0x245)]((_0xc96f1d[_0x380778(0x34d)]||'')[_0x380778(0x308)]()))return![];return(_0xc96f1d['type']===_0x380778(0x14d)||_0xc96f1d[_0x380778(0x132)]==='presence_radar_bool')&&isActiveValue(_0xc96f1d[_0x380778(0x49d)]);}),_0xdf9967=_0x26f84c&&_0x54a4d3[_0x5cfbba(0x1cd)](function(_0x4d002e){var _0x200785=_0x5cfbba,_0x21800=_0x4d002e[_0x200785(0x2f6)]||0x0;if(_0x21800<_0x4d0d65[_0x200785(0x29a)]-0x2*0x3c*0x3e8||_0x21800>_0x4d0d65['end'])return![];var _0x1d3e20=_0x4d002e['isBathroomSensor']||_0x473a49[_0x200785(0x245)](_0x4d002e['id']),_0x255700=_0x4d002e[_0x200785(0x2c0)]||_0x4d002e['isVibrationBed']||_0x4d002e[_0x200785(0x1c3)];if(_0x1d3e20||_0x255700)return![];if(_0x402205&&_0x402205[_0x200785(0x224)]>0x0&&(_0x4d002e[_0x200785(0x34d)]||'')[_0x200785(0x308)]()&&!_0x402205['has']((_0x4d002e[_0x200785(0x34d)]||'')[_0x200785(0x308)]()))return![];return(_0x4d002e[_0x200785(0x132)]===_0x200785(0x14d)||_0x4d002e[_0x200785(0x132)]===_0x200785(0x261))&&isActiveValue(_0x4d002e[_0x200785(0x49d)]);}),_0x2cf1be=_0x4d0d65[_0x5cfbba(0x252)];if(!_0x26f84c&&!_0x20b50c&&_0x2cf1be<_0x14c406){_0x5646a9++;return;}_0x2a0ee4[_0x5cfbba(0x400)]({'start':_0x4d0d65[_0x5cfbba(0x29a)],'end':_0x4d0d65[_0x5cfbba(0x27b)],'duration':_0x2cf1be,'type':_0x26f84c?_0x5cfbba(0x44b):_0x5cfbba(0x1fb),'confirmed':_0x26f84c||_0x20b50c}),_0x26f84c&&_0xdf9967&&_0x2a0ee4['push']({'start':_0x4d0d65['start'],'end':_0x4d0d65[_0x5cfbba(0x27b)],'duration':_0x2cf1be,'type':_0x5cfbba(0x1fb),'confirmed':!![]});}),_0x5646a9>0x0&&this[_0x452f4a(0x1c0)]['debug']('[OC-7]\x20'+_0x5646a9+_0x452f4a(0x2fd)+_0x14c406+_0x452f4a(0x3ce)),_0x118799[_0x452f4a(0x3b3)](function(_0x306dcc){var _0x5810a6=_0x452f4a,_0x8e3508=_0x2a0ee4[_0x5810a6(0x1cd)](function(_0x1f2a98){var _0x12c157=_0x5810a6;return _0x306dcc[_0x12c157(0x29a)]<_0x1f2a98['end']&&_0x306dcc[_0x12c157(0x27b)]>_0x1f2a98[_0x12c157(0x29a)];});if(!_0x8e3508){var _0x313c8d=Math[_0x5810a6(0x347)](0x1,Math[_0x5810a6(0x32a)]((_0x306dcc[_0x5810a6(0x27b)]-_0x306dcc[_0x5810a6(0x29a)])/0xea60)),_0x4183b3=_0x306dcc['sensors']||[];if(_0x306dcc[_0x5810a6(0x199)])_0x2a0ee4[_0x5810a6(0x400)]({'start':_0x306dcc[_0x5810a6(0x29a)],'end':_0x306dcc[_0x5810a6(0x27b)],'duration':_0x313c8d,'type':_0x5810a6(0x44b),'confirmed':!![],'sensors':_0x4183b3}),_0x306dcc[_0x5810a6(0x162)]&&_0x2a0ee4[_0x5810a6(0x400)]({'start':_0x306dcc[_0x5810a6(0x29a)],'end':_0x306dcc[_0x5810a6(0x27b)],'duration':_0x313c8d,'type':_0x5810a6(0x1fb),'confirmed':!![],'sensors':_0x4183b3});else{if(_0xb9a306){var _0x4ae47b=_0x16060d&&_0x205e6c['some'](function(_0x3ada6e){var _0x25edc9=_0x5810a6;return _0x306dcc[_0x25edc9(0x29a)]<_0x3ada6e[_0x25edc9(0x27b)]&&_0x306dcc['end']>_0x3ada6e[_0x25edc9(0x29a)];});_0x2a0ee4[_0x5810a6(0x400)]({'start':_0x306dcc[_0x5810a6(0x29a)],'end':_0x306dcc[_0x5810a6(0x27b)],'duration':_0x313c8d,'type':_0x4ae47b?_0x5810a6(0x1fb):_0x5810a6(0x20e),'confirmed':!![],'sensors':_0x4183b3});}else _0x2a0ee4['push']({'start':_0x306dcc[_0x5810a6(0x29a)],'end':_0x306dcc[_0x5810a6(0x27b)],'duration':_0x313c8d,'type':_0x5810a6(0x1fb),'confirmed':!![],'sensors':_0x4183b3});}}}),_0x14a3d6=_0x2a0ee4[_0x452f4a(0x21b)](function(_0x1dcd32,_0x215654){var _0x5a203a=_0x452f4a;return _0x1dcd32[_0x5a203a(0x29a)]-_0x215654[_0x5a203a(0x29a)];});}_0x14a3d6[_0x452f4a(0x1e0)]===0x0&&_0x3a949e&&_0x2cffaa&&Array['isArray'](_0x2cffaa['outsideBedEvents'])&&_0x2cffaa[_0x452f4a(0x153)]['length']>0x0&&(_0x14a3d6=_0x2cffaa[_0x452f4a(0x153)],this[_0x452f4a(0x1c0)]['debug'](_0x452f4a(0x3c2)+_0x14a3d6['length']+_0x452f4a(0x1f8)));var _0x1f5daa=null,_0xefac11=_0x1fd156||null,_0x24e92a=(this['config'][_0x452f4a(0x2f7)]||'')[_0x452f4a(0x308)]()||_0x452f4a(0x37f);try{var _0x2e86f6=await this[_0x452f4a(0x1f4)](_0x24e92a);if(_0x2e86f6&&_0x2e86f6[_0x452f4a(0x24d)]!=null){var _0x542145=Number(_0x2e86f6[_0x452f4a(0x24d)]);if(!isNaN(_0x542145)&&_0x542145>0x0){var _0x129cb8=new Date(_0x542145)[_0x452f4a(0x2a9)]();_0x129cb8>=0x3&&_0x129cb8<0xe?(_0x1f5daa=_0x542145,this[_0x452f4a(0x1c0)][_0x452f4a(0x277)](_0x452f4a(0x1bf)+new Date(_0x1f5daa)['toISOString']())):this[_0x452f4a(0x1c0)][_0x452f4a(0x277)](_0x452f4a(0x304)+new Date(_0x542145)[_0x452f4a(0x1e4)]());}}}catch(_0x1e2322){this[_0x452f4a(0x1c0)]['debug']('[Wake]\x20Garmin-End\x20nicht\x20lesbar:\x20'+_0x1e2322[_0x452f4a(0x2e2)]);}var _0x4367aa=_0x397fed['allWakeSources']['map'](function(_0x5edc37){var _0x2e2b6a=_0x452f4a;return _0x5edc37['source']===_0x2e2b6a(0x388)?{'source':_0x2e2b6a(0x388),'ts':_0x1f5daa||null}:_0x5edc37;}),_0x56d25e=_0x1f5daa?_0x452f4a(0x388):_0x397fed[_0x452f4a(0x326)]||_0x452f4a(0x25e),_0x5441d0=_0x1f5daa?_0x452f4a(0x167):_0x397fed['wakeConf']||_0x452f4a(0x1c7);if(_0x1f5daa)_0x22e1cf[_0x452f4a(0x27b)]=_0x1f5daa,this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)](_0x452f4a(0x383)+new Date(_0x1f5daa)['toISOString']());else _0x397fed[_0x452f4a(0x336)]&&(_0x22e1cf[_0x452f4a(0x27b)]=_0x397fed['sleepWindowEnd']);var _0x4d5690=![];try{var _0x327757=(await this[_0x452f4a(0x205)](_0x452f4a(0x45c)))?.[_0x452f4a(0x24d)];if(_0x327757&&_0x327757!==_0x452f4a(0x32c)){var _0x2dd169=JSON[_0x452f4a(0x46f)](_0x327757);_0x2dd169&&_0x2dd169[_0x452f4a(0x179)]===_0x4d0488&&_0x2dd169['ts']&&(_0x22e1cf['end']=_0x2dd169['ts'],_0x56d25e=_0x2dd169['source']||_0x452f4a(0x436),_0x4d5690=!![],this[_0x452f4a(0x1c0)]['info'](_0x452f4a(0x1b0)+_0x56d25e+'\x20=\x20'+new Date(_0x2dd169['ts'])[_0x452f4a(0x1e4)]()));}}catch(_0x9a4f30){this['log'][_0x452f4a(0x1d2)](_0x452f4a(0x42d)+_0x9a4f30[_0x452f4a(0x2e2)]);}!_0x3a949e&&_0x22e1cf['start']&&_0x22e1cf[_0x452f4a(0x27b)]&&(_0x5ee002=!![]);if(_0x5ee002&&_0x22e1cf['start']&&_0x22e1cf[_0x452f4a(0x27b)]){var _0x37d7c9=0x5*0x3c*0x3e8,_0x581488=_0x22e1cf[_0x452f4a(0x29a)],_0x18f6bb=_0x22e1cf[_0x452f4a(0x27b)],_0x276739=Math[_0x452f4a(0x3b8)]((_0x18f6bb-_0x581488)/_0x37d7c9),_0x3a5766=_0x54a4d3[_0x452f4a(0x44d)](function(_0xe4754b){var _0x11693b=_0x452f4a;return _0xe4754b[_0x11693b(0x17c)]&&(_0xe4754b[_0x11693b(0x2f6)]||0x0)>=_0x581488&&(_0xe4754b['timestamp']||0x0)<=_0x18f6bb&&(isActiveValue(_0xe4754b[_0x11693b(0x49d)])||toPersonCount(_0xe4754b[_0x11693b(0x49d)])>0x0);}),_0x4e9d61=_0x54a4d3['filter'](function(_0x39ee88){var _0x34b462=_0x452f4a;return _0x39ee88[_0x34b462(0x3d7)]&&(_0x39ee88[_0x34b462(0x2f6)]||0x0)>=_0x581488&&(_0x39ee88['timestamp']||0x0)<=_0x18f6bb;}),_0x240788=0x0,_0x3fb5a8=0x0,_0x272174=0x0,_0x2c5da5=0x0,_0x4e33e5=0x0;for(var _0x39ffed=0x0;_0x39ffed<_0x276739;_0x39ffed++){var _0x2d99c8=_0x581488+_0x39ffed*_0x37d7c9,_0x545f20=_0x2d99c8+_0x37d7c9,_0x4732d3=_0x3a5766['filter'](function(_0x33db06){var _0x3f89d2=_0x452f4a;return(_0x33db06[_0x3f89d2(0x2f6)]||0x0)>=_0x2d99c8&&(_0x33db06[_0x3f89d2(0x2f6)]||0x0)<_0x545f20;})[_0x452f4a(0x1e0)],_0x597ef6=_0x4e9d61[_0x452f4a(0x44d)](function(_0x1d8b10){var _0x4b4df7=_0x452f4a;return(_0x1d8b10[_0x4b4df7(0x2f6)]||0x0)>=_0x2d99c8&&(_0x1d8b10[_0x4b4df7(0x2f6)]||0x0)<_0x545f20;})['map'](function(_0x5cfa6f){var _0x519f87=_0x452f4a;return typeof _0x5cfa6f[_0x519f87(0x49d)]===_0x519f87(0x435)?_0x5cfa6f['value']:parseFloat(_0x5cfa6f[_0x519f87(0x49d)])||0x0;}),_0x24a921=_0x597ef6['length']>0x0?Math[_0x452f4a(0x347)][_0x452f4a(0x409)](null,_0x597ef6):0x0,_0x5b0613=(_0x2d99c8-_0x581488)/0x36ee80,_0x459fd3;if(_0x4732d3===0x0)_0x4e33e5++,_0x459fd3=_0x4e33e5>=0x5?'deep':'light';else{if(_0x4732d3>=0x5||_0x24a921>0x1c)_0x4e33e5=0x0,_0x459fd3=_0x452f4a(0x1e7);else _0x4732d3>=0x2&&_0x5b0613>=2.5&&_0x24a921>=0xc&&_0x24a921<=0x1c?(_0x4e33e5=0x0,_0x459fd3=_0x452f4a(0x19b)):(_0x4e33e5=0x0,_0x459fd3='light');}_0x3ce386[_0x452f4a(0x400)]({'t':_0x39ffed*0x5,'s':_0x459fd3});if(_0x459fd3===_0x452f4a(0x27c))_0x240788+=0x12c;else{if(_0x459fd3===_0x452f4a(0x3bb))_0x3fb5a8+=0x12c;else{if(_0x459fd3==='rem')_0x272174+=0x12c;else _0x2c5da5+=0x12c;}}}var _0x45d77a=_0x240788+_0x3fb5a8+_0x272174+_0x2c5da5,_0x31e51d=(_0x18f6bb-_0x581488)/0xea60,_0x265d88=Math[_0x452f4a(0x347)](0x14,Math[_0x452f4a(0x288)](0x5f,0x19+0.12*_0x31e51d)),_0x4dc1ea=0x0;if(_0x45d77a>0x0){var _0x213518=_0x240788/_0x45d77a,_0x593e76=_0x272174/_0x45d77a,_0x1f2fe7=_0x3fb5a8/_0x45d77a,_0x5202d4=_0x2c5da5/_0x45d77a,_0x1447ec=Math['min'](0x1,_0x45d77a/0x3c/Math[_0x452f4a(0x347)](0x1,_0x31e51d));_0x4dc1ea=Math[_0x452f4a(0x347)](-0x8,Math[_0x452f4a(0x288)](0x8,Math['round']((_0x593e76*0x1e-_0x5202d4*0x32)*_0x1447ec)));}_0xa0ffc0=Math[_0x452f4a(0x32a)](Math[_0x452f4a(0x347)](0x0,_0x265d88+_0x4dc1ea)),_0xa9797=Math['round'](Math[_0x452f4a(0x347)](0x0,Math['min'](0x64,_0xa0ffc0))),this[_0x452f4a(0x1c0)][_0x452f4a(0x277)](_0x452f4a(0x1e6)+_0xa9797+_0x452f4a(0x2af)+Math[_0x452f4a(0x32a)](_0x31e51d)+_0x452f4a(0x3cb)+Math[_0x452f4a(0x32a)](_0x265d88)+'\x20adj='+_0x4dc1ea+'\x20deep='+(_0x45d77a>0x0?Math[_0x452f4a(0x32a)](_0x240788/_0x45d77a*0x64):0x0)+_0x452f4a(0x3a3)+(_0x45d77a>0x0?Math[_0x452f4a(0x32a)](_0x272174/_0x45d77a*0x64):0x0)+'%');}var _0x1872c1=null,_0x9bcedc=null,_0x52a99a=null,_0x256de0=null,_0x46447e=(this[_0x452f4a(0x19e)]['garminSleepScoreStateId']||'')[_0x452f4a(0x308)]()||_0x452f4a(0x2b0);try{var _0x4c456e=await this['getForeignStateAsync'](_0x46447e);_0x4c456e&&_0x4c456e['val']!=null&&(_0x1872c1=Number(_0x4c456e['val'])||null,this[_0x452f4a(0x1c0)][_0x452f4a(0x277)]('[Garmin]\x20Sleep\x20Score\x20gelesen:\x20'+_0x1872c1));}catch(_0x117603){}var _0x1970fa=(this['config'][_0x452f4a(0x20f)]||'')[_0x452f4a(0x308)]()||_0x452f4a(0x40f),_0x352ba4=(this[_0x452f4a(0x19e)]['garminLightSleepStateId']||'')[_0x452f4a(0x308)]()||_0x452f4a(0x279),_0x98cdfe=(this[_0x452f4a(0x19e)][_0x452f4a(0x1da)]||'')[_0x452f4a(0x308)]()||_0x452f4a(0x352);try{var _0x4b4ede=await this[_0x452f4a(0x1f4)](_0x1970fa),_0x45da7a=await this[_0x452f4a(0x1f4)](_0x352ba4),_0x46004c=await this['getForeignStateAsync'](_0x98cdfe);if(_0x4b4ede&&_0x4b4ede[_0x452f4a(0x24d)]!=null)_0x9bcedc=Number(_0x4b4ede[_0x452f4a(0x24d)])||null;if(_0x45da7a&&_0x45da7a[_0x452f4a(0x24d)]!=null)_0x52a99a=Number(_0x45da7a[_0x452f4a(0x24d)])||null;if(_0x46004c&&_0x46004c[_0x452f4a(0x24d)]!=null)_0x256de0=Number(_0x46004c[_0x452f4a(0x24d)])||null;}catch(_0x2346b1){}if(_0xa9797!==null||_0x1872c1!==null){var _0x319cc6={'date':_0x1410d5,'auraScore':_0xa9797,'auraScoreCal':_0x43c6a0,'garminScore':_0x1872c1,'delta':_0xa9797!==null&&_0x1872c1!==null?_0x1872c1-_0xa9797:null,'garminDeepMin':_0x9bcedc?Math['round'](_0x9bcedc/0x3c):null,'garminLightMin':_0x52a99a?Math[_0x452f4a(0x32a)](_0x52a99a/0x3c):null,'garminRemMin':_0x256de0?Math[_0x452f4a(0x32a)](_0x256de0/0x3c):null,'timestamp':Date['now']()};try{await this[_0x452f4a(0x1d5)]('analysis.health.sleepValidation',{'type':_0x452f4a(0x345),'common':{'name':'Sleep\x20Score\x20Validation\x20(AURA\x20vs\x20Garmin)','type':_0x452f4a(0x370),'role':'json','read':!![],'write':![],'def':'{}'},'native':{}}),await this[_0x452f4a(0x295)](_0x452f4a(0x286),{'val':JSON[_0x452f4a(0x332)](_0x319cc6),'ack':!![]});}catch(_0x2f08d6){}}try{await this[_0x452f4a(0x1d5)](_0x452f4a(0x25b),{'type':_0x452f4a(0x345),'common':{'name':_0x452f4a(0x185),'type':_0x452f4a(0x370),'role':_0x452f4a(0x31c),'read':!![],'write':![],'def':'{}'},'native':{}});const _0x31aae1={'timestamp':new Date()['toISOString'](),'dateStr':_0x1410d5,'eventHistoryCount':this[_0x452f4a(0x429)]['length'],'todayEventsCount':_0x4f79a6['length'],'sleepSearchEventsCount':_0x54a4d3[_0x452f4a(0x1e0)],'vibrationBedEventsTotal':_0x54a4d3[_0x452f4a(0x44d)](function(_0x3cc734){var _0x3d66b7=_0x452f4a;return _0x3cc734[_0x3d66b7(0x17c)];})[_0x452f4a(0x1e0)],'fp2BedEventsTotal':_0x54a4d3[_0x452f4a(0x44d)](function(_0x5f3238){var _0x21f671=_0x452f4a;return _0x5f3238[_0x21f671(0x2c0)];})[_0x452f4a(0x1e0)],'bedPresenceMinutes':_0x46c4ad,'sleepWindowCalcStart':_0x75d43f['start']?new Date(_0x75d43f[_0x452f4a(0x29a)])[_0x452f4a(0x1e4)]():null,'sleepWindowCalcEnd':_0x75d43f['end']?new Date(_0x75d43f[_0x452f4a(0x27b)])[_0x452f4a(0x1e4)]():null,'sleepWindowOC7Start':_0x22e1cf[_0x452f4a(0x29a)]?new Date(_0x22e1cf['start'])[_0x452f4a(0x1e4)]():null,'sleepWindowOC7End':_0x22e1cf[_0x452f4a(0x27b)]?new Date(_0x22e1cf[_0x452f4a(0x27b)])[_0x452f4a(0x1e4)]():null,'sleepStagesCount':_0x3ce386[_0x452f4a(0x1e0)],'sleepScore':_0xa9797,'oc4GuardFired':_0x46c4ad<0xb4&&_0x75d43f[_0x452f4a(0x29a)]===null&&_0x54a4d3[_0x452f4a(0x44d)](function(_0x33d418){var _0x37716b=_0x452f4a;return _0x33d418[_0x37716b(0x2c0)];})['length']>0x0};await this[_0x452f4a(0x295)](_0x452f4a(0x25b),{'val':JSON[_0x452f4a(0x332)](_0x31aae1),'ack':!![]}),this['log'][_0x452f4a(0x2c9)](_0x452f4a(0x36a)+_0x3ce386[_0x452f4a(0x1e0)]+_0x452f4a(0x19c)+(_0x31aae1[_0x452f4a(0x489)]||_0x452f4a(0x2c3))+_0x452f4a(0x30e)+_0x46c4ad+_0x452f4a(0x244)+_0x31aae1[_0x452f4a(0x2de)]);}catch(_0x3ac5fe){this[_0x452f4a(0x1c0)]['warn'](_0x452f4a(0x1a6)+_0x3ac5fe[_0x452f4a(0x2e2)]);}var _0x841bfd=_0x4f79a6[_0x452f4a(0x44d)](function(_0x513ad4){var _0x49349f=_0x452f4a;if(!_0x513ad4[_0x49349f(0x17c)])return![];var _0x9817f2=isActiveValue(_0x513ad4[_0x49349f(0x49d)])||toPersonCount(_0x513ad4['value'])>0x0;if(!_0x9817f2)return![];var _0x1514ea=_0x513ad4[_0x49349f(0x2f6)]||0x0;if(_0x75d43f[_0x49349f(0x29a)]&&_0x75d43f[_0x49349f(0x27b)])return _0x1514ea>=_0x75d43f[_0x49349f(0x29a)]&&_0x1514ea<=_0x75d43f[_0x49349f(0x27b)];var _0x3fa4d9=new Date(_0x1514ea)['getHours']();return _0x3fa4d9>=0x16||_0x3fa4d9<0x6;})[_0x452f4a(0x1e0)],_0x4e8f60=0x0,_0x554868=0x0,_0x7224d9=0x0;_0x4f79a6[_0x452f4a(0x3b3)](function(_0x2bead0){var _0x4f5753=_0x452f4a;if(!_0x2bead0[_0x4f5753(0x3d7)])return;var _0x154840=_0x2bead0[_0x4f5753(0x2f6)]||0x0,_0x12334e=_0x75d43f[_0x4f5753(0x29a)]&&_0x75d43f[_0x4f5753(0x27b)]?_0x154840>=_0x75d43f[_0x4f5753(0x29a)]&&_0x154840<=_0x75d43f[_0x4f5753(0x27b)]:new Date(_0x154840)[_0x4f5753(0x2a9)]()>=0x16||new Date(_0x154840)[_0x4f5753(0x2a9)]()<0x6;if(!_0x12334e)return;var _0xfa422e=typeof _0x2bead0['value']===_0x4f5753(0x435)?_0x2bead0[_0x4f5753(0x49d)]:parseFloat(_0x2bead0[_0x4f5753(0x49d)]);if(isNaN(_0xfa422e)||_0xfa422e<=0x0)return;_0x4e8f60+=_0xfa422e,_0x554868++;if(_0xfa422e>_0x7224d9)_0x7224d9=_0xfa422e;});const _0x8e31d=_0x554868>0x0?Math[_0x452f4a(0x32a)](_0x4e8f60/_0x554868):null,_0x4d0a3a=_0x554868>0x0?_0x7224d9:null;var _0x2d435d=_0x22e1cf['start']&&_0x22e1cf['end']?_0x54a4d3[_0x452f4a(0x44d)](function(_0xa3804b){var _0x3a3154=_0x452f4a;return _0xa3804b[_0x3a3154(0x2c0)]&&(_0xa3804b[_0x3a3154(0x2f6)]||0x0)>=_0x22e1cf['start']&&(_0xa3804b['timestamp']||0x0)<=_0x22e1cf[_0x3a3154(0x27b)];})[_0x452f4a(0x1e0)]:0x0,_0x5da265=!_0x539004[_0x452f4a(0x1cd)](function(_0x468531){var _0x5e9366=_0x452f4a;return(_0x468531[_0x5e9366(0x142)]==='fp2'||_0x468531[_0x5e9366(0x142)]==='fp2_vib'||_0x468531[_0x5e9366(0x142)]===_0x5e9366(0x4b0)||_0x468531[_0x5e9366(0x142)]===_0x5e9366(0x182))&&_0x468531['ts'];}),_0x147170=_0x841bfd===0x0&&_0x2d435d===0x0&&_0x5da265;_0x147170&&(_0xa9797=null,_0xa0ffc0=null,_0x3ce386=[],this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)](_0x452f4a(0x3ed)+_0x2d435d+_0x452f4a(0x13b)+_0x5da265));const _0x3e2e14=new Set((this['config']['devices']||[])[_0x452f4a(0x44d)](function(_0x250a69){var _0x3d950d=_0x452f4a;return _0x250a69[_0x3d950d(0x16e)]||_0x250a69[_0x3d950d(0x40b)]===_0x3d950d(0x44b);})[_0x452f4a(0x1cc)](function(_0x16b6e5){return _0x16b6e5['id'];})),_0x2bc7ed=new Set((this[_0x452f4a(0x19e)][_0x452f4a(0x39e)]||[])['filter'](function(_0x32ae48){var _0x30f887=_0x452f4a;return _0x32ae48[_0x30f887(0x2ae)]||_0x32ae48['sensorFunction']==='kitchen';})[_0x452f4a(0x1cc)](function(_0x462064){return _0x462064['id'];})),_0x3ee677=(function(){var _0x148376=_0x452f4a,_0x1dc750=new Set(),_0x139045=!!(_0x75d43f[_0x148376(0x29a)]&&_0x75d43f[_0x148376(0x27b)]);return _0x4f79a6[_0x148376(0x3b3)](function(_0x262185){var _0x359304=_0x148376;if(!_0x262185[_0x359304(0x16e)]&&!_0x3e2e14[_0x359304(0x245)](_0x262185['id']))return;var _0x5e1676=_0x262185[_0x359304(0x2f6)]||_0x262185['ts']||0x0,_0x1a9bb3=new Date(_0x5e1676)[_0x359304(0x2a9)]();if(_0x139045){if(_0x5e1676>=_0x75d43f[_0x359304(0x29a)]&&_0x5e1676<=_0x75d43f[_0x359304(0x27b)])_0x1dc750[_0x359304(0x1d3)](_0x1a9bb3);}else{if(_0x1a9bb3>=0x16||_0x1a9bb3<0x6)_0x1dc750['add'](_0x1a9bb3);}}),_0x1dc750[_0x148376(0x224)];}()),_0x42496b=(function(){var _0x52f390=new Set();return _0x4f79a6['forEach'](function(_0x54e571){var _0x166398=a0_0x5e53;if(!_0x54e571[_0x166398(0x2ae)]&&!_0x2bc7ed['has'](_0x54e571['id']))return;var _0x4e3a2b=new Date(_0x54e571[_0x166398(0x2f6)]||_0x54e571['ts']||0x0)[_0x166398(0x2a9)]();_0x52f390[_0x166398(0x1d3)](_0x4e3a2b);}),_0x52f390['size'];}());var _0xca99e5={},_0x414170=this[_0x452f4a(0x19e)]['garminPersonAssignment']&&typeof this['config'][_0x452f4a(0x2a4)]===_0x452f4a(0x3ea)?this[_0x452f4a(0x19e)][_0x452f4a(0x2a4)]:{};for(var _0x2e6558 of Object[_0x452f4a(0x3a5)](_0x414170)){var _0x1d60d7=_0x414170[_0x2e6558];if(!_0x1d60d7||typeof _0x1d60d7!=='object')continue;var _0x462ff3=(_0x1d60d7['sleepStartId']||'')[_0x452f4a(0x308)](),_0x1da080=(_0x1d60d7[_0x452f4a(0x250)]||'')[_0x452f4a(0x308)]();if(!_0x462ff3&&!_0x1da080)continue;try{var _0x43300c=_0x462ff3?await this[_0x452f4a(0x1f4)](_0x462ff3):null,_0x3047c8=_0x1da080?await this[_0x452f4a(0x1f4)](_0x1da080):null,_0x35cdd1=_0x43300c&&_0x43300c[_0x452f4a(0x24d)]!=null?Number(_0x43300c[_0x452f4a(0x24d)]):null,_0x357a7d=_0x3047c8&&_0x3047c8[_0x452f4a(0x24d)]!=null?Number(_0x3047c8[_0x452f4a(0x24d)]):null,_0x446c39=_0x35cdd1?new Date(_0x35cdd1)[_0x452f4a(0x2a9)]():null,_0x202a61=_0x357a7d?new Date(_0x357a7d)[_0x452f4a(0x2a9)]():null,_0x2d4438=_0x35cdd1&&_0x446c39!==null&&(_0x446c39>=0x12||_0x446c39<0x4)&&_0x35cdd1>=_0x5ad6fc[_0x452f4a(0x16f)]()-0x2*0x36ee80&&_0x35cdd1<=_0x5ad6fc[_0x452f4a(0x16f)]()+0x10*0x36ee80?_0x35cdd1:null,_0x5431d7=_0x357a7d&&_0x202a61!==null&&_0x202a61>=0x3&&_0x202a61<0xe?_0x357a7d:null;_0xca99e5[_0x2e6558]={'sleepStartTs':_0x2d4438,'wakeTs':_0x5431d7};if(_0x2d4438)this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)](_0x452f4a(0x341)+_0x2e6558+_0x452f4a(0x204)+new Date(_0x2d4438)['toISOString']());if(_0x5431d7)this['log']['info'](_0x452f4a(0x341)+_0x2e6558+'\x20Aufwachen:\x20'+new Date(_0x5431d7)['toISOString']());}catch(_0x2f8322){this[_0x452f4a(0x1c0)][_0x452f4a(0x277)]('[Per-Person\x20Watch]\x20'+_0x2e6558+_0x452f4a(0x14e)+_0x2f8322['message']);}}const _0x110d71=this,_0x29d112=(function(){var _0x468a6b=_0x452f4a,_0xd73738={},_0x95d6e8=_0x110d71[_0x468a6b(0x19e)]&&_0x110d71[_0x468a6b(0x19e)][_0x468a6b(0x39e)]?_0x110d71[_0x468a6b(0x19e)][_0x468a6b(0x39e)]:[],_0x4e191e={};_0x95d6e8[_0x468a6b(0x3b3)](function(_0x3a8602){var _0x1ce5b7=_0x468a6b;if(!_0x3a8602['personTag']||!_0x3a8602[_0x1ce5b7(0x38f)][_0x1ce5b7(0x308)]())return;var _0x3c03b3=_0x3a8602[_0x1ce5b7(0x38f)][_0x1ce5b7(0x308)]();if(!_0x4e191e[_0x3c03b3])_0x4e191e[_0x3c03b3]=new Set();_0x4e191e[_0x3c03b3]['add'](_0x3a8602['id']);});if(Object[_0x468a6b(0x3a5)](_0x4e191e)['length']===0x0)return _0xd73738;var _0x4f905a=_0x75d43f[_0x468a6b(0x29a)]||_0x22e1cf['start']||_0x5ad6fc[_0x468a6b(0x16f)](),_0x1b91f4=_0x75d43f['end']||(function(){var _0x2d1f26=_0x468a6b,_0x3fcd0c=new Date();_0x3fcd0c[_0x2d1f26(0x254)](0x6,0x0,0x0,0x0);if(_0x3fcd0c[_0x2d1f26(0x16f)]()<_0x4f905a)_0x3fcd0c[_0x2d1f26(0x3c4)](_0x3fcd0c[_0x2d1f26(0x414)]()+0x1);return _0x3fcd0c['getTime']();}()),_0x4e0091=(function(){var _0x295142=_0x468a6b,_0x349496=new Date();return _0x349496['setHours'](0xc,0x0,0x0,0x0),_0x349496[_0x295142(0x16f)]();}());return Object['keys'](_0x4e191e)['forEach'](function(_0x15e0ab){var _0x373dd0=_0x468a6b,_0x1ad757=_0x4e191e[_0x15e0ab],_0x34828a=_0x4f79a6[_0x373dd0(0x44d)](function(_0x3ac3a6){var _0x4e7bd4=_0x373dd0;return _0x1ad757[_0x4e7bd4(0x245)](_0x3ac3a6['id']);}),_0x5ac7b5=_0x34828a[_0x373dd0(0x44d)](function(_0x778a1a){var _0x5af273=_0x778a1a['timestamp']||_0x778a1a['ts']||0x0;return _0x5af273>=_0x4f905a&&_0x5af273<=_0x1b91f4;}),_0x58d2ba=_0x5ac7b5[_0x373dd0(0x1e0)],_0x1e3d0c=new Date(_0x1b91f4);_0x1e3d0c[_0x373dd0(0x254)](0x5,0x0,0x0,0x0);var _0x261c35=_0x34828a[_0x373dd0(0x44d)](function(_0x17a7ed){var _0x5792c8=_0x373dd0,_0x24edc7=_0x17a7ed[_0x5792c8(0x2f6)]||_0x17a7ed['ts']||0x0;return _0x24edc7>=_0x1e3d0c[_0x5792c8(0x16f)]();})[_0x373dd0(0x21b)](function(_0x2af84a,_0x8fb1a9){var _0x27c123=_0x373dd0;return(_0x2af84a[_0x27c123(0x2f6)]||0x0)-(_0x8fb1a9['timestamp']||0x0);}),_0x6f48eb=_0x261c35[_0x373dd0(0x1e0)]>0x0?Math[_0x373dd0(0x32a)](((_0x261c35[0x0][_0x373dd0(0x2f6)]||0x0)-new Date(_0x261c35[0x0]['timestamp']||0x0)['setHours'](0x0,0x0,0x0,0x0))/0xea60):null,_0x357dfa=new Set((_0x110d71[_0x373dd0(0x19e)]&&_0x110d71[_0x373dd0(0x19e)][_0x373dd0(0x39e)]||[])[_0x373dd0(0x44d)](function(_0x5da90c){var _0xea4f2e=_0x373dd0;return _0x5da90c[_0xea4f2e(0x16e)]||_0x5da90c[_0xea4f2e(0x40b)]===_0xea4f2e(0x44b);})[_0x373dd0(0x1cc)](function(_0x15408e){return _0x15408e['id'];})),_0x5f362c=_0x4f79a6[_0x373dd0(0x44d)](function(_0x27a3ce){var _0x2d2ccf=_0x373dd0;if(!_0x357dfa[_0x2d2ccf(0x245)](_0x27a3ce['id']))return![];var _0x314cfb=_0x27a3ce['timestamp']||_0x27a3ce['ts']||0x0;return _0x314cfb>=_0x4f905a&&_0x314cfb<=_0x1b91f4;}),_0x192d2c=0x0;_0x5f362c[_0x373dd0(0x3b3)](function(_0x151898){var _0x81e86c=_0x373dd0,_0x4ce98b=_0x151898[_0x81e86c(0x2f6)]||0x0,_0x3904ef=_0x5ac7b5['filter'](function(_0x468c7d){var _0x8ae563=_0x81e86c,_0x528323=_0x468c7d[_0x8ae563(0x2f6)]||0x0;return _0x528323>=_0x4ce98b-0xa*0x3c*0x3e8&&_0x528323<_0x4ce98b;});if(_0x3904ef[_0x81e86c(0x1e0)]>0x0)_0x192d2c++;});var _0xc77b01=_0xca99e5[_0x15e0ab]||{},_0x494c05=_0xc77b01[_0x373dd0(0x229)]||null,_0x4480c2=_0xc77b01[_0x373dd0(0x33a)]||null,_0x1ff280=computePersonSleep({'allEvents':_0x54a4d3,'personTag':_0x15e0ab,'fp2RawStart':null,'garminTs':_0x494c05,'garminWakeTs':_0x4480c2,'fp2WakeTs':null,'searchBase':_0x5ad6fc,'wakeHardCap':_0x4e0091,'startOverride':_0x378fbe&&_0x378fbe[_0x15e0ab]?_0x378fbe[_0x15e0ab]:null,'wakeOverride':_0x3ef701&&_0x3ef701[_0x15e0ab]?_0x3ef701[_0x15e0ab]:null,'existingSnap':_0x2cffaa&&_0x2cffaa[_0x373dd0(0x495)]&&_0x2cffaa['personData'][_0x15e0ab]?_0x2cffaa[_0x373dd0(0x495)][_0x15e0ab]:null,'sleepDate':_0x4d0488,'bathroomIds':_0x3e2e14,'log':_0x110d71[_0x373dd0(0x1c0)]}),_0x166f16=null;_0x1ff280[_0x373dd0(0x28f)]&&(_0x166f16=Math[_0x373dd0(0x32a)]((_0x1ff280[_0x373dd0(0x28f)]-new Date(_0x1ff280[_0x373dd0(0x28f)])[_0x373dd0(0x254)](0x0,0x0,0x0,0x0))/0xea60)),_0xd73738[_0x15e0ab]={'nightActivityCount':_0x58d2ba,'wakeTimeMin':_0x6f48eb,'sleepOnsetMin':_0x166f16,'nocturiaAttr':_0x192d2c,'sleepWindowStart':_0x1ff280[_0x373dd0(0x28f)],'sleepWindowEnd':_0x1ff280['sleepWindowEnd'],'wakeSource':_0x1ff280[_0x373dd0(0x326)],'wakeConf':_0x1ff280[_0x373dd0(0x2fa)],'sleepStartSource':_0x1ff280['sleepStartSource'],'sleepStartOverridden':_0x1ff280[_0x373dd0(0x2ef)],'allSleepStartSources':_0x1ff280[_0x373dd0(0x225)],'allWakeSources':_0x1ff280['allWakeSources'],'wakeConfirmed':_0x1ff280[_0x373dd0(0x2b4)],'wakeOverridden':_0x1ff280[_0x373dd0(0x1d1)],'bedWasEmpty':_0x1ff280['bedWasEmpty'],'outsideBedEvents':_0x1ff280[_0x373dd0(0x153)],'sleepStages':_0x1ff280[_0x373dd0(0x3c8)],'stagesWindowStart':_0x1ff280['stagesWindowStart'],'sleepScore':_0x1ff280[_0x373dd0(0x30a)],'sleepScoreRaw':_0x1ff280[_0x373dd0(0x1ed)],'sleepScoreCalStatus':_0x373dd0(0x35f)};}),_0xd73738;}());try{await this[_0x452f4a(0x295)](_0x452f4a(0x348),{'val':JSON[_0x452f4a(0x332)](_0x29d112),'ack':!![]});}catch(_0x4163d1){}try{await this['setObjectNotExistsAsync'](_0x452f4a(0x36d),{'type':'state','common':{'name':_0x452f4a(0x403),'type':_0x452f4a(0x370),'role':'json','read':!![],'write':![],'def':'[]'},'native':{}});var _0x177459=[],_0x228e2f=await this['getStateAsync'](_0x452f4a(0x36d));if(_0x228e2f&&_0x228e2f['val'])try{_0x177459=JSON[_0x452f4a(0x46f)](_0x228e2f[_0x452f4a(0x24d)]);if(!Array['isArray'](_0x177459))_0x177459=[];}catch(_0xe22ee1){_0x177459=[];}if(_0xa9797!==null){var _0x2b6253=_0x177459[_0x452f4a(0x3cd)](function(_0x573867){var _0x1c6f7f=_0x452f4a;return _0x573867[_0x1c6f7f(0x179)]===_0x1410d5;}),_0x5bc8ec={'date':_0x1410d5,'aura':_0xa9797,'garmin':_0x1872c1||null};if(_0x2b6253>=0x0)_0x177459[_0x2b6253]=_0x5bc8ec;else _0x177459[_0x452f4a(0x400)](_0x5bc8ec);}if(_0x177459[_0x452f4a(0x1e0)]>0x3c)_0x177459=_0x177459[_0x452f4a(0x314)](_0x177459[_0x452f4a(0x1e0)]-0x3c);await this[_0x452f4a(0x295)](_0x452f4a(0x36d),{'val':JSON[_0x452f4a(0x332)](_0x177459),'ack':!![]});var _0x2af4d2=_0x177459[_0x452f4a(0x44d)](function(_0x299ae6){var _0x5756e4=_0x452f4a;return _0x299ae6[_0x5756e4(0x2fe)]!==null&&_0x299ae6[_0x5756e4(0x388)]!==null;});_0x353e57=_0x2af4d2[_0x452f4a(0x1e0)];if(_0x2af4d2[_0x452f4a(0x1e0)]>=0x7){_0x49ac16=_0x2af4d2[_0x452f4a(0x1e0)]>=0xe?'calibrated':'calibrating';var _0x4abe9a=_0x2af4d2[_0x452f4a(0x41c)](function(_0x28b481,_0x48cc3b){var _0x3f138a=_0x452f4a;return _0x28b481+(_0x48cc3b[_0x3f138a(0x388)]-_0x48cc3b[_0x3f138a(0x2fe)]);},0x0)/_0x2af4d2[_0x452f4a(0x1e0)];_0xa9797!==null&&(_0x43c6a0=Math[_0x452f4a(0x32a)](Math[_0x452f4a(0x347)](0x0,Math[_0x452f4a(0x288)](0x64,_0xa9797+_0x4abe9a)))),this['log'][_0x452f4a(0x277)](_0x452f4a(0x1fa)+_0x49ac16+_0x452f4a(0x2a7)+_0x2af4d2[_0x452f4a(0x1e0)]+_0x452f4a(0x410)+Math['round'](_0x4abe9a)+_0x452f4a(0x2ba)+_0x43c6a0);}}catch(_0x4b0da7){this[_0x452f4a(0x1c0)][_0x452f4a(0x1d2)](_0x452f4a(0x27f)+_0x4b0da7[_0x452f4a(0x2e2)]);}var _0x441e0b=[],_0x3d8dc5={'src':'default','n':0x0,'calibA':0x32,'calibB':0x1e};if(this['config'][_0x452f4a(0x171)]===!![])try{var _0x17a729=0x32,_0x5dea23=0x1e,_0x2f3831=_0x452f4a(0x48a),_0x9a6fa6=0x0;try{var _0x211b1c=this[_0x452f4a(0x19e)][_0x452f4a(0x28d)]||'',_0x18c5f9=[];try{var _0x481e01=JSON[_0x452f4a(0x46f)](_0x211b1c);if(Array[_0x452f4a(0x20b)](_0x481e01))_0x18c5f9=_0x481e01[_0x452f4a(0x44d)](function(_0x1e07d8){var _0x560c99=_0x452f4a;return _0x1e07d8&&_0x1e07d8[_0x560c99(0x179)];});}catch(_0x33a032){}if(_0x18c5f9[_0x452f4a(0x1e0)]>=0x2){var _0x48c5cf=require('path')['join'](utils[_0x452f4a(0x476)](),_0x452f4a(0x41e),'history'),_0x595772=[],_0x3aa69b=[],_0x3cf2c0=[],_0x33dbfb=[],_0x149351=0x5*0x3c*0x3e8,_0x56708e=![];for(var _0x48402b of _0x18c5f9){if(_0x48402b['_features']){var _0x485efa=_0x48402b[_0x452f4a(0x366)],_0x401fa1=(_0x48402b[_0x452f4a(0x132)]||'')[_0x452f4a(0x1f3)]();if(_0x401fa1!==_0x452f4a(0x228))_0x595772[_0x452f4a(0x400)](_0x485efa[_0x452f4a(0x1d9)]);if(_0x401fa1==='vaginal')_0x3aa69b[_0x452f4a(0x400)](_0x485efa[_0x452f4a(0x1d9)]);else{if(_0x401fa1==='oral_hand')_0x3cf2c0[_0x452f4a(0x400)](_0x485efa['medianPeak']);}_0x33dbfb[_0x452f4a(0x400)]({'peak':_0x485efa[_0x452f4a(0x395)],'durSlots':_0x485efa['durSlots'],'avgPeak':_0x485efa['avgPeak'],'variance':_0x485efa[_0x452f4a(0x320)],'tierB':0x0,'label':_0x401fa1,'date':_0x48402b['date']||'','hourSin':_0x485efa[_0x452f4a(0x4a1)]||0x0,'hourCos':_0x485efa[_0x452f4a(0x44a)]||0x1,'lightOn':_0x485efa[_0x452f4a(0x327)]!==undefined?_0x485efa[_0x452f4a(0x327)]:null,'presenceOn':_0x485efa[_0x452f4a(0x3fe)]!==undefined?_0x485efa[_0x452f4a(0x3fe)]:null,'roomTemp':_0x485efa[_0x452f4a(0x1b3)]||null,'bathBefore':_0x485efa[_0x452f4a(0x23a)]||0x0,'bathAfter':_0x485efa[_0x452f4a(0x375)]||0x0});continue;}try{var _0x2408b6=require('path')['join'](_0x48c5cf,_0x48402b[_0x452f4a(0x179)]+'.json');if(!fs['existsSync'](_0x2408b6))continue;var _0x1a6751=JSON[_0x452f4a(0x46f)](fs[_0x452f4a(0x3b1)](_0x2408b6,_0x452f4a(0x449))),_0x20d7b4=(_0x1a6751['eventHistory']||[])[_0x452f4a(0x44d)](function(_0x590fe1){var _0x9c9997=_0x452f4a;return _0x590fe1[_0x9c9997(0x132)]==='vibration_strength'&&(_0x590fe1[_0x9c9997(0x17c)]||_0x590fe1[_0x9c9997(0x2c0)]);});if(_0x20d7b4[_0x452f4a(0x1e0)]===0x0)continue;var _0x532cb1=null,_0x3cf5a1=null;if(_0x48402b[_0x452f4a(0x147)]&&/^\d{1,2}:\d{2}$/['test'](_0x48402b[_0x452f4a(0x147)])){var _0x470325=_0x48402b[_0x452f4a(0x147)][_0x452f4a(0x1d0)](':'),_0x6a18c2=new Date(_0x48402b['date']+_0x452f4a(0x29b));_0x6a18c2[_0x452f4a(0x254)](parseInt(_0x470325[0x0]),parseInt(_0x470325[0x1]),0x0,0x0),_0x532cb1=_0x6a18c2[_0x452f4a(0x16f)]()-0x2d*0xea60,_0x3cf5a1=_0x6a18c2['getTime']()+((_0x48402b[_0x452f4a(0x468)]||0x2d)+0xf)*0xea60;}var _0xbf6fa8=_0x532cb1!==null?_0x20d7b4[_0x452f4a(0x44d)](function(_0x1ad270){var _0x5be32a=_0x1ad270['timestamp']||0x0;return _0x5be32a>=_0x532cb1&&_0x5be32a<=_0x3cf5a1;}):_0x20d7b4;if(_0xbf6fa8['length']===0x0)continue;_0xbf6fa8[_0x452f4a(0x21b)](function(_0x1696e0,_0x54c295){var _0x599f6f=_0x452f4a;return(_0x1696e0[_0x599f6f(0x2f6)]||0x0)-(_0x54c295[_0x599f6f(0x2f6)]||0x0);});var _0x4192d8=_0xbf6fa8[0x0][_0x452f4a(0x2f6)]||0x0,_0x236d4d=(_0xbf6fa8[_0xbf6fa8['length']-0x1][_0x452f4a(0x2f6)]||0x0)+_0x149351,_0xdb089f=[];for(var _0x377139=_0x4192d8;_0x377139<_0x236d4d;_0x377139+=_0x149351){var _0x36afac=_0xbf6fa8['filter'](function(_0x348e0b){var _0x1c6848=_0x348e0b['timestamp']||0x0;return _0x1c6848>=_0x377139&&_0x1c6848<_0x377139+_0x149351;})[_0x452f4a(0x1cc)](function(_0x59973f){var _0x5c10c2=_0x452f4a;return Number(_0x59973f[_0x5c10c2(0x49d)])||0x0;});if(_0x36afac[_0x452f4a(0x1e0)]>0x0)_0xdb089f['push'](Math[_0x452f4a(0x347)][_0x452f4a(0x409)](null,_0x36afac));}if(_0xdb089f[_0x452f4a(0x1e0)]>0x0){_0xdb089f[_0x452f4a(0x21b)](function(_0xe6fa4d,_0x415a11){return _0xe6fa4d-_0x415a11;});var _0x4e7fde=_0xdb089f[Math[_0x452f4a(0x39d)](_0xdb089f['length']/0x2)],_0x2ecd8b=(_0x48402b[_0x452f4a(0x132)]||'')['toLowerCase']();if(_0x2ecd8b!=='nullnummer')_0x595772['push'](_0x4e7fde);if(_0x2ecd8b===_0x452f4a(0x174))_0x3aa69b[_0x452f4a(0x400)](_0x4e7fde);else{if(_0x2ecd8b===_0x452f4a(0x218))_0x3cf2c0[_0x452f4a(0x400)](_0x4e7fde);}var _0x3f383c=_0xdb089f[_0xdb089f['length']-0x1],_0x575563=Math[_0x452f4a(0x32a)](_0xdb089f['reduce'](function(_0x30b12d,_0xa9dc78){return _0x30b12d+_0xa9dc78;},0x0)/_0xdb089f[_0x452f4a(0x1e0)]),_0x50d4de=Math[_0x452f4a(0x32a)](_0xdb089f[_0x452f4a(0x41c)](function(_0x2b1dfa,_0x16fd9e){return _0x2b1dfa+(_0x16fd9e-_0x575563)*(_0x16fd9e-_0x575563);},0x0)/_0xdb089f[_0x452f4a(0x1e0)]),_0x27957f=_0x1a6751[_0x452f4a(0x429)]||[],_0x5d5a1d={'start':_0x532cb1||_0x4192d8,'end':_0x3cf5a1||_0x236d4d+_0x4192d8},_0x37fe8b=new Date(_0x5d5a1d[_0x452f4a(0x29a)]),_0x25a626=_0x37fe8b[_0x452f4a(0x2a9)]()+_0x37fe8b[_0x452f4a(0x481)]()/0x3c,_0x54f5ad=Math[_0x452f4a(0x32a)](Math[_0x452f4a(0x177)](0x2*Math['PI']*_0x25a626/0x18)*0x3e8)/0x3e8,_0x3fb7ea=Math['round'](Math[_0x452f4a(0x420)](0x2*Math['PI']*_0x25a626/0x18)*0x3e8)/0x3e8,_0x1c0c2e=_0x27957f['filter'](function(_0x18d668){var _0x3103f1=_0x452f4a,_0x42873d=_0x18d668[_0x3103f1(0x2f6)]||0x0;return(_0x18d668[_0x3103f1(0x132)]===_0x3103f1(0x3bb)||_0x18d668[_0x3103f1(0x132)]==='dimmer')&&(typeof _0x12f1ed!==_0x3103f1(0x45b)?_0x12f1ed[_0x3103f1(0x245)](_0x18d668['id']):![])&&_0x42873d>=_0x5d5a1d[_0x3103f1(0x29a)]-0xf*0xea60&&_0x42873d<=_0x5d5a1d['end']+0x1e*0xea60;}),_0x437aa1=_0x1c0c2e['length']>0x0?Number(_0x1c0c2e[_0x1c0c2e[_0x452f4a(0x1e0)]-0x1][_0x452f4a(0x49d)])>0x0?0x1:0x0:null,_0x2ecf2c=_0x27957f[_0x452f4a(0x44d)](function(_0xdf062c){var _0x2777b5=_0x452f4a,_0x52a9e4=_0xdf062c[_0x2777b5(0x2f6)]||0x0;return _0xdf062c[_0x2777b5(0x2c0)]&&_0x52a9e4>=_0x5d5a1d[_0x2777b5(0x29a)]-0xf*0xea60&&_0x52a9e4<=_0x5d5a1d[_0x2777b5(0x27b)]+0x1e*0xea60;}),_0x148c5f=_0x2ecf2c['length']>0x0?Number(_0x2ecf2c[_0x2ecf2c[_0x452f4a(0x1e0)]-0x1][_0x452f4a(0x49d)])>0x0?0x1:0x0:null,_0x524e32=_0x27957f[_0x452f4a(0x44d)](function(_0x1b6f3b){var _0x388d5c=_0x452f4a,_0x317112=_0x1b6f3b[_0x388d5c(0x2f6)]||0x0;return(_0x1b6f3b[_0x388d5c(0x132)]==='temperature'||_0x1b6f3b[_0x388d5c(0x132)]===_0x388d5c(0x143))&&(typeof _0x12f1ed!==_0x388d5c(0x45b)?_0x12f1ed[_0x388d5c(0x245)](_0x1b6f3b['id']):![])&&_0x317112>=_0x5d5a1d['start']-0xf*0xea60&&_0x317112<=_0x5d5a1d[_0x388d5c(0x27b)]+0x1e*0xea60;}),_0xfeb802=_0x524e32['length']>0x0?Number(_0x524e32[_0x524e32[_0x452f4a(0x1e0)]-0x1][_0x452f4a(0x49d)])||null:null,_0x253aff=_0x27957f[_0x452f4a(0x1cd)](function(_0xa91d67){var _0x41bdb2=_0x452f4a,_0x3a69e8=_0xa91d67[_0x41bdb2(0x2f6)]||0x0;return(_0xa91d67[_0x41bdb2(0x16e)]||typeof _0x3a0b4b!==_0x41bdb2(0x45b)&&_0x3a0b4b[_0x41bdb2(0x245)](_0xa91d67['id']))&&_0xa91d67[_0x41bdb2(0x132)]===_0x41bdb2(0x14d)&&_0x3a69e8>=_0x5d5a1d[_0x41bdb2(0x29a)]-0x3c*0xea60&&_0x3a69e8<_0x5d5a1d[_0x41bdb2(0x29a)];})?0x1:0x0,_0x533675=_0x27957f[_0x452f4a(0x1cd)](function(_0x3ee577){var _0x43fff8=_0x452f4a,_0x5051de=_0x3ee577[_0x43fff8(0x2f6)]||0x0;return(_0x3ee577[_0x43fff8(0x16e)]||typeof _0x3a0b4b!==_0x43fff8(0x45b)&&_0x3a0b4b[_0x43fff8(0x245)](_0x3ee577['id']))&&_0x3ee577['type']===_0x43fff8(0x14d)&&_0x5051de>_0x5d5a1d[_0x43fff8(0x27b)]&&_0x5051de<=_0x5d5a1d[_0x43fff8(0x27b)]+0x3c*0xea60;})?0x1:0x0;!_0x48402b[_0x452f4a(0x366)]&&(_0x48402b[_0x452f4a(0x366)]={'peakMax':_0x3f383c,'medianPeak':_0x4e7fde,'durSlots':_0xdb089f[_0x452f4a(0x1e0)],'avgPeak':_0x575563,'variance':_0x50d4de,'hourSin':_0x54f5ad,'hourCos':_0x3fb7ea,'lightOn':_0x437aa1,'presenceOn':_0x148c5f,'roomTemp':_0xfeb802,'bathBefore':_0x253aff,'bathAfter':_0x533675},_0x56708e=!![]),_0x33dbfb['push']({'peak':_0x3f383c,'durSlots':_0xdb089f['length'],'avgPeak':_0x575563,'variance':_0x50d4de,'tierB':0x0,'label':_0x2ecd8b,'date':_0x48402b['date']||'','hourSin':_0x54f5ad,'hourCos':_0x3fb7ea,'lightOn':_0x437aa1,'presenceOn':_0x148c5f,'roomTemp':_0xfeb802,'bathBefore':_0x253aff,'bathAfter':_0x533675});}}catch(_0x41cc0c){this['log'][_0x452f4a(0x277)](_0x452f4a(0x35e)+_0x41cc0c[_0x452f4a(0x2e2)]);}}if(_0x56708e)try{var _0x30ff19=JSON[_0x452f4a(0x332)](_0x18c5f9);this['config'][_0x452f4a(0x28d)]=_0x30ff19,this[_0x452f4a(0x31a)](_0x452f4a(0x284)+this[_0x452f4a(0x3bf)],{'native':{'sexTrainingLabels':_0x30ff19}},function(){}),this['log'][_0x452f4a(0x277)](_0x452f4a(0x1b5)+_0x18c5f9[_0x452f4a(0x44d)](function(_0x4713db){var _0x381303=_0x452f4a;return _0x4713db[_0x381303(0x366)];})['length']+_0x452f4a(0x18f));}catch(_0x2ef91e){}if(_0x3aa69b[_0x452f4a(0x1e0)]>=0x2&&_0x3cf2c0[_0x452f4a(0x1e0)]>=0x2)_0x3aa69b[_0x452f4a(0x21b)](function(_0x4c8a6b,_0x38af0b){return _0x4c8a6b-_0x38af0b;}),_0x3cf2c0[_0x452f4a(0x21b)](function(_0x2f8cb2,_0xad1dee){return _0x2f8cb2-_0xad1dee;}),_0x17a729=Math[_0x452f4a(0x347)](0x5,Math[_0x452f4a(0x32a)](_0x3aa69b[0x0]*0x1)),_0x5dea23=Math['max'](0x3,Math[_0x452f4a(0x32a)](_0x3cf2c0[0x0]*0.7)),_0x2f3831=_0x452f4a(0x29d),_0x9a6fa6=_0x595772[_0x452f4a(0x1e0)],this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)]('[OC-SEX]\x20Stufe-2-Kalib:\x20calibA='+_0x17a729+'\x20(vaginal/'+_0x3aa69b[_0x452f4a(0x1e0)]+_0x452f4a(0x2dd)+_0x5dea23+'\x20(oral/'+_0x3cf2c0[_0x452f4a(0x1e0)]+'x)');else{if(_0x595772[_0x452f4a(0x1e0)]>=0x2){_0x595772['sort'](function(_0x49c449,_0x37cbba){return _0x49c449-_0x37cbba;});var _0x2dc7a5=_0x595772[0x0];_0x5dea23=Math[_0x452f4a(0x347)](0x3,Math[_0x452f4a(0x32a)](_0x2dc7a5*0.7)),_0x17a729=Math[_0x452f4a(0x347)](0x5,Math[_0x452f4a(0x32a)](_0x2dc7a5*1.1)),_0x2f3831=_0x452f4a(0x3a0),_0x9a6fa6=_0x595772['length'],this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)]('[OC-SEX]\x20Kalibrierung\x20aus\x20'+_0x9a6fa6+_0x452f4a(0x398)+_0x17a729+_0x452f4a(0x307)+_0x5dea23+_0x452f4a(0x1c5)+_0x595772[_0x452f4a(0x2ab)](',')+')');}}}}catch(_0x384af0){this[_0x452f4a(0x1c0)][_0x452f4a(0x277)]('[OC-SEX]\x20Kalibrierung\x20Fehler:\x20'+_0x384af0[_0x452f4a(0x2e2)]);}_0x2f3831===_0x452f4a(0x48a)&&this[_0x452f4a(0x19e)][_0x452f4a(0x1b2)]&&Number(this[_0x452f4a(0x19e)][_0x452f4a(0x1b2)])>0x0&&(_0x5dea23=Number(this[_0x452f4a(0x19e)][_0x452f4a(0x1b2)]),_0x17a729=Math['round'](_0x5dea23*1.3),_0x2f3831=_0x452f4a(0x38e));if(_0x2f3831===_0x452f4a(0x48a)){var _0x7e1fcd=_0x54a4d3[_0x452f4a(0x44d)](function(_0x128982){var _0x2c131a=_0x452f4a;return _0x128982['type']===_0x2c131a(0x23f)&&(_0x128982[_0x2c131a(0x17c)]||_0x128982[_0x2c131a(0x2c0)])&&(_0x128982[_0x2c131a(0x2f6)]||0x0)>=_0x538029;})['map'](function(_0xcf2800){var _0x468770=_0x452f4a;return Number(_0xcf2800[_0x468770(0x49d)])||0x0;})[_0x452f4a(0x44d)](function(_0x434b94){return _0x434b94>0x0;});if(_0x7e1fcd[_0x452f4a(0x1e0)]>=0xa){_0x7e1fcd[_0x452f4a(0x21b)](function(_0x10e2eb,_0x3bc88e){return _0x10e2eb-_0x3bc88e;});var _0x18bb24=_0x7e1fcd[Math['floor'](_0x7e1fcd[_0x452f4a(0x1e0)]*0.75)];_0x17a729=Math[_0x452f4a(0x347)](0x5,Math[_0x452f4a(0x32a)](_0x18bb24*2.5)),_0x5dea23=Math[_0x452f4a(0x347)](0x3,Math[_0x452f4a(0x32a)](_0x18bb24*1.5)),_0x2f3831=_0x452f4a(0x42c),this[_0x452f4a(0x1c0)][_0x452f4a(0x277)](_0x452f4a(0x4b2)+_0x18bb24+_0x452f4a(0x193)+_0x17a729+_0x452f4a(0x307)+_0x5dea23);}}var _0x3d8dc5={'src':_0x2f3831,'n':_0x9a6fa6,'calibA':_0x17a729,'calibB':_0x5dea23},_0x538029=new Date(_0x1410d5+'T00:00:00')[_0x452f4a(0x16f)](),_0x30c9f0=_0x54a4d3[_0x452f4a(0x44d)](function(_0x52c56d){var _0x559bfe=_0x452f4a;return(_0x52c56d[_0x559bfe(0x132)]===_0x559bfe(0x23f)||_0x52c56d['type']===_0x559bfe(0x297))&&(_0x52c56d['isVibrationBed']||_0x52c56d[_0x559bfe(0x2c0)]||!_0x52c56d['isFP2Bed']&&!_0x52c56d['isBedroomMotion'])&&(_0x52c56d[_0x559bfe(0x2f6)]||0x0)>=_0x538029;})[_0x452f4a(0x21b)](function(_0x32545e,_0x37d6a6){var _0x3cd2f6=_0x452f4a;return(_0x32545e[_0x3cd2f6(0x2f6)]||0x0)-(_0x37d6a6[_0x3cd2f6(0x2f6)]||0x0);}),_0x4cce5a=_0x30c9f0[_0x452f4a(0x44d)](function(_0x21911b){var _0xa261eb=_0x452f4a;return _0x21911b[_0xa261eb(0x132)]===_0xa261eb(0x23f);}),_0x4d6b45=_0x30c9f0[_0x452f4a(0x44d)](function(_0x349c2b){var _0x101756=_0x452f4a;return _0x349c2b[_0x101756(0x132)]===_0x101756(0x297);}),_0x37d7c9=0x5*0x3c*0x3e8,_0x401bdc=[];if(_0x30c9f0[_0x452f4a(0x1e0)]>=0x4){var _0x4798bf=_0x30c9f0[0x0]['timestamp']||0x0,_0x2e03fc=(_0x30c9f0[_0x30c9f0[_0x452f4a(0x1e0)]-0x1][_0x452f4a(0x2f6)]||0x0)+_0x37d7c9;for(var _0x4d8095=_0x4798bf;_0x4d8095<_0x2e03fc;_0x4d8095+=_0x37d7c9){var _0x109d90=_0x4d8095+_0x37d7c9,_0x5609fa=_0x4cce5a[_0x452f4a(0x44d)](function(_0x304c36){var _0x1fa1a5=_0x452f4a;return(_0x304c36[_0x1fa1a5(0x2f6)]||0x0)>=_0x4d8095&&(_0x304c36[_0x1fa1a5(0x2f6)]||0x0)<_0x109d90;}),_0x518485=_0x4d6b45[_0x452f4a(0x44d)](function(_0x4cd3fa){var _0x45a67d=_0x452f4a;return(_0x4cd3fa[_0x45a67d(0x2f6)]||0x0)>=_0x4d8095&&(_0x4cd3fa[_0x45a67d(0x2f6)]||0x0)<_0x109d90;}),_0x1c9c0f=_0x5609fa[_0x452f4a(0x1cc)](function(_0x3d4d73){var _0x110fe5=_0x452f4a;return Number(_0x3d4d73[_0x110fe5(0x49d)])||0x0;}),_0x3c32c0=_0x1c9c0f[_0x452f4a(0x1e0)]>0x0?Math[_0x452f4a(0x347)]['apply'](null,_0x1c9c0f):0x0,_0x5cf4aa=_0x1c9c0f[_0x452f4a(0x1e0)]>0x0?Math[_0x452f4a(0x32a)](_0x1c9c0f[_0x452f4a(0x41c)](function(_0x3834b6,_0x46d3be){return _0x3834b6+_0x46d3be;},0x0)/_0x1c9c0f[_0x452f4a(0x1e0)]):0x0;_0x401bdc[_0x452f4a(0x400)]({'start':_0x4d8095,'end':_0x109d90,'strCnt':_0x5609fa[_0x452f4a(0x1e0)],'trigCnt':_0x518485['length'],'strMax':_0x3c32c0,'strAvg':_0x5cf4aa});}}var _0x44957f=[],_0x497ea5=[];_0x401bdc[_0x452f4a(0x3b3)](function(_0x1c6a71,_0x3178cd){var _0x426f03=_0x452f4a,_0x119061=(_0x1c6a71['trigCnt']>=0x2||_0x1c6a71['strCnt']>=0x1)&&_0x1c6a71[_0x426f03(0x379)]>=_0x17a729;if(_0x119061)_0x497ea5['push'](_0x3178cd);else{if(_0x497ea5[_0x426f03(0x1e0)]>=0x2)_0x44957f[_0x426f03(0x400)]({'run':_0x497ea5['slice'](),'tier':'A'});_0x497ea5=[];}});if(_0x497ea5['length']>=0x2)_0x44957f['push']({'run':_0x497ea5[_0x452f4a(0x314)](),'tier':'A'});var _0x4805a1=new Set();_0x44957f[_0x452f4a(0x3b3)](function(_0x462e91){var _0x3bcf32=_0x452f4a;_0x462e91[_0x3bcf32(0x1be)][_0x3bcf32(0x3b3)](function(_0x30d13f){var _0x329ed4=_0x3bcf32;_0x4805a1[_0x329ed4(0x1d3)](_0x30d13f);});});var _0x1d0943=[];_0x401bdc[_0x452f4a(0x3b3)](function(_0x45d122,_0x529402){var _0x44f86d=_0x452f4a;if(_0x4805a1[_0x44f86d(0x245)](_0x529402)){if(_0x1d0943['length']>=0x6&&_0x1d0943[_0x44f86d(0x1e0)]<=0x18)_0x44957f['push']({'run':_0x1d0943[_0x44f86d(0x314)](),'tier':'B'});_0x1d0943=[];return;}var _0x68aa0a=(_0x45d122['trigCnt']>=0x1||_0x45d122[_0x44f86d(0x4af)]>=0x1)&&_0x45d122[_0x44f86d(0x379)]>=_0x5dea23;if(_0x68aa0a)_0x1d0943[_0x44f86d(0x400)](_0x529402);else{if(_0x1d0943[_0x44f86d(0x1e0)]>=0x6&&_0x1d0943[_0x44f86d(0x1e0)]<=0x18)_0x44957f[_0x44f86d(0x400)]({'run':_0x1d0943[_0x44f86d(0x314)](),'tier':'B'});_0x1d0943=[];}});if(_0x1d0943[_0x452f4a(0x1e0)]>=0x6&&_0x1d0943[_0x452f4a(0x1e0)]<=0x18)_0x44957f['push']({'run':_0x1d0943[_0x452f4a(0x314)](),'tier':'B'});var _0x343f99=[];if(this[_0x452f4a(0x19e)][_0x452f4a(0x493)])try{var _0xebe0d4=await this[_0x452f4a(0x1f4)]((this['config'][_0x452f4a(0x493)]||'')[_0x452f4a(0x308)]());if(_0xebe0d4&&_0xebe0d4[_0x452f4a(0x24d)]){var _0x3e4b95=typeof _0xebe0d4['val']==='string'?JSON[_0x452f4a(0x46f)](_0xebe0d4[_0x452f4a(0x24d)]):_0xebe0d4[_0x452f4a(0x24d)];if(Array['isArray'](_0x3e4b95))_0x343f99=_0x3e4b95;}}catch(_0x53ebf6){this['log'][_0x452f4a(0x277)]('[OC-SEX]\x20Garmin\x20HR\x20nicht\x20lesbar:\x20'+_0x53ebf6['message']);}_0x44957f[_0x452f4a(0x3b3)](function(_0x38dfae){var _0x24226a=_0x452f4a,_0x1782bb=_0x38dfae[_0x24226a(0x1be)]||_0x38dfae,_0x5188b0=_0x401bdc[_0x1782bb[0x0]],_0x1f5958=_0x401bdc[_0x1782bb[_0x1782bb[_0x24226a(0x1e0)]-0x1]],_0x40e005=_0x5188b0['start'],_0x39c7bb=_0x1f5958[_0x24226a(0x27b)],_0x5d0f41=Math[_0x24226a(0x32a)](_0x1782bb[_0x24226a(0x1e0)]*0x5),_0x5282a8=_0x1782bb[_0x24226a(0x1cc)](function(_0x4fe5bb){return _0x401bdc[_0x4fe5bb];}),_0x54081b=Math[_0x24226a(0x347)][_0x24226a(0x409)](null,_0x5282a8['map'](function(_0x581acb){var _0xa0ad4d=_0x24226a;return _0x581acb[_0xa0ad4d(0x379)];})),_0x4ba519=Math[_0x24226a(0x32a)](_0x5282a8[_0x24226a(0x41c)](function(_0x34cd00,_0x235ea8){return _0x34cd00+_0x235ea8['strAvg'];},0x0)/_0x5282a8[_0x24226a(0x1e0)]),_0xa18cc=Math[_0x24226a(0x32a)](_0x5282a8['reduce'](function(_0x5a0ad9,_0x5a90b0){var _0x6cec0f=_0x24226a;return _0x5a0ad9+_0x5a90b0[_0x6cec0f(0x2d2)];},0x0)/_0x5282a8[_0x24226a(0x1e0)]),_0x39222c=Math[_0x24226a(0x288)](0x64,Math[_0x24226a(0x32a)](_0x54081b/0x78*0x64)),_0x797f17=Math[_0x24226a(0x288)](0x64,Math[_0x24226a(0x32a)](_0xa18cc/0xa*0x64)),_0x1d3ee0=Math['min'](0x64,Math[_0x24226a(0x32a)](_0x5d0f41/0x3c*0x64)),_0x140a95=Math[_0x24226a(0x32a)](_0x39222c*0.5+_0x797f17*0.3+_0x1d3ee0*0.2),_0x5e83a4=Math[_0x24226a(0x32a)](_0x17a729*1.5),_0x10098e=_0x5282a8[_0x24226a(0x44d)](function(_0x5c964a){var _0x8cb3ec=_0x24226a;return _0x5c964a[_0x8cb3ec(0x379)]>=_0x5e83a4&&_0x5c964a[_0x8cb3ec(0x4af)]>=0x2;}),_0x23511b=_0x38dfae['tier']==='B'?'oral_hand':_0x10098e['length']>=0x1?_0x24226a(0x174):_0x54081b>=_0x17a729?_0x24226a(0x218):_0x24226a(0x27d),_0x1ec1c0=null,_0x317656=null;if(_0x343f99['length']>0x0){var _0x7901c3=_0x343f99[_0x24226a(0x44d)](function(_0x224bd5){var _0x16e9fe=_0x24226a,_0x57d05c=_0x224bd5[_0x16e9fe(0x1f5)]?new Date(_0x224bd5[_0x16e9fe(0x1f5)])[_0x16e9fe(0x16f)]():_0x224bd5[_0x16e9fe(0x2f6)]||0x0;return _0x57d05c>=_0x40e005-0x5*0xea60&&_0x57d05c<=_0x39c7bb+0x5*0xea60;});if(_0x7901c3[_0x24226a(0x1e0)]>0x0){var _0x285dcd=_0x7901c3[_0x24226a(0x1cc)](function(_0x25c3a0){var _0x374fb4=_0x24226a;return Number(_0x25c3a0[_0x374fb4(0x49d)]||_0x25c3a0['heartRate']||0x0);})[_0x24226a(0x44d)](function(_0x308ed9){return _0x308ed9>0x0;});if(_0x285dcd[_0x24226a(0x1e0)]>0x0){_0x1ec1c0=Math[_0x24226a(0x347)][_0x24226a(0x409)](null,_0x285dcd),_0x317656=Math[_0x24226a(0x32a)](_0x285dcd['reduce'](function(_0x4d5bb9,_0xe5599c){return _0x4d5bb9+_0xe5599c;},0x0)/_0x285dcd['length']);if(_0x1ec1c0>0x64)_0x140a95=Math[_0x24226a(0x288)](0x64,_0x140a95+(_0x23511b===_0x24226a(0x174)?0xf:0xa));}}}_0x441e0b[_0x24226a(0x400)]({'start':_0x40e005,'end':_0x39c7bb,'duration':_0x5d0f41,'score':_0x140a95,'type':_0x23511b,'peakStrength':_0x54081b,'avgStrength':_0x4ba519,'avgTrigger':_0xa18cc,'garminHRMax':_0x1ec1c0,'garminHRAvg':_0x317656,'slots':_0x5282a8['map'](function(_0x15ca9b){var _0x4ee212=_0x24226a;return{'start':_0x15ca9b[_0x4ee212(0x29a)],'strMax':_0x15ca9b['strMax'],'strAvg':_0x15ca9b[_0x4ee212(0x13d)],'trigCnt':_0x15ca9b[_0x4ee212(0x2d2)]};})});});var _0x1dd00=0x1e*0x3c*0x3e8;_0x441e0b[_0x452f4a(0x21b)](function(_0x96d942,_0x3aa6cc){var _0x1a0313=_0x452f4a;return _0x96d942[_0x1a0313(0x29a)]-_0x3aa6cc['start'];});var _0x41c00c=[];for(var _0x4dea3e=0x0;_0x4dea3e<_0x441e0b[_0x452f4a(0x1e0)];_0x4dea3e++){var _0x4f4aa5=_0x441e0b[_0x4dea3e];if(_0x41c00c[_0x452f4a(0x1e0)]===0x0||_0x4f4aa5['start']-_0x41c00c[_0x41c00c[_0x452f4a(0x1e0)]-0x1][_0x452f4a(0x27b)]>_0x1dd00)_0x41c00c['push'](Object[_0x452f4a(0x49a)]({},_0x4f4aa5,{'slots':(_0x4f4aa5[_0x452f4a(0x3b9)]||[])[_0x452f4a(0x314)]()}));else{var _0x41638a=_0x41c00c[_0x41c00c[_0x452f4a(0x1e0)]-0x1],_0x3e9f03={'vaginal':0x3,'oral_hand':0x2,'intim':0x1};if((_0x3e9f03[_0x4f4aa5[_0x452f4a(0x132)]]||0x0)>(_0x3e9f03[_0x41638a['type']]||0x0))_0x41638a[_0x452f4a(0x132)]=_0x4f4aa5[_0x452f4a(0x132)];_0x41638a[_0x452f4a(0x27b)]=Math[_0x452f4a(0x347)](_0x41638a[_0x452f4a(0x27b)],_0x4f4aa5[_0x452f4a(0x27b)]),_0x41638a[_0x452f4a(0x252)]=Math[_0x452f4a(0x32a)]((_0x41638a[_0x452f4a(0x27b)]-_0x41638a[_0x452f4a(0x29a)])/0xea60),_0x41638a[_0x452f4a(0x269)]=Math[_0x452f4a(0x347)](_0x41638a[_0x452f4a(0x269)],_0x4f4aa5[_0x452f4a(0x269)]),_0x41638a[_0x452f4a(0x317)]=Math[_0x452f4a(0x32a)]((_0x41638a[_0x452f4a(0x317)]+_0x4f4aa5[_0x452f4a(0x317)])/0x2),_0x41638a[_0x452f4a(0x2b9)]=Math[_0x452f4a(0x32a)]((_0x41638a['avgTrigger']+_0x4f4aa5['avgTrigger'])/0x2),_0x41638a[_0x452f4a(0x378)]=Math['round']((_0x41638a[_0x452f4a(0x378)]+_0x4f4aa5[_0x452f4a(0x378)])/0x2),_0x41638a[_0x452f4a(0x3b9)]=(_0x41638a[_0x452f4a(0x3b9)]||[])['concat'](_0x4f4aa5['slots']||[]);if(_0x4f4aa5['garminHRMax']!=null)_0x41638a[_0x452f4a(0x258)]=_0x41638a[_0x452f4a(0x258)]!=null?Math[_0x452f4a(0x347)](_0x41638a[_0x452f4a(0x258)],_0x4f4aa5['garminHRMax']):_0x4f4aa5['garminHRMax'];if(_0x4f4aa5[_0x452f4a(0x3b2)]!=null)_0x41638a[_0x452f4a(0x3b2)]=_0x41638a[_0x452f4a(0x3b2)]!=null?Math['round']((_0x41638a['garminHRAvg']+_0x4f4aa5['garminHRAvg'])/0x2):_0x4f4aa5['garminHRAvg'];}}_0x41c00c['length']<_0x441e0b[_0x452f4a(0x1e0)]&&(this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)](_0x452f4a(0x382)+_0x441e0b[_0x452f4a(0x1e0)]+'\x20?\x20'+_0x41c00c[_0x452f4a(0x1e0)]+_0x452f4a(0x39c)),_0x441e0b=_0x41c00c);var _0x12f1ed=new Set((this[_0x452f4a(0x19e)][_0x452f4a(0x39e)]||[])[_0x452f4a(0x44d)](function(_0x103f9e){var _0x568529=_0x452f4a;return _0x103f9e[_0x568529(0x40b)]==='bed';})[_0x452f4a(0x1cc)](function(_0x220edb){return _0x220edb['id'];})),_0x19600b=(this['config'][_0x452f4a(0x39e)]||[])[_0x452f4a(0x44d)](function(_0x3cddb5){var _0x23a7c3=_0x452f4a;return _0x3cddb5['sensorFunction']===_0x23a7c3(0x1ef);})['map'](function(_0x55f1ba){var _0x20bdc4=_0x452f4a;return _0x55f1ba[_0x20bdc4(0x34d)];})[_0x452f4a(0x44d)](Boolean)[0x0]||null,_0x3a0b4b=new Set((this[_0x452f4a(0x19e)][_0x452f4a(0x39e)]||[])[_0x452f4a(0x44d)](function(_0x58dbee){var _0x21d743=_0x452f4a;return _0x58dbee[_0x21d743(0x40b)]===_0x21d743(0x44b)||_0x58dbee[_0x21d743(0x16e)];})[_0x452f4a(0x1cc)](function(_0xb5a4f5){return _0xb5a4f5['id'];})),_0x115bcc=new Set();try{var _0x2d4ef7=await this['getStateAsync'](_0x452f4a(0x406));if(_0x2d4ef7&&_0x2d4ef7[_0x452f4a(0x24d)]){var _0x5bebf8=JSON[_0x452f4a(0x46f)](_0x2d4ef7['val']),_0x2b94d8=_0x5bebf8[_0x452f4a(0x2a2)]||[],_0x504b9e=_0x5bebf8[_0x452f4a(0x469)]||[],_0x347c27=new Set((this['config'][_0x452f4a(0x39e)]||[])[_0x452f4a(0x44d)](function(_0x587a8d){var _0x54fd11=_0x452f4a;return _0x587a8d[_0x54fd11(0x40b)]==='bed';})[_0x452f4a(0x1cc)](function(_0x4c4592){return _0x4c4592['location'];})['filter'](Boolean));_0x347c27[_0x452f4a(0x3b3)](function(_0x9c4937){var _0x5e5e0d=_0x452f4a,_0x1bc534=_0x2b94d8[_0x5e5e0d(0x3f2)](_0x9c4937);if(_0x1bc534===-0x1)return;var _0x5b0f4f=new Array(_0x2b94d8[_0x5e5e0d(0x1e0)])[_0x5e5e0d(0x21d)](Infinity);_0x5b0f4f[_0x1bc534]=0x0;var _0x1f7acf=[_0x1bc534];while(_0x1f7acf[_0x5e5e0d(0x1e0)]>0x0){var _0x1b36b2=_0x1f7acf[_0x5e5e0d(0x2e3)]();if(_0x5b0f4f[_0x1b36b2]>=0x1)continue;for(var _0x17fc7d=0x0;_0x17fc7d<_0x2b94d8[_0x5e5e0d(0x1e0)];_0x17fc7d++){_0x504b9e[_0x1b36b2]&&_0x504b9e[_0x1b36b2][_0x17fc7d]===0x1&&_0x5b0f4f[_0x17fc7d]===Infinity&&(_0x5b0f4f[_0x17fc7d]=_0x5b0f4f[_0x1b36b2]+0x1,_0x1f7acf[_0x5e5e0d(0x400)](_0x17fc7d));}}_0x2b94d8['forEach'](function(_0x51d24a,_0x1eb9fb){var _0x2ac33a=_0x5e5e0d;if(_0x5b0f4f[_0x1eb9fb]===0x1)_0x115bcc[_0x2ac33a(0x1d3)](_0x51d24a);});});}}catch(_0x1704d5){}var _0x2dccff=(this['config'][_0x452f4a(0x39e)]||[])[_0x452f4a(0x44d)](function(_0x5e0277){var _0x174085=_0x452f4a;return _0x5e0277[_0x174085(0x132)]==='motion'&&!_0x5e0277['isBathroomSensor']&&_0x5e0277[_0x174085(0x40b)]!==_0x174085(0x1ef)&&_0x115bcc[_0x174085(0x245)](_0x5e0277[_0x174085(0x34d)]);})[_0x452f4a(0x1cc)](function(_0x4130e0){return _0x4130e0['id'];}),_0x2dccff=(this[_0x452f4a(0x19e)][_0x452f4a(0x39e)]||[])['filter'](function(_0x2d0ff1){var _0x1fdec9=_0x452f4a;return _0x2d0ff1['type']==='motion'&&!_0x2d0ff1['isBathroomSensor']&&_0x2d0ff1['sensorFunction']!==_0x1fdec9(0x1ef)&&_0x115bcc[_0x1fdec9(0x245)](_0x2d0ff1[_0x1fdec9(0x34d)]);})[_0x452f4a(0x1cc)](function(_0x54be93){return _0x54be93['id'];}),_0x2a57db=function(_0x2222fe,_0x1b16f4){var _0x201db2=_0x452f4a,_0x2ef0ef=_0x2222fe[_0x201db2(0x29a)]-0xf*0xea60,_0x1d632b=_0x2222fe[_0x201db2(0x27b)]+0x1e*0xea60,_0x251e77=_0x1b16f4['filter'](function(_0x5a13c5){var _0x5ad461=_0x201db2,_0x31c038=_0x5a13c5[_0x5ad461(0x2f6)]||0x0;return _0x31c038>=_0x2ef0ef&&_0x31c038<=_0x1d632b;}),_0x47ba85=new Date(_0x2222fe[_0x201db2(0x29a)]),_0xece78f=_0x47ba85[_0x201db2(0x2a9)]()+_0x47ba85['getMinutes']()/0x3c,_0x5f4d3f=Math[_0x201db2(0x32a)](Math[_0x201db2(0x177)](0x2*Math['PI']*_0xece78f/0x18)*0x3e8)/0x3e8,_0x36b821=Math[_0x201db2(0x32a)](Math[_0x201db2(0x420)](0x2*Math['PI']*_0xece78f/0x18)*0x3e8)/0x3e8,_0x5d1057=_0x251e77[_0x201db2(0x44d)](function(_0x36e55c){var _0xf83a10=_0x201db2;return(_0x36e55c['type']===_0xf83a10(0x3bb)||_0x36e55c[_0xf83a10(0x132)]===_0xf83a10(0x421))&&(_0x19600b?_0x36e55c[_0xf83a10(0x34d)]===_0x19600b:_0x12f1ed['has'](_0x36e55c['id']));}),_0x48fbb6=_0x5d1057['length']>0x0?Number(_0x5d1057[_0x5d1057[_0x201db2(0x1e0)]-0x1]['value'])>0x0?0x1:0x0:null,_0x5b5b3a=_0x251e77[_0x201db2(0x44d)](function(_0x4ecf5a){return _0x4ecf5a['isFP2Bed'];}),_0x909d=_0x5b5b3a[_0x201db2(0x1e0)]>0x0?Number(_0x5b5b3a[_0x5b5b3a['length']-0x1]['value'])>0x0?0x1:0x0:null,_0x3dac98=_0x251e77[_0x201db2(0x44d)](function(_0x1487b4){var _0xb3f240=_0x201db2;return(_0x1487b4[_0xb3f240(0x132)]===_0xb3f240(0x37c)||_0x1487b4['type']===_0xb3f240(0x143)||_0x1487b4[_0xb3f240(0x132)]==='heating_valve')&&(_0x19600b?_0x1487b4['location']===_0x19600b:_0x12f1ed[_0xb3f240(0x245)](_0x1487b4['id']));}),_0x3142f6=_0x3dac98[_0x201db2(0x1e0)]>0x0?Number(_0x3dac98[_0x3dac98[_0x201db2(0x1e0)]-0x1][_0x201db2(0x49d)])||null:null,_0x4956bf=_0x1b16f4[_0x201db2(0x1cd)](function(_0x5236f8){var _0x2813fd=_0x201db2,_0x11814b=_0x5236f8[_0x2813fd(0x2f6)]||0x0;return(_0x5236f8[_0x2813fd(0x16e)]||_0x3a0b4b[_0x2813fd(0x245)](_0x5236f8['id']))&&_0x5236f8[_0x2813fd(0x132)]===_0x2813fd(0x14d)&&_0x11814b>=_0x2222fe[_0x2813fd(0x29a)]-0x3c*0xea60&&_0x11814b<_0x2222fe[_0x2813fd(0x29a)];})?0x1:0x0,_0x370359=_0x1b16f4[_0x201db2(0x1cd)](function(_0x5af0b9){var _0xe28079=_0x201db2,_0x1aaf3c=_0x5af0b9['timestamp']||0x0;return(_0x5af0b9[_0xe28079(0x16e)]||_0x3a0b4b['has'](_0x5af0b9['id']))&&_0x5af0b9[_0xe28079(0x132)]===_0xe28079(0x14d)&&_0x1aaf3c>_0x2222fe['end']&&_0x1aaf3c<=_0x2222fe['end']+0x3c*0xea60;})?0x1:0x0,_0x4df30b=_0x115bcc[_0x201db2(0x224)]>0x0?_0x1b16f4[_0x201db2(0x1cd)](function(_0x2b5621){var _0x561071=_0x201db2,_0x46ee32=_0x2b5621[_0x561071(0x2f6)]||0x0;return _0x2b5621[_0x561071(0x132)]===_0x561071(0x14d)&&_0x115bcc[_0x561071(0x245)](_0x2b5621[_0x561071(0x34d)])&&_0x46ee32>=_0x2222fe[_0x561071(0x29a)]-0x5*0xea60&&_0x46ee32<=_0x2222fe[_0x561071(0x27b)]+0x5*0xea60;})?0x1:0x0:null;return{'hourSin':_0x5f4d3f,'hourCos':_0x36b821,'lightOn':_0x48fbb6,'presenceOn':_0x909d,'roomTemp':_0x3142f6,'bathBefore':_0x4956bf,'bathAfter':_0x370359,'nearbyRoomMotion':_0x4df30b};},_0x308daa=null,_0x483e74=typeof _0x33dbfb!==_0x452f4a(0x45b)?_0x33dbfb:[];if(_0x483e74[_0x452f4a(0x1e0)]>=0x3)try{var _0x3da928=_0x441e0b[_0x452f4a(0x1cc)](function(_0x53e812){var _0x11452d=_0x452f4a,_0x475266=_0x53e812[_0x11452d(0x3b9)]||[],_0x16b52e=_0x475266[_0x11452d(0x1cc)](function(_0x3da318){var _0x1b9543=_0x11452d;return _0x3da318[_0x1b9543(0x379)]||0x0;}),_0x3a37b7=_0x16b52e[_0x11452d(0x1e0)]>0x0?_0x16b52e[_0x11452d(0x41c)](function(_0x3dce32,_0x1b0447){return _0x3dce32+_0x1b0447;},0x0)/_0x16b52e[_0x11452d(0x1e0)]:0x0,_0x1cc18b=_0x16b52e[_0x11452d(0x1e0)]>0x0?_0x16b52e[_0x11452d(0x41c)](function(_0x2fcacd,_0xc41300){return _0x2fcacd+(_0xc41300-_0x3a37b7)*(_0xc41300-_0x3a37b7);},0x0)/_0x16b52e['length']:0x0,_0x430bce=_0x2a57db(_0x53e812,_0x54a4d3);return Object[_0x11452d(0x49a)]({'peak':_0x53e812[_0x11452d(0x269)],'durSlots':_0x475266[_0x11452d(0x1e0)],'avgPeak':Math[_0x11452d(0x32a)](_0x3a37b7),'variance':Math[_0x11452d(0x32a)](_0x1cc18b),'tierB':_0x53e812['tier']==='B'?0x1:0x0},_0x430bce);}),_0x55a205=await new Promise(function(_0x53bad5,_0xe712d9){var _0x3d82b5=_0x452f4a,_0xf0a1c5=setTimeout(function(){var _0x1936df=a0_0x5e53;_0xe712d9(new Error(_0x1936df(0x3b7)));},0x3a98);pythonBridge['send'](this,_0x3d82b5(0x401),{'train':_0x483e74,'predict':_0x3da928},function(_0x2366b0){clearTimeout(_0xf0a1c5),_0x53bad5(_0x2366b0);});}[_0x452f4a(0x490)](this));_0x55a205&&_0x55a205[_0x452f4a(0x152)]&&(_0x308daa=_0x55a205[_0x452f4a(0x152)],_0x308daa[_0x452f4a(0x40d)]&&Array['isArray'](_0x308daa[_0x452f4a(0x2a6)])&&(_0x308daa[_0x452f4a(0x2a6)][_0x452f4a(0x3b3)](function(_0x19ebd5,_0x522afb){var _0x9bdfca=_0x452f4a;if(!_0x441e0b[_0x522afb])return;if(_0x19ebd5[_0x9bdfca(0x132)]===_0x9bdfca(0x228)&&_0x19ebd5[_0x9bdfca(0x1b7)]>=0.6)this[_0x9bdfca(0x1c0)]['info'](_0x9bdfca(0x339)+_0x522afb+_0x9bdfca(0x4b4)),_0x441e0b[_0x522afb]=null;else _0x19ebd5[_0x9bdfca(0x132)]&&_0x19ebd5[_0x9bdfca(0x132)]!=='nullnummer'&&_0x19ebd5['confidence']>=0.55&&(_0x441e0b[_0x522afb][_0x9bdfca(0x132)]=_0x19ebd5['type'],_0x441e0b[_0x522afb][_0x9bdfca(0x34b)]=Math[_0x9bdfca(0x32a)](_0x19ebd5['confidence']*0x64));}[_0x452f4a(0x490)](this)),_0x441e0b=_0x441e0b[_0x452f4a(0x44d)](function(_0x5e5e34){return _0x5e5e34!==null;})));}catch(_0x58fc2e){this[_0x452f4a(0x1c0)][_0x452f4a(0x277)]('[OC-SEX-PY]\x20'+_0x58fc2e['message']);}_0x3d8dc5[_0x452f4a(0x1f9)]=_0x308daa?{'trained':_0x308daa[_0x452f4a(0x40d)]||![],'n':_0x308daa['n_samples']||0x0,'counts':_0x308daa[_0x452f4a(0x3be)]||{},'msg':_0x308daa[_0x452f4a(0x2ee)]||'','feature_importances':_0x308daa[_0x452f4a(0x38a)]||[],'loo_accuracy':_0x308daa[_0x452f4a(0x485)]!=null?_0x308daa[_0x452f4a(0x485)]:null,'confusion_matrix':_0x308daa['confusion_matrix']||null,'loo_details':_0x308daa[_0x452f4a(0x1bb)]||[],'nearbyRoomSensorIds':_0x2dccff}:null;if(!_0x3d8dc5[_0x452f4a(0x1f9)])try{var _0xa27ee7=path[_0x452f4a(0x2ab)](utils[_0x452f4a(0x476)](),_0x452f4a(0x41e),_0x452f4a(0x20a),_0x1410d5+'.json');if(fs[_0x452f4a(0x2c5)](_0xa27ee7)){var _0x2c2496=JSON['parse'](fs[_0x452f4a(0x3b1)](_0xa27ee7,'utf8'));_0x2c2496[_0x452f4a(0x1c6)]&&_0x2c2496[_0x452f4a(0x1c6)]['pyClassifier']&&_0x2c2496[_0x452f4a(0x1c6)]['pyClassifier'][_0x452f4a(0x40d)]&&(_0x3d8dc5[_0x452f4a(0x1f9)]=_0x2c2496[_0x452f4a(0x1c6)][_0x452f4a(0x1f9)],this['log'][_0x452f4a(0x277)](_0x452f4a(0x2ed)+_0x3d8dc5[_0x452f4a(0x1f9)][_0x452f4a(0x40d)]+')'));}}catch(_0x776bb6){this[_0x452f4a(0x1c0)][_0x452f4a(0x277)]('[OC-SEX]\x20pyClassifier-Fallback:\x20'+_0x776bb6['message']);}_0x441e0b[_0x452f4a(0x1e0)]>0x0?this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)](_0x452f4a(0x399)+_0x441e0b[_0x452f4a(0x1e0)]+_0x452f4a(0x26d)+_0x17a729+_0x452f4a(0x307)+_0x5dea23+'\x20Scores:\x20'+_0x441e0b[_0x452f4a(0x1cc)](function(_0x468f96){return _0x468f96['score']+'('+_0x468f96['type']+')';})[_0x452f4a(0x2ab)](',\x20')):this[_0x452f4a(0x1c0)]['debug']('[OC-SEX]\x20daily:\x200\x20Events\x20(calibA='+_0x17a729+_0x452f4a(0x340)+_0x5dea23+',\x20'+_0x30c9f0[_0x452f4a(0x1e0)]+_0x452f4a(0x498));}catch(_0x566c3b){this[_0x452f4a(0x1c0)][_0x452f4a(0x1d2)]('[OC-SEX]\x20Fehler\x20bei\x20Intimacy-Detection:\x20'+_0x566c3b[_0x452f4a(0x2e2)]);}try{var _0x277f40=new Date();_0x277f40[_0x452f4a(0x3c4)](_0x277f40[_0x452f4a(0x414)]()-0x1);var _0x4f5d7a=_0x277f40[_0x452f4a(0x32f)]()+'-'+String(_0x277f40['getMonth']()+0x1)['padStart'](0x2,'0')+'-'+String(_0x277f40[_0x452f4a(0x414)]())[_0x452f4a(0x18d)](0x2,'0'),_0x552fc6=path[_0x452f4a(0x2ab)](utils[_0x452f4a(0x476)](),_0x452f4a(0x41e),'history',_0x4f5d7a+_0x452f4a(0x461));if(fs['existsSync'](_0x552fc6)&&_0x441e0b[_0x452f4a(0x1e0)]>0x0){var _0x1a46a5=JSON[_0x452f4a(0x46f)](fs[_0x452f4a(0x3b1)](_0x552fc6,_0x452f4a(0x449))),_0x178519=new Set((_0x1a46a5[_0x452f4a(0x2a5)]||[])[_0x452f4a(0x1cc)](function(_0x20d743){var _0x488b10=_0x452f4a;return _0x20d743[_0x488b10(0x29a)];})),_0x1c2667=_0x441e0b[_0x452f4a(0x1e0)];_0x441e0b=_0x441e0b[_0x452f4a(0x44d)](function(_0xb32312){var _0x178b33=_0x452f4a;return!_0x178519[_0x178b33(0x245)](_0xb32312[_0x178b33(0x29a)]);}),_0x441e0b['length']<_0x1c2667&&this[_0x452f4a(0x1c0)][_0x452f4a(0x2c9)](_0x452f4a(0x430)+(_0x1c2667-_0x441e0b[_0x452f4a(0x1e0)])+'\x20doppeltes\x20Event(s)\x20aus\x20'+_0x4f5d7a+_0x452f4a(0x13c));}}catch(_0x5c87da){this[_0x452f4a(0x1c0)][_0x452f4a(0x277)](_0x452f4a(0x333)+_0x5c87da[_0x452f4a(0x2e2)]);}try{var _0x5164ad=[];try{var _0x37c06a=JSON[_0x452f4a(0x46f)](this['config'][_0x452f4a(0x28d)]||'[]');if(Array[_0x452f4a(0x20b)](_0x37c06a))_0x5164ad=_0x37c06a[_0x452f4a(0x44d)](function(_0x4f25f1){var _0x160c35=_0x452f4a;return _0x4f25f1&&_0x4f25f1['date']===_0x1410d5&&_0x4f25f1[_0x160c35(0x132)]===_0x160c35(0x228)&&_0x4f25f1[_0x160c35(0x147)];});}catch(_0x974a39){}if(_0x5164ad[_0x452f4a(0x1e0)]>0x0&&_0x441e0b[_0x452f4a(0x1e0)]>0x0){var _0x53fb96=_0x441e0b[_0x452f4a(0x1e0)];_0x441e0b=_0x441e0b[_0x452f4a(0x44d)](function(_0x603f51){return!_0x5164ad['some'](function(_0x145264){var _0xc16ad8=a0_0x5e53,_0x5867d5=_0x145264[_0xc16ad8(0x147)][_0xc16ad8(0x1d0)](':')[_0xc16ad8(0x1cc)](Number),_0xaf1128=new Date(_0x1410d5+_0xc16ad8(0x29b))[_0xc16ad8(0x254)](_0x5867d5[0x0],_0x5867d5[0x1],0x0,0x0);return Math[_0xc16ad8(0x1a2)]((_0x603f51[_0xc16ad8(0x29a)]||0x0)-_0xaf1128)<0x1e*0xea60;});});if(_0x441e0b[_0x452f4a(0x1e0)]<_0x53fb96)this[_0x452f4a(0x1c0)]['info'](_0x452f4a(0x3f3)+(_0x53fb96-_0x441e0b[_0x452f4a(0x1e0)])+_0x452f4a(0x3fd)+_0x441e0b[_0x452f4a(0x1e0)]+_0x452f4a(0x36c));}}catch(_0x1e841a){this[_0x452f4a(0x1c0)][_0x452f4a(0x277)]('[OC-SEX]\x20Nullnummer-Filter:\x20'+_0x1e841a[_0x452f4a(0x2e2)]);}const _0x7675f3={'date':_0x1410d5,'timestamp':Date[_0x452f4a(0x1ae)](),'roomHistory':_0x32f1d4,'todayRoomMinutes':_0x586517,'geminiNight':_0x513b01?.['val']||null,'geminiDay':_0x3a7375?.[_0x452f4a(0x24d)]||null,'anomalyScore':_0x42c557?.['val']!==undefined&&_0x42c557?.['val']!==null?Number(_0x42c557[_0x452f4a(0x24d)]):null,'todayVector':((()=>{var _0x4d8098=_0x452f4a;let _0x1547d1=_0x39559f?.[_0x4d8098(0x24d)]?JSON[_0x4d8098(0x46f)](_0x39559f['val']):null;const _0x59404c=!_0x1547d1||_0x1547d1[_0x4d8098(0x1fc)](_0x14b4eb=>_0x14b4eb===0x0);if(_0x59404c&&_0x4f79a6['length']>0x0){_0x1547d1=new Array(0x30)[_0x4d8098(0x21d)](0x0);const _0x1ddbb3=new Date()[_0x4d8098(0x254)](0x0,0x0,0x0,0x0);_0x4f79a6[_0x4d8098(0x3b3)](_0x53ac34=>{var _0x103bf6=_0x4d8098;const _0x327431=_0x53ac34[_0x103bf6(0x2f6)]||_0x53ac34['ts']||0x0;if(_0x327431>=_0x1ddbb3){const _0x33f5ec=new Date(_0x327431),_0x242bb1=_0x33f5ec[_0x103bf6(0x2a9)]()*0x2+Math['floor'](_0x33f5ec['getMinutes']()/0x1e);if(_0x242bb1>=0x0&&_0x242bb1<0x30)_0x1547d1[_0x242bb1]++;}});}return _0x1547d1||new Array(0x30)[_0x4d8098(0x21d)](0x0);})()),'batteryLevel':_0x43a274,'freshAirCount':_0x582350,'freshAirLongCount':_0x1d7c47,'windowOpenings':_0x582350,'gaitSpeed':((()=>{var _0x28641b=_0x452f4a;try{const _0x4c4200=this['_lastSeqState'];if(!_0x4c4200)return null;const _0x1d2a03=JSON[_0x28641b(0x46f)](_0x4c4200),_0x1f46d6=_0x1410d5,_0x1c0992=_0x1d2a03['filter'](_0x13f3db=>(_0x13f3db[_0x28641b(0x2f6)]||'')[_0x28641b(0x267)](_0x1f46d6));if(_0x1c0992[_0x28641b(0x1e0)]<0x1)return null;const _0x3351dd=(this[_0x28641b(0x19e)][_0x28641b(0x39e)]||[])[_0x28641b(0x44d)](_0x33b5ae=>_0x33b5ae[_0x28641b(0x15b)]||_0x33b5ae[_0x28641b(0x40b)]===_0x28641b(0x446)),_0x5e9a5f=_0x3351dd[_0x28641b(0x44d)](_0xcbe75e=>_0xcbe75e[_0x28641b(0x2b6)]),_0x5af936=_0x5e9a5f['length']>0x0?_0x5e9a5f:_0x3351dd,_0x42b294=_0x5af936[_0x28641b(0x1cc)](_0x44bd4b=>_0x44bd4b['location']||_0x44bd4b['name']||''),_0x227864=[_0x28641b(0x157),_0x28641b(0x178),_0x28641b(0x17b),_0x28641b(0x3f6)],_0x2836ad=_0x2ae28e=>_0x42b294[_0x28641b(0x256)](_0x2ae28e)||_0x42b294[_0x28641b(0x1e0)]===0x0&&_0x227864[_0x28641b(0x1cd)](_0x10a48a=>(_0x2ae28e||'')[_0x28641b(0x1f3)]()[_0x28641b(0x256)](_0x10a48a)),_0x4865fc=[];for(const _0x599e79 of _0x1c0992){const _0x346276=_0x599e79[_0x28641b(0x31d)]||[];if(_0x346276[_0x28641b(0x1e0)]<0x3)continue;for(let _0x499bf5=0x1;_0x499bf5<_0x346276['length']-0x1;_0x499bf5++){if(!_0x2836ad(_0x346276[_0x499bf5][_0x28641b(0x1bd)]))continue;if(_0x2836ad(_0x346276[_0x499bf5-0x1]['loc'])||_0x2836ad(_0x346276[_0x499bf5+0x1]['loc']))continue;const _0x4d2625=(_0x346276[_0x499bf5+0x1]['t_delta']||0x0)-(_0x346276[_0x499bf5]['t_delta']||0x0);if(_0x4d2625>=0x1&&_0x4d2625<=0x14)_0x4865fc[_0x28641b(0x400)](_0x4d2625);}}if(_0x4865fc[_0x28641b(0x1e0)]<0x2)return null;_0x4865fc[_0x28641b(0x21b)]((_0x2e9ca7,_0x14ae9f)=>_0x2e9ca7-_0x14ae9f);const _0x22cc64=_0x4865fc[Math[_0x28641b(0x39d)](_0x4865fc[_0x28641b(0x1e0)]/0x2)];return Math[_0x28641b(0x32a)](_0x22cc64*0xa)/0xa;}catch(_0xb0430a){return null;}})()),'eventHistory':_0x4f79a6,'nocturiaCount':_0x3ee677,'kitchenVisits':_0x42496b,'sleepWindowStart':_0x22e1cf[_0x452f4a(0x29a)],'sleepWindowEnd':_0x22e1cf[_0x452f4a(0x27b)],'maxPersonsDetected':_0x54bfbb,'bedPresenceMinutes':_0x46c4ad,'nightVibrationCount':_0x841bfd,'nightVibrationStrengthAvg':_0x8e31d,'nightVibrationStrengthMax':_0x4d0a3a,'personData':_0x29d112,'sleepScore':_0xa9797,'sleepScoreRaw':_0xa0ffc0,'sleepScoreCal':_0x43c6a0,'sleepScoreCalNights':_0x353e57,'sleepScoreCalStatus':_0x49ac16,'sleepStages':_0x3ce386,'stagesWindowStart':_0x3a949e?_0x2cffaa[_0x452f4a(0x4a4)]??_0x2cffaa[_0x452f4a(0x28f)]??null:_0x22e1cf['start']??null,'garminScore':_0x1872c1,'garminDeepMin':_0x9bcedc?Math[_0x452f4a(0x32a)](_0x9bcedc/0x3c):null,'garminLightMin':_0x52a99a?Math['round'](_0x52a99a/0x3c):null,'garminRemMin':_0x256de0?Math[_0x452f4a(0x32a)](_0x256de0/0x3c):null,'sleepWindowSource':_0xc4d089,'outsideBedEvents':_0x14a3d6,'intimacyEvents':_0x441e0b,'sexCalibInfo':_0x3d8dc5,'wakeSource':_0x56d25e,'wakeConf':_0x5441d0,'allWakeSources':_0x4367aa,'sleepStartSource':_0x4d9bb9,'allSleepStartSources':_0x539004,'wakeConfirmed':!!(_0x22e1cf[_0x452f4a(0x27b)]&&new Date()[_0x452f4a(0x2a9)]()>=0xa&&Date[_0x452f4a(0x1ae)]()-(_0x22e1cf[_0x452f4a(0x27b)]||0x0)>=0x36ee80),'sleepDate':_0x4d0488,'sleepStartOverridden':_0x1cc526,'sleepStartOverrideSource':_0x1cc526?_0x4d9bb9:null,'wakeOverridden':_0x4d5690,'bedWasEmpty':_0x147170},_0x5b4f58=utils[_0x452f4a(0x476)](),_0x429aca=path[_0x452f4a(0x2ab)](_0x5b4f58,'cogni-living',_0x452f4a(0x20a));if(!fs[_0x452f4a(0x2c5)](_0x429aca))fs[_0x452f4a(0x28c)](_0x429aca,{'recursive':!![]});const _0x1915f8=path[_0x452f4a(0x2ab)](_0x429aca,_0x1410d5+_0x452f4a(0x461));fs[_0x452f4a(0x492)](_0x1915f8,JSON[_0x452f4a(0x332)](_0x7675f3)),this['log'][_0x452f4a(0x2c9)](_0x452f4a(0x275)+_0x1915f8);try{const _0x13b804=(_0x1931f3,_0x4b1b68)=>{var _0x4838fc=_0x452f4a;if(!_0x1931f3||!_0x4b1b68)return null;return Math[_0x4838fc(0x1a2)](Math[_0x4838fc(0x32a)]((_0x1931f3-_0x4b1b68)/0xea60));},_0x342beb={'date':_0x1410d5,'ts':Date[_0x452f4a(0x1ae)](),'chosen':{'sleepStartSource':_0x4d9bb9||null,'wakeSource':_0x56d25e||null,'wakeConf':_0x5441d0||null},'references':{'garminSleepStartTs':_0x4577bd||null,'garminWakeTs':_0x1f5daa||null},'candidatesStart':{'garmin':_0x4577bd||null,'fp2_vib':_0x399cf6||null,'fp2':_0x2d8ef5||null,'motion':_0x2003db['start']||null,'fixed':_fixedSleepStartTs||null},'candidatesWake':{'garmin':_0x1f5daa||null,'fp2_vib':fp2VibWakeTs||null,'fp2_other':fp2OtherWakeTs||null,'fp2':_0xefac11||null,'other':otherRoomWakeTs||null,'motion':_0xc4d089===_0x452f4a(0x14d)?_0xefac11:null,'vibration_alone':vibAloneWakeTs||null,'vibration':vibWakeTs||null,'fixed':_0xc4d089===_0x452f4a(0x25e)?_0xefac11:null},'absDeltaToGarminMin':{'sleepStart':{'fp2_vib':_0x13b804(_0x399cf6,_0x4577bd),'fp2':_0x13b804(_0x2d8ef5,_0x4577bd),'motion':_0x13b804(_0x2003db[_0x452f4a(0x29a)],_0x4577bd),'fixed':_0x13b804(_fixedSleepStartTs,_0x4577bd)},'wake':{'fp2_vib':_0x13b804(fp2VibWakeTs,_0x1f5daa),'fp2_other':_0x13b804(fp2OtherWakeTs,_0x1f5daa),'fp2':_0x13b804(_0xefac11,_0x1f5daa),'other':_0x13b804(otherRoomWakeTs,_0x1f5daa),'vibration_alone':_0x13b804(vibAloneWakeTs,_0x1f5daa),'vibration':_0x13b804(vibWakeTs,_0x1f5daa)}}};let _0x3ddc3c=[];const _0x57c4d0=await this['getStateAsync']('analysis.health.sleepCalibrationLog');if(_0x57c4d0&&_0x57c4d0[_0x452f4a(0x24d)])try{_0x3ddc3c=JSON[_0x452f4a(0x46f)](_0x57c4d0['val']);if(!Array[_0x452f4a(0x20b)](_0x3ddc3c))_0x3ddc3c=[];}catch(_0x5422ce){_0x3ddc3c=[];}_0x3ddc3c[_0x452f4a(0x400)](_0x342beb);if(_0x3ddc3c[_0x452f4a(0x1e0)]>0x78)_0x3ddc3c=_0x3ddc3c[_0x452f4a(0x314)](_0x3ddc3c[_0x452f4a(0x1e0)]-0x78);await this[_0x452f4a(0x295)](_0x452f4a(0x311),{'val':JSON[_0x452f4a(0x332)](_0x3ddc3c),'ack':!![]});}catch(_0x839111){this[_0x452f4a(0x1c0)][_0x452f4a(0x1d2)]('[SleepCalibration]\x20Log\x20konnte\x20nicht\x20gespeichert\x20werden:\x20'+_0x839111['message']);}this[_0x452f4a(0x16a)](_0x429aca)[_0x452f4a(0x34f)](_0x2b06d7=>this['log'][_0x452f4a(0x1d2)](_0x452f4a(0x159)+_0x2b06d7[_0x452f4a(0x2e2)]));}catch(_0x3fd9ad){this['log']['error'](_0x452f4a(0x203)+_0x3fd9ad[_0x452f4a(0x2e2)]);}}async[a0_0x44e735(0x16a)](_0x46d143){var _0x49d270=a0_0x44e735;const _0x450f32=require(_0x49d270(0x233)),_0x1fec67=0xe,_0x258314=0xa;try{const _0x499ffb=await this['getStateAsync'](_0x49d270(0x35b))[_0x49d270(0x34f)](()=>null);if(_0x499ffb&&_0x499ffb[_0x49d270(0x24d)]){const _0x1d30ee=(Date['now']()-new Date(_0x499ffb[_0x49d270(0x24d)])['getTime']())/0x5265c00;if(_0x1d30ee<_0x1fec67){this[_0x49d270(0x1c0)][_0x49d270(0x277)](_0x49d270(0x3e2)+_0x1d30ee[_0x49d270(0x138)](0x0)+_0x49d270(0x1ab)+_0x1fec67+'\x20Tagen)');return;}}}catch(_0x57092a){}const _0x25a783=[];for(let _0x3a57d8=0x1;_0x3a57d8<=0x3c;_0x3a57d8++){const _0x5e579b=new Date();_0x5e579b['setDate'](_0x5e579b[_0x49d270(0x414)]()-_0x3a57d8);const _0x15cefc=_0x5e579b[_0x49d270(0x1e4)]()['slice'](0x0,0xa),_0x11f640=path[_0x49d270(0x2ab)](_0x46d143,_0x15cefc+_0x49d270(0x461));if(fs[_0x49d270(0x2c5)](_0x11f640))try{const _0x339451=JSON[_0x49d270(0x46f)](fs[_0x49d270(0x3b1)](_0x11f640,_0x49d270(0x449))),_0x3dc98a=_0x339451['todayVector']||[],_0x102498=_0x3dc98a[_0x49d270(0x41c)]((_0x52971b,_0x57e8a2)=>_0x52971b+_0x57e8a2,0x0),_0x4cf269=_0x339451['gaitSpeed']>0x0&&_0x339451[_0x49d270(0x1e5)]<0x3c?_0x339451[_0x49d270(0x1e5)]:0x0,_0x1101e3=_0x339451[_0x49d270(0x483)]!==undefined?_0x339451[_0x49d270(0x483)]:Array[_0x49d270(0x20b)](_0x339451['eventHistory'])?_0x339451['eventHistory'][_0x49d270(0x44d)](_0x545f69=>{var _0x41c19b=_0x49d270;const _0x383ede=new Date(_0x545f69[_0x41c19b(0x2f6)]||_0x545f69['ts']||0x0)[_0x41c19b(0x2a9)]();return _0x383ede>=0x16||_0x383ede<0x6;})[_0x49d270(0x1e0)]:0x0;_0x25a783[_0x49d270(0x400)]({'date':_0x15cefc,'act':_0x102498,'gs':_0x4cf269,'nt':_0x1101e3});}catch(_0x225070){}}_0x25a783['sort']((_0x16aec8,_0x595848)=>_0x16aec8['date'][_0x49d270(0x187)](_0x595848[_0x49d270(0x179)]));if(_0x25a783[_0x49d270(0x1e0)]<_0x258314){this[_0x49d270(0x1c0)][_0x49d270(0x277)](_0x49d270(0x12f)+_0x25a783['length']+')');return;}const _0x385630=_0xd99bd8=>{var _0x588b32=_0x49d270;const _0x5a1e72=[..._0xd99bd8][_0x588b32(0x21b)]((_0x1f7fdd,_0x328250)=>_0x1f7fdd-_0x328250);return _0x5a1e72[Math['floor'](_0x5a1e72['length']/0x2)]||0x1;},_0x3aac7f=_0x25a783[_0x49d270(0x1cc)](_0x39cc64=>_0x39cc64[_0x49d270(0x1d6)])[_0x49d270(0x44d)](_0x1f926=>_0x1f926>0x0),_0x45add5=_0x385630(_0x3aac7f)||0x1,_0x47f3e2=_0x25a783[_0x49d270(0x1cc)](_0x1ab2e8=>_0x1ab2e8['act']>0x0?Math[_0x49d270(0x288)](0xc8,Math['round'](_0x1ab2e8[_0x49d270(0x1d6)]/_0x45add5*0x64)):0x0),_0x240fef=(_0x3ef8f6,_0x380c51='up',_0x1d4da5=0.5)=>{var _0x113f32=_0x49d270;const _0x35d458=Math[_0x113f32(0x288)](0xe,Math[_0x113f32(0x347)](0x7,Math[_0x113f32(0x39d)](_0x3ef8f6[_0x113f32(0x1e0)]/0x2))),_0x4c1b4b=_0x3ef8f6['slice'](0x0,_0x35d458)[_0x113f32(0x44d)](_0x16feb6=>_0x16feb6>0x0);if(_0x4c1b4b[_0x113f32(0x1e0)]<0x3)return{'score':0x0,'threshold':0x32,'alarm':![]};const _0x45b105=_0x4c1b4b['reduce']((_0x58307c,_0x20b8bf)=>_0x58307c+_0x20b8bf,0x0)/_0x4c1b4b[_0x113f32(0x1e0)],_0x4d31c0=Math['sqrt'](_0x4c1b4b[_0x113f32(0x41c)]((_0x383c13,_0x179702)=>_0x383c13+(_0x179702-_0x45b105)**0x2,0x0)/_0x4c1b4b[_0x113f32(0x1e0)])||0x1,_0x4d9548=Math[_0x113f32(0x347)](0x1e,0x3*_0x4d31c0*Math[_0x113f32(0x282)](Math['max'](0x1,_0x3ef8f6[_0x113f32(0x1e0)]-_0x35d458)));let _0x19c3e9=0x0,_0x527b52=0x0,_0x56dae2=0x0;for(let _0x4b98b4=_0x35d458;_0x4b98b4<_0x3ef8f6[_0x113f32(0x1e0)];_0x4b98b4++){const _0x35c380=_0x380c51===_0x113f32(0x423)?-_0x3ef8f6[_0x4b98b4]:_0x3ef8f6[_0x4b98b4],_0x588734=_0x380c51===_0x113f32(0x423)?-_0x45b105:_0x45b105;_0x19c3e9=_0x19c3e9+(_0x35c380-_0x588734-_0x1d4da5*_0x4d31c0),_0x527b52=Math['min'](_0x527b52,_0x19c3e9),_0x56dae2=Math[_0x113f32(0x347)](0x0,_0x19c3e9-_0x527b52);}return{'score':Math[_0x113f32(0x32a)](_0x56dae2*0xa)/0xa,'threshold':Math[_0x113f32(0x32a)](_0x4d9548*0xa)/0xa,'alarm':_0x56dae2>_0x4d9548};},_0x2e4797=_0x240fef(_0x47f3e2,_0x49d270(0x423)),_0x405754=_0x240fef(_0x25a783[_0x49d270(0x1cc)](_0x27f891=>_0x27f891['gs'])[_0x49d270(0x44d)](_0x32164a=>_0x32164a>0x0),'up'),_0xc12fde=_0x240fef(_0x25a783[_0x49d270(0x1cc)](_0x579afa=>_0x579afa['nt']),'up');this['log'][_0x49d270(0x277)](_0x49d270(0x2c1)+_0x2e4797[_0x49d270(0x378)]+'/'+_0x2e4797[_0x49d270(0x231)]+_0x49d270(0x324)+_0x405754[_0x49d270(0x378)]+'/'+_0x405754[_0x49d270(0x231)]+_0x49d270(0x488)+_0xc12fde[_0x49d270(0x378)]+'/'+_0xc12fde[_0x49d270(0x231)]);const _0x4205b1=[];if(_0x2e4797['alarm'])_0x4205b1[_0x49d270(0x400)](_0x49d270(0x17f)+_0x2e4797[_0x49d270(0x378)]+'/'+_0x2e4797[_0x49d270(0x231)]+')');if(_0x405754[_0x49d270(0x37a)])_0x4205b1[_0x49d270(0x400)](_0x49d270(0x35a)+_0x405754['score']+'/'+_0x405754[_0x49d270(0x231)]+')');if(_0xc12fde['alarm'])_0x4205b1[_0x49d270(0x400)](_0x49d270(0x210)+_0xc12fde[_0x49d270(0x378)]+'/'+_0xc12fde[_0x49d270(0x231)]+')');if(_0x4205b1[_0x49d270(0x1e0)]>0x0){const _0xafa34c='??\x20DRIFT\x20ERKANNT\x20('+_0x25a783[_0x49d270(0x1e0)]+_0x49d270(0x3f0)+_0x4205b1[_0x49d270(0x2ab)]('\x0a')+'\x0a\x0aBitte\x20Admin-UI\x20?\x20Drift-Monitor\x20f?r\x20Details\x20?ffnen.';_0x450f32[_0x49d270(0x464)](this,_0xafa34c,!![],![],'??\x20NUUKANNI:\x20Verhaltens-Drift'),await this['setObjectNotExistsAsync']('analysis.drift.lastAlarmDate',{'type':_0x49d270(0x345),'common':{'name':_0x49d270(0x405),'type':'string','role':'text','read':!![],'write':![],'def':''},'native':{}}),await this[_0x49d270(0x295)](_0x49d270(0x35b),{'val':new Date()[_0x49d270(0x1e4)](),'ack':!![]}),this['log'][_0x49d270(0x1d2)](_0x49d270(0x385)+_0x4205b1['join']('\x20|\x20'));}}async[a0_0x44e735(0x1cf)](){var _0x9d3944=a0_0x44e735;if(!this[_0x9d3944(0x1a9)])return;try{let _0x2dc6a3=null;try{const _0x2dd99c=await this[_0x9d3944(0x205)]('analysis.prediction.trackerTopRoom'),_0x14aa72=await this[_0x9d3944(0x205)](_0x9d3944(0x287));if(_0x2dd99c&&_0x2dd99c[_0x9d3944(0x24d)]&&_0x14aa72&&_0x14aa72['val']&&_0x14aa72[_0x9d3944(0x24d)]>0.3){if(_0x2dd99c[_0x9d3944(0x24d)]!==_0x9d3944(0x42f)&&_0x2dd99c[_0x9d3944(0x24d)]!==_0x9d3944(0x3d6))_0x2dc6a3=_0x2dd99c[_0x9d3944(0x24d)];}}catch(_0x7ae674){}if(!_0x2dc6a3){const _0x2b1082=this[_0x9d3944(0x19e)][_0x9d3944(0x39e)]||[];for(const _0x298ecd of _0x2b1082){if(_0x298ecd[_0x9d3944(0x132)]===_0x9d3944(0x14d)&&_0x298ecd[_0x9d3944(0x34d)])try{const _0x2e9447=await this[_0x9d3944(0x1f4)](_0x298ecd['id']);if(_0x2e9447&&(_0x2e9447[_0x9d3944(0x24d)]===!![]||_0x2e9447[_0x9d3944(0x24d)]==='on'||_0x2e9447[_0x9d3944(0x24d)]===0x1)){_0x2dc6a3=_0x298ecd['location'];break;}}catch(_0x22b691){}}}if(!_0x2dc6a3)return;const _0x10fedc=this[_0x9d3944(0x19e)][_0x9d3944(0x39e)]||[];let _0x3c5bb8=_0x2dc6a3;const _0x5227e3=_0x10fedc[_0x9d3944(0x248)](_0x1076da=>_0x1076da[_0x9d3944(0x34d)]&&_0x1076da['location']['toLowerCase']()===_0x2dc6a3['toLowerCase']());if(_0x5227e3)_0x3c5bb8=_0x5227e3[_0x9d3944(0x34d)];const _0x5c52f8=_0x9d3944(0x13a),_0x13f417=await this[_0x9d3944(0x205)](_0x5c52f8),_0x13d5ac=new Date()[_0x9d3944(0x33f)]();let _0x5e8b00={'history':{},'date':_0x13d5ac};if(_0x13f417&&_0x13f417[_0x9d3944(0x24d)])try{_0x5e8b00=JSON[_0x9d3944(0x46f)](_0x13f417[_0x9d3944(0x24d)]);}catch(_0x54c495){}_0x5e8b00[_0x9d3944(0x179)]!==_0x13d5ac&&(_0x5e8b00[_0x9d3944(0x20a)]={},_0x5e8b00[_0x9d3944(0x179)]=_0x13d5ac);if(!_0x5e8b00[_0x9d3944(0x20a)][_0x3c5bb8])_0x5e8b00['history'][_0x3c5bb8]=new Array(0x18)[_0x9d3944(0x21d)](0x0);const _0xc15320=new Date()[_0x9d3944(0x2a9)]();if(_0x5e8b00[_0x9d3944(0x20a)][_0x3c5bb8][_0xc15320]<0x3c)_0x5e8b00[_0x9d3944(0x20a)][_0x3c5bb8][_0xc15320]++;await this[_0x9d3944(0x295)](_0x5c52f8,{'val':JSON['stringify'](_0x5e8b00),'ack':!![]});}catch(_0x5ef81c){this[_0x9d3944(0x1c0)][_0x9d3944(0x1d2)](_0x9d3944(0x17a)+_0x5ef81c[_0x9d3944(0x2e2)]);}}async[a0_0x44e735(0x2ca)](_0x8a376b){var _0x1117a8=a0_0x44e735;if(typeof _0x8a376b===_0x1117a8(0x3ea)&&_0x8a376b[_0x1117a8(0x2e2)]){if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x3ab)){const _0x537829=_0x8a376b[_0x1117a8(0x2e2)][_0x1117a8(0x179)],_0x1f1efd=utils[_0x1117a8(0x476)](),_0x364810=path[_0x1117a8(0x2ab)](_0x1f1efd,_0x1117a8(0x41e),_0x1117a8(0x20a),_0x537829+_0x1117a8(0x461));if(fs[_0x1117a8(0x2c5)](_0x364810))try{const _0x227815=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](_0x364810,'utf8'));this['sendTo'](_0x8a376b['from'],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'data':_0x227815},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x4ea85f){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':![],'error':'Corrupt'},_0x8a376b[_0x1117a8(0x22a)]);}else this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':'No\x20data'},_0x8a376b['callback']);}else{if(_0x8a376b['command']===_0x1117a8(0x188)){const _0x5482a8=this[_0x1117a8(0x43e)][_0x1117a8(0x1e0)];let _0x21cde6=new Array(0x30)[_0x1117a8(0x21d)](0x0),_0x478376=Array[_0x1117a8(0x200)]({'length':0x30},()=>[]);try{const _0x4fc1ec=await this['getStateAsync']('analysis.health.todayVector');if(_0x4fc1ec&&_0x4fc1ec[_0x1117a8(0x24d)])_0x21cde6=JSON['parse'](_0x4fc1ec[_0x1117a8(0x24d)]);const _0x31681f=await this[_0x1117a8(0x205)]('analysis.health.todayRoomDetails');if(_0x31681f&&_0x31681f[_0x1117a8(0x24d)])_0x478376=JSON['parse'](_0x31681f[_0x1117a8(0x24d)]);}catch(_0x1657b7){}let _0x475f35=new Array(0x30)['fill'](0x0);try{const _0x1cd8b4=new Date();_0x1cd8b4[_0x1117a8(0x3c4)](_0x1cd8b4[_0x1117a8(0x414)]()-0x1);const _0x53778d=_0x1cd8b4[_0x1117a8(0x1e4)]()[_0x1117a8(0x1d0)]('T')[0x0],_0x1580e7=utils[_0x1117a8(0x476)](),_0x5a7d60=path[_0x1117a8(0x2ab)](_0x1580e7,_0x1117a8(0x41e),_0x1117a8(0x20a),_0x53778d+'.json');if(fs[_0x1117a8(0x2c5)](_0x5a7d60)){const _0x3d71cf=JSON[_0x1117a8(0x46f)](fs['readFileSync'](_0x5a7d60,_0x1117a8(0x449)));if(_0x3d71cf&&_0x3d71cf[_0x1117a8(0x239)])_0x475f35=_0x3d71cf[_0x1117a8(0x239)];}}catch(_0x2b76ee){}let _0x203edd={'today':{},'yesterday':{}};try{const _0x57b5aa=await this[_0x1117a8(0x205)](_0x1117a8(0x292));if(_0x57b5aa&&_0x57b5aa[_0x1117a8(0x24d)])_0x203edd=JSON[_0x1117a8(0x46f)](_0x57b5aa[_0x1117a8(0x24d)]);}catch(_0x43a2c6){}let _0xeb29f0=null;try{const _0x292212=await this[_0x1117a8(0x205)]('analysis.health.activityTrend');if(_0x292212)_0xeb29f0=_0x292212[_0x1117a8(0x24d)];}catch(_0x257fdd){}if(_0xeb29f0===undefined||_0xeb29f0===null){const _0x1857f5=_0x21cde6['reduce']((_0x30e992,_0x11fc3c)=>_0x30e992+_0x11fc3c,0x0),_0x2cdfae=Math[_0x1117a8(0x288)](0x2,Math['max'](-0x2,(0x64-_0x1857f5)/0x32));_0xeb29f0=_0x2cdfae;}let _0x593ae2=![],_0x14d654='',_0xdcea85='',_0x1eb035='';try{const _0x5b33e8=await this[_0x1117a8(0x205)](_0x1117a8(0x1fd));if(_0x5b33e8&&_0x5b33e8['val']){_0x593ae2=!![];const _0x39a456=await this[_0x1117a8(0x205)](_0x1117a8(0x377));_0x14d654=_0x39a456?_0x39a456[_0x1117a8(0x24d)]:'';const _0x510057=await this[_0x1117a8(0x205)](_0x1117a8(0x1dc));_0xdcea85=_0x510057?_0x510057[_0x1117a8(0x24d)]:'';const _0x1c9b95=await this[_0x1117a8(0x205)](_0x1117a8(0x2b5));_0x1eb035=_0x1c9b95?_0x1c9b95[_0x1117a8(0x24d)]:'';}}catch(_0x50076d){}const _0x20f5df=await this[_0x1117a8(0x3eb)](),_0xa66ccb=(this[_0x1117a8(0x19e)]['devices']||[])[_0x1117a8(0x1cd)](_0x245e3f=>_0x245e3f[_0x1117a8(0x23d)]),_0x5adc75=_0x20f5df&&_0xa66ccb;let _0x2bba6a='';try{const _0x19457c=await this[_0x1117a8(0x205)](_0x1117a8(0x223));if(_0x19457c&&_0x19457c['val'])_0x2bba6a=_0x19457c['val'];}catch(_0x59f2a8){}this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'eventHistory':this[_0x1117a8(0x429)][_0x1117a8(0x314)](0x0,0x7d0),'stats':{'digestCount':_0x5482a8,'isPresent':this[_0x1117a8(0x1a9)],'hourlyActivity':_0x21cde6,'hourlyDetails':_0x478376,'yesterdayActivity':_0x475f35,'solarActive':_0x5adc75,'presenceWho':_0x2bba6a,'roomStats':_0x203edd,'activityTrend':_0xeb29f0,'modules':this[_0x1117a8(0x47c)]},'automation':{'detected':_0x593ae2,'description':_0x14d654,'targetId':_0xdcea85,'targetValue':_0x1eb035}},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]==='checkThermostats')try{const _0x4efee6=await automation['scanThermostats'](this);this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'results':_0x4efee6},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x2f7715){this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':![],'error':_0x2f7715[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b['command']==='scanDevices')try{const _0x428000=await scanner[_0x1117a8(0x447)](this,_0x8a376b[_0x1117a8(0x2e2)]||{});this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'devices':_0x428000},_0x8a376b['callback']);}catch(_0x52ee77){}else{if(_0x8a376b['command']===_0x1117a8(0x371)){const _0x2877f4=await this[_0x1117a8(0x2b7)](_0x1117a8(0x198),_0x1117a8(0x3e5)),_0x42154f=[];if(_0x2877f4)for(const _0x245529 in _0x2877f4){let _0x5b1491=_0x2877f4[_0x245529][_0x1117a8(0x2be)][_0x1117a8(0x353)];if(_0x5b1491&&typeof _0x5b1491===_0x1117a8(0x3ea))_0x5b1491=_0x5b1491['de']||_0x5b1491['en']||Object['values'](_0x5b1491)[0x0]||JSON[_0x1117a8(0x332)](_0x5b1491);_0x42154f[_0x1117a8(0x400)]({'id':_0x245529,'name':String(_0x5b1491||_0x245529)});}const _0xefbca2=await this[_0x1117a8(0x2b7)]('enum.rooms.*',_0x1117a8(0x3e5)),_0x4c9eb9=[];if(_0xefbca2)for(const _0x127910 in _0xefbca2){let _0x174067=_0xefbca2[_0x127910]['common'][_0x1117a8(0x353)];if(_0x174067&&typeof _0x174067==='object')_0x174067=_0x174067['de']||_0x174067['en']||Object[_0x1117a8(0x26c)](_0x174067)[0x0]||JSON['stringify'](_0x174067);_0x4c9eb9[_0x1117a8(0x400)](String(_0x174067||_0x127910[_0x1117a8(0x1d0)]('.')[_0x1117a8(0x247)]()));}this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'enums':_0x42154f,'rooms':_0x4c9eb9},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]==='getCalendarNames')try{const _0x3d5a9a=await this[_0x1117a8(0x3b0)](_0x1117a8(0x227),_0x1117a8(0x2ad),{'startkey':_0x1117a8(0x2ff),'endkey':_0x1117a8(0x1ad)}),_0x163fbe=new Set();if(_0x3d5a9a&&_0x3d5a9a[_0x1117a8(0x14a)])for(const _0x2c1e4d of _0x3d5a9a['rows']){const _0x20c141=_0x2c1e4d['id'][_0x1117a8(0x3af)](_0x1117a8(0x284),''),_0x426be8=await this[_0x1117a8(0x1f4)](_0x20c141+'.data.table');let _0x5555e3=![];if(_0x426be8&&_0x426be8[_0x1117a8(0x24d)]){const _0x548f73=typeof _0x426be8[_0x1117a8(0x24d)]===_0x1117a8(0x370)?JSON['parse'](_0x426be8[_0x1117a8(0x24d)]):_0x426be8[_0x1117a8(0x24d)];Array['isArray'](_0x548f73)&&_0x548f73['forEach'](_0x3840b6=>{var _0x53dd82=_0x1117a8;_0x3840b6['calendarName']&&(_0x163fbe['add'](_0x3840b6[_0x53dd82(0x262)]),_0x5555e3=!![]);});}!_0x5555e3&&_0x163fbe[_0x1117a8(0x1d3)](_0x20c141);}const _0x23a2d0=Array[_0x1117a8(0x200)](_0x163fbe);if(_0x23a2d0[_0x1117a8(0x1e0)]===0x0)_0x23a2d0['push'](_0x1117a8(0x130));this['sendTo'](_0x8a376b['from'],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'names':_0x23a2d0},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x3d1348){this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':'Scan\x20Error:\x20'+_0x3d1348[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x25c))try{await automation[_0x1117a8(0x466)](this),this[_0x1117a8(0x329)](_0x8a376b['from'],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![]},_0x8a376b['callback']);}catch(_0x53ac38){this[_0x1117a8(0x1c0)][_0x1117a8(0x1d2)](_0x1117a8(0x264)+_0x53ac38['message']),this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x53ac38[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x3ae))try{const _0x82d8d2=_0x8a376b[_0x1117a8(0x2e2)][_0x1117a8(0x469)];if(!_0x82d8d2||!Array[_0x1117a8(0x20b)](_0x82d8d2))throw new Error(_0x1117a8(0x237));const _0x2d270b=await this[_0x1117a8(0x205)](_0x1117a8(0x406));if(_0x2d270b&&_0x2d270b[_0x1117a8(0x24d)]){const _0x264548=JSON[_0x1117a8(0x46f)](_0x2d270b['val']);_0x264548[_0x1117a8(0x469)]=_0x82d8d2,_0x264548[_0x1117a8(0x475)]=Date[_0x1117a8(0x1ae)](),await this[_0x1117a8(0x295)](_0x1117a8(0x406),{'val':JSON['stringify'](_0x264548),'ack':!![]}),this[_0x1117a8(0x1c0)][_0x1117a8(0x277)]('???\x20Topology\x20Matrix\x20manually\x20updated\x20by\x20user.'),this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![]},_0x8a376b[_0x1117a8(0x22a)]);}else throw new Error(_0x1117a8(0x2f5));}catch(_0x4b94a6){this[_0x1117a8(0x1c0)][_0x1117a8(0x1d2)]('updateTopologyMatrix\x20failed:\x20'+_0x4b94a6[_0x1117a8(0x2e2)]),this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x4b94a6[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x48d))try{const _0x46ee7a=_0x8a376b[_0x1117a8(0x2e2)][_0x1117a8(0x3ec)],_0x1534b9=_0x8a376b['message'];this[_0x1117a8(0x1c0)][_0x1117a8(0x277)]('[PythonBridge]\x20Forwarding\x20command:\x20'+_0x46ee7a),pythonBridge[_0x1117a8(0x2ea)](this,_0x46ee7a,_0x1534b9,_0x3d80ad=>{var _0xc71153=_0x1117a8;this[_0xc71153(0x329)](_0x8a376b[_0xc71153(0x200)],_0x8a376b[_0xc71153(0x3ec)],_0x3d80ad,_0x8a376b[_0xc71153(0x22a)]);});}catch(_0x587d52){this['log'][_0x1117a8(0x1d2)](_0x1117a8(0x2cd)+_0x587d52[_0x1117a8(0x2e2)]),this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'type':_0x1117a8(0x1dd),'payload':_0x587d52[_0x1117a8(0x2e2)]},_0x8a376b['callback']);}else{if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x234))try{const _0x134881=_0x8a376b[_0x1117a8(0x2e2)]?_0x8a376b['message'][_0x1117a8(0x1b8)]:'';if(!_0x134881)throw new Error('Kein\x20API\x20Key\x20?bergeben.');const _0x42cd71=new GoogleGenerativeAI(_0x134881),_0x2174b5=_0x42cd71[_0x1117a8(0x2bd)]({'model':GEMINI_MODEL}),_0x3bf346=await _0x2174b5['generateContent']('Say\x20Hello'),_0x4170c5=await _0x3bf346[_0x1117a8(0x39b)],_0x3cc1bc=_0x4170c5[_0x1117a8(0x37b)]();this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':!![],'message':_0x1117a8(0x2bb)+_0x3cc1bc[_0x1117a8(0x1a3)](0x0,0x14)+'...'},_0x8a376b['callback']);}catch(_0x581ae8){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'message':_0x581ae8[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x236))try{const _0x31d370=await this['checkSolarCondition'](),_0x4ce398=await this['getObjectViewAsync']('system','instance',{'startkey':'system.adapter.ical.','endkey':_0x1117a8(0x1ad)}),_0x5d0a6d=_0x4ce398&&_0x4ce398['rows']?_0x4ce398['rows']['length']:0x0;this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'weather':_0x1117a8(0x220)+_0x31d370+_0x1117a8(0x280)+(this[_0x1117a8(0x2a3)][this[_0x1117a8(0x19e)][_0x1117a8(0x16c)]]||'?')+'?C','calendar':_0x5d0a6d+_0x1117a8(0x35d)},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x4e7d1a){this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![]},_0x8a376b['callback']);}else{if(_0x8a376b[_0x1117a8(0x3ec)]==='setSleepStartOverride')try{var _0x3435a6=_0x8a376b[_0x1117a8(0x2e2)]||{},_0x32cf00=[_0x1117a8(0x388),_0x1117a8(0x1b1),_0x1117a8(0x3bc),_0x1117a8(0x182),_0x1117a8(0x312),_0x1117a8(0x19f),_0x1117a8(0x4b0),_0x1117a8(0x14d),_0x1117a8(0x25e)];if(!_0x3435a6[_0x1117a8(0x179)]||!_0x3435a6[_0x1117a8(0x142)]||!_0x3435a6['ts']||_0x32cf00[_0x1117a8(0x3f2)](_0x3435a6[_0x1117a8(0x142)])<0x0){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':![],'error':_0x1117a8(0x372)},_0x8a376b['callback']);return;}var _0x2bff9c={'date':_0x3435a6[_0x1117a8(0x179)],'source':_0x3435a6[_0x1117a8(0x142)],'ts':_0x3435a6['ts'],'setBy':'ui','setAt':Date[_0x1117a8(0x1ae)]()};await this[_0x1117a8(0x295)](_0x1117a8(0x26f),{'val':JSON['stringify'](_0x2bff9c),'ack':!![]}),await this[_0x1117a8(0x4a9)](_0x2bff9c);var _0x2d8e18=utils[_0x1117a8(0x476)](),_0x304450=new Date(),_0x5889ae=_0x304450['getFullYear']()+'-'+String(_0x304450[_0x1117a8(0x17e)]()+0x1)[_0x1117a8(0x18d)](0x2,'0')+'-'+String(_0x304450[_0x1117a8(0x414)]())[_0x1117a8(0x18d)](0x2,'0'),_0x52370e=path['join'](_0x2d8e18,'cogni-living',_0x1117a8(0x20a),_0x5889ae+'.json');if(fs[_0x1117a8(0x2c5)](_0x52370e)){var _0xb32e3e=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](_0x52370e,_0x1117a8(0x449)));this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':!![],'data':_0xb32e3e},_0x8a376b[_0x1117a8(0x22a)]);}else this[_0x1117a8(0x329)](_0x8a376b['from'],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'data':null},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x5839bf){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x5839bf[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x3c9))try{await this['setStateAsync'](_0x1117a8(0x26f),{'val':_0x1117a8(0x32c),'ack':!![]}),await this[_0x1117a8(0x4a9)]();var _0x384858=utils[_0x1117a8(0x476)](),_0x613222=new Date(),_0xb66a44=_0x613222['getFullYear']()+'-'+String(_0x613222['getMonth']()+0x1)[_0x1117a8(0x18d)](0x2,'0')+'-'+String(_0x613222[_0x1117a8(0x414)]())[_0x1117a8(0x18d)](0x2,'0'),_0x13ed6d=path[_0x1117a8(0x2ab)](_0x384858,_0x1117a8(0x41e),_0x1117a8(0x20a),_0xb66a44+_0x1117a8(0x461));if(fs[_0x1117a8(0x2c5)](_0x13ed6d)){var _0x53e218=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](_0x13ed6d,'utf8'));this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':!![],'data':_0x53e218},_0x8a376b[_0x1117a8(0x22a)]);}else this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':!![],'data':null},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x2baf5b){this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x2baf5b['message']},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x212))try{var _0x3030c2=_0x8a376b[_0x1117a8(0x2e2)]||{},_0xdb9413=[_0x1117a8(0x1b1),_0x1117a8(0x3bc),_0x1117a8(0x182),_0x1117a8(0x303),_0x1117a8(0x19f),_0x1117a8(0x312),_0x1117a8(0x4b0),_0x1117a8(0x28a),_0x1117a8(0x14d),_0x1117a8(0x3bd)];if(!_0x3030c2[_0x1117a8(0x37e)]||!_0x3030c2[_0x1117a8(0x179)]||!_0x3030c2[_0x1117a8(0x142)]||!_0x3030c2['ts']||_0xdb9413[_0x1117a8(0x3f2)](_0x3030c2[_0x1117a8(0x142)])<0x0){this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':'Ungueltige\x20Per-Person\x20Override-Daten'},_0x8a376b[_0x1117a8(0x22a)]);return;}var _0xe8e02c=(await this[_0x1117a8(0x205)]('analysis.sleep.personStartOverrides'))?.[_0x1117a8(0x24d)],_0x9ebe54=_0xe8e02c&&_0xe8e02c!=='null'?JSON[_0x1117a8(0x46f)](_0xe8e02c):{};_0x9ebe54[_0x3030c2[_0x1117a8(0x37e)]]={'date':_0x3030c2[_0x1117a8(0x179)],'source':_0x3030c2[_0x1117a8(0x142)],'ts':_0x3030c2['ts'],'setBy':'ui','setAt':Date[_0x1117a8(0x1ae)]()},await this[_0x1117a8(0x295)]('analysis.sleep.personStartOverrides',{'val':JSON[_0x1117a8(0x332)](_0x9ebe54),'ack':!![]}),await this['saveDailyHistory']();var _0x3de7c3=utils['getAbsoluteDefaultDataDir'](),_0x1bf000=new Date(),_0x15b340=require('path')[_0x1117a8(0x2ab)](_0x3de7c3,'cogni-living',_0x1117a8(0x20a),_0x1bf000[_0x1117a8(0x32f)]()+'-'+String(_0x1bf000[_0x1117a8(0x17e)]()+0x1)[_0x1117a8(0x18d)](0x2,'0')+'-'+String(_0x1bf000[_0x1117a8(0x414)]())[_0x1117a8(0x18d)](0x2,'0')+_0x1117a8(0x461));if(fs[_0x1117a8(0x2c5)](_0x15b340)){var _0x2786ef=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](_0x15b340,_0x1117a8(0x449)));this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':!![],'data':_0x2786ef},_0x8a376b[_0x1117a8(0x22a)]);}else this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':!![],'data':null},_0x8a376b['callback']);}catch(_0x146c4a){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x146c4a[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]==='clearPersonSleepStartOverride')try{var _0x58249e=_0x8a376b[_0x1117a8(0x2e2)]||{};if(!_0x58249e['person']){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x1117a8(0x48b)},_0x8a376b[_0x1117a8(0x22a)]);return;}var _0x9382bd=(await this[_0x1117a8(0x205)](_0x1117a8(0x219)))?.['val'],_0x2d9ec7=_0x9382bd&&_0x9382bd!==_0x1117a8(0x32c)?JSON['parse'](_0x9382bd):{};delete _0x2d9ec7[_0x58249e[_0x1117a8(0x37e)]],await this[_0x1117a8(0x295)](_0x1117a8(0x219),{'val':JSON['stringify'](_0x2d9ec7),'ack':!![]}),await this[_0x1117a8(0x4a9)]();var _0x5c2172=utils[_0x1117a8(0x476)](),_0x5bfa07=new Date(),_0x4b3801=require('path')[_0x1117a8(0x2ab)](_0x5c2172,_0x1117a8(0x41e),_0x1117a8(0x20a),_0x5bfa07[_0x1117a8(0x32f)]()+'-'+String(_0x5bfa07[_0x1117a8(0x17e)]()+0x1)[_0x1117a8(0x18d)](0x2,'0')+'-'+String(_0x5bfa07[_0x1117a8(0x414)]())[_0x1117a8(0x18d)](0x2,'0')+_0x1117a8(0x461));if(fs[_0x1117a8(0x2c5)](_0x4b3801)){var _0x474e84=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](_0x4b3801,'utf8'));this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'data':_0x474e84},_0x8a376b[_0x1117a8(0x22a)]);}else this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'data':null},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x24235d){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':![],'error':_0x24235d[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b['command']==='setWakeOverride')try{var _0xecdd62=_0x8a376b[_0x1117a8(0x2e2)]||{},_0x2cbeb6=['garmin',_0x1117a8(0x1b1),_0x1117a8(0x3bc),'fp2_other',_0x1117a8(0x182),_0x1117a8(0x312),_0x1117a8(0x4b0),_0x1117a8(0x14d),_0x1117a8(0x2cf),_0x1117a8(0x3bd),_0x1117a8(0x25e),'override'];if(!_0xecdd62[_0x1117a8(0x179)]||!_0xecdd62['source']||!_0xecdd62['ts']||_0x2cbeb6['indexOf'](_0xecdd62[_0x1117a8(0x142)])<0x0){this[_0x1117a8(0x329)](_0x8a376b['from'],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x1117a8(0x1b9)},_0x8a376b[_0x1117a8(0x22a)]);return;}var _0x35d6a0={'date':_0xecdd62[_0x1117a8(0x179)],'source':_0xecdd62[_0x1117a8(0x142)],'ts':_0xecdd62['ts'],'setBy':'ui','setAt':Date[_0x1117a8(0x1ae)]()};await this[_0x1117a8(0x295)]('analysis.sleep.wakeOverride',{'val':JSON['stringify'](_0x35d6a0),'ack':!![]}),await this['saveDailyHistory'](_0x35d6a0);var _0x19c527=utils['getAbsoluteDefaultDataDir'](),_0x1f0f46=new Date(),_0x22434e=require(_0x1117a8(0x2f8))[_0x1117a8(0x2ab)](_0x19c527,_0x1117a8(0x41e),'history',_0x1f0f46[_0x1117a8(0x32f)]()+'-'+String(_0x1f0f46[_0x1117a8(0x17e)]()+0x1)['padStart'](0x2,'0')+'-'+String(_0x1f0f46[_0x1117a8(0x414)]())[_0x1117a8(0x18d)](0x2,'0')+_0x1117a8(0x461));if(fs[_0x1117a8(0x2c5)](_0x22434e)){var _0x60c2c=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](_0x22434e,_0x1117a8(0x449)));this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'data':_0x60c2c},_0x8a376b['callback']);}else this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':!![],'data':null},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x54ec93){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x54ec93[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]==='clearWakeOverride')try{await this[_0x1117a8(0x295)](_0x1117a8(0x45c),{'val':_0x1117a8(0x32c),'ack':!![]}),await this[_0x1117a8(0x4a9)]();var _0x45d5db=utils[_0x1117a8(0x476)](),_0x4f109b=new Date(),_0x8d0317=require(_0x1117a8(0x2f8))[_0x1117a8(0x2ab)](_0x45d5db,_0x1117a8(0x41e),'history',_0x4f109b['getFullYear']()+'-'+String(_0x4f109b[_0x1117a8(0x17e)]()+0x1)[_0x1117a8(0x18d)](0x2,'0')+'-'+String(_0x4f109b['getDate']())[_0x1117a8(0x18d)](0x2,'0')+_0x1117a8(0x461));if(fs['existsSync'](_0x8d0317)){var _0x8353fe=JSON['parse'](fs['readFileSync'](_0x8d0317,_0x1117a8(0x449)));this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'data':_0x8353fe},_0x8a376b[_0x1117a8(0x22a)]);}else this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':!![],'data':null},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x48b4e8){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':![],'error':_0x48b4e8['message']},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x477))try{var _0x3a5e3f=_0x8a376b[_0x1117a8(0x2e2)]||{},_0x223e0a=['garmin',_0x1117a8(0x1b1),_0x1117a8(0x3bc),'fp2_other',_0x1117a8(0x182),_0x1117a8(0x1ea),_0x1117a8(0x303),_0x1117a8(0x19f),_0x1117a8(0x312),_0x1117a8(0x4b0),'vibration_alone',_0x1117a8(0x38b),_0x1117a8(0x3bd),'fixed','override'];if(!_0x3a5e3f[_0x1117a8(0x37e)]||!_0x3a5e3f['date']||!_0x3a5e3f['source']||!_0x3a5e3f['ts']||_0x223e0a[_0x1117a8(0x3f2)](_0x3a5e3f['source'])<0x0){this[_0x1117a8(0x329)](_0x8a376b['from'],_0x8a376b['command'],{'success':![],'error':'Ungueltige\x20Per-Person\x20Wake-Override-Daten'},_0x8a376b[_0x1117a8(0x22a)]);return;}var _0x386c3b=(await this[_0x1117a8(0x205)](_0x1117a8(0x2aa)))?.[_0x1117a8(0x24d)],_0x35ae3b=_0x386c3b&&_0x386c3b!==_0x1117a8(0x32c)?JSON[_0x1117a8(0x46f)](_0x386c3b):{};_0x35ae3b[_0x3a5e3f['person']]={'date':_0x3a5e3f[_0x1117a8(0x179)],'source':_0x3a5e3f[_0x1117a8(0x142)],'ts':_0x3a5e3f['ts'],'setBy':'ui','setAt':Date[_0x1117a8(0x1ae)]()},await this[_0x1117a8(0x295)]('analysis.sleep.personWakeOverrides',{'val':JSON[_0x1117a8(0x332)](_0x35ae3b),'ack':!![]}),await this[_0x1117a8(0x4a9)]();var _0x2852fe=utils[_0x1117a8(0x476)](),_0x486a1a=new Date(),_0x1b7efa=require(_0x1117a8(0x2f8))[_0x1117a8(0x2ab)](_0x2852fe,_0x1117a8(0x41e),_0x1117a8(0x20a),_0x486a1a['getFullYear']()+'-'+String(_0x486a1a[_0x1117a8(0x17e)]()+0x1)[_0x1117a8(0x18d)](0x2,'0')+'-'+String(_0x486a1a[_0x1117a8(0x414)]())[_0x1117a8(0x18d)](0x2,'0')+_0x1117a8(0x461));if(fs[_0x1117a8(0x2c5)](_0x1b7efa)){var _0x20933c=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](_0x1b7efa,'utf8'));this[_0x1117a8(0x329)](_0x8a376b['from'],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'data':_0x20933c},_0x8a376b[_0x1117a8(0x22a)]);}else this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'data':null},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x482b29){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x482b29[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b['command']===_0x1117a8(0x459))try{var _0x2a525f=_0x8a376b[_0x1117a8(0x2e2)]||{};if(!_0x2a525f[_0x1117a8(0x37e)]){this['sendTo'](_0x8a376b['from'],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x1117a8(0x48b)},_0x8a376b[_0x1117a8(0x22a)]);return;}var _0x3c7b7e=(await this[_0x1117a8(0x205)]('analysis.sleep.personWakeOverrides'))?.[_0x1117a8(0x24d)],_0xfa5de1=_0x3c7b7e&&_0x3c7b7e!==_0x1117a8(0x32c)?JSON[_0x1117a8(0x46f)](_0x3c7b7e):{};delete _0xfa5de1[_0x2a525f[_0x1117a8(0x37e)]],await this[_0x1117a8(0x295)]('analysis.sleep.personWakeOverrides',{'val':JSON[_0x1117a8(0x332)](_0xfa5de1),'ack':!![]}),await this[_0x1117a8(0x4a9)]();var _0x2168c7=utils[_0x1117a8(0x476)](),_0x17c68b=new Date(),_0x4c53a5=require(_0x1117a8(0x2f8))[_0x1117a8(0x2ab)](_0x2168c7,_0x1117a8(0x41e),_0x1117a8(0x20a),_0x17c68b[_0x1117a8(0x32f)]()+'-'+String(_0x17c68b[_0x1117a8(0x17e)]()+0x1)['padStart'](0x2,'0')+'-'+String(_0x17c68b[_0x1117a8(0x414)]())[_0x1117a8(0x18d)](0x2,'0')+_0x1117a8(0x461));if(fs['existsSync'](_0x4c53a5)){var _0x10cfb3=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](_0x4c53a5,_0x1117a8(0x449)));this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'data':_0x10cfb3},_0x8a376b[_0x1117a8(0x22a)]);}else this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':!![],'data':null},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x2dfbb1){this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':![],'error':_0x2dfbb1[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b['command']===_0x1117a8(0x173))try{const _0x1a6806=_0x8a376b[_0x1117a8(0x2e2)]&&_0x8a376b['message'][_0x1117a8(0x179)]?_0x8a376b['message'][_0x1117a8(0x179)]:null;if(!_0x1a6806||!/^\d{4}-\d{2}-\d{2}$/[_0x1117a8(0x259)](_0x1a6806)){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x1117a8(0x1cb)},_0x8a376b['callback']);return;}if(this[_0x1117a8(0x19e)][_0x1117a8(0x171)]!==!![]){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x1117a8(0x1ee)},_0x8a376b['callback']);return;}const _0x141d62=utils['getAbsoluteDefaultDataDir'](),_0x5eda28=path[_0x1117a8(0x2ab)](_0x141d62,_0x1117a8(0x41e),_0x1117a8(0x20a),_0x1a6806+_0x1117a8(0x461));if(!fs[_0x1117a8(0x2c5)](_0x5eda28)){this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x1117a8(0x139)},_0x8a376b[_0x1117a8(0x22a)]);return;}const _0x2cf5a6=JSON['parse'](fs[_0x1117a8(0x3b1)](_0x5eda28,_0x1117a8(0x449))),_0x40ffb3=_0x2cf5a6[_0x1117a8(0x429)]||[];var _0x15ff43=0x32,_0x470a82=0x1e,_0x327dc8=_0x1117a8(0x48a),_0x3d561a=0x0;try{var _0xd6146b=[];try{var _0x292b80=JSON[_0x1117a8(0x46f)](this['config']['sexTrainingLabels']||'');if(Array[_0x1117a8(0x20b)](_0x292b80))_0xd6146b=_0x292b80[_0x1117a8(0x44d)](function(_0x4ae3a0){var _0xfbf254=_0x1117a8;return _0x4ae3a0&&_0x4ae3a0[_0xfbf254(0x179)];});}catch(_0x5c471c){}if(_0xd6146b[_0x1117a8(0x1e0)]>=0x2){var _0x565c67=path[_0x1117a8(0x2ab)](utils['getAbsoluteDefaultDataDir'](),_0x1117a8(0x41e),_0x1117a8(0x20a)),_0x3bca5d=[],_0x18cd8e=[],_0x27f7fa=[],_0x15453b=[],_0x111787=0x5*0x3c*0x3e8,_0x1a2251=![];for(var _0x191159 of _0xd6146b){if(_0x191159[_0x1117a8(0x366)]){var _0x4051c8=_0x191159[_0x1117a8(0x366)],_0x123630=(_0x191159[_0x1117a8(0x132)]||'')[_0x1117a8(0x1f3)]();if(_0x123630!==_0x1117a8(0x228))_0x3bca5d['push'](_0x4051c8[_0x1117a8(0x1d9)]);if(_0x123630==='vaginal')_0x18cd8e[_0x1117a8(0x400)](_0x4051c8[_0x1117a8(0x1d9)]);else{if(_0x123630===_0x1117a8(0x218))_0x27f7fa[_0x1117a8(0x400)](_0x4051c8['medianPeak']);}_0x15453b[_0x1117a8(0x400)]({'peak':_0x4051c8[_0x1117a8(0x395)],'durSlots':_0x4051c8[_0x1117a8(0x45f)],'avgPeak':_0x4051c8['avgPeak'],'variance':_0x4051c8[_0x1117a8(0x320)],'tierB':0x0,'label':_0x123630,'date':_0x191159[_0x1117a8(0x179)]||'','hourSin':_0x4051c8['hourSin']||0x0,'hourCos':_0x4051c8[_0x1117a8(0x44a)]||0x1,'lightOn':_0x4051c8[_0x1117a8(0x327)]!==undefined?_0x4051c8[_0x1117a8(0x327)]:null,'presenceOn':_0x4051c8[_0x1117a8(0x3fe)]!==undefined?_0x4051c8[_0x1117a8(0x3fe)]:null,'roomTemp':_0x4051c8[_0x1117a8(0x1b3)]||null,'bathBefore':_0x4051c8[_0x1117a8(0x23a)]||0x0,'bathAfter':_0x4051c8[_0x1117a8(0x375)]||0x0,'nearbyRoomMotion':_0x4051c8['nearbyRoomMotion']||0x0});continue;}try{var _0x26d8da=path[_0x1117a8(0x2ab)](_0x565c67,_0x191159[_0x1117a8(0x179)]+_0x1117a8(0x461));if(!fs[_0x1117a8(0x2c5)](_0x26d8da))continue;var _0x155b8e=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](_0x26d8da,_0x1117a8(0x449))),_0x3708de=(_0x155b8e[_0x1117a8(0x429)]||[])[_0x1117a8(0x44d)](function(_0xd66a2e){var _0x598cf0=_0x1117a8;return _0xd66a2e['type']===_0x598cf0(0x23f)&&(_0xd66a2e[_0x598cf0(0x17c)]||_0xd66a2e[_0x598cf0(0x2c0)]);});if(_0x3708de[_0x1117a8(0x1e0)]===0x0)continue;var _0x1f51c6=null,_0x60d92d=null;if(_0x191159['time']&&/^\d{1,2}:\d{2}$/[_0x1117a8(0x259)](_0x191159['time'])){var _0x3e0c8e=_0x191159[_0x1117a8(0x147)]['split'](':'),_0x343448=new Date(_0x191159[_0x1117a8(0x179)]+'T00:00:00');_0x343448[_0x1117a8(0x254)](parseInt(_0x3e0c8e[0x0]),parseInt(_0x3e0c8e[0x1]),0x0,0x0),_0x1f51c6=_0x343448[_0x1117a8(0x16f)]()-0x2d*0xea60,_0x60d92d=_0x343448[_0x1117a8(0x16f)]()+((_0x191159[_0x1117a8(0x468)]||0x2d)+0xf)*0xea60;}var _0x1ffd62=_0x1f51c6!==null?_0x3708de[_0x1117a8(0x44d)](function(_0x382926){var _0x386e7b=_0x1117a8,_0x176e77=_0x382926[_0x386e7b(0x2f6)]||0x0;return _0x176e77>=_0x1f51c6&&_0x176e77<=_0x60d92d;}):_0x3708de;if(_0x1ffd62[_0x1117a8(0x1e0)]===0x0)continue;_0x1ffd62['sort'](function(_0x157cde,_0x3a6419){var _0x57b3a4=_0x1117a8;return(_0x157cde[_0x57b3a4(0x2f6)]||0x0)-(_0x3a6419[_0x57b3a4(0x2f6)]||0x0);});var _0x12d570=_0x1ffd62[0x0][_0x1117a8(0x2f6)]||0x0,_0x49c057=(_0x1ffd62[_0x1ffd62[_0x1117a8(0x1e0)]-0x1]['timestamp']||0x0)+_0x111787,_0x113443=[];for(var _0x3c1dd7=_0x12d570;_0x3c1dd7<_0x49c057;_0x3c1dd7+=_0x111787){var _0x9463ab=_0x1ffd62[_0x1117a8(0x44d)](function(_0x2ab8fb){var _0x218ba3=_0x1117a8,_0x587b1b=_0x2ab8fb[_0x218ba3(0x2f6)]||0x0;return _0x587b1b>=_0x3c1dd7&&_0x587b1b<_0x3c1dd7+_0x111787;})[_0x1117a8(0x1cc)](function(_0x5239c8){var _0x289680=_0x1117a8;return Number(_0x5239c8[_0x289680(0x49d)])||0x0;});if(_0x9463ab['length']>0x0)_0x113443[_0x1117a8(0x400)](Math[_0x1117a8(0x347)]['apply'](null,_0x9463ab));}if(_0x113443[_0x1117a8(0x1e0)]>0x0){_0x113443[_0x1117a8(0x21b)](function(_0x23beb2,_0x40fea7){return _0x23beb2-_0x40fea7;});var _0x5c1b7e=_0x113443[Math[_0x1117a8(0x39d)](_0x113443[_0x1117a8(0x1e0)]/0x2)],_0xb17539=(_0x191159[_0x1117a8(0x132)]||'')[_0x1117a8(0x1f3)]();if(_0xb17539!==_0x1117a8(0x228))_0x3bca5d[_0x1117a8(0x400)](_0x5c1b7e);if(_0xb17539===_0x1117a8(0x174))_0x18cd8e[_0x1117a8(0x400)](_0x5c1b7e);else{if(_0xb17539===_0x1117a8(0x218))_0x27f7fa[_0x1117a8(0x400)](_0x5c1b7e);}var _0x2d4836=_0x113443[_0x113443[_0x1117a8(0x1e0)]-0x1],_0x180edd=Math['round'](_0x113443[_0x1117a8(0x41c)](function(_0x1ba6c1,_0x3889e4){return _0x1ba6c1+_0x3889e4;},0x0)/_0x113443[_0x1117a8(0x1e0)]),_0xfe8942=Math[_0x1117a8(0x32a)](_0x113443[_0x1117a8(0x41c)](function(_0x4e949b,_0x4b1cb8){return _0x4e949b+(_0x4b1cb8-_0x180edd)*(_0x4b1cb8-_0x180edd);},0x0)/_0x113443[_0x1117a8(0x1e0)]),_0x383180=_0x155b8e[_0x1117a8(0x429)]||[],_0x582025={'start':_0x1f51c6||_0x12d570,'end':_0x60d92d||_0x49c057+_0x12d570},_0x251225=new Date(_0x582025[_0x1117a8(0x29a)]),_0x58a62e=_0x251225[_0x1117a8(0x2a9)]()+_0x251225['getMinutes']()/0x3c,_0x5a446b=Math[_0x1117a8(0x32a)](Math[_0x1117a8(0x177)](0x2*Math['PI']*_0x58a62e/0x18)*0x3e8)/0x3e8,_0x54d172=Math[_0x1117a8(0x32a)](Math[_0x1117a8(0x420)](0x2*Math['PI']*_0x58a62e/0x18)*0x3e8)/0x3e8,_0x53db33=_0x383180['filter'](function(_0x2e7799){var _0x41cb68=_0x1117a8,_0x5c670f=_0x2e7799[_0x41cb68(0x2f6)]||0x0;return(_0x2e7799[_0x41cb68(0x132)]===_0x41cb68(0x3bb)||_0x2e7799[_0x41cb68(0x132)]===_0x41cb68(0x148))&&_0x5c670f>=_0x582025[_0x41cb68(0x29a)]&&_0x5c670f<=_0x582025[_0x41cb68(0x27b)];}),_0x405587=_0x53db33['length']>0x0?Number(_0x53db33[_0x53db33[_0x1117a8(0x1e0)]-0x1][_0x1117a8(0x49d)])>0x0?0x1:0x0:null,_0x7ac077=_0x383180[_0x1117a8(0x44d)](function(_0x267459){var _0x4701a1=_0x1117a8,_0x2a7aba=_0x267459[_0x4701a1(0x2f6)]||0x0;return _0x267459[_0x4701a1(0x2c0)]&&_0x2a7aba>=_0x582025[_0x4701a1(0x29a)]&&_0x2a7aba<=_0x582025[_0x4701a1(0x27b)];}),_0x585cf0=_0x7ac077[_0x1117a8(0x1e0)]>0x0?Number(_0x7ac077[_0x7ac077[_0x1117a8(0x1e0)]-0x1][_0x1117a8(0x49d)])>0x0?0x1:0x0:null,_0x2a967e=_0x383180[_0x1117a8(0x44d)](function(_0x3efd13){var _0x37cbda=_0x1117a8,_0x164a45=_0x3efd13['timestamp']||0x0;return(_0x3efd13['type']===_0x37cbda(0x37c)||_0x3efd13[_0x37cbda(0x132)]===_0x37cbda(0x36f))&&_0x164a45>=_0x582025[_0x37cbda(0x29a)]&&_0x164a45<=_0x582025[_0x37cbda(0x27b)];}),_0x5ea39e=_0x2a967e[_0x1117a8(0x1e0)]>0x0?Number(_0x2a967e[_0x2a967e[_0x1117a8(0x1e0)]-0x1][_0x1117a8(0x49d)])||null:null,_0x4f37ec=_0x383180[_0x1117a8(0x1cd)](function(_0x1cce76){var _0x50e269=_0x1117a8,_0x31a517=_0x1cce76[_0x50e269(0x2f6)]||0x0;return(_0x1cce76['isBathroomSensor']||_0x1cce76[_0x50e269(0x132)]===_0x50e269(0x40e))&&_0x31a517>=_0x582025['start']-0x36ee80&&_0x31a517<_0x582025[_0x50e269(0x29a)];}),_0x9ed24f=_0x383180['some'](function(_0x3e96ff){var _0x17ad10=_0x1117a8,_0x5b6915=_0x3e96ff['timestamp']||0x0;return(_0x3e96ff[_0x17ad10(0x16e)]||_0x3e96ff[_0x17ad10(0x132)]===_0x17ad10(0x40e))&&_0x5b6915>_0x582025[_0x17ad10(0x27b)]&&_0x5b6915<=_0x582025[_0x17ad10(0x27b)]+0x36ee80;});_0x191159['_features']={'peakMax':_0x2d4836,'medianPeak':_0x5c1b7e,'durSlots':_0x113443[_0x1117a8(0x1e0)],'avgPeak':_0x180edd,'variance':_0xfe8942,'hourSin':_0x5a446b,'hourCos':_0x54d172,'lightOn':_0x405587,'presenceOn':_0x585cf0,'roomTemp':_0x5ea39e,'bathBefore':_0x4f37ec?0x1:0x0,'bathAfter':_0x9ed24f?0x1:0x0,'nearbyRoomMotion':0x0},_0x1a2251=!![],_0x15453b[_0x1117a8(0x400)]({'peak':_0x2d4836,'durSlots':_0x113443[_0x1117a8(0x1e0)],'avgPeak':_0x180edd,'variance':_0xfe8942,'tierB':0x0,'label':_0xb17539,'date':_0x191159[_0x1117a8(0x179)]||'','hourSin':_0x5a446b,'hourCos':_0x54d172,'lightOn':_0x405587,'presenceOn':_0x585cf0,'roomTemp':_0x5ea39e,'bathBefore':_0x4f37ec?0x1:0x0,'bathAfter':_0x9ed24f?0x1:0x0,'nearbyRoomMotion':0x0});}}catch(_0xff6f6d){this[_0x1117a8(0x1c0)][_0x1117a8(0x277)](_0x1117a8(0x325)+_0xff6f6d[_0x1117a8(0x2e2)]);}}if(_0x1a2251)try{var _0x46ad60=JSON[_0x1117a8(0x332)](_0xd6146b);this[_0x1117a8(0x19e)]['sexTrainingLabels']=_0x46ad60,this['extendForeignObjectAsync'](_0x1117a8(0x284)+this['namespace'],{'native':{'sexTrainingLabels':_0x46ad60}})[_0x1117a8(0x34f)](function(){}),this[_0x1117a8(0x1c0)][_0x1117a8(0x277)](_0x1117a8(0x24c)+_0xd6146b[_0x1117a8(0x44d)](function(_0x5106bc){var _0x2b1a94=_0x1117a8;return _0x5106bc[_0x2b1a94(0x366)];})[_0x1117a8(0x1e0)]+_0x1117a8(0x18f));}catch(_0x10a08f){}if(_0x18cd8e[_0x1117a8(0x1e0)]>=0x2&&_0x27f7fa[_0x1117a8(0x1e0)]>=0x2)_0x18cd8e[_0x1117a8(0x21b)](function(_0x501662,_0x204099){return _0x501662-_0x204099;}),_0x27f7fa[_0x1117a8(0x21b)](function(_0xa4488a,_0x639d2c){return _0xa4488a-_0x639d2c;}),_0x15ff43=Math[_0x1117a8(0x347)](0x5,Math['round'](_0x18cd8e[0x0]*0x1)),_0x470a82=Math['max'](0x3,Math[_0x1117a8(0x32a)](_0x27f7fa[0x0]*0.7)),_0x327dc8=_0x1117a8(0x29d),_0x3d561a=_0x3bca5d[_0x1117a8(0x1e0)];else{if(_0x3bca5d['length']>=0x2){_0x3bca5d[_0x1117a8(0x21b)](function(_0x2180a0,_0x587f4a){return _0x2180a0-_0x587f4a;});var _0x2e4b67=_0x3bca5d[0x0];_0x470a82=Math[_0x1117a8(0x347)](0x3,Math[_0x1117a8(0x32a)](_0x2e4b67*0.7)),_0x15ff43=Math[_0x1117a8(0x347)](0x5,Math[_0x1117a8(0x32a)](_0x2e4b67*1.1)),_0x327dc8=_0x1117a8(0x3a0),_0x3d561a=_0x3bca5d[_0x1117a8(0x1e0)];}}}}catch(_0x28e895){this[_0x1117a8(0x1c0)]['debug'](_0x1117a8(0x160)+_0x28e895[_0x1117a8(0x2e2)]);}_0x327dc8==='default'&&this[_0x1117a8(0x19e)][_0x1117a8(0x1b2)]&&Number(this[_0x1117a8(0x19e)][_0x1117a8(0x1b2)])>0x0&&(_0x470a82=Number(this[_0x1117a8(0x19e)]['sexCalibThreshold']),_0x15ff43=Math[_0x1117a8(0x32a)](_0x470a82*1.3),_0x327dc8=_0x1117a8(0x38e));if(_0x327dc8===_0x1117a8(0x48a)){var _0x39429b=_0x40ffb3[_0x1117a8(0x44d)](function(_0x25edbd){var _0x56fd64=_0x1117a8;return _0x25edbd[_0x56fd64(0x132)]===_0x56fd64(0x23f)&&(_0x25edbd[_0x56fd64(0x17c)]||_0x25edbd['isFP2Bed']);})[_0x1117a8(0x1cc)](function(_0x5253c1){var _0x2071be=_0x1117a8;return Number(_0x5253c1[_0x2071be(0x49d)])||0x0;})['filter'](function(_0x186986){return _0x186986>0x0;});if(_0x39429b[_0x1117a8(0x1e0)]>=0xa){_0x39429b[_0x1117a8(0x21b)](function(_0x3fd89e,_0x13abf4){return _0x3fd89e-_0x13abf4;});var _0xedc32b=_0x39429b[Math['floor'](_0x39429b[_0x1117a8(0x1e0)]*0.75)];_0x15ff43=Math['max'](0x5,Math[_0x1117a8(0x32a)](_0xedc32b*2.5)),_0x470a82=Math[_0x1117a8(0x347)](0x3,Math['round'](_0xedc32b*1.5)),_0x327dc8=_0x1117a8(0x42c);}}var _0x9a800c={'src':_0x327dc8,'n':_0x3d561a,'calibA':_0x15ff43,'calibB':_0x470a82},_0x218985=new Date(_0x1a6806+_0x1117a8(0x29b))[_0x1117a8(0x16f)](),_0x2d4c72=_0x40ffb3[_0x1117a8(0x44d)](function(_0x4faf58){var _0x542330=_0x1117a8;return(_0x4faf58[_0x542330(0x132)]===_0x542330(0x23f)||_0x4faf58[_0x542330(0x132)]===_0x542330(0x297))&&(_0x4faf58['isVibrationBed']||_0x4faf58['isFP2Bed']||!_0x4faf58['isFP2Bed']&&!_0x4faf58[_0x542330(0x1c3)])&&(_0x4faf58[_0x542330(0x2f6)]||0x0)>=_0x218985;})[_0x1117a8(0x21b)](function(_0xdc92f6,_0x4729d4){var _0x2eda6c=_0x1117a8;return(_0xdc92f6[_0x2eda6c(0x2f6)]||0x0)-(_0x4729d4[_0x2eda6c(0x2f6)]||0x0);}),_0x28db17=_0x2d4c72['filter'](function(_0x30ef67){var _0x3e7f63=_0x1117a8;return _0x30ef67[_0x3e7f63(0x132)]===_0x3e7f63(0x23f);}),_0x53462e=_0x2d4c72['filter'](function(_0x3fa014){var _0x4ef6a5=_0x1117a8;return _0x3fa014[_0x4ef6a5(0x132)]===_0x4ef6a5(0x297);}),_0x1f0151=0x5*0x3c*0x3e8,_0x1be23d=[];if(_0x2d4c72[_0x1117a8(0x1e0)]>=0x4){var _0x3fd4a0=_0x2d4c72[0x0][_0x1117a8(0x2f6)]||0x0,_0x3590ab=(_0x2d4c72[_0x2d4c72['length']-0x1]['timestamp']||0x0)+_0x1f0151;for(var _0x20efcb=_0x3fd4a0;_0x20efcb<_0x3590ab;_0x20efcb+=_0x1f0151){var _0xb14ea=_0x20efcb+_0x1f0151,_0x1ba807=_0x28db17[_0x1117a8(0x44d)](function(_0x4a511f){var _0x4fc419=_0x1117a8;return(_0x4a511f[_0x4fc419(0x2f6)]||0x0)>=_0x20efcb&&(_0x4a511f['timestamp']||0x0)<_0xb14ea;}),_0x5ab66e=_0x53462e[_0x1117a8(0x44d)](function(_0x322f2b){var _0x2ce423=_0x1117a8;return(_0x322f2b[_0x2ce423(0x2f6)]||0x0)>=_0x20efcb&&(_0x322f2b[_0x2ce423(0x2f6)]||0x0)<_0xb14ea;}),_0x5a2fdd=_0x1ba807[_0x1117a8(0x1cc)](function(_0x3205a2){return Number(_0x3205a2['value'])||0x0;}),_0x4407cf=_0x5a2fdd['length']>0x0?Math[_0x1117a8(0x347)]['apply'](null,_0x5a2fdd):0x0,_0x1e7e4f=_0x5a2fdd[_0x1117a8(0x1e0)]>0x0?Math[_0x1117a8(0x32a)](_0x5a2fdd[_0x1117a8(0x41c)](function(_0x371e43,_0xe4653){return _0x371e43+_0xe4653;},0x0)/_0x5a2fdd[_0x1117a8(0x1e0)]):0x0;_0x1be23d[_0x1117a8(0x400)]({'start':_0x20efcb,'end':_0xb14ea,'strCnt':_0x1ba807['length'],'trigCnt':_0x5ab66e[_0x1117a8(0x1e0)],'strMax':_0x4407cf,'strAvg':_0x1e7e4f});}}var _0x8c22c8=[],_0x16a8be=[];_0x1be23d[_0x1117a8(0x3b3)](function(_0x2751b2,_0x378eaa){var _0x1e2666=_0x1117a8,_0x5a10e2=(_0x2751b2['trigCnt']>=0x2||_0x2751b2[_0x1e2666(0x4af)]>=0x1)&&_0x2751b2['strMax']>=_0x15ff43;if(_0x5a10e2)_0x16a8be['push'](_0x378eaa);else{if(_0x16a8be[_0x1e2666(0x1e0)]>=0x2)_0x8c22c8[_0x1e2666(0x400)]({'run':_0x16a8be['slice'](),'tier':'A'});_0x16a8be=[];}});if(_0x16a8be[_0x1117a8(0x1e0)]>=0x2)_0x8c22c8['push']({'run':_0x16a8be['slice'](),'tier':'A'});var _0x581199=new Set();_0x8c22c8['forEach'](function(_0x498c32){var _0x2c3b58=_0x1117a8;_0x498c32[_0x2c3b58(0x1be)]['forEach'](function(_0x4335a7){var _0x3203e7=_0x2c3b58;_0x581199[_0x3203e7(0x1d3)](_0x4335a7);});});var _0x5c723c=[];_0x1be23d[_0x1117a8(0x3b3)](function(_0x325ea9,_0x5654c8){var _0x7e9df7=_0x1117a8;if(_0x581199['has'](_0x5654c8)){if(_0x5c723c[_0x7e9df7(0x1e0)]>=0x6&&_0x5c723c[_0x7e9df7(0x1e0)]<=0x18)_0x8c22c8['push']({'run':_0x5c723c['slice'](),'tier':'B'});_0x5c723c=[];return;}var _0x43ea70=(_0x325ea9[_0x7e9df7(0x2d2)]>=0x1||_0x325ea9['strCnt']>=0x1)&&_0x325ea9['strMax']>=_0x470a82;if(_0x43ea70)_0x5c723c[_0x7e9df7(0x400)](_0x5654c8);else{if(_0x5c723c[_0x7e9df7(0x1e0)]>=0x6&&_0x5c723c[_0x7e9df7(0x1e0)]<=0x18)_0x8c22c8[_0x7e9df7(0x400)]({'run':_0x5c723c[_0x7e9df7(0x314)](),'tier':'B'});_0x5c723c=[];}});if(_0x5c723c['length']>=0x6&&_0x5c723c['length']<=0x18)_0x8c22c8['push']({'run':_0x5c723c[_0x1117a8(0x314)](),'tier':'B'});var _0x4bbc28=[];_0x8c22c8[_0x1117a8(0x3b3)](function(_0x59b11c){var _0x30a6ca=_0x1117a8,_0x313fa0=_0x59b11c[_0x30a6ca(0x1be)],_0x3d2b88=_0x1be23d[_0x313fa0[0x0]],_0x1ca629=_0x1be23d[_0x313fa0[_0x313fa0[_0x30a6ca(0x1e0)]-0x1]],_0x1facd0=_0x3d2b88[_0x30a6ca(0x29a)],_0x8b0db4=_0x1ca629[_0x30a6ca(0x27b)],_0x44fd2c=Math[_0x30a6ca(0x32a)](_0x313fa0[_0x30a6ca(0x1e0)]*0x5),_0x1551dd=_0x313fa0[_0x30a6ca(0x1cc)](function(_0x203f9e){return _0x1be23d[_0x203f9e];}),_0x193256=Math[_0x30a6ca(0x347)][_0x30a6ca(0x409)](null,_0x1551dd['map'](function(_0x23ffdc){var _0x3e113f=_0x30a6ca;return _0x23ffdc[_0x3e113f(0x379)];})),_0x514e1c=Math[_0x30a6ca(0x32a)](_0x1551dd['reduce'](function(_0x592c16,_0x1e0fd5){var _0x5197a3=_0x30a6ca;return _0x592c16+_0x1e0fd5[_0x5197a3(0x13d)];},0x0)/_0x1551dd[_0x30a6ca(0x1e0)]),_0x50b85e=Math[_0x30a6ca(0x32a)](_0x1551dd[_0x30a6ca(0x41c)](function(_0x347c07,_0xd86fd4){var _0x7d81ef=_0x30a6ca;return _0x347c07+_0xd86fd4[_0x7d81ef(0x2d2)];},0x0)/_0x1551dd[_0x30a6ca(0x1e0)]),_0x3a22dc=Math['min'](0x64,Math[_0x30a6ca(0x32a)](_0x193256/0x78*0x64)),_0x56d16f=Math[_0x30a6ca(0x288)](0x64,Math['round'](_0x50b85e/0xa*0x64)),_0x464230=Math[_0x30a6ca(0x288)](0x64,Math[_0x30a6ca(0x32a)](_0x44fd2c/0x3c*0x64)),_0x435fd1=Math[_0x30a6ca(0x32a)](_0x3a22dc*0.5+_0x56d16f*0.3+_0x464230*0.2),_0x10b0fe=Math[_0x30a6ca(0x32a)](_0x15ff43*1.5),_0x11e4d4=_0x1551dd[_0x30a6ca(0x44d)](function(_0x475630){var _0x3cd6aa=_0x30a6ca;return _0x475630[_0x3cd6aa(0x379)]>=_0x10b0fe&&_0x475630[_0x3cd6aa(0x4af)]>=0x2;}),_0x567537=_0x59b11c[_0x30a6ca(0x33b)]==='B'?_0x30a6ca(0x218):_0x11e4d4['length']>=0x1?_0x30a6ca(0x174):_0x193256>=_0x15ff43?_0x30a6ca(0x218):_0x30a6ca(0x27d);_0x4bbc28[_0x30a6ca(0x400)]({'start':_0x1facd0,'end':_0x8b0db4,'duration':_0x44fd2c,'score':_0x435fd1,'type':_0x567537,'peakStrength':_0x193256,'avgStrength':_0x514e1c,'avgTrigger':_0x50b85e,'garminHRMax':null,'garminHRAvg':null,'slots':_0x1551dd[_0x30a6ca(0x1cc)](function(_0x4dc620){var _0x3078b3=_0x30a6ca;return{'start':_0x4dc620['start'],'strMax':_0x4dc620[_0x3078b3(0x379)],'strAvg':_0x4dc620['strAvg'],'trigCnt':_0x4dc620[_0x3078b3(0x2d2)]};})});}),this['log'][_0x1117a8(0x2c9)](_0x1117a8(0x29e)+_0x1a6806+':\x20'+_0x4bbc28[_0x1117a8(0x1e0)]+_0x1117a8(0x23c)+_0x15ff43+_0x1117a8(0x307)+_0x470a82);var _0x520e79=0x1e*0x3c*0x3e8;_0x4bbc28[_0x1117a8(0x21b)](function(_0x346594,_0x11c69b){var _0x44dcc8=_0x1117a8;return _0x346594[_0x44dcc8(0x29a)]-_0x11c69b[_0x44dcc8(0x29a)];});var _0x3907a0=[];for(var _0x4b1b8f=0x0;_0x4b1b8f<_0x4bbc28['length'];_0x4b1b8f++){var _0x1edece=_0x4bbc28[_0x4b1b8f];if(_0x3907a0['length']===0x0||_0x1edece[_0x1117a8(0x29a)]-_0x3907a0[_0x3907a0[_0x1117a8(0x1e0)]-0x1][_0x1117a8(0x27b)]>_0x520e79)_0x3907a0[_0x1117a8(0x400)](Object['assign']({},_0x1edece,{'slots':(_0x1edece[_0x1117a8(0x3b9)]||[])['slice']()}));else{var _0x23c0c0=_0x3907a0[_0x3907a0[_0x1117a8(0x1e0)]-0x1],_0x484ae2={'vaginal':0x3,'oral_hand':0x2,'intim':0x1};if((_0x484ae2[_0x1edece[_0x1117a8(0x132)]]||0x0)>(_0x484ae2[_0x23c0c0[_0x1117a8(0x132)]]||0x0))_0x23c0c0[_0x1117a8(0x132)]=_0x1edece[_0x1117a8(0x132)];_0x23c0c0[_0x1117a8(0x27b)]=Math['max'](_0x23c0c0['end'],_0x1edece[_0x1117a8(0x27b)]),_0x23c0c0[_0x1117a8(0x252)]=Math['round']((_0x23c0c0[_0x1117a8(0x27b)]-_0x23c0c0[_0x1117a8(0x29a)])/0xea60),_0x23c0c0[_0x1117a8(0x269)]=Math[_0x1117a8(0x347)](_0x23c0c0['peakStrength'],_0x1edece[_0x1117a8(0x269)]),_0x23c0c0[_0x1117a8(0x317)]=Math[_0x1117a8(0x32a)]((_0x23c0c0[_0x1117a8(0x317)]+_0x1edece['avgStrength'])/0x2),_0x23c0c0[_0x1117a8(0x2b9)]=Math[_0x1117a8(0x32a)]((_0x23c0c0[_0x1117a8(0x2b9)]+_0x1edece[_0x1117a8(0x2b9)])/0x2),_0x23c0c0[_0x1117a8(0x378)]=Math[_0x1117a8(0x32a)]((_0x23c0c0[_0x1117a8(0x378)]+_0x1edece['score'])/0x2),_0x23c0c0[_0x1117a8(0x3b9)]=(_0x23c0c0[_0x1117a8(0x3b9)]||[])[_0x1117a8(0x1a1)](_0x1edece[_0x1117a8(0x3b9)]||[]);}}_0x3907a0['length']<_0x4bbc28['length']&&(this[_0x1117a8(0x1c0)]['info'](_0x1117a8(0x3ca)+_0x4bbc28[_0x1117a8(0x1e0)]+_0x1117a8(0x2c6)+_0x3907a0[_0x1117a8(0x1e0)]+_0x1117a8(0x39c)),_0x4bbc28=_0x3907a0);var _0x434571=new Set((this[_0x1117a8(0x19e)][_0x1117a8(0x39e)]||[])[_0x1117a8(0x44d)](function(_0x5a4607){var _0x2682ea=_0x1117a8;return _0x5a4607['sensorFunction']===_0x2682ea(0x1ef);})[_0x1117a8(0x1cc)](function(_0x5e3413){return _0x5e3413['id'];})),_0x1c61d6=new Set((this['config']['devices']||[])['filter'](function(_0x5a95e8){var _0x3f2e40=_0x1117a8;return _0x5a95e8['sensorFunction']===_0x3f2e40(0x44b)||_0x5a95e8[_0x3f2e40(0x16e)];})['map'](function(_0x3b64ba){return _0x3b64ba['id'];})),_0x11e7ed=(this[_0x1117a8(0x19e)]['devices']||[])[_0x1117a8(0x44d)](function(_0x3928d0){return _0x3928d0['sensorFunction']==='bed';})[_0x1117a8(0x1cc)](function(_0x521551){var _0x32c31b=_0x1117a8;return _0x521551[_0x32c31b(0x34d)];})[_0x1117a8(0x44d)](Boolean)[0x0]||null,_0x26baf9=new Set();try{var _0x189b47=await this['getStateAsync']('analysis.topology.structure');if(_0x189b47&&_0x189b47[_0x1117a8(0x24d)]){var _0xc3ee99=JSON[_0x1117a8(0x46f)](_0x189b47[_0x1117a8(0x24d)]),_0x5e5912=_0xc3ee99[_0x1117a8(0x2a2)]||[],_0x373d49=_0xc3ee99[_0x1117a8(0x469)]||[],_0x188c19=new Set((this['config'][_0x1117a8(0x39e)]||[])[_0x1117a8(0x44d)](function(_0x158e01){var _0x41d945=_0x1117a8;return _0x158e01[_0x41d945(0x40b)]===_0x41d945(0x1ef);})[_0x1117a8(0x1cc)](function(_0x46b0ae){return _0x46b0ae['location'];})[_0x1117a8(0x44d)](Boolean));_0x188c19[_0x1117a8(0x3b3)](function(_0x185d7f){var _0xd21624=_0x1117a8,_0x1c5612=_0x5e5912['indexOf'](_0x185d7f);if(_0x1c5612===-0x1)return;var _0x1f758d=new Array(_0x5e5912[_0xd21624(0x1e0)])[_0xd21624(0x21d)](Infinity);_0x1f758d[_0x1c5612]=0x0;var _0x416495=[_0x1c5612];while(_0x416495[_0xd21624(0x1e0)]>0x0){var _0x4e222d=_0x416495[_0xd21624(0x2e3)]();if(_0x1f758d[_0x4e222d]>=0x1)continue;for(var _0x4d2c99=0x0;_0x4d2c99<_0x5e5912[_0xd21624(0x1e0)];_0x4d2c99++){_0x373d49[_0x4e222d]&&_0x373d49[_0x4e222d][_0x4d2c99]===0x1&&_0x1f758d[_0x4d2c99]===Infinity&&(_0x1f758d[_0x4d2c99]=_0x1f758d[_0x4e222d]+0x1,_0x416495[_0xd21624(0x400)](_0x4d2c99));}}_0x5e5912[_0xd21624(0x3b3)](function(_0x680e2d,_0x19b0b1){var _0x151915=_0xd21624;if(_0x1f758d[_0x19b0b1]===0x1)_0x26baf9[_0x151915(0x1d3)](_0x680e2d);});});}}catch(_0x50386d){}var _0x11b562=(this[_0x1117a8(0x19e)]['devices']||[])[_0x1117a8(0x44d)](function(_0x1edf36){var _0x3e8829=_0x1117a8;return _0x1edf36[_0x3e8829(0x132)]===_0x3e8829(0x14d)&&!_0x1edf36[_0x3e8829(0x16e)]&&_0x1edf36[_0x3e8829(0x40b)]!==_0x3e8829(0x1ef)&&_0x26baf9[_0x3e8829(0x245)](_0x1edf36[_0x3e8829(0x34d)]);})[_0x1117a8(0x1cc)](function(_0x4af08c){return _0x4af08c['id'];}),_0x4ad351=function(_0x47bb0a,_0x22dae9){var _0x17205c=_0x1117a8,_0x504ac6=_0x47bb0a[_0x17205c(0x29a)]-0xf*0xea60,_0x376eae=_0x47bb0a[_0x17205c(0x27b)]+0x1e*0xea60,_0x3c8453=_0x22dae9[_0x17205c(0x44d)](function(_0x278d1f){var _0x29489e=_0x17205c,_0x4ce925=_0x278d1f[_0x29489e(0x2f6)]||0x0;return _0x4ce925>=_0x504ac6&&_0x4ce925<=_0x376eae;}),_0x469fa0=new Date(_0x47bb0a[_0x17205c(0x29a)]),_0x471ad1=_0x469fa0['getHours']()+_0x469fa0['getMinutes']()/0x3c,_0x1e8384=Math[_0x17205c(0x32a)](Math['sin'](0x2*Math['PI']*_0x471ad1/0x18)*0x3e8)/0x3e8,_0x596d44=Math[_0x17205c(0x32a)](Math['cos'](0x2*Math['PI']*_0x471ad1/0x18)*0x3e8)/0x3e8,_0x4ee63f=_0x3c8453[_0x17205c(0x44d)](function(_0x3cc545){var _0x147176=_0x17205c;return(_0x3cc545[_0x147176(0x132)]===_0x147176(0x3bb)||_0x3cc545['type']===_0x147176(0x421))&&(_0x11e7ed?_0x3cc545['location']===_0x11e7ed:_0x434571[_0x147176(0x245)](_0x3cc545['id']));}),_0x1c2084=_0x4ee63f[_0x17205c(0x1e0)]>0x0?Number(_0x4ee63f[_0x4ee63f[_0x17205c(0x1e0)]-0x1]['value'])>0x0?0x1:0x0:null,_0x50460b=_0x3c8453[_0x17205c(0x44d)](function(_0x6b7afd){return _0x6b7afd['isFP2Bed'];}),_0x584d37=_0x50460b['length']>0x0?Number(_0x50460b[_0x50460b[_0x17205c(0x1e0)]-0x1][_0x17205c(0x49d)])>0x0?0x1:0x0:null,_0x1a991c=_0x3c8453[_0x17205c(0x44d)](function(_0x5b26dd){var _0x261374=_0x17205c;return(_0x5b26dd['type']==='temperature'||_0x5b26dd['type']===_0x261374(0x143)||_0x5b26dd[_0x261374(0x132)]===_0x261374(0x427))&&(_0x11e7ed?_0x5b26dd[_0x261374(0x34d)]===_0x11e7ed:_0x434571['has'](_0x5b26dd['id']));}),_0x2b8d31=_0x1a991c[_0x17205c(0x1e0)]>0x0?Number(_0x1a991c[_0x1a991c['length']-0x1][_0x17205c(0x49d)])||null:null,_0x46bdca=_0x22dae9['some'](function(_0x561399){var _0x400ca7=_0x17205c,_0x2847f8=_0x561399[_0x400ca7(0x2f6)]||0x0;return(_0x561399['isBathroomSensor']||_0x1c61d6[_0x400ca7(0x245)](_0x561399['id']))&&_0x561399[_0x400ca7(0x132)]===_0x400ca7(0x14d)&&_0x2847f8>=_0x47bb0a[_0x400ca7(0x29a)]-0x3c*0xea60&&_0x2847f8<_0x47bb0a[_0x400ca7(0x29a)];})?0x1:0x0,_0x47a448=_0x22dae9['some'](function(_0x4d360b){var _0x344148=_0x17205c,_0x15b6ce=_0x4d360b[_0x344148(0x2f6)]||0x0;return(_0x4d360b[_0x344148(0x16e)]||_0x1c61d6[_0x344148(0x245)](_0x4d360b['id']))&&_0x4d360b[_0x344148(0x132)]===_0x344148(0x14d)&&_0x15b6ce>_0x47bb0a[_0x344148(0x27b)]&&_0x15b6ce<=_0x47bb0a['end']+0x3c*0xea60;})?0x1:0x0,_0x5eb714=_0x26baf9[_0x17205c(0x224)]>0x0?_0x22dae9[_0x17205c(0x1cd)](function(_0xf0a401){var _0x1e95a9=_0x17205c,_0x3e9b42=_0xf0a401['timestamp']||0x0;return _0xf0a401[_0x1e95a9(0x132)]===_0x1e95a9(0x14d)&&_0x26baf9[_0x1e95a9(0x245)](_0xf0a401[_0x1e95a9(0x34d)])&&_0x3e9b42>=_0x47bb0a[_0x1e95a9(0x29a)]-0x5*0xea60&&_0x3e9b42<=_0x47bb0a[_0x1e95a9(0x27b)]+0x5*0xea60;})?0x1:0x0:null;return{'hourSin':_0x1e8384,'hourCos':_0x596d44,'lightOn':_0x1c2084,'presenceOn':_0x584d37,'roomTemp':_0x2b8d31,'bathBefore':_0x46bdca,'bathAfter':_0x47a448,'nearbyRoomMotion':_0x5eb714};},_0x1f3210=null,_0x5d07fa=_0x8a376b[_0x1117a8(0x2e2)]&&_0x8a376b['message'][_0x1117a8(0x4b1)]===!![];if(!_0x5d07fa&&_0x15453b[_0x1117a8(0x1e0)]>=0x3)try{var _0x4cf4b4=_0x4bbc28[_0x1117a8(0x1cc)](function(_0x5a5ef2){var _0x52122d=_0x1117a8,_0xa164a2=_0x5a5ef2['slots']||[],_0x831c61=_0xa164a2[_0x52122d(0x1cc)](function(_0x21065c){return _0x21065c['strMax']||0x0;}),_0x39874e=_0x831c61[_0x52122d(0x1e0)]>0x0?_0x831c61[_0x52122d(0x41c)](function(_0x2c3075,_0xe0e13){return _0x2c3075+_0xe0e13;},0x0)/_0x831c61[_0x52122d(0x1e0)]:0x0,_0x3c3d0f=_0x831c61[_0x52122d(0x1e0)]>0x0?_0x831c61['reduce'](function(_0x1c49a8,_0x52589e){return _0x1c49a8+(_0x52589e-_0x39874e)*(_0x52589e-_0x39874e);},0x0)/_0x831c61[_0x52122d(0x1e0)]:0x0,_0x415060=_0x4ad351(_0x5a5ef2,_0x40ffb3);return Object[_0x52122d(0x49a)]({'peak':_0x5a5ef2[_0x52122d(0x269)],'durSlots':_0xa164a2[_0x52122d(0x1e0)],'avgPeak':Math[_0x52122d(0x32a)](_0x39874e),'variance':Math[_0x52122d(0x32a)](_0x3c3d0f),'tierB':_0x5a5ef2[_0x52122d(0x33b)]==='B'?0x1:0x0},_0x415060);}),_0x34ac85=await new Promise(function(_0x129c49,_0x33134c){var _0x3c83ac=_0x1117a8,_0x5def29=setTimeout(function(){_0x33134c(new Error('timeout'));},0x3a98);pythonBridge['send'](this,_0x3c83ac(0x401),{'train':_0x15453b,'predict':_0x4cf4b4},function(_0x6814da){clearTimeout(_0x5def29),_0x129c49(_0x6814da);});}['bind'](this));_0x34ac85&&_0x34ac85[_0x1117a8(0x152)]&&(_0x1f3210=_0x34ac85[_0x1117a8(0x152)],_0x1f3210['trained']&&Array['isArray'](_0x1f3210[_0x1117a8(0x2a6)])&&(_0x1f3210[_0x1117a8(0x2a6)][_0x1117a8(0x3b3)](function(_0x5ea321,_0x56425e){var _0x3f723c=_0x1117a8;if(!_0x4bbc28[_0x56425e])return;if(_0x5ea321[_0x3f723c(0x132)]==='nullnummer'&&_0x5ea321['confidence']>=0.6)this[_0x3f723c(0x1c0)][_0x3f723c(0x2c9)]('[OC-SEX-RA-PY]\x20Session\x20'+_0x56425e+_0x3f723c(0x4b4)),_0x4bbc28[_0x56425e]=null;else _0x5ea321[_0x3f723c(0x132)]&&_0x5ea321[_0x3f723c(0x132)]!==_0x3f723c(0x228)&&_0x5ea321[_0x3f723c(0x1b7)]>=0.55&&(_0x4bbc28[_0x56425e][_0x3f723c(0x132)]=_0x5ea321[_0x3f723c(0x132)],_0x4bbc28[_0x56425e][_0x3f723c(0x34b)]=Math[_0x3f723c(0x32a)](_0x5ea321['confidence']*0x64));}[_0x1117a8(0x490)](this)),_0x4bbc28=_0x4bbc28[_0x1117a8(0x44d)](function(_0x14f637){return _0x14f637!==null;})));}catch(_0x3d7456){this['log']['debug'](_0x1117a8(0x47a)+_0x3d7456[_0x1117a8(0x2e2)]);}_0x9a800c[_0x1117a8(0x1f9)]=_0x1f3210?{'trained':_0x1f3210['trained']||![],'n':_0x1f3210[_0x1117a8(0x3ee)]||0x0,'counts':_0x1f3210[_0x1117a8(0x3be)]||{},'msg':_0x1f3210[_0x1117a8(0x2ee)]||'','feature_importances':_0x1f3210[_0x1117a8(0x38a)]||[],'loo_accuracy':_0x1f3210[_0x1117a8(0x485)]!=null?_0x1f3210[_0x1117a8(0x485)]:null,'confusion_matrix':_0x1f3210[_0x1117a8(0x1a5)]||null,'loo_details':_0x1f3210[_0x1117a8(0x1bb)]||[],'nearbyRoomSensorIds':_0x11b562}:null;var _0x45f019=[];try{var _0x449372=JSON['parse'](this[_0x1117a8(0x19e)][_0x1117a8(0x28d)]||'[]');if(Array[_0x1117a8(0x20b)](_0x449372))_0x45f019=_0x449372[_0x1117a8(0x44d)](function(_0x2835e3){var _0x31e1c1=_0x1117a8;return _0x2835e3&&_0x2835e3[_0x31e1c1(0x179)]===_0x1a6806&&_0x2835e3[_0x31e1c1(0x132)]===_0x31e1c1(0x228)&&_0x2835e3[_0x31e1c1(0x147)];});}catch(_0x22c4f9){}if(_0x45f019[_0x1117a8(0x1e0)]>0x0){var _0x4c82b4=_0x4bbc28[_0x1117a8(0x1e0)];_0x4bbc28=_0x4bbc28[_0x1117a8(0x44d)](function(_0x4c186a){var _0x2de558=_0x1117a8;return!_0x45f019[_0x2de558(0x1cd)](function(_0x15d1fe){var _0x576784=_0x2de558,_0x14ebbb=_0x15d1fe[_0x576784(0x147)][_0x576784(0x1d0)](':')['map'](Number),_0x12942a=new Date(_0x1a6806+_0x576784(0x29b))[_0x576784(0x254)](_0x14ebbb[0x0],_0x14ebbb[0x1],0x0,0x0);return Math[_0x576784(0x1a2)]((_0x4c186a[_0x576784(0x29a)]||0x0)-_0x12942a)<0x1e*0xea60;});}),this[_0x1117a8(0x1c0)][_0x1117a8(0x2c9)](_0x1117a8(0x29e)+_0x1a6806+_0x1117a8(0x208)+(_0x4c82b4-_0x4bbc28[_0x1117a8(0x1e0)])+_0x1117a8(0x3fd)+_0x4bbc28[_0x1117a8(0x1e0)]+_0x1117a8(0x36c));}_0x2cf5a6[_0x1117a8(0x2a5)]=_0x4bbc28,_0x2cf5a6[_0x1117a8(0x1c6)]=_0x9a800c,_0x2cf5a6['timestamp']=Date[_0x1117a8(0x1ae)](),fs[_0x1117a8(0x492)](_0x5eda28,JSON[_0x1117a8(0x332)](_0x2cf5a6),'utf8'),this[_0x1117a8(0x329)](_0x8a376b['from'],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'data':_0x2cf5a6},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x3cb272){this[_0x1117a8(0x1c0)][_0x1117a8(0x1d2)](_0x1117a8(0x437)+_0x3cb272[_0x1117a8(0x2e2)]),this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x3cb272['message']},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x190))try{if(this[_0x1117a8(0x19e)][_0x1117a8(0x171)]!==!![]){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':'Sex-Modul\x20nicht\x20aktiviert'},_0x8a376b[_0x1117a8(0x22a)]);return;}const _0x532980=path[_0x1117a8(0x2ab)](utils['getAbsoluteDefaultDataDir'](),_0x1117a8(0x41e),_0x1117a8(0x20a));if(!fs[_0x1117a8(0x2c5)](_0x532980)){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x1117a8(0x390)},_0x8a376b['callback']);return;}const _0x3aec6c=fs[_0x1117a8(0x418)](_0x532980)[_0x1117a8(0x44d)](function(_0xb93291){var _0x44800f=_0x1117a8;return/^\d{4}-\d{2}-\d{2}\.json$/[_0x44800f(0x259)](_0xb93291);})['sort'](),_0x53382f=[];for(var _0x5589dd=0x0;_0x5589dd<_0x3aec6c[_0x1117a8(0x1e0)];_0x5589dd++){try{var _0x4f2ae0=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](path[_0x1117a8(0x2ab)](_0x532980,_0x3aec6c[_0x5589dd]),_0x1117a8(0x449)));if((_0x4f2ae0[_0x1117a8(0x429)]||[])[_0x1117a8(0x1e0)]>0x0)_0x53382f[_0x1117a8(0x400)](_0x3aec6c[_0x5589dd][_0x1117a8(0x3af)](_0x1117a8(0x461),''));}catch(_0x1740fd){}}this['log'][_0x1117a8(0x2c9)](_0x1117a8(0x25f)+_0x53382f[_0x1117a8(0x1e0)]+'\x20Tage\x20mit\x20Daten\x20gefunden.'),this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'dates':_0x53382f},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x4b4377){this[_0x1117a8(0x1c0)][_0x1117a8(0x1d2)](_0x1117a8(0x154)+_0x4b4377[_0x1117a8(0x2e2)]),this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':![],'error':_0x4b4377[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b['command']===_0x1117a8(0x2d0))try{const _0x21c152=_0x8a376b[_0x1117a8(0x2e2)]&&_0x8a376b[_0x1117a8(0x2e2)][_0x1117a8(0x156)]?_0x8a376b[_0x1117a8(0x2e2)]['month']:null;if(!_0x21c152||!/^\d{4}-\d{2}$/[_0x1117a8(0x259)](_0x21c152)){this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':![],'error':_0x1117a8(0x251)},_0x8a376b[_0x1117a8(0x22a)]);return;}const _0x45dfda=path[_0x1117a8(0x2ab)](utils[_0x1117a8(0x476)](),_0x1117a8(0x41e),_0x1117a8(0x20a)),_0x25c39e={},_0x2a2cab=parseInt(_0x21c152[_0x1117a8(0x1d0)]('-')[0x0]),_0x3fc50c=parseInt(_0x21c152[_0x1117a8(0x1d0)]('-')[0x1]),_0x5bac86=new Date(_0x2a2cab,_0x3fc50c,0x0)[_0x1117a8(0x414)]();for(let _0x2d6ecd=0x1;_0x2d6ecd<=_0x5bac86;_0x2d6ecd++){const _0x45bc46=_0x2a2cab+'-'+String(_0x3fc50c)[_0x1117a8(0x18d)](0x2,'0')+'-'+String(_0x2d6ecd)[_0x1117a8(0x18d)](0x2,'0'),_0x10b43b=path[_0x1117a8(0x2ab)](_0x45dfda,_0x45bc46+_0x1117a8(0x461));if(fs[_0x1117a8(0x2c5)](_0x10b43b))try{const _0x18d689=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](_0x10b43b,_0x1117a8(0x449))),_0x4fabca=(_0x18d689[_0x1117a8(0x2a5)]||[])[_0x1117a8(0x1cc)](function(_0x53d4fb){var _0x2624b4=_0x1117a8;return{'type':_0x53d4fb[_0x2624b4(0x132)],'duration':_0x53d4fb[_0x2624b4(0x252)],'score':_0x53d4fb[_0x2624b4(0x378)],'start':_0x53d4fb[_0x2624b4(0x29a)],'end':_0x53d4fb[_0x2624b4(0x27b)],'pyConf':_0x53d4fb[_0x2624b4(0x34b)]};});if(_0x4fabca[_0x1117a8(0x1e0)]>0x0)_0x25c39e[_0x45bc46]=_0x4fabca;}catch(_0x27d1a4){}}this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'data':_0x25c39e},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x338150){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x338150[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x448))try{var _0x4658eb=path[_0x1117a8(0x2ab)](utils[_0x1117a8(0x476)](),'cogni-living',_0x1117a8(0x20a)),_0x12075f=path[_0x1117a8(0x2ab)](_0x4658eb,'sex-manual.json'),_0x2148bc=[];if(fs[_0x1117a8(0x2c5)](_0x12075f))try{_0x2148bc=JSON[_0x1117a8(0x46f)](fs['readFileSync'](_0x12075f,_0x1117a8(0x449)));}catch(_0x2c40c9){}if(!Array['isArray'](_0x2148bc))_0x2148bc=[];this[_0x1117a8(0x329)](_0x8a376b['from'],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'entries':_0x2148bc},_0x8a376b['callback']);}catch(_0x26552d){this['sendTo'](_0x8a376b['from'],_0x8a376b['command'],{'success':![],'error':_0x26552d['message']},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x49e))try{var _0xbd891a=path[_0x1117a8(0x2ab)](utils[_0x1117a8(0x476)](),_0x1117a8(0x41e),_0x1117a8(0x20a)),_0x267853=path[_0x1117a8(0x2ab)](_0xbd891a,_0x1117a8(0x484)),_0x360a65=[];if(fs[_0x1117a8(0x2c5)](_0x267853))try{_0x360a65=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](_0x267853,_0x1117a8(0x449)));}catch(_0x2a8fc5){}if(!Array[_0x1117a8(0x20b)](_0x360a65))_0x360a65=[];var _0x593848={'id':Date[_0x1117a8(0x1ae)]()[_0x1117a8(0x175)](0x24)+Math['random']()[_0x1117a8(0x175)](0x24)[_0x1117a8(0x314)](0x2,0x6),'date':_0x8a376b[_0x1117a8(0x2e2)]['date']||'','type':_0x8a376b[_0x1117a8(0x2e2)][_0x1117a8(0x132)]||'sonstiges','createdAt':Date[_0x1117a8(0x1ae)]()};if(_0x8a376b[_0x1117a8(0x2e2)]['time'])_0x593848['time']=_0x8a376b[_0x1117a8(0x2e2)]['time'];if(_0x8a376b[_0x1117a8(0x2e2)][_0x1117a8(0x468)])_0x593848[_0x1117a8(0x468)]=parseInt(_0x8a376b['message'][_0x1117a8(0x468)])||0x0;_0x360a65[_0x1117a8(0x400)](_0x593848),_0x360a65[_0x1117a8(0x21b)](function(_0x3b755a,_0x17fa31){var _0x273ea4=_0x1117a8;return _0x17fa31[_0x273ea4(0x179)][_0x273ea4(0x187)](_0x3b755a['date']);}),fs[_0x1117a8(0x492)](_0x267853,JSON['stringify'](_0x360a65),_0x1117a8(0x449)),this['log']['info']('[ManualSex]\x20gespeichert:\x20'+_0x593848[_0x1117a8(0x179)]+'\x20'+_0x593848['type']),this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'entries':_0x360a65},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x5b1338){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x5b1338[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]==='deleteManualSexSession')try{var _0xa2f95e=path[_0x1117a8(0x2ab)](utils[_0x1117a8(0x476)](),_0x1117a8(0x41e),_0x1117a8(0x20a)),_0x34e246=path['join'](_0xa2f95e,_0x1117a8(0x484)),_0x115543=[];if(fs[_0x1117a8(0x2c5)](_0x34e246))try{_0x115543=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](_0x34e246,_0x1117a8(0x449)));}catch(_0x28b503){}if(!Array[_0x1117a8(0x20b)](_0x115543))_0x115543=[];var _0x18780e=_0x8a376b['message']&&_0x8a376b[_0x1117a8(0x2e2)]['id'];_0x115543=_0x115543['filter'](function(_0x5519f6){return _0x5519f6['id']!==_0x18780e;}),fs[_0x1117a8(0x492)](_0x34e246,JSON[_0x1117a8(0x332)](_0x115543),_0x1117a8(0x449)),this[_0x1117a8(0x1c0)]['info']('[ManualSex]\x20geloescht:\x20'+_0x18780e),this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'entries':_0x115543},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x2c14eb){this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':![],'error':_0x2c14eb[_0x1117a8(0x2e2)]},_0x8a376b['callback']);}else{if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x131))try{var _0x197ea4=_0x8a376b['message']&&_0x8a376b[_0x1117a8(0x2e2)][_0x1117a8(0x179)];if(!_0x197ea4||!/^\d{4}-\d{2}-\d{2}$/[_0x1117a8(0x259)](_0x197ea4)){this[_0x1117a8(0x329)](_0x8a376b['from'],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x1117a8(0x1cb)},_0x8a376b['callback']);return;}var _0x354add=path[_0x1117a8(0x2ab)](utils[_0x1117a8(0x476)](),_0x1117a8(0x41e),'history'),_0x13ed6d=path[_0x1117a8(0x2ab)](_0x354add,_0x197ea4+'.json');if(!fs[_0x1117a8(0x2c5)](_0x13ed6d)){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'cleared':![]},_0x8a376b[_0x1117a8(0x22a)]);return;}var _0x53e218=JSON[_0x1117a8(0x46f)](fs['readFileSync'](_0x13ed6d,'utf8')),_0x5e35b3=(_0x53e218[_0x1117a8(0x2a5)]||[])['length'];_0x53e218['intimacyEvents']=[],fs['writeFileSync'](_0x13ed6d,JSON['stringify'](_0x53e218),_0x1117a8(0x449)),this[_0x1117a8(0x1c0)]['info'](_0x1117a8(0x453)+_0x197ea4+'):\x20'+_0x5e35b3+_0x1117a8(0x36e)),this['sendTo'](_0x8a376b['from'],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'cleared':!![],'prevCount':_0x5e35b3},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x3a1ce9){this[_0x1117a8(0x1c0)][_0x1117a8(0x1d2)](_0x1117a8(0x4aa)+_0x3a1ce9[_0x1117a8(0x2e2)]),this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x3a1ce9[_0x1117a8(0x2e2)]},_0x8a376b[_0x1117a8(0x22a)]);}else{if(_0x8a376b[_0x1117a8(0x3ec)]===_0x1117a8(0x166))try{var _0x28bc7e=_0x8a376b[_0x1117a8(0x2e2)]&&_0x8a376b[_0x1117a8(0x2e2)]['date'],_0x580ced=_0x8a376b[_0x1117a8(0x2e2)]&&Number(_0x8a376b['message'][_0x1117a8(0x29f)]);if(!_0x28bc7e||!/^\d{4}-\d{2}-\d{2}$/[_0x1117a8(0x259)](_0x28bc7e)||!_0x580ced){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x1117a8(0x246)},_0x8a376b[_0x1117a8(0x22a)]);return;}var _0x10fd0e=path[_0x1117a8(0x2ab)](utils[_0x1117a8(0x476)](),_0x1117a8(0x41e),_0x1117a8(0x20a)),_0xd024bf=path[_0x1117a8(0x2ab)](_0x10fd0e,_0x28bc7e+_0x1117a8(0x461));if(!fs[_0x1117a8(0x2c5)](_0xd024bf)){this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':!![],'removed':![],'remaining':0x0},_0x8a376b['callback']);return;}var _0x362d72=JSON[_0x1117a8(0x46f)](fs[_0x1117a8(0x3b1)](_0xd024bf,_0x1117a8(0x449))),_0xaa8215=(_0x362d72[_0x1117a8(0x2a5)]||[])[_0x1117a8(0x1e0)];_0x362d72['intimacyEvents']=(_0x362d72[_0x1117a8(0x2a5)]||[])[_0x1117a8(0x44d)](function(_0xd9a669){var _0x19c6ce=_0x1117a8;return Math[_0x19c6ce(0x1a2)]((_0xd9a669[_0x19c6ce(0x29a)]||0x0)-_0x580ced)>0x5*0x3c*0x3e8;});var _0x167cd2=_0xaa8215-_0x362d72[_0x1117a8(0x2a5)]['length'];fs[_0x1117a8(0x492)](_0xd024bf,JSON[_0x1117a8(0x332)](_0x362d72),'utf8'),this[_0x1117a8(0x1c0)][_0x1117a8(0x2c9)](_0x1117a8(0x2f0)+_0x28bc7e+'\x20~'+new Date(_0x580ced)[_0x1117a8(0x43a)]()['slice'](0x0,0x8)+_0x1117a8(0x334)+_0x167cd2+_0x1117a8(0x24b)+_0x362d72[_0x1117a8(0x2a5)][_0x1117a8(0x1e0)]+_0x1117a8(0x197)),this['sendTo'](_0x8a376b[_0x1117a8(0x200)],_0x8a376b['command'],{'success':!![],'removed':_0x167cd2>0x0,'prevCount':_0xaa8215,'remaining':_0x362d72[_0x1117a8(0x2a5)][_0x1117a8(0x1e0)]},_0x8a376b[_0x1117a8(0x22a)]);}catch(_0x4313a1){this[_0x1117a8(0x1c0)]['warn'](_0x1117a8(0x151)+_0x4313a1[_0x1117a8(0x2e2)]),this[_0x1117a8(0x329)](_0x8a376b[_0x1117a8(0x200)],_0x8a376b[_0x1117a8(0x3ec)],{'success':![],'error':_0x4313a1['message']},_0x8a376b['callback']);}}}}}}}}}}}}}}}}}}}}}}}}}}}}}[a0_0x44e735(0x3cf)](){var _0x555404=a0_0x44e735;if(!this['activeModules'][_0x555404(0x2d5)])return;this[_0x555404(0x1c0)][_0x555404(0x277)](_0x555404(0x1a7));try{const _0x4ae5bc=this[_0x555404(0x38d)]||[];pythonBridge[_0x555404(0x2ea)](this,'CALCULATE_HEALTH_TREND',{'events':_0x4ae5bc});}catch(_0x588bf5){this[_0x555404(0x1c0)]['warn'](_0x555404(0x422));}}async['onStateChange'](_0x4a2c86,_0xe09620){var _0x245286=a0_0x44e735;if(!_0xe09620||this[_0x245286(0x428)])return;if(_0x4a2c86[_0x245286(0x256)](_0x245286(0x24f))&&_0x4a2c86[_0x245286(0x26b)](_0x245286(0x201))&&_0xe09620[_0x245286(0x24d)])return;if(this['config'][_0x245286(0x230)]&&_0x4a2c86===this[_0x245286(0x19e)][_0x245286(0x2c2)]&&this[_0x245286(0x47c)][_0x245286(0x30d)]){this[_0x245286(0x226)](_0xe09620['val']);return;}if(_0xe09620[_0x245286(0x268)]&&_0x4a2c86[_0x245286(0x26b)](_0x245286(0x368)))return;if(_0x4a2c86===this[_0x245286(0x3bf)]+_0x245286(0x144)){if(_0xe09620[_0x245286(0x24d)]&&Object[_0x245286(0x26c)](setup[_0x245286(0x272)])[_0x245286(0x256)](_0xe09620[_0x245286(0x24d)])){this[_0x245286(0x3f1)]=_0xe09620['val'];if(_0xe09620[_0x245286(0x24d)]===setup['SYSTEM_MODES']['VACATION'])await recorder[_0x245286(0x33e)](this,![]);else await recorder['setPresence'](this,!![]);if(this[_0x245286(0x454)]){let _0xf296ea=![],_0x2d1291=0x0,_0x2b4b79=_0x245286(0x38e);if(this[_0x245286(0x3f1)]==='party')_0xf296ea=!![],_0x2d1291=0x168,_0x2b4b79='Party\x20Mode';else this[_0x245286(0x3f1)]==='guest'&&(_0xf296ea=!![],_0x2d1291=0x5a0,_0x2b4b79='Guest\x20Mode');pythonBridge[_0x245286(0x2ea)](this,_0x245286(0x1aa),{'active':_0xf296ea,'duration':_0x2d1291,'label':_0x2b4b79}),await this['setStateAsync'](_0x245286(0x4ae),{'val':JSON['stringify']({'active':_0xf296ea,'label':_0x2b4b79,'timestamp':Date['now']()}),'ack':!![]});}}if(!_0xe09620[_0x245286(0x268)])this['setState'](_0x4a2c86,{'val':this[_0x245286(0x3f1)],'ack':!![]});return;}if(_0x4a2c86['endsWith']('analysis.energy.warmupSources')&&_0xe09620[_0x245286(0x268)])this[_0x245286(0x439)](_0xe09620[_0x245286(0x24d)]);if(_0x4a2c86['endsWith']('analysis.energy.warmupTimes')&&_0xe09620['ack']&&this[_0x245286(0x47c)]['energy'])automation['checkCalendarTriggers'](this);if(!_0xe09620[_0x245286(0x268)]){if(_0x4a2c86[_0x245286(0x256)](_0x245286(0x2f9))&&_0xe09620[_0x245286(0x24d)]&&!_0x4a2c86[_0x245286(0x256)](_0x245286(0x2e4))){this[_0x245286(0x18b)](_0x4a2c86,{'val':![],'ack':!![]}),aiAgent[_0x245286(0x16b)](this);return;}if(_0x4a2c86[_0x245286(0x256)]('triggerWeeklyBriefing')&&_0xe09620[_0x245286(0x24d)]){this[_0x245286(0x18b)](_0x4a2c86,{'val':![],'ack':!![]}),aiAgent[_0x245286(0x408)](this);return;}if(_0x4a2c86[_0x245286(0x256)](_0x245286(0x155))&&_0xe09620[_0x245286(0x24d)]){this[_0x245286(0x18b)](_0x4a2c86,{'val':![],'ack':!![]});if(this[_0x245286(0x454)])aiAgent[_0x245286(0x36b)](this,pythonBridge);return;}if(_0x4a2c86[_0x245286(0x256)]('analysis.trigger')&&_0xe09620[_0x245286(0x24d)]){this[_0x245286(0x18b)](_0x4a2c86,{'val':![],'ack':!![]}),aiAgent['runGeminiAnalysis'](this);return;}if(_0x4a2c86['includes'](_0x245286(0x433))&&_0xe09620['val']){this[_0x245286(0x18b)](_0x4a2c86,{'val':![],'ack':!![]}),aiAgent[_0x245286(0x305)](this);return;}if(_0x4a2c86[_0x245286(0x256)](_0x245286(0x271))&&_0xe09620[_0x245286(0x24d)]){this[_0x245286(0x18b)](_0x4a2c86,{'val':![],'ack':!![]});if(this[_0x245286(0x454)])try{const _0x50b566=await this[_0x245286(0x205)]('LTM.trainingData.sequences');if(_0x50b566&&_0x50b566[_0x245286(0x24d)]){const _0x48cdf8=JSON[_0x245286(0x46f)](_0x50b566[_0x245286(0x24d)]);this[_0x245286(0x295)](_0x245286(0x1d8),{'val':'Sec-Training\x20started...','ack':!![]}),pythonBridge[_0x245286(0x2ea)](this,_0x245286(0x34e),{'sequences':_0x48cdf8});}}catch(_0x579bfd){}return;}if(_0x4a2c86[_0x245286(0x256)](_0x245286(0x491))&&_0xe09620[_0x245286(0x24d)]){this['setState'](_0x4a2c86,{'val':![],'ack':!![]});try{aiAgent['generateHealthReport'](this,_0x245286(0x22f)),setTimeout(()=>aiAgent[_0x245286(0x170)](this,_0x245286(0x34a)),0x2ee0);if(this[_0x245286(0x454)]){this[_0x245286(0x3cf)]();const _0x395f20=await this['getStateAsync'](_0x245286(0x1f6));if(_0x395f20&&_0x395f20[_0x245286(0x24d)]){const _0x14377e=JSON[_0x245286(0x46f)](_0x395f20[_0x245286(0x24d)]);pythonBridge['send'](this,'TRAIN_HEALTH',{'digests':_0x14377e});}}try{await this[_0x245286(0x4a9)]();}catch(_0x8befb5){}try{const _0x38568b=utils[_0x245286(0x476)](),_0x2b84c4=path[_0x245286(0x2ab)](_0x38568b,_0x245286(0x41e),_0x245286(0x20a)),_0x17b220=[],_0xcd26d8=new Set((this[_0x245286(0x19e)][_0x245286(0x39e)]||[])[_0x245286(0x44d)](function(_0x4b253d){var _0x550d32=_0x245286;return _0x4b253d[_0x550d32(0x16e)]||_0x4b253d[_0x550d32(0x40b)]===_0x550d32(0x44b);})[_0x245286(0x1cc)](function(_0xb5210){return _0xb5210['id'];})),_0x411d66=new Set((this[_0x245286(0x19e)]['devices']||[])[_0x245286(0x44d)](function(_0xb74bb7){var _0xa58e1c=_0x245286;return _0xb74bb7[_0xa58e1c(0x2ae)]||_0xb74bb7[_0xa58e1c(0x40b)]==='kitchen';})[_0x245286(0x1cc)](function(_0x71bf7d){return _0x71bf7d['id'];}));for(let _0x1c3630=0x0;_0x1c3630<=0x3b;_0x1c3630++){const _0x5374f9=new Date();_0x5374f9[_0x245286(0x3c4)](_0x5374f9[_0x245286(0x414)]()-_0x1c3630);const _0x5321ab=_0x5374f9[_0x245286(0x1e4)]()['slice'](0x0,0xa),_0x1bb112=path['join'](_0x2b84c4,_0x5321ab+_0x245286(0x461));if(fs[_0x245286(0x2c5)](_0x1bb112))try{const _0x79aa04=JSON[_0x245286(0x46f)](fs['readFileSync'](_0x1bb112,'utf8')),_0x3186b5=_0x79aa04[_0x245286(0x239)]||[],_0x4bc682=_0x3186b5[_0x245286(0x41c)](function(_0x160f98,_0xd512fa){return _0x160f98+_0xd512fa;},0x0),_0x49116c=Array['isArray'](_0x79aa04[_0x245286(0x429)])?_0x79aa04[_0x245286(0x429)][_0x245286(0x44d)](function(_0x4f9431){var _0x2c85b7=_0x245286;const _0x8bdf55=new Date(_0x4f9431[_0x2c85b7(0x2f6)]||_0x4f9431['ts']||0x0)[_0x2c85b7(0x2a9)]();return _0x8bdf55>=0x16||_0x8bdf55<0x6;})['length']:_0x79aa04[_0x245286(0x483)]||0x0,_0x4d1046=Object['keys'](_0x79aa04[_0x245286(0x17d)]||{})['filter'](function(_0x265e73){var _0x258abf=_0x245286;return(_0x79aa04[_0x258abf(0x17d)][_0x265e73]||0x0)>0x0;})['length']||0x1,_0x3f33f9=Array[_0x245286(0x20b)](_0x79aa04[_0x245286(0x429)])?_0x79aa04[_0x245286(0x429)][_0x245286(0x44d)](function(_0x506274){var _0x532598=_0x245286;return _0x506274[_0x532598(0x16e)];})[_0x245286(0x1cc)](function(_0x2e7ce6){var _0x9c3e99=_0x245286;return Math[_0x9c3e99(0x39d)]((_0x2e7ce6['timestamp']||_0x2e7ce6['ts']||0x0)/0x36ee80);}):[],_0xf0910a=new Set(_0x3f33f9);var _0x5b98c2=_0x79aa04[_0x245286(0x299)];if(_0x5b98c2===undefined&&Array[_0x245286(0x20b)](_0x79aa04[_0x245286(0x429)])){var _0x1cd32e=new Set(_0x79aa04['eventHistory'][_0x245286(0x44d)](function(_0x29de70){var _0x1e3ede=_0x245286;if(!_0x29de70[_0x1e3ede(0x16e)]&&!_0xcd26d8[_0x1e3ede(0x245)](_0x29de70['id']))return![];var _0x435838=new Date(_0x29de70['timestamp']||_0x29de70['ts']||0x0)['getHours']();return _0x435838>=0x16||_0x435838<0x6;})[_0x245286(0x1cc)](function(_0x36e1d6){var _0x3a1db4=_0x245286;return new Date(_0x36e1d6[_0x3a1db4(0x2f6)]||_0x36e1d6['ts']||0x0)['getHours']();}));_0x5b98c2=_0x1cd32e['size'];}var _0x2bd917=_0x79aa04[_0x245286(0x4a7)];if(_0x2bd917===undefined&&Array[_0x245286(0x20b)](_0x79aa04[_0x245286(0x429)])){var _0x2c0223=new Set(_0x79aa04[_0x245286(0x429)][_0x245286(0x44d)](function(_0x4f1336){var _0x3013d1=_0x245286;return _0x4f1336[_0x3013d1(0x2ae)]||_0x411d66[_0x3013d1(0x245)](_0x4f1336['id']);})[_0x245286(0x1cc)](function(_0x316752){var _0x40899d=_0x245286;return new Date(_0x316752[_0x40899d(0x2f6)]||_0x316752['ts']||0x0)[_0x40899d(0x2a9)]();}));_0x2bd917=_0x2c0223['size'];}_0x17b220[_0x245286(0x400)]({'date':_0x5321ab,'activityPercent':_0x4bc682,'gaitSpeed':_0x79aa04['gaitSpeed']||0x0,'nightEvents':_0x49116c,'uniqueRooms':_0x4d1046,'bathroomVisits':_0xf0910a[_0x245286(0x224)],'nocturiaCount':_0x5b98c2||0x0,'kitchenVisits':_0x2bd917||0x0,'maxPersonsDetected':_0x79aa04[_0x245286(0x2dc)]||0x0,'bedPresenceMinutes':_0x79aa04['bedPresenceMinutes']||0x0,'nightVibrationCount':_0x79aa04[_0x245286(0x1f0)]||0x0});}catch(_0x530383){}}_0x17b220['sort'](function(_0x797f04,_0x2975ac){var _0x1e865c=_0x245286;return _0x797f04[_0x1e865c(0x179)][_0x1e865c(0x187)](_0x2975ac[_0x1e865c(0x179)]);}),this[_0x245286(0x1c0)]['info'](_0x245286(0x41a)+_0x17b220[_0x245286(0x1e0)]);const _0x2bcdc3=[_0x245286(0x146),_0x245286(0x291),'frailty',_0x245286(0x2df),'diabetes2',_0x245286(0x1e9),'cardiovascular',_0x245286(0x135),_0x245286(0x180),_0x245286(0x1c1),_0x245286(0x49c),_0x245286(0x32b),'longCovid',_0x245286(0x350)],_0x5b85a2=this[_0x245286(0x19e)][_0x245286(0x29c)]||{},_0x10733a=_0x2bcdc3[_0x245286(0x44d)](function(_0x67e72d){var _0x667ba4=_0x245286;return _0x5b85a2[_0x67e72d]&&_0x5b85a2[_0x67e72d][_0x667ba4(0x30b)];}),_0x5414d4=_0x10733a[_0x245286(0x1e0)]>0x0?_0x10733a:[_0x245286(0x146),_0x245286(0x291),_0x245286(0x3ba)];if(_0x17b220[_0x245286(0x1e0)]>=0x5)pythonBridge[_0x245286(0x2ea)](this,_0x245286(0x13f),{'digests':_0x17b220,'enabledProfiles':_0x5414d4},_0x48b338=>{var _0x3aef57=_0x245286;if(!_0x48b338||!_0x48b338[_0x3aef57(0x152)]||_0x48b338[_0x3aef57(0x152)]['error']){this['log'][_0x3aef57(0x1d2)](_0x3aef57(0x482)+JSON['stringify'](_0x48b338));return;}const _0x251cd8=_0x48b338[_0x3aef57(0x152)];this[_0x3aef57(0x295)](_0x3aef57(0x301),{'val':JSON['stringify'](_0x251cd8),'ack':!![]})[_0x3aef57(0x34f)](()=>{});for(const [_0x415117,_0x32d4b4]of Object[_0x3aef57(0x432)](_0x251cd8)){if(_0x32d4b4&&_0x32d4b4['score']!==null&&_0x32d4b4[_0x3aef57(0x378)]!==undefined)this['setStateAsync'](_0x3aef57(0x20d)+_0x415117,{'val':_0x32d4b4['score'],'ack':!![]})['catch'](()=>{});}this[_0x3aef57(0x1c0)][_0x3aef57(0x2c9)](_0x3aef57(0x285)+Object[_0x3aef57(0x3a5)](_0x251cd8)[_0x3aef57(0x1cc)](function(_0x5d0670){var _0x38dfad=_0x3aef57;return _0x5d0670+'='+(_0x251cd8[_0x5d0670]&&_0x251cd8[_0x5d0670][_0x38dfad(0x378)]);})[_0x3aef57(0x2ab)](',\x20')),pythonBridge['send'](this,_0x3aef57(0x32d),{'digests':_0x17b220},_0x158dc3=>{var _0x2ea7ff=_0x3aef57;if(!_0x158dc3||!_0x158dc3[_0x2ea7ff(0x152)]){this[_0x2ea7ff(0x1c0)][_0x2ea7ff(0x1d2)](_0x2ea7ff(0x455));return;}this[_0x2ea7ff(0x295)](_0x2ea7ff(0x3dc),{'val':JSON[_0x2ea7ff(0x332)](_0x158dc3[_0x2ea7ff(0x152)]),'ack':!![]})['catch'](()=>{});const _0x11486c=_0x158dc3[_0x2ea7ff(0x152)][_0x2ea7ff(0x33d)]||[];this[_0x2ea7ff(0x1c0)][_0x2ea7ff(0x2c9)](_0x2ea7ff(0x356)+_0x11486c[_0x2ea7ff(0x1e0)]+'\x20Hinweis(e):\x20'+_0x11486c[_0x2ea7ff(0x1cc)](function(_0x30274f){var _0x22c87d=_0x2ea7ff;return _0x30274f[_0x22c87d(0x338)]+'('+Math[_0x22c87d(0x32a)](_0x30274f[_0x22c87d(0x1b7)]*0x64)+'%)';})[_0x2ea7ff(0x2ab)](',\x20'));});});else{const _0x1af01f={};for(const _0x475098 of _0x5414d4){_0x1af01f[_0x475098]={'score':null,'level':_0x245286(0x2db),'dataPoints':_0x17b220[_0x245286(0x1e0)],'message':_0x17b220[_0x245286(0x1e0)]+'/5\x20Tage\x20Datenbasis.\x20Taeglich\x20waechst\x20die\x20Basis.'};}this[_0x245286(0x295)](_0x245286(0x301),{'val':JSON[_0x245286(0x332)](_0x1af01f),'ack':!![]})[_0x245286(0x34f)](()=>{}),this[_0x245286(0x1c0)]['info'](_0x245286(0x3db)+_0x17b220[_0x245286(0x1e0)]+'/5');}}catch(_0x4aaaaf){this[_0x245286(0x1c0)]['warn'](_0x245286(0x482)+_0x4aaaaf['message']);}setTimeout(()=>{var _0x2e9e4c=_0x245286;this[_0x2e9e4c(0x4a9)]()[_0x2e9e4c(0x34f)](_0x589657=>{}),pwaServer[_0x2e9e4c(0x283)]();},0x7530);}catch(_0x16bfd6){this['log'][_0x245286(0x1d2)](_0x245286(0x3a1)+_0x16bfd6[_0x245286(0x2e2)]);}return;}if(_0x4a2c86[_0x245286(0x256)](_0x245286(0x2a1))&&_0xe09620['val']){this[_0x245286(0x18b)](_0x4a2c86,{'val':![],'ack':!![]}),await this[_0x245286(0x346)]();return;}if(_0x4a2c86[_0x245286(0x256)](_0x245286(0x165))&&_0xe09620[_0x245286(0x24d)]){this[_0x245286(0x18b)](_0x4a2c86,{'val':![],'ack':!![]});if(this[_0x245286(0x454)])try{const _0x436a55=await this[_0x245286(0x205)]('LTM.rawEventLog');if(_0x436a55&&_0x436a55[_0x245286(0x24d)]){const _0xab7eeb={};if(this[_0x245286(0x19e)][_0x245286(0x39e)])this[_0x245286(0x19e)]['devices'][_0x245286(0x3b3)](_0x57f919=>{var _0x1a1ffa=_0x245286;if(_0x57f919['id']&&_0x57f919[_0x1a1ffa(0x132)])_0xab7eeb[_0x57f919['id']]=_0x57f919[_0x1a1ffa(0x132)];});pythonBridge[_0x245286(0x2ea)](this,'TRAIN_COMFORT',{'events':JSON['parse'](_0x436a55[_0x245286(0x24d)]),'deviceMap':_0xab7eeb});}}catch(_0x2c96d4){}return;}if(_0x4a2c86[_0x245286(0x256)](_0x245286(0x39a))&&_0xe09620[_0x245286(0x24d)]){this[_0x245286(0x18b)](_0x4a2c86,{'val':![],'ack':!![]}),topology[_0x245286(0x192)](this);if(this[_0x245286(0x454)])try{const _0x2f66c5=await this[_0x245286(0x205)](_0x245286(0x2d1));if(_0x2f66c5&&_0x2f66c5[_0x245286(0x24d)])pythonBridge[_0x245286(0x2ea)](this,_0x245286(0x1b4),{'sequences':JSON[_0x245286(0x46f)](_0x2f66c5[_0x245286(0x24d)])});}catch(_0x39c591){}return;}}const _0x8f430b=(this['config'][_0x245286(0x39e)]||[])[_0x245286(0x248)](_0x366f9b=>_0x366f9b['id']===_0x4a2c86);if(_0x8f430b){const _0x2a0d4c=await recorder[_0x245286(0x2da)](this,_0x4a2c86,_0xe09620,_0x8f430b);_0x2a0d4c&&this[_0x245286(0x18b)](_0x245286(0x344),{'val':Date[_0x245286(0x1ae)](),'ack':!![]});_0x2a0d4c&&(_0x2a0d4c[_0x245286(0x132)]===_0x245286(0x14d)||_0x2a0d4c['type']===_0x245286(0x261)||_0x2a0d4c[_0x245286(0x132)]==='door')&&_0x2a0d4c[_0x245286(0x34d)]&&this['isProVersion']&&deadMan[_0x245286(0x240)](this,_0x2a0d4c['location']);isActiveValue(_0xe09620[_0x245286(0x24d)])&&(_0x8f430b[_0x245286(0x132)]&&(_0x8f430b[_0x245286(0x132)]==='window'||_0x8f430b[_0x245286(0x132)]===_0x245286(0x289)||_0x8f430b[_0x245286(0x132)]===_0x245286(0x294)||_0x8f430b[_0x245286(0x132)]===_0x245286(0x4ab)||_0x8f430b[_0x245286(0x132)]===_0x245286(0x235)||_0x8f430b[_0x245286(0x132)]===_0x245286(0x2b3))&&this[_0x245286(0x243)](_0x8f430b));if(_0x8f430b[_0x245286(0x132)]==='temperature'||_0x8f430b[_0x245286(0x132)]==='thermostat'){if(this[_0x245286(0x47c)][_0x245286(0x496)])automation[_0x245286(0x141)](this);}if(_0x8f430b['location']&&recorder[_0x245286(0x2e0)](_0x8f430b[_0x245286(0x132)],_0xe09620[_0x245286(0x24d)])){if(!this['sensorLastActive'])this[_0x245286(0x4a6)]={};this[_0x245286(0x4a6)][_0x4a2c86]=Date[_0x245286(0x1ae)]();var _0x49a9fa={'ts':Date['now'](),'sensorId':_0x4a2c86,'sensorName':_0x8f430b[_0x245286(0x353)]||_0x4a2c86,'room':_0x8f430b[_0x245286(0x34d)],'type':_0x8f430b['type']};this[_0x245286(0x295)](_0x245286(0x321),{'val':JSON['stringify'](_0x49a9fa),'ack':!![]})['catch'](function(){}),this[_0x245286(0x1ba)](_0x4a2c86,_0x8f430b['location']);}}}[a0_0x44e735(0x3c3)](_0x3d723d,_0x17b900){var _0x53b446=a0_0x44e735;if(_0x3d723d===_0x17b900)return 0x0;var _0x578c5a=this[_0x53b446(0x471)];if(!_0x578c5a||!_0x578c5a[_0x53b446(0x2a2)]||!_0x578c5a[_0x53b446(0x469)])return-0x1;var _0xd9a67e=_0x578c5a[_0x53b446(0x2a2)],_0x52ff94=_0x578c5a[_0x53b446(0x469)],_0x3f3b00=_0xd9a67e[_0x53b446(0x3f2)](_0x3d723d),_0x201b79=_0xd9a67e[_0x53b446(0x3f2)](_0x17b900);if(_0x3f3b00<0x0||_0x201b79<0x0)return-0x1;var _0x484103={};_0x484103[_0x3f3b00]=!![];var _0x37725d=[[_0x3f3b00,0x0]];while(_0x37725d[_0x53b446(0x1e0)]>0x0){var _0x168fa5=_0x37725d['shift'](),_0x5c85ab=_0x168fa5[0x0],_0x1b3d19=_0x168fa5[0x1];for(var _0x34cf9b=0x0;_0x34cf9b<_0xd9a67e[_0x53b446(0x1e0)];_0x34cf9b++){if(!_0x484103[_0x34cf9b]&&_0x52ff94[_0x5c85ab]&&_0x52ff94[_0x5c85ab][_0x34cf9b]>0x0){if(_0x34cf9b===_0x201b79)return _0x1b3d19+0x1;_0x484103[_0x34cf9b]=!![],_0x37725d['push']([_0x34cf9b,_0x1b3d19+0x1]);}}}return-0x1;}[a0_0x44e735(0x1ba)](_0x480115,_0x18d1da){var _0x3bef76=a0_0x44e735;if(!this[_0x3bef76(0x471)]){this[_0x3bef76(0x205)](_0x3bef76(0x406))[_0x3bef76(0x451)](_0x33d2cd=>{var _0x5ac7ac=_0x3bef76;if(_0x33d2cd&&_0x33d2cd[_0x5ac7ac(0x24d)])try{this[_0x5ac7ac(0x471)]=JSON[_0x5ac7ac(0x46f)](_0x33d2cd['val']);}catch(_0x10eede){}})[_0x3bef76(0x34f)](function(){});return;}var _0x5001bc=this[_0x3bef76(0x471)];if(!_0x5001bc||!_0x5001bc[_0x3bef76(0x2a2)]||!_0x5001bc[_0x3bef76(0x469)])return;var _0xa08059=0x1388,_0x3e8b9f=0x2,_0x350989=Date[_0x3bef76(0x1ae)](),_0x18a713=this,_0x51588d={};(this['config'][_0x3bef76(0x39e)]||[])[_0x3bef76(0x3b3)](function(_0x38fabe){if(_0x38fabe['id'])_0x51588d[_0x38fabe['id']]=_0x38fabe;});var _0x4d5a6=![],_0x141e2c=null;Object['keys'](this[_0x3bef76(0x4a6)]||{})['forEach'](function(_0x4431c1){var _0x4d475c=_0x3bef76;if(_0x4431c1===_0x480115)return;var _0x4bd381=_0x18a713[_0x4d475c(0x4a6)][_0x4431c1];if(!_0x4bd381||_0x350989-_0x4bd381>_0xa08059)return;var _0x1b7367=_0x51588d[_0x4431c1];if(!_0x1b7367||!_0x1b7367['location']||_0x1b7367[_0x4d475c(0x34d)]===_0x18d1da)return;var _0x262d0a=_0x18a713[_0x4d475c(0x3c3)](_0x18d1da,_0x1b7367[_0x4d475c(0x34d)]);if(_0x262d0a>=_0x3e8b9f){_0x4d5a6=!![];var _0x38a9ba=Math[_0x4d475c(0x32a)](_0x350989-_0x4bd381);_0x18a713[_0x4d475c(0x1c0)][_0x4d475c(0x2c9)](_0x4d475c(0x24e)+_0x18d1da+_0x4d475c(0x39f)+_0x1b7367[_0x4d475c(0x34d)]+'\x20('+_0x262d0a+_0x4d475c(0x1a4)+_0x38a9ba+_0x4d475c(0x2fb));if(!_0x141e2c||_0x262d0a>_0x141e2c[_0x4d475c(0x3c7)]){var _0x18e744=_0x51588d[_0x480115];_0x141e2c={'ts':_0x350989,'triggerSensorId':_0x480115,'triggerSensorName':_0x18e744?_0x18e744[_0x4d475c(0x353)]||_0x480115:_0x480115,'triggerRoom':_0x18d1da,'otherSensorId':_0x4431c1,'otherSensorName':_0x1b7367['name']||_0x4431c1,'otherRoom':_0x1b7367[_0x4d475c(0x34d)],'hops':_0x262d0a,'deltaMs':_0x38a9ba};}}});if(_0x4d5a6&&_0x141e2c){var _0x573a4d=this[_0x3bef76(0x417)]||0x1;_0x141e2c['personCountBefore']=_0x573a4d,_0x141e2c[_0x3bef76(0x296)]=0x2,this['setStateAsync'](_0x3bef76(0x278),{'val':JSON[_0x3bef76(0x332)](_0x141e2c),'ack':!![]})[_0x3bef76(0x34f)](function(){});if(_0x573a4d<0x2){this['_livePersonCount']=0x2;if(!this[_0x3bef76(0x2d4)]||this[_0x3bef76(0x2d4)]<0x2)this[_0x3bef76(0x2d4)]=0x2;this[_0x3bef76(0x295)]('system.currentPersonCount',{'val':0x2,'ack':!![]})[_0x3bef76(0x34f)](function(){}),this[_0x3bef76(0x295)](_0x3bef76(0x394),{'val':_0x3bef76(0x13e),'ack':!![]})['catch'](function(){});}if(this['_multiPersonResetTimer'])clearTimeout(this[_0x3bef76(0x3a9)]);var _0x2cde87=this[_0x3bef76(0x19e)][_0x3bef76(0x169)]||_0x3bef76(0x1f2),_0x350bab=_0x2cde87===_0x3bef76(0x1f2)?0x1:_0x2cde87===_0x3bef76(0x302)?0x2:0x3,_0x244170=_0x350bab>=0x2?'multi':_0x3bef76(0x1f2);this[_0x3bef76(0x3a9)]=setTimeout(function(){var _0x43fdc2=_0x3bef76;_0x18a713[_0x43fdc2(0x417)]=_0x350bab,_0x18a713[_0x43fdc2(0x295)](_0x43fdc2(0x21f),{'val':_0x350bab,'ack':!![]})[_0x43fdc2(0x34f)](function(){}),_0x18a713[_0x43fdc2(0x295)](_0x43fdc2(0x394),{'val':_0x244170,'ack':!![]})[_0x43fdc2(0x34f)](function(){}),_0x18a713[_0x43fdc2(0x1c0)][_0x43fdc2(0x2c9)](_0x43fdc2(0x381)+_0x2cde87);},0x3c*0x3c*0x3e8);}}async['protectAiMemory'](_0x101408){var _0x47ab55=a0_0x44e735;if(!this['memoryCache']||Date[_0x47ab55(0x1ae)]()-this[_0x47ab55(0x2c7)]>0x493e0)return;try{const _0x20e806=JSON[_0x47ab55(0x46f)](_0x101408),_0x53a798=this[_0x47ab55(0x49f)][_0x47ab55(0x202)];let _0xd76a2a=![];for(const _0x260d98 in _0x53a798){if(_0x53a798[_0x260d98][_0x47ab55(0x256)]('AI')&&_0x20e806[_0x260d98]&&!_0x20e806[_0x260d98][_0x47ab55(0x256)]('AI')){_0xd76a2a=!![];break;}}_0xd76a2a&&(await this[_0x47ab55(0x295)](_0x47ab55(0x4a8),{'val':JSON['stringify'](this['memoryCache'][_0x47ab55(0x45d)]),'ack':!![]}),await this['setStateAsync']('analysis.energy.warmupSources',{'val':JSON[_0x47ab55(0x332)](this[_0x47ab55(0x49f)][_0x47ab55(0x202)]),'ack':!![]}));}catch(_0x3cbaba){}}async[a0_0x44e735(0x4a2)](){var _0xd540ac=a0_0x44e735;try{const _0x233cc3=await this[_0xd540ac(0x205)](setup[_0xd540ac(0x26a)]);if(_0x233cc3&&_0x233cc3[_0xd540ac(0x24d)])this['currentSystemMode']=_0x233cc3['val'];}catch(_0x1822ee){this[_0xd540ac(0x3f1)]=setup['SYSTEM_MODES'][_0xd540ac(0x45e)];}}async[a0_0x44e735(0x3ef)](){var _0x385fba=a0_0x44e735;const _0x23706c=this[_0x385fba(0x19e)][_0x385fba(0x207)]||[];if(_0x23706c['length']===0x0)return![];const _0x26dd8e=[],_0x30bdb6=Date['now'](),_0x530cad=0x5*0x3c*0x3e8;for(const _0x43eb48 of _0x23706c){try{let _0x17a94b=![];try{const _0x31f033=await this['getForeignStateAsync'](_0x43eb48+_0x385fba(0x309));if(_0x31f033&&_0x31f033[_0x385fba(0x24d)]===!![])_0x17a94b=!![];}catch(_0x9d0390){}if(!_0x17a94b)try{const _0x46271b=await this[_0x385fba(0x1f4)](_0x43eb48+_0x385fba(0x374));if(_0x46271b&&_0x46271b['ts']){const _0x455fef=_0x30bdb6-_0x46271b['ts'];if(_0x455fef<_0x530cad)_0x17a94b=!![];}}catch(_0x4e30bb){}if(!_0x17a94b)try{const _0x25b780=await this[_0x385fba(0x1f4)](_0x43eb48+_0x385fba(0x458));if(_0x25b780&&typeof _0x25b780[_0x385fba(0x24d)]===_0x385fba(0x435)&&_0x25b780[_0x385fba(0x24d)]>0x0)_0x17a94b=!![];}catch(_0x5448bd){}if(!_0x17a94b)try{const _0x17c399=await this[_0x385fba(0x1f4)](_0x43eb48);if(_0x17c399){const _0x392de5=_0x30bdb6-(_0x17c399['ts']||0x0);_0x392de5<_0x530cad&&(_0x17c399[_0x385fba(0x24d)]===!![]||_0x17c399[_0x385fba(0x24d)]==='online'||_0x17c399[_0x385fba(0x24d)]===0x1)&&(_0x17a94b=!![]);}}catch(_0x1c75f8){}if(_0x17a94b){const _0x52b943=_0x43eb48['split']('.'),_0x57f018=_0x52b943[_0x52b943[_0x385fba(0x1e0)]-0x1]||_0x43eb48;_0x26dd8e[_0x385fba(0x400)](_0x57f018);}}catch(_0xfc4757){this[_0x385fba(0x1c0)][_0x385fba(0x1d2)](_0x385fba(0x441)+_0x43eb48+':\x20'+_0xfc4757[_0x385fba(0x2e2)]);}}const _0x2380c2=_0x26dd8e[_0x385fba(0x1e0)]>0x0?_0x26dd8e[_0x385fba(0x2ab)](',\x20'):_0x385fba(0x369);return await this[_0x385fba(0x295)](_0x385fba(0x223),{'val':_0x2380c2,'ack':!![]}),_0x26dd8e['length']>0x0;}async[a0_0x44e735(0x21e)](){var _0x57e782=a0_0x44e735;await aiAgent['runGeminiAnalysis'](this);this['activeModules']['health']&&(this[_0x57e782(0x2ec)](),this['triggerGaitAnalysis']());if(this[_0x57e782(0x47c)][_0x57e782(0x496)])this[_0x57e782(0x346)]();}async[a0_0x44e735(0x3eb)](){var _0x21c3ef=a0_0x44e735;const _0x55a5a8=['weatherunderground.0',_0x21c3ef(0x4ac),_0x21c3ef(0x2e8)],_0x2bcc06=['forecast.current.weather','Current.WeatherText',_0x21c3ef(0x163)];for(const _0x8d409a of _0x55a5a8){for(const _0x42e85e of _0x2bcc06){try{const _0x377017=_0x8d409a+'.'+_0x42e85e,_0x3d86d9=await this['getForeignStateAsync'](_0x377017);if(_0x3d86d9&&_0x3d86d9[_0x21c3ef(0x24d)]){const _0x2d1dd0=String(_0x3d86d9[_0x21c3ef(0x24d)])['toLowerCase']();if(_0x2d1dd0['includes'](_0x21c3ef(0x242))||_0x2d1dd0[_0x21c3ef(0x256)](_0x21c3ef(0x2f1))||_0x2d1dd0['includes']('klar')||_0x2d1dd0[_0x21c3ef(0x256)](_0x21c3ef(0x465))||_0x2d1dd0['includes'](_0x21c3ef(0x3f9)))return this[_0x21c3ef(0x1c0)][_0x21c3ef(0x277)]('??\x20Solar\x20Condition:\x20SUNNY\x20detected\x20via\x20'+_0x377017),!![];}}catch(_0x365cf2){}}}return![];}[a0_0x44e735(0x494)](){var _0x328071=a0_0x44e735;if(!this['isProVersion'])return;try{this[_0x328071(0x205)](_0x328071(0x2d1),(_0x186980,_0x49fc83)=>{var _0x1ff311=_0x328071;if(_0x186980||!_0x49fc83||!_0x49fc83[_0x1ff311(0x24d)])return;try{const _0x53bccf=JSON[_0x1ff311(0x46f)](_0x49fc83[_0x1ff311(0x24d)]);if(!_0x53bccf||_0x53bccf[_0x1ff311(0x1e0)]===0x0)return;pythonBridge[_0x1ff311(0x2ea)](this,_0x1ff311(0x337),{'sequences':_0x53bccf}),this['log']['debug'](_0x1ff311(0x3d0)+_0x53bccf[_0x1ff311(0x1e0)]+_0x1ff311(0x23e));}catch(_0x3b4fe3){this[_0x1ff311(0x1c0)]['warn'](_0x1ff311(0x133)+_0x3b4fe3['message']);}});}catch(_0x6166a1){this[_0x328071(0x1c0)][_0x328071(0x1d2)](_0x328071(0x2c8)+_0x6166a1[_0x328071(0x2e2)]);}}async['triggerEnergyPrediction'](){var _0x5dd87a=a0_0x44e735;if(!this[_0x5dd87a(0x454)]||!this['activeModules'][_0x5dd87a(0x496)])return;try{const _0x4c3830={},_0x3f59f0={},_0x6e31c1=this[_0x5dd87a(0x19e)]['devices']||[];for(const _0x5b2102 of _0x6e31c1){if((_0x5b2102[_0x5dd87a(0x132)]===_0x5dd87a(0x37c)||_0x5b2102['type']===_0x5dd87a(0x143))&&_0x5b2102['location'])try{const _0x7600dc=await this[_0x5dd87a(0x1f4)](_0x5b2102['id']);_0x7600dc&&typeof _0x7600dc[_0x5dd87a(0x24d)]===_0x5dd87a(0x435)&&(_0x4c3830[_0x5b2102['location']]=_0x7600dc['val'],_0x3f59f0[_0x5b2102[_0x5dd87a(0x34d)]]=_0x5b2102[_0x5dd87a(0x23d)]||![]);}catch(_0x21e109){}}let _0x42c89c=0xa;if(this[_0x5dd87a(0x19e)][_0x5dd87a(0x3c1)])try{const _0x8c8af3=await this[_0x5dd87a(0x1f4)](this[_0x5dd87a(0x19e)][_0x5dd87a(0x3c1)]);if(_0x8c8af3&&typeof _0x8c8af3[_0x5dd87a(0x24d)]===_0x5dd87a(0x435))_0x42c89c=_0x8c8af3['val'];}catch(_0x1b4f6d){}const _0x6bbbc8=await this[_0x5dd87a(0x3eb)]();let _0x14029b={};try{const _0x106edb=await this[_0x5dd87a(0x205)](_0x5dd87a(0x46a));if(_0x106edb&&_0x106edb[_0x5dd87a(0x24d)])_0x14029b=JSON[_0x5dd87a(0x46f)](_0x106edb[_0x5dd87a(0x24d)]);}catch(_0x222839){}pythonBridge[_0x5dd87a(0x2ea)](this,'PREDICT_ENERGY',{'current_temps':_0x4c3830,'t_out':_0x42c89c,'is_sunny':_0x6bbbc8,'solar_flags':_0x3f59f0,'warmup_targets':_0x14029b}),this[_0x5dd87a(0x1c0)]['info']('??\x20Energy\x20Prediction\x20triggered\x20('+Object['keys'](_0x4c3830)['length']+_0x5dd87a(0x3b6));}catch(_0x5c3c6b){this['log'][_0x5dd87a(0x1d2)]('triggerEnergyPrediction\x20Error:\x20'+_0x5c3c6b[_0x5dd87a(0x2e2)]);}}[a0_0x44e735(0x2ec)](){var _0x3ffa8a=a0_0x44e735;if(!this['rawEventLog']||this['rawEventLog'][_0x3ffa8a(0x1e0)]===0x0)return;const _0x5cd672=new Array(0x30)[_0x3ffa8a(0x21d)](0x0),_0x2f0b04=Array[_0x3ffa8a(0x200)]({'length':0x30},()=>[]),_0x352653=new Date()['setHours'](0x0,0x0,0x0,0x0);this[_0x3ffa8a(0x38d)][_0x3ffa8a(0x3b3)](_0x58d6e1=>{var _0x2ae256=_0x3ffa8a;const _0x5cfee2=new Date(_0x58d6e1[_0x2ae256(0x2f6)]);if(_0x5cfee2[_0x2ae256(0x16f)]()>=_0x352653){const _0x3f605a=_0x5cfee2[_0x2ae256(0x2a9)](),_0xb181fc=_0x5cfee2[_0x2ae256(0x481)](),_0x17052b=_0x3f605a*0x2+Math[_0x2ae256(0x39d)](_0xb181fc/0x1e);_0x17052b>=0x0&&_0x17052b<0x30&&(_0x5cd672[_0x17052b]++,_0x2f0b04[_0x17052b][_0x2ae256(0x400)]({'time':_0x5cfee2[_0x2ae256(0x40a)]('de-DE',{'hour':_0x2ae256(0x1d4),'minute':_0x2ae256(0x1d4)}),'location':_0x58d6e1['location']||_0x2ae256(0x2cb),'type':_0x58d6e1['type']||_0x2ae256(0x20c)}));}}),this['setStateAsync']('analysis.health.todayVector',{'val':JSON[_0x3ffa8a(0x332)](_0x5cd672),'ack':!![]}),this[_0x3ffa8a(0x295)]('analysis.health.todayRoomDetails',{'val':JSON[_0x3ffa8a(0x332)](_0x2f0b04),'ack':!![]});}async['handleInfrasound'](_0xd7050a){var _0xae576e=a0_0x44e735;if(!this[_0xae576e(0x19e)][_0xae576e(0x230)]||typeof _0xd7050a!==_0xae576e(0x435))return;const _0x3b743a=this[_0xae576e(0x19e)]['infrasoundThreshold']||0.04;this['pressureBuffer'][_0xae576e(0x400)]({'timestamp':Date[_0xae576e(0x1ae)](),'value':_0xd7050a}),this[_0xae576e(0x217)]['length']>0x64&&this['pressureBuffer']['shift'](),_0xd7050a>_0x3b743a&&!this[_0xae576e(0x313)]&&(this[_0xae576e(0x313)]=!![],this['log']['warn']('??\x20Infraschall-Alarm:\x20'+_0xd7050a['toFixed'](0x4)+_0xae576e(0x1c8)+_0x3b743a+_0xae576e(0x158)),await this[_0xae576e(0x316)](_0xd7050a,'threshold_exceeded'),setTimeout(()=>{var _0x4ecf0d=_0xae576e;this[_0x4ecf0d(0x313)]=![];},0x5*0x3c*0x3e8));}async[a0_0x44e735(0x316)](_0xa9bc7c,_0xa14d6){var _0x406f8d=a0_0x44e735;if(!this[_0x406f8d(0x1a9)]){const _0x47a7c7=this[_0x406f8d(0x429)][_0x406f8d(0x314)](0x0,0xa),_0x515e2d=_0x47a7c7['map'](_0x1dc2c5=>new Date(_0x1dc2c5['timestamp'])[_0x406f8d(0x40a)](_0x406f8d(0x397))+_0x406f8d(0x136)+(_0x1dc2c5['location']||'Unknown')+':\x20'+_0x1dc2c5[_0x406f8d(0x353)])[_0x406f8d(0x2ab)]('\x0a');this[_0x406f8d(0x1c0)][_0x406f8d(0x1d2)]('??\x20FORENSIC:\x20Infraschall\x20bei\x20Abwesenheit!\x20Pressure:\x20'+_0xa9bc7c[_0x406f8d(0x138)](0x4)+',\x20Events:\x0a'+_0x515e2d);if(this[_0x406f8d(0x19e)]['infrasoundArmingId'])try{const _0x22e6ae=await this['getForeignStateAsync'](this[_0x406f8d(0x19e)][_0x406f8d(0x3d2)]);_0x22e6ae&&_0x22e6ae[_0x406f8d(0x24d)]===!![]&&(await this['setStateAsync'](_0x406f8d(0x478),{'val':JSON['stringify']({'timestamp':Date[_0x406f8d(0x1ae)](),'pressure':_0xa9bc7c[_0x406f8d(0x138)](0x4),'eventType':_0xa14d6,'recentEvents':_0x47a7c7[_0x406f8d(0x314)](0x0,0x3)}),'ack':!![]}),this[_0x406f8d(0x1c0)][_0x406f8d(0x479)](_0x406f8d(0x445)));}catch(_0x1388bc){}}else this[_0x406f8d(0x1c0)][_0x406f8d(0x277)](_0x406f8d(0x46d)+_0xa9bc7c[_0x406f8d(0x138)](0x4)+_0x406f8d(0x359));}async['analyzeWindowOpening'](_0x5d12a5){var _0x3e3884=a0_0x44e735;if(!_0x5d12a5||!_0x5d12a5[_0x3e3884(0x34d)])return;try{const _0xfeda2a=(this[_0x3e3884(0x19e)][_0x3e3884(0x39e)]||[])[_0x3e3884(0x44d)](_0xd00039=>_0xd00039['location']===_0x5d12a5[_0x3e3884(0x34d)]&&(_0xd00039[_0x3e3884(0x132)]==='temperature'||_0xd00039['type']===_0x3e3884(0x143)));if(_0xfeda2a[_0x3e3884(0x1e0)]===0x0)return;const _0x126545=await this[_0x3e3884(0x1f4)](_0xfeda2a[0x0]['id']);if(!_0x126545||typeof _0x126545[_0x3e3884(0x24d)]!==_0x3e3884(0x435))return;const _0x1104e8=_0x126545[_0x3e3884(0x24d)];let _0x52a17b=null;if(this[_0x3e3884(0x19e)][_0x3e3884(0x3c1)]){const _0x55b40d=await this[_0x3e3884(0x1f4)](this['config'][_0x3e3884(0x3c1)]);_0x55b40d&&typeof _0x55b40d[_0x3e3884(0x24d)]===_0x3e3884(0x435)&&(_0x52a17b=_0x55b40d[_0x3e3884(0x24d)]);}if(_0x52a17b!==null){const _0x4131f5=Math[_0x3e3884(0x1a2)](_0x1104e8-_0x52a17b);_0x4131f5>0x3&&(this[_0x3e3884(0x1c0)][_0x3e3884(0x277)](_0x3e3884(0x194)+_0x5d12a5['location']+_0x3e3884(0x34c)+_0x4131f5[_0x3e3884(0x138)](0x1)+_0x3e3884(0x2e6)+_0x1104e8+'?C,\x20Au?en:\x20'+_0x52a17b+'?C)'),await this[_0x3e3884(0x295)]('analysis.ventilation.lastWindow',{'val':JSON[_0x3e3884(0x332)]({'room':_0x5d12a5[_0x3e3884(0x34d)],'timestamp':Date[_0x3e3884(0x1ae)](),'tempDiff':_0x4131f5[_0x3e3884(0x138)](0x1),'recommendation':_0x4131f5>0x5?_0x3e3884(0x238):_0x3e3884(0x1f7)}),'ack':!![]}));}}catch(_0x37a66e){this[_0x3e3884(0x1c0)][_0x3e3884(0x1d2)](_0x3e3884(0x306)+_0x37a66e[_0x3e3884(0x2e2)]);}}async['appendToLog'](_0xf6adeb){var _0x24c0b8=a0_0x44e735;if(!_0xf6adeb||typeof _0xf6adeb!=='object')return;const _0x39bcf4={'timestamp':_0xf6adeb[_0x24c0b8(0x2f6)]||Date[_0x24c0b8(0x1ae)](),'id':_0xf6adeb['id']||Date['now']()['toString'](),'name':_0xf6adeb['name']||_0x24c0b8(0x134),'type':_0xf6adeb[_0x24c0b8(0x132)]||_0x24c0b8(0x33c),'location':_0xf6adeb[_0x24c0b8(0x34d)]||_0x24c0b8(0x42f),'value':_0xf6adeb[_0x24c0b8(0x49d)]||null};this[_0x24c0b8(0x429)]['unshift'](_0x39bcf4);if(this[_0x24c0b8(0x429)][_0x24c0b8(0x1e0)]>0x1388)this[_0x24c0b8(0x429)][_0x24c0b8(0x247)]();await this['setStateAsync'](_0x24c0b8(0x3a7),{'val':JSON[_0x24c0b8(0x332)](this['eventHistory']),'ack':!![]}),this[_0x24c0b8(0x1c0)]['debug'](_0x24c0b8(0x41f)+_0x39bcf4[_0x24c0b8(0x353)]+'\x20('+_0x39bcf4['location']+')');}['sendNotification'](_0x2a1556){}}if(require[a0_0x44e735(0x1c9)]!==module)module['exports']=_0x4bf7cc=>new CogniLiving(_0x4bf7cc);else new CogniLiving();
+﻿/* eslint-disable */
+'use strict';
+
+/*
+ * cogni-living Adapter f?r ioBroker
+ * Version: 0.30.38 (Fix: Scheduler Init & Robust Calendar Search)
+ */
+
+const utils = require('@iobroker/adapter-core');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const path = require('path');
+const fs = require('fs');
+
+// --- MODULE IMPORTS ---
+const installer = require('./lib/installer');
+const scanner = require('./lib/scanner');
+const schedulers = require('./lib/scheduler');
+const topology = require('./lib/topology');
+const setup = require('./lib/setup');
+const recorder = require('./lib/recorder');
+const { isActiveValue, toPersonCount } = recorder;
+const pythonBridge = require('./lib/python_bridge');
+const aiAgent = require('./lib/ai_agent');
+const deadMan = require('./lib/dead_man');
+const automation = require('./lib/automation');
+const notifications = require('./lib/notifications');
+const pwaServer = require('./lib/pwa_server');
+const cloudflareTunnel = require('./lib/cloudflare_tunnel');
+
+// --- CONSTANTS ---
+const GEMINI_MODEL = 'models/gemini-flash-latest';
+// =============================================================================
+// computePersonSleep — Einheitlicher Schlafanalyse-Algorithmus
+// Wird sowohl fuer den globalen Haushalt als auch fuer Einzelpersonen verwendet.
+// Single-Source-of-Truth: Keine doppelte Implementierung.
+// Parameter (p): allEvents, personTag, fp2RawStart, garminTs, garminWakeTs, fp2WakeTs,
+//   searchBase, wakeHardCap, startOverride, wakeOverride, existingSnap, sleepDate,
+//   bathroomIds, log
+// =============================================================================
+function computePersonSleep(p) {
+    var allEvents    = p.allEvents;
+    var personTag    = p.personTag  || null;
+    var fp2RawStart  = p.fp2RawStart || null;
+    var garminTs     = p.garminTs    || null;
+    var garminWakeTs = p.garminWakeTs || null;
+    var fp2WakeTs    = p.fp2WakeTs   || null;
+    var searchBase   = p.searchBase;
+    var wakeHardCap  = p.wakeHardCap;
+    var startOverride = p.startOverride || null;
+    var wakeOverride  = p.wakeOverride  || null;
+    var existingSnap  = p.existingSnap  || null;
+    var sleepDate    = p.sleepDate;
+    var bathroomIds      = p.bathroomIds      || new Set();
+    var bedroomLocations = p.bedroomLocations  || [];
+    var hopDistFn        = p.hopDistFn         || null;
+    var log          = p.log;
+    var logPfx       = personTag ? ('[cPS:' + personTag + '] ') : '[cPS:global] ';
+
+    var isMine = function(e) { return !personTag || e.personTag === personTag; };
+    var isOtherPerson = function(e) { return !!(personTag && e.personTag && e.personTag !== personTag); };
+
+    var searchFromTs = (function() {
+        var d = new Date(searchBase); d.setHours(18, 0, 0, 0);
+        if (d.getTime() > searchBase.getTime()) d.setDate(d.getDate() - 1);
+        return d.getTime();
+    })();
+    var bedEvts = allEvents.filter(function(e) {
+        return isMine(e) && (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed)
+            && (e.timestamp || 0) >= searchFromTs;
+    }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+
+    var vibRefine = function(anchorTs) {
+        var maxTs = anchorTs + 3 * 3600000;
+        var evts = allEvents.filter(function(e) {
+            return isMine(e) && e.isVibrationBed && !e.isVibrationStrength
+                && isActiveValue(e.value)
+                && (e.timestamp || 0) >= anchorTs && (e.timestamp || 0) <= maxTs;
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        for (var i = 0; i < evts.length; i++) {
+            var ts = evts[i].timestamp || 0;
+            var next = (i < evts.length - 1) ? (evts[i + 1].timestamp || 0) : maxTs;
+            if ((next - ts) / 60000 >= 20) return ts;
+        }
+        return null;
+    };
+
+    var candFp2Anchor = (function() {
+        if (!fp2RawStart) return null;
+        var fp2Evts = bedEvts.filter(function(e) {
+            var hr = new Date(e.timestamp || 0).getHours();
+            return e.isFP2Bed && (hr >= 21 || hr < 2);
+        });
+        for (var i = fp2Evts.length - 1; i >= 0; i--) {
+            var ts = fp2Evts[i].timestamp || 0;
+            var nextBed = null;
+            for (var j = 0; j < bedEvts.length; j++) {
+                if ((bedEvts[j].timestamp || 0) > ts) { nextBed = bedEvts[j].timestamp || 0; break; }
+            }
+            if ((nextBed !== null ? nextBed : Infinity) - ts > 60 * 60 * 1000) return ts;
+        }
+        return fp2RawStart;
+    })();
+
+    var motionAnchor = (function() {
+        var anchor = null;
+        var fallbackEnd = searchBase.getTime() + 10 * 3600000;
+        var motEvts = allEvents.filter(function(e) {
+            return isMine(e) && e.isBedroomMotion && !e.isFP2Bed && isActiveValue(e.value);
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        for (var i = 0; i < motEvts.length; i++) {
+            var hr = new Date(motEvts[i].timestamp || 0).getHours();
+            if (!(hr >= 18 || hr < 3)) continue;
+            var nextTs = (i < motEvts.length - 1) ? (motEvts[i + 1].timestamp || 0) : fallbackEnd;
+            if ((nextTs - (motEvts[i].timestamp || 0)) / 60000 >= 30) anchor = motEvts[i].timestamp || 0;
+        }
+        return anchor;
+    })();
+
+    var hausStillTs = (function() {
+        var fallbackEnd = searchBase.getTime() + 10 * 3600000;
+        var commonEvts = allEvents.filter(function(e) {
+            if (isOtherPerson(e)) return false;
+            if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion || e.isBathroomSensor) return false;
+            if (!(e.type === 'motion' || e.type === 'presence_radar_bool') || !isActiveValue(e.value)) return false;
+            // Hop-Filter (OC-24/Fix-1): Sensor >2 Hops vom Schlafzimmer -> raus
+            if (hopDistFn && bedroomLocations.length > 0 && e.location) {
+                var minHops = bedroomLocations.reduce(function(min, bedLoc) {
+                    var h = hopDistFn(e.location, bedLoc);
+                    return (h >= 0 && h < min) ? h : min;
+                }, 999);
+                if (minHops > 2) return false;
+            }
+            return true;
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        for (var i = 0; i < commonEvts.length; i++) {
+            var ts = commonEvts[i].timestamp || 0;
+            var next = (i < commonEvts.length - 1) ? (commonEvts[i + 1].timestamp || 0) : fallbackEnd;
+            if (next - ts >= 60 * 60 * 1000) return ts;
+        }
+        return null;
+    })();
+
+    var candFp2Vib   = candFp2Anchor ? vibRefine(candFp2Anchor) : null;
+    var candFp2      = candFp2Anchor || null;
+    var candMotVib   = motionAnchor  ? vibRefine(motionAnchor)  : null;
+    var candMotion   = motionAnchor  || null;
+
+    var candVibRefined = (function() {
+        var end = searchBase.getTime() + 10 * 3600000;
+        var evts = allEvents.filter(function(e) {
+            if (!isMine(e) || !e.isVibrationBed) return false;
+            if (!(isActiveValue(e.value) || toPersonCount(e.value) > 0)) return false;
+            var hr = new Date(e.timestamp || 0).getHours();
+            return hr >= 21 || hr < 4;
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        for (var i = 0; i < evts.length; i++) {
+            var ts = evts[i].timestamp || 0;
+            var next = (i < evts.length - 1) ? (evts[i + 1].timestamp || 0) : end;
+            if ((next - ts) / 60000 >= 20) return ts;
+        }
+        return null;
+    })();
+
+    var candGap60 = (function() {
+        var end = searchBase.getTime() + 10 * 3600000;
+        var evts = allEvents.filter(function(e) {
+            if (!isMine(e)) return false;
+            if (!(e.isFP2Bed || (e.isVibrationBed && !e.isVibrationStrength))) return false;
+            var hr = new Date(e.timestamp || 0).getHours();
+            return hr >= 21 || hr < 4;
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        for (var i = 0; i < evts.length; i++) {
+            var ts = evts[i].timestamp || 0;
+            var next = (i < evts.length - 1) ? (evts[i + 1].timestamp || 0) : end;
+            if (next - ts >= 60 * 60 * 1000) return ts;
+        }
+        return null;
+    })();
+
+    var candLastOutside = (function() {
+        if (fp2RawStart || hausStillTs || motionAnchor) return null;
+        var extEvts = allEvents.filter(function(e) {
+            if (!isMine(e)) return false;
+            if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed || e.isBathroomSensor) return false;
+            var hr = new Date(e.timestamp || 0).getHours();
+            return (hr >= 18 || hr < 2) && isActiveValue(e.value);
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        var eveEvts = extEvts.filter(function(e) { var hr = new Date(e.timestamp || 0).getHours(); return hr >= 18 || hr < 2; });
+        for (var i = eveEvts.length - 1; i >= 0; i--) {
+            var ts = eveEvts[i].timestamp || 0;
+            var hasNext = extEvts.some(function(e) { return (e.timestamp || 0) > ts && (e.timestamp || 0) <= ts + 30 * 60 * 1000; });
+            if (!hasNext) {
+                for (var j = 0; j < bedEvts.length; j++) {
+                    if ((bedEvts[j].timestamp || 0) > ts && isActiveValue(bedEvts[j].value)) return bedEvts[j].timestamp || 0;
+                }
+            }
+        }
+        return null;
+    })();
+
+    var sleepStart = null; var sleepStartSrc = 'winstart'; var overrideApplied = false;
+    var ovWinMin = searchBase.getTime(); var ovWinMax = ovWinMin + 10 * 3600000;
+
+    if (startOverride && startOverride.date === sleepDate && startOverride.ts
+            && startOverride.ts >= ovWinMin && startOverride.ts <= ovWinMax) {
+        sleepStart = startOverride.ts; sleepStartSrc = startOverride.source || 'override'; overrideApplied = true;
+        if (log) log.info(logPfx + 'Override: ' + sleepStartSrc + ' = ' + new Date(sleepStart).toISOString());
+    }
+        if (!overrideApplied) {
+        // Cluster-basierte Einschlafzeit-Auswahl
+        // Stufe 1: Trusted (Garmin/FP2) immer vorrangig
+        // Stufe 2: Dominantester Cluster innerhalb 90 Min fuer restliche Quellen
+        var _sleepCandAll = [
+            { source: 'garmin',       ts: garminTs,        prio: 0 },
+            { source: 'fp2_vib',      ts: candFp2Vib,      prio: 1 },
+            { source: 'fp2',          ts: candFp2,          prio: 2 },
+            { source: 'vib_refined',  ts: candVibRefined,   prio: 3 },
+            { source: 'motion_vib',   ts: candMotVib,       prio: 4 },
+            { source: 'gap60',        ts: candGap60,        prio: 5 },
+            { source: 'motion',       ts: candMotion,       prio: 6 },
+            { source: 'last_outside', ts: candLastOutside,  prio: 7 },
+            { source: 'haus_still',   ts: hausStillTs,      prio: 8 }
+        ].filter(function(c) { return c.ts != null; });
+
+        if (_sleepCandAll.length > 0) {
+            var _trusted = _sleepCandAll.filter(function(c) { return c.prio <= 2; });
+            if (_trusted.length > 0) {
+                var _t = _trusted[0];
+                sleepStart = _t.ts; sleepStartSrc = _t.source;
+                if (log) log.info(logPfx + 'Onset trusted: ' + _t.source + ' @ ' + new Date(sleepStart).toISOString());
+            } else {
+                var _CWIN = 90 * 60 * 1000;
+                var _bestCluster = null; var _bestCount = 0;
+                for (var _ci = 0; _ci < _sleepCandAll.length; _ci++) {
+                    var _cAnchor = _sleepCandAll[_ci].ts;
+                    var _cGrp = _sleepCandAll.filter(function(c) { return Math.abs(c.ts - _cAnchor) <= _CWIN; });
+                    if (_cGrp.length > _bestCount || (_cGrp.length === _bestCount && (!_bestCluster || _cAnchor < _bestCluster[0].ts))) {
+                        _bestCount = _cGrp.length; _bestCluster = _cGrp;
+                    }
+                }
+                if (_bestCluster && _bestCluster.length > 0) {
+                    _bestCluster.sort(function(a,b) { return a.prio - b.prio; });
+                    var _winner = _bestCluster[0];
+                    sleepStart = _winner.ts; sleepStartSrc = _winner.source;
+                    if (log) {
+                        log.debug(logPfx + 'Onset Cluster ' + _bestCluster.length + '/' + _sleepCandAll.length + ': ' + _winner.source + ' @ ' + new Date(sleepStart).toLocaleTimeString());
+                        var _outliers = _sleepCandAll.filter(function(c) { return _bestCluster.indexOf(c) < 0; });
+                        if (_outliers.length > 0) log.debug(logPfx + 'Onset Ausreisser: ' + _outliers.map(function(c){return c.source+'@'+new Date(c.ts).toLocaleTimeString();}).join(', '));
+                    }
+                }
+            }
+        }
+    }
+
+    var allSleepStartSources = [
+        { source: 'garmin',       ts: garminTs },
+        { source: 'fp2_vib',      ts: candFp2Vib },
+        { source: 'fp2',          ts: candFp2 },
+        { source: 'motion_vib',   ts: candMotVib },
+        { source: 'motion',       ts: candMotion },
+        { source: 'vib_refined',  ts: candVibRefined },
+        { source: 'gap60',        ts: candGap60 },
+        { source: 'last_outside', ts: candLastOutside },
+        { source: 'haus_still',   ts: hausStillTs || null },
+        { source: 'fixed',        ts: ovWinMin + 2 * 3600000 }
+    ];
+
+    var p4amTs = (function() { var d = new Date(searchBase); d.setDate(d.getDate() + 1); d.setHours(4, 0, 0, 0); return d.getTime(); })();
+    var minSlTs = (fp2RawStart || sleepStart || 0) + 3 * 3600000;
+
+    var otherRoomEvts = allEvents.filter(function(e) {
+        if (e.isFP2Bed || e.isVibrationBed || e.isBathroomSensor || e.isBedroomMotion) return false;
+        if (isOtherPerson(e)) return false;
+        return (e.type === 'motion' || e.type === 'presence_radar_bool')
+            && (e.timestamp || 0) >= p4amTs && (e.timestamp || 0) >= minSlTs && (e.timestamp || 0) <= wakeHardCap;
+    }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+
+    var hasTriggerAfter4 = bedEvts.some(function(e) {
+        return e.isVibrationBed && !e.isVibrationStrength && isActiveValue(e.value) && (e.timestamp || 0) >= p4amTs;
+    });
+    var bedRetRaw = bedEvts.filter(function(e) {
+        if ((e.timestamp || 0) < p4amTs || (e.timestamp || 0) > wakeHardCap) return false;
+        if (e.isFP2Bed) return true;
+        if (e.isBedroomMotion && isActiveValue(e.value)) return true;
+        if (e.isVibrationBed && !e.isVibrationStrength && isActiveValue(e.value)) return true;
+        if (e.isVibrationStrength && !hasTriggerAfter4) return true;
+        return false;
+    });
+    var bedRet = bedRetRaw.filter(function(e, idx) {
+        if (e.isFP2Bed) return true;
+        var ts = e.timestamp || 0;
+        if (new Date(ts).getHours() < 10) return true;
+        var prev = idx > 0 ? (bedRetRaw[idx - 1].timestamp || 0) : 0;
+        var next = idx < bedRetRaw.length - 1 ? (bedRetRaw[idx + 1].timestamp || 0) : Infinity;
+        return (ts - prev <= 15 * 60 * 1000) || (next - ts <= 15 * 60 * 1000);
+    });
+
+    // ============================================================
+    // Wake-Kandidaten berechnen (einheitlich fuer Ein- und Mehrpersonenhaushalt)
+    // ============================================================
+
+    // vibWakeConfirm: Vibration in den 30 Min vor fp2WakeTs (erhoeht Konfidenz)
+    var _vibWakeConfirm = false;
+    if (fp2WakeTs) {
+        _vibWakeConfirm = allEvents.some(function(e) {
+            return e.isVibrationBed && isMine(e)
+                && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
+                && (e.timestamp||0) >= fp2WakeTs - 30*60*1000
+                && (e.timestamp||0) <= fp2WakeTs;
+        });
+    }
+
+    // vibAloneWakeTs: letztes Vib-Event mit mind. 45 Min Stille danach
+    var _vibAloneWakeTs = null;
+    var _vibWakeTs = null;
+    var _vibEvtsWk = allEvents.filter(function(e) {
+        var ts = e.timestamp||0;
+        return e.isVibrationBed && isMine(e)
+            && (isActiveValue(e.value) || toPersonCount(e.value) > 0)
+            && ts >= p4amTs && ts >= minSlTs && ts <= wakeHardCap;
+    }).sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+    for (var _vwi = 0; _vwi < _vibEvtsWk.length; _vwi++) {
+        var _vwTs = _vibEvtsWk[_vwi].timestamp||0;
+        var _vwNext = _vibEvtsWk[_vwi+1] ? (_vibEvtsWk[_vwi+1].timestamp||0) : null;
+        if (!_vwNext || _vwNext - _vwTs >= 45*60*1000) { _vibAloneWakeTs = _vwTs; }
+    }
+
+    // vibWakeTs: letztes Vib-Event VOR fp2WakeTs (Bestaetiger)
+    if (fp2WakeTs && _vibEvtsWk.length > 0) {
+        var _pvBefore = _vibEvtsWk.filter(function(e) { return (e.timestamp||0) <= fp2WakeTs; });
+        if (_pvBefore.length > 0) _vibWakeTs = _pvBefore[_pvBefore.length-1].timestamp||null;
+    }
+
+    // fp2OtherWakeTs: erste andere-Raum-Bewegung nach fp2WakeTs (max. +60 Min)
+    var _fp2OtherWakeTs = null;
+    if (fp2WakeTs) {
+        var _fp2OtherEvts = allEvents.filter(function(e) {
+            return !e.isFP2Bed && !e.isVibrationBed && !e.isBathroomSensor && !e.isBedroomMotion
+                && (e.type === 'motion' || e.type === 'presence_radar_bool')
+                && !isOtherPerson(e)
+                && (e.timestamp||0) >= fp2WakeTs && (e.timestamp||0) <= fp2WakeTs + 60*60*1000;
+        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+        if (_fp2OtherEvts.length > 0) _fp2OtherWakeTs = _fp2OtherEvts[0].timestamp||null;
+    }
+
+    // fp2VibWakeTs: FP2 + Vib kombiniert (bei enger Korrelation + Bestaetigung)
+    var _fp2VibWakeTs = null;
+    if (fp2WakeTs && _vibWakeTs && Math.abs(_vibWakeTs - fp2WakeTs) <= 12*60*1000 && _vibWakeConfirm) {
+        _fp2VibWakeTs = Math.min(fp2WakeTs, _vibWakeTs);
+    }
+
+    // motionVibWakeTs: Schlafzimmer-BM + Vibrations-Bestaetigung (Pendant zu fp2_vib fuer Haeuser ohne Radar)
+    // Findet: Ersten Schlafzimmer-BM-Abgang nach 04:00 bei dem in den vorangehenden 30 Min Vibration war
+    var _motionVibWakeTs = null;
+    var _bedroomMotEvts = allEvents.filter(function(e) {
+        return e.isBedroomMotion && isMine(e) && !isOtherPerson(e)
+            && (e.timestamp||0) >= p4amTs && (e.timestamp||0) >= minSlTs && (e.timestamp||0) <= wakeHardCap;
+    }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+    if (_bedroomMotEvts.length > 0) {
+        var _bmFirst = _bedroomMotEvts[0].timestamp || 0;
+        var _bmVibBefore = _vibEvtsWk.some(function(e) {
+            return (e.timestamp||0) >= _bmFirst - 30*60*1000 && (e.timestamp||0) <= _bmFirst;
+        });
+        if (_bmVibBefore) _motionVibWakeTs = _bmFirst;
+    }
+
+    // otherRoomWakeTs explizit (fuer allWakeSources)
+    var _otherRoomWakeTs = null;
+
+    // ============================================================
+    // Wake-Prioritaetskette (identisch fuer Ein- und Mehrpersonenhaushalt)
+    var wakeTs = null; var wakeSrc = null;
+    if (garminWakeTs) { wakeTs = garminWakeTs; wakeSrc = 'garmin'; if (log) log.info(logPfx + 'Wake Garmin: ' + new Date(wakeTs).toISOString()); }
+    if (!wakeTs && _fp2VibWakeTs)   { wakeTs = _fp2VibWakeTs;   wakeSrc = 'fp2_vib'; }
+    if (!wakeTs && fp2WakeTs)       { wakeTs = fp2WakeTs;       wakeSrc = 'fp2'; if (log) log.debug(logPfx + 'Wake FP2: ' + new Date(wakeTs).toISOString()); }
+    if (!wakeTs && _fp2OtherWakeTs) { wakeTs = _fp2OtherWakeTs; wakeSrc = 'fp2_other'; }
+    if (!wakeTs && otherRoomEvts.length > 0) {
+        var ci = 0;
+        while (ci < otherRoomEvts.length) {
+            var dep = otherRoomEvts[ci].timestamp || 0; var ret = null;
+            for (var bi = 0; bi < bedRet.length; bi++) { if ((bedRet[bi].timestamp || 0) > dep + 2 * 60 * 1000) { ret = bedRet[bi]; break; } }
+            if (!ret) { wakeTs = dep; wakeSrc = 'other'; _otherRoomWakeTs = dep; break; }
+            var ni = -1;
+            for (var oi = ci + 1; oi < otherRoomEvts.length; oi++) { if ((otherRoomEvts[oi].timestamp || 0) > (ret.timestamp || 0) + 2 * 60 * 1000) { ni = oi; break; } }
+            if (ni === -1) { wakeTs = null; break; }
+            ci = ni;
+        }
+    }
+    if (!wakeTs && _motionVibWakeTs) { wakeTs = _motionVibWakeTs; wakeSrc = 'motion_vib'; }
+    if (!wakeTs && _vibAloneWakeTs) { wakeTs = _vibAloneWakeTs; wakeSrc = 'vibration_alone'; }
+    if (wakeTs === null && bedRet.length > 0) { wakeTs = bedRet[bedRet.length - 1].timestamp || null; wakeSrc = 'motion'; }
+
+    if (!garminWakeTs && existingSnap && existingSnap.sleepWindowEnd) {
+        var exWakeHr = new Date(existingSnap.sleepWindowEnd).getHours();
+        var exWakeAge = Date.now() - existingSnap.sleepWindowEnd;
+        if (exWakeHr >= 5 && exWakeAge > 2 * 3600000) {
+            wakeTs = existingSnap.sleepWindowEnd; wakeSrc = existingSnap.wakeSource || wakeSrc;
+            if (log) log.info(logPfx + 'Wake FROZEN: ' + new Date(wakeTs).toLocaleTimeString());
+        }
+    }
+    var wakeOverrideApplied = false;
+    if (wakeOverride && wakeOverride.date === sleepDate && wakeOverride.ts) {
+        wakeTs = wakeOverride.ts; wakeSrc = wakeOverride.source || 'override'; wakeOverrideApplied = true;
+        if (log) log.info(logPfx + 'Wake Override: ' + wakeSrc + ' = ' + new Date(wakeTs).toISOString());
+    }
+
+    var allWakeSources = [
+        { source: 'garmin',          ts: garminWakeTs       || null },
+        { source: 'fp2_vib',         ts: _fp2VibWakeTs      || null },
+        { source: 'fp2',             ts: fp2WakeTs          || null },
+        { source: 'fp2_other',       ts: _fp2OtherWakeTs    || null },
+        { source: 'other',           ts: _otherRoomWakeTs   || null },
+        { source: 'motion_vib',       ts: _motionVibWakeTs   || null },
+        { source: 'vibration_alone', ts: _vibAloneWakeTs    || null },
+        { source: 'vibration',       ts: _vibWakeTs         || null },
+        { source: 'motion',          ts: wakeSrc === 'motion' ? wakeTs : null },
+        { source: 'override',        ts: wakeOverrideApplied  ? wakeTs : null }
+    ];
+    var wakeConf = wakeTs
+        ? (wakeSrc === 'garmin' || wakeSrc === 'fp2' ? 'hoch' : wakeSrc === 'other' ? 'mittel' : 'niedrig')
+        : 'niedrig';
+    var wakeConfirmed = !!(wakeTs && new Date().getHours() >= 10 && (Date.now() - wakeTs) >= 3600000);
+
+    var winSCheck = sleepStart || fp2RawStart || searchBase.getTime();
+    var winECheck = wakeTs || Date.now();
+    var bedInWin = (winSCheck <= winECheck)
+        ? bedEvts.filter(function(e) { var ts = e.timestamp || 0; return ts >= winSCheck && ts <= winECheck; })
+        : bedEvts.filter(function(e) { var ts = e.timestamp || 0; return ts >= (fp2RawStart || searchBase.getTime()) && ts <= winECheck; });
+    var bedWasEmpty = bedInWin.length === 0;
+
+    var obe = [];
+    var obeWinS = sleepStart || fp2RawStart || searchBase.getTime();
+    var obeWinE = wakeTs || Date.now();
+    if (obeWinS < obeWinE) {
+        var obeAllSrc = allEvents.filter(function(e) {
+            var ts = e.timestamp || 0;
+            if (ts < obeWinS || ts > obeWinE) return false;
+            if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion) return false;
+            if (isOtherPerson(e)) return false;
+            return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        var obeCluster = null; var obeCGap = 5 * 60 * 1000; var obeCAfter = 3 * 60 * 1000;
+        var obePush = function(c) {
+            var dur = Math.max(1, Math.round((c.end - c.start) / 60000));
+            if (c.hasBath) {
+                obe.push({ start: c.start, end: c.end, duration: dur, type: 'bathroom', confirmed: true, sensors: c.sensors || [] });
+                if (c.hasOther) obe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true, sensors: c.sensors || [] });
+            } else { obe.push({ start: c.start, end: c.end, duration: dur, type: 'outside', confirmed: true, sensors: c.sensors || [] }); }
+        };
+        obeAllSrc.forEach(function(e) {
+            var ts = e.timestamp || 0; var isBath = e.isBathroomSensor || bathroomIds.has(e.id);
+            if (!obeCluster) {
+                obeCluster = { start: ts, end: ts + obeCAfter, hasBath: isBath, hasOther: !isBath, sensors: [{ name: e.name || e.id, location: e.location || '', isBathroomSensor: isBath, timestamp: ts }] };
+            } else if (ts <= obeCluster.end + obeCGap) {
+                obeCluster.end = ts + obeCAfter; if (isBath) obeCluster.hasBath = true; else obeCluster.hasOther = true;
+                var sn = e.name || e.id; if (!obeCluster.sensors.some(function(s) { return s.name === sn; })) obeCluster.sensors.push({ name: sn, location: e.location || '', isBathroomSensor: isBath, timestamp: ts });
+            } else { obePush(obeCluster); obeCluster = { start: ts, end: ts + obeCAfter, hasBath: isBath, hasOther: !isBath, sensors: [{ name: e.name || e.id, location: e.location || '', isBathroomSensor: isBath, timestamp: ts }] }; }
+        });
+        if (obeCluster) obePush(obeCluster);
+    }
+
+    var sleepStages = []; var stagesWinStart = sleepStart || fp2RawStart || searchBase.getTime(); var stagesWinEnd = wakeTs || (wakeHardCap && wakeHardCap < Date.now() ? wakeHardCap : null);
+    var sleepScore = null; var sleepScoreRaw = null;
+    if (!bedWasEmpty && stagesWinStart && stagesWinEnd && stagesWinEnd > stagesWinStart) {
+        var SLOT_MS = 5 * 60 * 1000;
+        var slotCount = Math.ceil((stagesWinEnd - stagesWinStart) / SLOT_MS);
+        var vibDetEvts = allEvents.filter(function(e) {
+            return isMine(e) && e.isVibrationBed && (e.timestamp || 0) >= stagesWinStart && (e.timestamp || 0) <= stagesWinEnd
+                && (isActiveValue(e.value) || toPersonCount(e.value) > 0);
+        });
+        var vibStrEvts = allEvents.filter(function(e) {
+            return isMine(e) && e.isVibrationStrength && (e.timestamp || 0) >= stagesWinStart && (e.timestamp || 0) <= stagesWinEnd;
+        });
+        var consQuiet = 0; var deepSec = 0; var lightSec = 0; var remSec = 0; var wakeSec2 = 0;
+        for (var si = 0; si < slotCount; si++) {
+            var slotS = stagesWinStart + si * SLOT_MS; var slotE = slotS + SLOT_MS;
+            var slotDet = vibDetEvts.filter(function(e) { return (e.timestamp || 0) >= slotS && (e.timestamp || 0) < slotE; }).length;
+            var slotStrArr = vibStrEvts.filter(function(e) { return (e.timestamp || 0) >= slotS && (e.timestamp || 0) < slotE; })
+                .map(function(e) { return typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0; });
+            var slotStrMax = slotStrArr.length > 0 ? Math.max.apply(null, slotStrArr) : 0;
+            var hoursIn = (slotS - stagesWinStart) / 3600000; var stage;
+            if (slotDet === 0)                                                                { consQuiet++; stage = consQuiet >= 5 ? 'deep' : 'light'; }
+            else if (slotDet >= 5 || slotStrMax > 28)                                         { consQuiet = 0; stage = 'wake'; }
+            else if (slotDet >= 2 && hoursIn >= 2.5 && slotStrMax >= 12 && slotStrMax <= 28)  { consQuiet = 0; stage = 'rem'; }
+            else                                                                               { consQuiet = 0; stage = 'light'; }
+            sleepStages.push({ t: si * 5, s: stage });
+            if (stage === 'deep') deepSec += 300; else if (stage === 'light') lightSec += 300;
+            else if (stage === 'rem') remSec += 300; else wakeSec2 += 300;
+        }
+        if (log) log.debug(logPfx + 'Stages: ' + sleepStages.length + ' Slots (' + new Date(stagesWinStart).toLocaleTimeString() + '-' + new Date(stagesWinEnd).toLocaleTimeString() + ')');
+        var totalSec = deepSec + lightSec + remSec + wakeSec2;
+        var durMin = (stagesWinEnd - stagesWinStart) / 60000;
+        var durScore = Math.max(20, Math.min(95, 25 + 0.12 * durMin)); var stageAdj = 0;
+        if (totalSec > 0) {
+            var rp = remSec / totalSec; var wp = wakeSec2 / totalSec;
+            var coverage = Math.min(1, (totalSec / 60) / Math.max(1, durMin));
+            stageAdj = Math.max(-8, Math.min(8, Math.round((rp * 30 - wp * 50) * coverage)));
+        }
+        sleepScoreRaw = Math.round(Math.max(0, durScore + stageAdj));
+        sleepScore    = Math.round(Math.max(0, Math.min(100, sleepScoreRaw)));
+        if (log) log.debug(logPfx + 'Score=' + sleepScore + ' dur=' + Math.round(durMin) + 'min adj=' + stageAdj);
+    }
+
+    return {
+        sleepWindowStart:     sleepStart,
+        sleepWindowEnd:       wakeTs,
+        sleepStartSource:     sleepStartSrc,
+        allSleepStartSources: allSleepStartSources,
+        sleepStartOverridden: overrideApplied,
+        wakeSource:           wakeSrc || null,
+        allWakeSources:       allWakeSources,
+        wakeConf:             wakeConf,
+        wakeConfirmed:        wakeConfirmed,
+        wakeOverridden:       wakeOverrideApplied,
+        bedWasEmpty:          bedWasEmpty,
+        outsideBedEvents:     obe,
+        sleepStages:          sleepStages,
+        stagesWindowStart:    stagesWinStart,
+        sleepScore:           sleepScore,
+        sleepScoreRaw:        sleepScoreRaw,
+        _motionAnchor:        motionAnchor,
+        _hausStillTs:         hausStillTs
+    };
+}
+
+
+class CogniLiving extends utils.Adapter {
+    constructor(options) {
+        super({ ...options, name: 'cogni-living' });
+        this.eventHistory = []; this.analysisHistory = []; this.rawEventLog = []; this.dailyDigests = []; this.sensorLastValues = {};
+        this.systemConfig = { latitude: 0, longitude: 0, city: '' }; this.isPresent = true; this.exitTimer = null; this.exitGraceTimer = null; this.isGracePeriodActive = false;
+        this.genAI = null; this.geminiModel = null; this.currentSystemMode = setup.SYSTEM_MODES.NORMAL; this.isProVersion = false; this.lastAlertState = false;
+        this.analysisTimer = null; this.calendarCheckTimer = null; this.presenceCheckTimer = null; this.ltmJob = null; this.modeResetJob = null; this.driftAnalysisTimer = null; this.briefingJob = null; this.weeklyBriefingJob = null;
+        this.historyJob = null;
+
+        this.trackerHeartbeat = null;
+        this.healthTrendInterval = null;
+        this.roomIntegratorTimer = null;
+
+        this.dependencyInstallInProgress = false;
+        this.lastTrackerEventTime = Date.now();
+
+        this.memoryCache = null;
+        this.bootTime = Date.now();
+
+        this.infrasoundLocked = false;
+        this.pressureBuffer = [];
+
+        // Sensor-Ausfall-Erkennung
+        this.sensorLastSeen = {};    // { sensorId: timestamp }
+        this.sensorAlertSent = {};   // { sensorId: lastAlertTs } - verhindert Spam
+        this.sensorCheckInterval = null;
+
+        // OC-15: Batterie-Monitoring
+        this.batteryStates = {};           // { sensorId: { stateId, level, isLow, isCritical, source } }
+        this.batteryDiscoveryInterval = null;
+        this._lastBatteryPushoverDay = null;
+
+        // Active Modules
+        this.activeModules = { health: true, security: true, energy: true, comfort: true };
+
+        this.on('ready', this.onReady.bind(this));
+        this.on('stateChange', this.onStateChange.bind(this));
+        this.on('unload', this.onUnload.bind(this));
+        this.on('message', this.onMessage.bind(this));
+    }
+
+    async onReady() {
+        this.log.info(`cogni-living adapter starting (v${this.version}) - Phase E (Scheduler Fix)`);
+
+        if (this.config.moduleHealth !== undefined) this.activeModules.health = this.config.moduleHealth;
+        if (this.config.moduleSecurity !== undefined) this.activeModules.security = this.config.moduleSecurity;
+        if (this.config.moduleEnergy !== undefined) this.activeModules.energy = this.config.moduleEnergy;
+        if (this.config.moduleComfort !== undefined) this.activeModules.comfort = this.config.moduleComfort;
+        if (this.config.modules) this.activeModules = { ...this.activeModules, ...this.config.modules };
+
+        this.startSystem();
+    }
+
+    async startSystem() {
+        await setup.initZombies(this);
+        try { this.isProVersion = await setup.checkLicense(this.config.licenseKey); } catch(e) {}
+        if (!this.config.inactivityThresholdHours || this.config.inactivityThresholdHours < 0.1) this.config.inactivityThresholdHours = 12;
+
+        await setup.initHistory(this);
+        await setup.initSystemConfig(this);
+        
+        // Update Topology Matrix beim Start
+        topology.updateTopology(this);
+
+        try {
+            const wt = await this.getStateAsync('analysis.energy.warmupTimes');
+            const ws = await this.getStateAsync('analysis.energy.warmupSources');
+            if (wt && wt.val && ws && ws.val) {
+                if (Date.now() - wt.ts < 4 * 3600 * 1000) {
+                    this.memoryCache = { times: JSON.parse(wt.val), sources: JSON.parse(ws.val) };
+                }
+            }
+        } catch(e) {}
+
+        if (this.config.geminiApiKey) {
+            try {
+                this.genAI = new GoogleGenerativeAI(this.config.geminiApiKey);
+                this.geminiModel = this.genAI.getGenerativeModel({ model: GEMINI_MODEL, generationConfig: { responseMimeType: 'application/json' } });
+            } catch (error) { this.log.error(`Gemini Init Error: ${error.message}`); }
+        }
+
+        await setup.createAllObjects(this);
+        await this.loadSystemMode();
+
+        // --- FIX: START SCHEDULERS (This was missing!) ---
+        schedulers.initSchedules(this);
+        // -------------------------------------------------
+
+        // Migration: V2-Score einmalig fuer alte History-Dateien berechnen
+        this.migrateScoresToV2().catch(e => this.log.warn('[ScoreMigration] ' + e.message));
+
+        await this.setObjectNotExistsAsync('analysis.visualization.pulse', { type: 'state', common: { name: 'Live Event Pulse', type: 'number', role: 'value', read: true, write: false }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.activity.roomStats', { type: 'state', common: { name: 'Room Dwell Time Stats', type: 'string', role: 'json', read: true, write: false, def: '{"today":{}, "yesterday":{}, "date":""}' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.activity.roomHistory', { type: 'state', common: { name: 'Room History (24h Buckets)', type: 'string', role: 'json', read: true, write: false, def: '{"history":{}}' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.health.geminiNight', { type: 'state', common: { name: 'Gemini Report Night', type: 'string', role: 'text', read: true, write: false, def: 'Warte auf Analyse...' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.health.geminiDay', { type: 'state', common: { name: 'Gemini Report Day', type: 'string', role: 'text', read: true, write: false, def: 'Warte auf Analyse...' }, native: {} });
+
+        await this.setObjectNotExistsAsync('analysis.health.todayVector', { type: 'state', common: { name: 'Daily Activity Vector (48x30min)', type: 'string', role: 'json', read: true, write: false, def: '[]' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.health.todayRoomDetails', { type: 'state', common: { name: 'Daily Room Details (48x30min)', type: 'string', role: 'json', read: true, write: false, def: '[]' }, native: {} });
+
+        await this.setObjectNotExistsAsync('analysis.health.activityTrend', { type: 'state', common: { name: 'General Activity Trend', type: 'number', role: 'value', unit: '%', read: true, write: false }, native: {} });
+        // Phase 2: Krankheits-Risiko-Scores States anlegen
+        await this.setObjectNotExistsAsync('analysis.health.disease.scores', { type: 'state', common: { name: 'Disease Risk Scores (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
+        for (const _dp of ['fallRisk','dementia','frailty','depression','diabetes2','sleepDisorder','cardiovascular','parkinson','copd','socialIsolation','epilepsy','diabetes1','longCovid','bipolar']) {
+            await this.setObjectNotExistsAsync('analysis.health.disease.' + _dp, { type: 'state', common: { name: 'Disease Risk: ' + _dp, type: 'number', role: 'value', unit: '%', read: true, write: false, def: 0 }, native: {} });
+        }
+        // Phase 3: Proaktives Screening State
+        await this.setObjectNotExistsAsync('analysis.health.screening.hints', { type: 'state', common: { name: 'Proactive Screening Hints (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.health.sleepCalibrationLog', {
+            type: 'state',
+            common: {
+                name: 'Sleep Calibration Log (JSON) - Sensorquellen vs Garmin',
+                type: 'string',
+                role: 'json',
+                read: true,
+                write: false,
+                def: '[]'
+            },
+            native: {}
+        });
+        await this.setObjectNotExistsAsync('analysis.sleep.startOverride', { type: 'state', common: { name: 'Sleep Start Override (OC-23) - JSON', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.sleep.personStartOverrides', { type: 'state', common: { name: 'Per-Person Sleep Start Overrides (JSON)', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.sleep.wakeOverride', { type: 'state', common: { name: 'Wake Override (JSON)', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.sleep.personWakeOverrides', { type: 'state', common: { name: 'Per-Person Wake Overrides (JSON)', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
+        await this.setObjectNotExistsAsync('system.sensorBatteryStatus', { type: 'state', common: { name: 'Sensor Battery Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
+        await this.setObjectNotExistsAsync('system.sensorStatus', { type: 'state', common: { name: 'Sensor Health Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
+        await this.setObjectNotExistsAsync('system.currentPersonCount', { type: 'state', common: { name: 'Aktuelle Personenanzahl im Haus', type: 'number', role: 'value', unit: 'Personen', read: true, write: false, def: 1, desc: 'Geschaetzte Personenanzahl (Config-Baseline + raeumliche Heuristik + FP2)' }, native: {} });
+        await this.setObjectNotExistsAsync('system.personCount.heuristicDetection', { type: 'state', common: { name: 'Personenerkennung: Heuristik-Ereignis (SQL) - mind. 2 Personen erkannt', type: 'string', role: 'json', read: true, write: false, def: '{}', desc: 'Wird bei jeder rauemlichen Unmoglichkeitserkennung (>= 2 Hops, <= 5s) geschrieben. Enthaelt: Sensor-IDs, Raeume, Hop-Abstand, Zeitdelta, Personenzahl vorher/nachher.' }, native: {} });
+        await this.setObjectNotExistsAsync('system.personCount.sensorActivity', { type: 'state', common: { name: 'Personenerkennung: Sensor-Aktivitaet (SQL) - Bewegung/Praesenz/Tuer-Fenster', type: 'string', role: 'json', read: true, write: false, def: '{}', desc: 'Jede steigende Flanke eines person-relevanten Sensors (isPersonPresenceActivity). Kein Licht, kein Temperatur.' }, native: {} });
+        await this.setObjectNotExistsAsync('system.config.sensorList', { type: 'state', common: { name: 'Sensor-Konfiguration (Uebersicht)', type: 'string', role: 'json', read: true, write: false, def: '[]', desc: 'Alle konfigurierten Sensoren aus dem System-Tab: ID, Bezeichnung, Ort, Typ, Funktion. Wird bei jedem Adapterstart aktualisiert.' }, native: {} });
+        await this.setObjectNotExistsAsync('system.householdType', { type: 'state', common: { name: 'Haushaltstyp', type: 'string', role: 'text', states: { single: 'Einpersonenhaushalt', multi: 'Mehrpersonenhaushalt' }, read: true, write: false, def: 'single' }, native: {} });
+        await this.setObjectNotExistsAsync('system.personData', { type: 'state', common: { name: 'Per-Person Night Metrics (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.energy.warmupTimes', { type: 'state', common: { name: 'Warm-Up Time', type: 'string', role: 'json', read: true, write: false }, native: {} });
+
+        try {
+            const s = await this.getStateAsync('events.history');
+            if (s && s.val) {
+                this.eventHistory = JSON.parse(s.val);
+                if(this.isProVersion) {
+                    const r = await this.getStateAsync('LTM.rawEventLog');
+                    if(r && r.val) this.rawEventLog = JSON.parse(r.val);
+                }
+                this.log.info(`?? Restored ${this.eventHistory.length} events from standard storage.`);
+            }
+        } catch(e){ this.eventHistory = []; }
+
+        try { const s = await this.getStateAsync('LTM.dailyDigests'); if (s && s.val) this.dailyDigests = JSON.parse(s.val); } catch(e){ this.dailyDigests = []; }
+
+        const msg = this.dailyDigests.length >= (this.config.minDaysForBaseline || 7) ? `Aktiv (${this.dailyDigests.length} Tage)` : `Lernphase (${this.dailyDigests.length}/${this.config.minDaysForBaseline || 7})`;
+        await this.setStateAsync('LTM.baselineStatus', { val: msg, ack: true });
+
+        this.subscribeStates('analysis.trigger');
+        this.subscribeStates('LTM.triggerDailyDigest');
+        this.subscribeStates('analysis.training.triggerHealth');
+        this.subscribeStates('analysis.triggerBriefing');
+        this.subscribeStates('analysis.triggerWeeklyBriefing');
+
+        if (this.config.infrasoundEnabled && this.config.infrasoundSensorId && this.activeModules.security) {
+            this.subscribeForeignStates(this.config.infrasoundSensorId);
+        }
+        const devices = this.config.devices; if (devices) { for (const d of devices) { await this.subscribeForeignStatesAsync(d.id); } }
+
+        // system.config.sensorList: Sensor-Konfiguration bei Start schreiben (Kontroll-Objekt)
+        try {
+            const _sensorListData = (this.config.devices || []).map(function(d) {
+                return {
+                    id:              d.id || '',
+                    bezeichnung:     d.name || '',
+                    ort:             d.location || '',
+                    typ:             d.type || '',
+                    funktion:        d.sensorFunction || '',
+                    isBathroomSensor: !!(d.sensorFunction === 'bathroom' || d.isBathroomSensor),
+                    isKitchenSensor:  !!(d.sensorFunction === 'kitchen'  || d.isKitchenSensor),
+                    isFP2Bed:         !!(d.sensorFunction === 'bed'      && (d.type||'').toLowerCase() === 'presence_radar_bool'),
+                    isVibrationBed:   !!(d.sensorFunction === 'bed'      && ['vibration_trigger','vibration_strength'].includes((d.type||'').toLowerCase())),
+                    isBedroomMotion:  !!(d.sensorFunction === 'bed'      && (d.type||'').toLowerCase() === 'motion'),
+                };
+            });
+            await this.setStateAsync('system.config.sensorList', { val: JSON.stringify(_sensorListData, null, 2), ack: true });
+        } catch(_e) { this.log.warn('[Config] Fehler beim Schreiben der sensorList: ' + _e.message); }
+
+        const devs = this.config.presenceDevices; if (devs) { for (const id of devs) { await this.subscribeForeignStatesAsync(id); } }
+
+        // Option B: sensorLastValues mit echten aktuellen States initialisieren (Duplikat-Filter nach Neustart)
+        // Verhindert dass Sensoren die sich waehrend Adapter-Downtime NICHT veraendert haben als 'neue Aktivitaet' zaehlen.
+        // Nur Sensoren ueberschreiben deren State aktuell in ioBroker vorliegt.
+        try {
+            const _allDevices = (this.config.devices || []);
+            for (const _dev of _allDevices) {
+                if (!_dev.id) continue;
+                try {
+                    const _currentState = await this.getForeignStateAsync(_dev.id);
+                    if (_currentState && _currentState.val !== undefined && _currentState.val !== null) {
+                        this.sensorLastValues[_dev.id] = _currentState.val;
+                    }
+                } catch (e) { /* Sensor nicht erreichbar, Initialwert aus History bleibt */ }
+            }
+            this.log.info(`Sensor baseline initialized for ${_allDevices.length} devices (duplicate filter ready).`);
+        } catch (e) {
+            this.log.warn('Sensor baseline init failed: ' + e.message);
+        }
+
+        const schedule = require('node-schedule');
+        if (this.historyJob) this.historyJob.cancel();
+        this.historyJob = schedule.scheduleJob({ hour: 23, minute: 59, second: 59 }, () => {
+            this.saveDailyHistory();
+        });
+
+        setTimeout(() => this.replayTodayEvents(), 5000);
+        // Startup-Save: heute-Datei nach Replay schreiben damit Charts sofort Balken zeigen
+        setTimeout(() => this.saveDailyHistory().catch(e => {}), 90000);
+
+        // householdType-Baseline aus Config setzen (gilt solange kein FP2-Sensor live ueberschreibt)
+        var _hsMap = { single: 'single', couple: 'multi', family: 'multi' };
+        var _hsCfg = this.config.householdSize || 'single';
+        var _hsBaseline = _hsMap[_hsCfg] || 'single';
+        var _hsCount = _hsCfg === 'single' ? 1 : _hsCfg === 'couple' ? 2 : 3;
+        this.setStateAsync('system.householdType', { val: _hsBaseline, ack: true }).catch(function(){});
+        this.setStateAsync('system.currentPersonCount', { val: _hsCount, ack: true }).catch(function(){});
+        this.log.info('Haushaltsgroesse (Config-Baseline): ' + _hsCfg + ' -> householdType=' + _hsBaseline + ', count=' + _hsCount);
+
+        // Sensor-LastSeen aus eventHistory initialisieren (auch nach Adapter-Neustart)
+        if (this.eventHistory && this.eventHistory.length > 0) {
+            this.eventHistory.forEach(function(e) { if (e.id && e.timestamp) { var cur = this.sensorLastSeen[e.id]; if (!cur || e.timestamp > cur) this.sensorLastSeen[e.id] = e.timestamp; } }.bind(this));
+        }
+        // St?ndlicher Sensor-Ausfall-Check
+        if (this.sensorCheckInterval) clearInterval(this.sensorCheckInterval);
+            if (this.batteryDiscoveryInterval) clearInterval(this.batteryDiscoveryInterval);
+        this.sensorCheckInterval = setInterval(() => { this.checkSensorHealth(); }, 60 * 60 * 1000);
+        // St?ndlicher History-Save: heute-Datei aktuell halten damit Chart heute-Balken zeigt
+        if (this.hourlySaveInterval) clearInterval(this.hourlySaveInterval);
+        this.hourlySaveInterval = setInterval(() => { this.saveDailyHistory().catch(e => {}); }, 60 * 60 * 1000);
+        setTimeout(() => this.checkSensorHealth(), 5 * 60 * 1000); // auch 5 min nach Start
+
+        // OC-15: Batterie-Discovery beim Start und alle 12 Stunden
+        if (this.batteryDiscoveryInterval) clearInterval(this.batteryDiscoveryInterval);
+        this.discoverBatteryStates().then(() => this.checkBatteryLevels()).catch(e => this.log.warn('[BATTERY] Init error: ' + e.message));
+        this.batteryDiscoveryInterval = setInterval(async () => {
+            try { await this.discoverBatteryStates(); await this.checkBatteryLevels(); } catch(e) {}
+        }, 12 * 60 * 60 * 1000);
+
+        if (this.roomIntegratorTimer) clearInterval(this.roomIntegratorTimer);
+        this.integrateRoomTime();
+        this.roomIntegratorTimer = setInterval(async () => {
+            await this.integrateRoomTime();
+        }, 60 * 1000);
+
+        if (this.healthTrendInterval) clearInterval(this.healthTrendInterval);
+        this.healthTrendInterval = setInterval(() => {
+            if (this.isProVersion && this.activeModules.health) {
+                this.runPythonHealthCheck();
+            }
+        }, 4 * 60 * 60 * 1000);
+
+        // Energy Prediction Timer (alle 15 Minuten)
+        if (this.analysisTimer) clearInterval(this.analysisTimer);
+        if (this.activeModules.energy) {
+            this.analysisTimer = setInterval(() => {
+                this.triggerEnergyPrediction();
+            }, 60 * 60 * 1000); // 1 Stunde // 15 Minuten
+            // Initialer Run nach 10 Sekunden
+            setTimeout(() => this.triggerEnergyPrediction(), 10000);
+        }
+
+        // Calendar Check Timer (alle 2 Minuten) - KRITISCH f?r rechtzeitiges Heizen!
+        if (this.calendarCheckTimer) clearInterval(this.calendarCheckTimer);
+        if (this.config.useCalendar && this.activeModules.energy) {
+            this.calendarCheckTimer = setInterval(() => {
+                automation.checkCalendarTriggers(this);
+            }, 2 * 60 * 1000); // 2 Minuten
+            // Initialer Run nach 15 Sekunden
+            setTimeout(() => automation.checkCalendarTriggers(this), 15000);
+        }
+
+        // Presence Check Timer (alle 1 Minute) - Aktualisiert "Bewohner Anwesend"
+        if (this.presenceCheckTimer) clearInterval(this.presenceCheckTimer);
+        if (this.config.presenceDevices && this.config.presenceDevices.length > 0) {
+            this.presenceCheckTimer = setInterval(async () => {
+                await this.checkWifiPresence();
+            }, 60 * 1000); // 1 Minute
+            // Initialer Run nach 5 Sekunden
+            setTimeout(async () => await this.checkWifiPresence(), 5000);
+        }
+
+        const manualPythonPath = path.join(__dirname, '.venv', 'bin', 'python');
+        pythonBridge.startService(this, manualPythonPath);
+
+        // --- PWA FAMILY APP ---
+        this._startFamilyApp();
+    }
+
+    async _startFamilyApp() {
+        if (!this.config.pwaEnabled) return;
+        
+        try {
+            await pwaServer.start(this);
+            
+            if (this.config.cloudflareEnabled) {
+                const port = this.config.pwaPort || 8095;
+                const tunnelUrl = await cloudflareTunnel.start(this, port);
+                if (tunnelUrl) {
+                    this.log.info(`[PWA] ?? Cloudflare URL: ${tunnelUrl}/?token=${this.config.familyShareToken || ''}`);
+                }
+            }
+        } catch(e) {
+            this.log.error(`[PWA] Startup error: ${e.message}`);
+        }
+    }
+
+    async checkSensorHealth() {
+        var _self = this;
+        var now = Date.now();
+        var devices = this.config.devices || [];
+        // Schwellwerte pro Typ ? T?r/Fenster 7 Tage (wochenlang geschlossen ist normal)
+        var thresholds = { motion: 7*24*3600000, presence_radar: 7*24*3600000, vibration: 7*24*3600000,
+            door: 7*24*3600000, temperature: 6*3600000, moisture: 8*3600000 };
+        var defaultThreshold = 7 * 24 * 3600000; // OC-5: Schwelle 7 Tage
+        var ALERT_COOLDOWN = 24 * 3600000; // max. 1 Pushover pro Sensor pro Tag
+        // KNX/Loxone/BACnet: kabelgebunden, kein Heartbeat ? Timeout-Check ?berspringen
+        var WIRED_PREFIXES = ['knx.', 'loxone.', 'bacnet.', 'modbus.'];
+        var alerts = [];
+        var statusList = [];
+        for (var _di = 0; _di < devices.length; _di++) {
+            var d = devices[_di];
+            if (!d.id) continue;
+            var isWired = WIRED_PREFIXES.some(function(p) { return d.id.toLowerCase().startsWith(p); });
+            if (isWired) continue;
+            // Aktoren (Lampen, Dimmer, Schalter) senden keine regelmaessigen Events - kein Ausfall-Check
+            if (d.type === 'light' || d.type === 'dimmer' || d.type === 'switch') continue;
+            // getForeignStateAsync: ts wird vom Basisadapter (zigbee, homekit etc.) bei jedem Heartbeat aktualisiert
+            var lastSeen = _self.sensorLastSeen[d.id] || 0;
+            try {
+                var fState = await _self.getForeignStateAsync(d.id);
+                if (fState && fState.ts && fState.ts > lastSeen) lastSeen = fState.ts;
+            } catch(e) {}
+            if (!lastSeen) continue;
+            var threshold = thresholds[d.type] || defaultThreshold;
+            var elapsed = now - lastSeen;
+            var sinceH = Math.round(elapsed / 360000) / 10;
+            var isOffline = elapsed > threshold;
+            statusList.push({ id: d.id, name: d.name || d.id, location: d.location || '', type: d.type || '', lastSeen: lastSeen, sinceH: sinceH, status: isOffline ? 'offline' : 'ok' });
+            if (isOffline) {
+                var lastAlert = _self.sensorAlertSent[d.id] || 0;
+                if ((now - lastAlert) > ALERT_COOLDOWN) {
+                    _self.sensorAlertSent[d.id] = now;
+                    var hours = Math.round(elapsed / 3600000);
+                    alerts.push((d.name || d.id) + ' (' + (d.location || '?') + '): seit ' + hours + 'h inaktiv');
+                }
+            }
+        }
+        var offlineCount = statusList.filter(function(s) { return s.status === 'offline'; }).length;
+        try {
+            await this.setStateAsync('system.sensorStatus', { val: JSON.stringify({ timestamp: now, sensors: statusList, offlineCount: offlineCount }), ack: true });
+        } catch(e) {}
+        // OC-5: Pushover-Alarme waehrend der Nachtruhe unterdruecken (Sensor schlaeimft normal)         var _nowH = new Date(now).getHours();         var _isSleepTime = _nowH >= 22 || _nowH < 8;         if (_isSleepTime) alerts = []; // Status-LED bleibt rot, aber kein Push-Spam         
+        if (alerts.length > 0) {
+            var msg = '?? Sensor-Ausfall:\n' + alerts.join('\n');
+            this.log.warn('[SENSOR-CHECK] ' + alerts.join(', '));
+            try { setup.sendNotification(this, msg, true, false, '?? NUUKANNI: Sensor-Ausfall'); } catch(e) {}
+        }
+        // OC-15: Batteriestand stuendlich pruefen (Pushover taeglich um 09:00)
+        try { await this.checkBatteryLevels(); } catch(e) {}
+    }
+
+    async discoverBatteryStates() {
+        var _self = this;
+        var devices = this.config.devices || [];
+        // G?ngige Battery-State-Namen quer durch alle ioBroker-Adapter:
+        // battery/BATTERY       ? Zigbee, deCONZ, Tuya, mihome, ZHA
+        // battery_percentage    ? Tuya, einige BLE-Adapter
+        // battery_level/Level   ? HomeKit-Controller, Matter, ESPHome
+        // battery-level         ? HomeKit Controller (Bindestrich)
+        // Bat.value/Bat.percent ? Shelly (batteriebetrieben: DW2, H&T, Motion)
+        // params.battery.Battery_Level ? Z-Wave 2 (zwave2-Adapter)
+        var BATTERY_NAMES = [
+            'battery', 'BATTERY', 'battery_low', 'lowBattery', 'Battery',
+            'battery_percentage', 'battery_level', 'batteryLevel', 'battery-level', 'BatteryLevel',
+            'Bat.value', 'Bat.percent', 'bat.value',
+            'params.battery.Battery_Level', 'params.battery.Battery_Level_Alarm'
+        ];
+        var WIRED_PREFIXES = ['knx.', 'loxone.', 'bacnet.', 'modbus.'];
+        var BATTERY_TYPES = ['motion', 'vibration', 'vibration_trigger', 'vibration_strength', 'presence_radar', 'presence_radar_bool', 'moisture', 'door', 'temperature'];
+        for (var _bi = 0; _bi < devices.length; _bi++) {
+            var d = devices[_bi];
+            if (!d.id) continue;
+            var isWired = WIRED_PREFIXES.some(function(p) { return d.id.toLowerCase().startsWith(p); });
+            if (isWired) continue;
+            if (BATTERY_TYPES.indexOf(d.type || 'motion') === -1) continue;
+            var batteryStateId = null;
+            var bSource = 'none';
+            // 1. Manuelles Feld aus Config
+            if (d.batteryStateId && d.batteryStateId.trim()) {
+                batteryStateId = d.batteryStateId.trim();
+                bSource = 'manual';
+            }
+            // 2. Alias-Rekonstruktion: alias.id -> nativer Geraetepfad -> battery
+            if (!batteryStateId) {
+                try {
+                    var aliasObj = await _self.getForeignObjectAsync(d.id);
+                    if (aliasObj && aliasObj.common && aliasObj.common.alias && aliasObj.common.alias.id) {
+                        var nativeId = typeof aliasObj.common.alias.id === 'object'
+                            ? (aliasObj.common.alias.id.read || aliasObj.common.alias.id.write)
+                            : aliasObj.common.alias.id;
+                        if (nativeId) {
+                            var aliasParts = String(nativeId).split('.');
+                            aliasParts.pop();
+                            var aliasDevPath = aliasParts.join('.');
+                            for (var _an = 0; _an < BATTERY_NAMES.length; _an++) {
+                                try {
+                                    var cStateA = await _self.getForeignStateAsync(aliasDevPath + '.' + BATTERY_NAMES[_an]);
+                                    if (cStateA !== null && cStateA !== undefined) {
+                                        batteryStateId = aliasDevPath + '.' + BATTERY_NAMES[_an];
+                                        bSource = 'alias';
+                                        break;
+                                    }
+                                } catch(e) {}
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+            // 3. Direktsuche ? bis zu 3 Pfad-Ebenen hoch
+            //    Tiefe 1: adapter.0.device.channel  ? adapter.0.device
+            //    Tiefe 2: adapter.0.device.ch.state ? adapter.0.device  (Shelly: Bat.value)
+            //    Tiefe 3: adapter.0.Node.ch.sub.st  ? adapter.0.Node   (Z-Wave: params.battery.Battery_Level)
+            if (!batteryStateId) {
+                try {
+                    var _dParts = d.id.split('.');
+                    var _maxDepth = Math.min(3, _dParts.length - 3); // mind. adapter.instance.device uebrig lassen
+                    _discoveryLoop:
+                    for (var _depth = 1; _depth <= _maxDepth; _depth++) {
+                        var _devPath = _dParts.slice(0, _dParts.length - _depth).join('.');
+                        for (var _dn = 0; _dn < BATTERY_NAMES.length; _dn++) {
+                            try {
+                                var cStateD = await _self.getForeignStateAsync(_devPath + '.' + BATTERY_NAMES[_dn]);
+                                if (cStateD !== null && cStateD !== undefined) {
+                                    batteryStateId = _devPath + '.' + BATTERY_NAMES[_dn];
+                                    bSource = 'auto';
+                                    break _discoveryLoop;
+                                }
+                            } catch(e) {}
+                        }
+                    }
+                } catch(e) {}
+            }
+            // 4. Homematic: Kanal 0 (Maintenance) fuer LOWBAT und BATTERY_STATE
+            if (!batteryStateId) {
+                try {
+                    var HM_PREFIXES = ['hm-rpc.', 'hmip-rfc.', 'hm-rega.'];
+                    var isHM = HM_PREFIXES.some(function(p) { return d.id.toLowerCase().startsWith(p); });
+                    if (isHM) {
+                        // hm-rpc.0.DEVADDR:X.DATAPOINT -> hm-rpc.0.DEVADDR:0
+                        var hmMatchColon = d.id.match(/^([\w-]+\.\d+\.[^:]+):(\d+)\./);
+                        // hm-rpc.0.DEVADDR.X.DATAPOINT -> hm-rpc.0.DEVADDR.0 (HmIP style)
+                        var hmMatchDot   = !hmMatchColon && d.id.match(/^([\w-]+\.\d+\.[^\.]+)\.\d+\./);
+                        var hmCh0 = hmMatchColon ? hmMatchColon[1] + ':0' : (hmMatchDot ? hmMatchDot[1] + '.0' : null);
+                        if (hmCh0) {
+                            var HM_BATT_NAMES = ['LOW_BAT', 'LOW_BAT_ALARM', 'LOWBAT', 'LOWBAT_ALARM']; // nur Booleans ? Spannungswerte nicht konvertierbar (Geraetyp unbekannt)
+                            for (var _hn = 0; _hn < HM_BATT_NAMES.length; _hn++) {
+                                try {
+                                    var cStateHM = await _self.getForeignStateAsync(hmCh0 + '.' + HM_BATT_NAMES[_hn]);
+                                    if (cStateHM !== null && cStateHM !== undefined) {
+                                        batteryStateId = hmCh0 + '.' + HM_BATT_NAMES[_hn];
+                                        bSource = 'hm-auto';
+                                        break;
+                                    }
+                                } catch(e) {}
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+            if (batteryStateId) {
+                if (!_self.batteryStates[d.id]) _self.batteryStates[d.id] = {};
+                _self.batteryStates[d.id].stateId = batteryStateId;
+                _self.batteryStates[d.id].source = bSource;
+                _self.log.debug('[BATTERY] ' + (d.name || d.id) + ': ' + batteryStateId + ' (' + bSource + ')');
+            } else {
+                delete _self.batteryStates[d.id];
+            }
+        }
+    }
+
+    async checkBatteryLevels() {
+        var _self = this;
+        var now = Date.now();
+        var criticals = [];
+        var devices = this.config.devices || [];
+        for (var _sid in _self.batteryStates) {
+            var info = _self.batteryStates[_sid];
+            if (!info || !info.stateId) continue;
+            try {
+                var bst = await _self.getForeignStateAsync(info.stateId);
+                if (!bst || bst.val === null || bst.val === undefined) continue;
+                var level = null; var isLow = false; var isCritical = false;
+                if (typeof bst.val === 'boolean') {
+                    isLow = bst.val; isCritical = bst.val; level = bst.val ? 5 : 80;
+                } else if (typeof bst.val === 'number') {
+                    // Nur echte Prozentwerte (0-100) verarbeiten.
+                    // Spannungswerte (< 10) werden bewusst ignoriert ? ohne Geraete-Datenbank
+                    // nicht zuverlaessig konvertierbar (1x CR2032 vs 2x AAA vs 1x 1.5V).
+                    if (bst.val >= 0 && bst.val <= 100) {
+                        level = bst.val;
+                        isLow = level <= 20; isCritical = level <= 10;
+                    }
+                    // else: Spannungswert -> kein Eintrag in batteryStates (wird uebersprungen)
+                }
+                info.level = level; info.isLow = isLow; info.isCritical = isCritical;
+                if (isCritical) {
+                    var _bd = devices.find(function(dv) { return dv.id === _sid; });
+                    var _bname = (_bd && _bd.name) ? _bd.name : _sid;
+                    var _bloc = (_bd && _bd.location) ? _bd.location : '?';
+                    criticals.push(_bname + ' (' + _bloc + '): ' + (level !== null ? level + '%' : 'kritisch'));
+                }
+            } catch(e) {}
+        }
+        // Status in State schreiben
+        try {
+            var batteryList = Object.keys(_self.batteryStates).map(function(id) {
+                var inf = _self.batteryStates[id];
+                return { id: id, stateId: inf.stateId, level: inf.level !== undefined ? inf.level : null, isLow: inf.isLow || false, isCritical: inf.isCritical || false, source: inf.source || 'auto' };
+            });
+            await _self.setStateAsync('system.sensorBatteryStatus', { val: JSON.stringify({ timestamp: now, sensors: batteryList }), ack: true });
+        } catch(e) {}
+        // Taeglich einmal um 09:00 Uhr Pushover bei kritischer Batterie
+        var _nowH2 = new Date(now).getHours();
+        var _dayKey2 = new Date(now).toDateString();
+        if (criticals.length > 0 && _nowH2 >= 9 && _self._lastBatteryPushoverDay !== _dayKey2) {
+            _self._lastBatteryPushoverDay = _dayKey2;
+            var _bMsg = '\uD83D\uDD0B Batterie-Warnung:\n' + criticals.join('\n');
+            _self.log.warn('[BATTERY] Kritisch: ' + criticals.join(', '));
+            try { setup.sendNotification(_self, _bMsg, true, false, '\uD83D\uDD0B NUUKANNI: Batterie fast leer'); } catch(e) {}
+        }
+    }
+
+    onUnload(callback) {
+        if (this.historyJob) this.historyJob.cancel();
+        this.saveDailyHistory().then(async () => {
+            if (this.analysisTimer) clearInterval(this.analysisTimer);
+            if (this.calendarCheckTimer) clearInterval(this.calendarCheckTimer);
+            if (this.presenceCheckTimer) clearInterval(this.presenceCheckTimer);
+            if (this.roomIntegratorTimer) clearInterval(this.roomIntegratorTimer);
+            if (this.sensorCheckInterval) clearInterval(this.sensorCheckInterval);
+            if (this.hourlySaveInterval) clearInterval(this.hourlySaveInterval);
+            recorder.abortExitTimer(this);
+            pythonBridge.stopService(this);
+            
+            // PWA und Tunnel beenden
+            cloudflareTunnel.stop();
+            await pwaServer.stop();
+            
+            callback();
+        });
+    }
+
+    async replayTodayEvents() {
+        if (!this.eventHistory || this.eventHistory.length === 0) {
+            this.log.warn("? Replay skipped: No events in memory.");
+            return;
+        }
+
+        this.log.info(`? Replaying ${this.eventHistory.length} events from today...`);
+        const startOfDay = new Date().setHours(0,0,0,0);
+
+        const histId = 'analysis.activity.roomHistory';
+        let histData = { history: {}, date: new Date().toLocaleDateString() };
+
+        const vectorId = 'analysis.health.todayVector';
+        const detailsId = 'analysis.health.todayRoomDetails';
+
+        let todayBuckets = new Array(48).fill(0);
+        let todayDetails = Array.from({ length: 48 }, () => []);
+
+        // Sensoren die explizit aus der Health-Timeline ausgeschlossen sind (aktuelle Konfiguration)
+        const _excludedFromActivity = new Set((this.config.devices || []).filter(d => d.excludeFromActivity).map(d => d.id));
+
+        this.eventHistory.forEach(evt => {
+            if (evt.timestamp >= startOfDay) {
+                if (evt.excludeFromActivity || _excludedFromActivity.has(evt.id)) return;
+                if (recorder.isRelevantActivity(evt.type, evt.value)) {
+                    const date = new Date(evt.timestamp);
+                    const bucketIndex = (date.getHours() * 2) + (date.getMinutes() >= 30 ? 1 : 0);
+
+                    if (bucketIndex < 48) {
+                        todayBuckets[bucketIndex]++;
+
+                        const roomName = evt.location || evt.name || '?';
+                        let currentRooms = todayDetails[bucketIndex];
+                        if (!currentRooms.includes(roomName)) {
+                            currentRooms.push(roomName);
+                        }
+                    }
+
+                    const hour = date.getHours();
+                    let room = evt.location || 'Unknown';
+                    const dev = (this.config.devices||[]).find(d => d.location === room);
+                    if(dev) room = dev.location;
+
+                    if (!histData.history[room]) histData.history[room] = new Array(24).fill(0);
+                    if (histData.history[room][hour] < 60) histData.history[room][hour]++;
+                }
+            }
+        });
+
+        const currentState = await this.getStateAsync(histId);
+        if (!currentState || !currentState.val || currentState.val === '{}' || currentState.val.includes('"history":{}')) {
+            await this.setStateAsync(histId, { val: JSON.stringify(histData), ack: true });
+        }
+
+        await this.setStateAsync(vectorId, { val: JSON.stringify(todayBuckets), ack: true });
+        await this.setStateAsync(detailsId, { val: JSON.stringify(todayDetails), ack: true });
+
+        this.log.info("? Dashboard Data (Rooms & Timeline & Details) restored.");
+    }
+
+    async migrateScoresToV2() {
+        try {
+            const dataDir = utils.getAbsoluteDefaultDataDir();
+            const historyDir = require('path').join(dataDir, 'cogni-living', 'history');
+            if (!require('fs').existsSync(historyDir)) return;
+            const files = require('fs').readdirSync(historyDir).filter(function(f) { return f.endsWith('.json'); });
+            var updated = 0;
+            for (var fi = 0; fi < files.length; fi++) {
+                try {
+                    var fp = require('path').join(historyDir, files[fi]);
+                    var data = JSON.parse(require('fs').readFileSync(fp, 'utf8'));
+                    // Bereits migriert oder kein Schlaffenster: skip
+                    if (data.sleepScoreCalStatus !== undefined) continue;
+                    if (!data.sleepWindowStart || !data.sleepWindowEnd) continue;
+                    if (data.bedWasEmpty) { data.sleepScoreCalStatus = 'uncalibrated'; require('fs').writeFileSync(fp, JSON.stringify(data)); continue; }
+                    var durMin = (data.sleepWindowEnd - data.sleepWindowStart) / 60000;
+                    var durScore = Math.max(20, Math.min(95, 25 + 0.12 * durMin));
+                    var stageAdj = 0;
+                    if (data.sleepStages && data.sleepStages.length > 0) {
+                        var _deep = 0, _rem = 0, _wake = 0, _total = 0;
+                        data.sleepStages.forEach(function(s) { _total += 300; if (s.s === 'deep') _deep += 300; else if (s.s === 'rem') _rem += 300; else if (s.s === 'wake') _wake += 300; });
+                        if (_total > 0) {
+                            var _cov = Math.min(1, (_total / 60) / Math.max(1, durMin));
+                            stageAdj = Math.max(-8, Math.min(8, Math.round((_rem/_total*30 - _wake/_total*50) * _cov)));
+                        }
+                    }
+                    var newScore = Math.round(Math.max(0, Math.min(100, durScore + stageAdj)));
+                    data.sleepScore = newScore;
+                    data.sleepScoreRaw = newScore;
+                    data.sleepScoreCal = null;
+                    data.sleepScoreCalNights = 0;
+                    data.sleepScoreCalStatus = 'uncalibrated';
+                    require('fs').writeFileSync(fp, JSON.stringify(data));
+                    updated++;
+                } catch(_fe) { this.log.warn('[ScoreMigration] Datei ' + files[fi] + ': ' + _fe.message); }
+            }
+            if (updated > 0) this.log.info('[ScoreMigration] V2-Score fuer ' + updated + ' History-Dateien aktualisiert.');
+
+            // sleepScoreHistory retroaktiv befuellen (fuer Kalibrierung)
+            try {
+                var _curHistState = await this.getStateAsync('analysis.health.sleepScoreHistory');
+                var _curHistory = [];
+                if (_curHistState && _curHistState.val) { try { _curHistory = JSON.parse(_curHistState.val); } catch(_) {} }
+                var _existingDates = new Set(_curHistory.map(function(e) { return e.date; }));
+                var _backfill = [];
+                for (var _bi = 0; _bi < files.length; _bi++) {
+                    try {
+                        var _bp = require('path').join(historyDir, files[_bi]);
+                        var _bd = JSON.parse(require('fs').readFileSync(_bp, 'utf8'));
+                        var _bdate = files[_bi].replace('.json', '');
+                        if (_bd.sleepScore !== null && _bd.sleepScore !== undefined && !_existingDates.has(_bdate)) {
+                            _backfill.push({ date: _bdate, aura: _bd.sleepScore, garmin: _bd.garminScore || null });
+                        }
+                    } catch(_be) {}
+                }
+                if (_backfill.length > 0) {
+                    var _merged = _curHistory.concat(_backfill).sort(function(a,b){ return a.date.localeCompare(b.date); });
+                    if (_merged.length > 60) _merged = _merged.slice(_merged.length - 60);
+                    await this.setStateAsync('analysis.health.sleepScoreHistory', { val: JSON.stringify(_merged), ack: true });
+                    this.log.info('[ScoreMigration] sleepScoreHistory mit ' + _backfill.length + ' historischen Eintraegen ergaenzt (' + _merged.filter(function(e){return e.garmin!==null;}).length + ' mit Garmin).');
+                }
+            } catch (_he) { this.log.warn('[ScoreMigration] History-Backfill Fehler: ' + _he.message); }
+        } catch (me) { this.log.warn('[ScoreMigration] Fehler: ' + me.message); }
+    }
+
+    async saveDailyHistory(_directOverride) {
+        // Sequenzen f?r Gait-Speed-Berechnung vorladen
+        try {
+            const _sq = await this.getStateAsync('LTM.trainingData.sequences');
+            this._lastSeqState = (_sq && _sq.val) ? _sq.val : null;
+        } catch(e) { this._lastSeqState = null; }
+        if (!this.activeModules.health) return;
+        const _now = new Date();
+        const dateStr = _now.getFullYear() + '-' + String(_now.getMonth()+1).padStart(2,'0') + '-' + String(_now.getDate()).padStart(2,'0'); // LOKAL, nicht UTC!
+        this.log.debug(`?? Saving Daily History for ${dateStr}...`);
+
+        try {
+            const [
+                roomHistory, geminiNight, geminiDay, anomalyScore, todayVector, activityTrend
+            ] = await Promise.all([
+                this.getStateAsync('analysis.activity.roomHistory'),
+                this.getStateAsync('analysis.health.geminiNight'),
+                this.getStateAsync('analysis.health.geminiDay'),
+                this.getStateAsync('analysis.security.lastScore'),
+                this.getStateAsync('analysis.health.todayVector'),
+                this.getStateAsync('analysis.health.activityTrend')
+            ]);
+
+            const startOfDayTimestamp = new Date().setHours(0,0,0,0);
+            // Fenster/T?r-?ffnungen: alle Sensoren mit fenster/haust?r/terrasse/balkon/window im Namen
+            // Frischluft: Verwende Sensor-Typ "door" aus dem Typ-System (Sensorliste: T?r/Fenster)
+            // Identisch zum Architektur-Prinzip: e.type === "door" statt Keyword-Matching
+            const freshAirCount = this.eventHistory.filter(e => {
+                const ts = e.timestamp || e.ts || 0;
+                if (ts < startOfDayTimestamp) return false;
+                const isDoorSensor = e.type === 'door';
+                const isOpen = e.value === true || e.value === 1 || e.value === 'true' || e.value === 'open';
+                return isDoorSensor && isOpen;
+            }).length;
+            // 5-Min-Sto?l?ftungen: OPEN/CLOSE-Paare >= 5 Min
+            const FRESH_AIR_MIN_MS = 5 * 60 * 1000;
+            const doorEventsToday = this.eventHistory
+                .filter(e => { const ts = e.timestamp || e.ts || 0; return ts >= startOfDayTimestamp && e.type === 'door'; })
+                .sort((a, b) => (a.timestamp || a.ts || 0) - (b.timestamp || b.ts || 0));
+            const openMap = {};
+            let freshAirLongCount = 0;
+            for (const e of doorEventsToday) {
+                const ts = e.timestamp || e.ts || 0;
+                const isOpen = e.value === true || e.value === 1 || e.value === 'true' || e.value === 'open';
+                if (isOpen) { openMap[e.id] = ts; }
+                else { if (openMap[e.id] && (ts - openMap[e.id] >= FRESH_AIR_MIN_MS)) freshAirLongCount++; delete openMap[e.id]; }
+            }
+            for (const openTs of Object.values(openMap)) { if ((Date.now() - openTs) >= FRESH_AIR_MIN_MS) freshAirLongCount++; }
+
+            let battery = 85;
+            if (activityTrend && activityTrend.val !== undefined) battery = Math.min(100, Math.max(20, Math.round(80 + (Number(activityTrend.val) * 5))));
+
+            // WICHTIG: Nur Events von HEUTE speichern, nicht alle Events!
+            const todayEvents = this.eventHistory.filter(e => e.timestamp >= startOfDayTimestamp);
+
+            // Sleep-Freeze: Snapshot lesen und pr++fen ob Nacht bereits eingefroren (echte Nacht gesichert)
+            const _dataDir0 = utils.getAbsoluteDefaultDataDir();
+            const _filePath0 = path.join(_dataDir0, 'cogni-living', 'history', dateStr + '.json');
+            let _existingSnap = null;
+            try { if (fs.existsSync(_filePath0)) _existingSnap = JSON.parse(fs.readFileSync(_filePath0, 'utf8')); } catch(_fe) {}
+            // Eingefroren wenn: Aufwachzeit vorhanden + vor 14:00 Uhr (= echte Nacht) + mind. 3h Bettzeit
+            const _sleepFrozenMotionOnly = !!(
+                _existingSnap && _existingSnap.personData &&
+                _existingSnap.sleepWindowStart && _existingSnap.sleepWindowEnd &&
+                new Date(_existingSnap.sleepWindowEnd).getHours() < 14 &&
+                Object.keys(_existingSnap.personData).some(function(pk) {
+                    var _ppd = _existingSnap.personData[pk];
+                    return _ppd && _ppd.wakeConfirmed === true;
+                })
+            );
+            const _sleepFrozen = !!(_existingSnap &&
+                _existingSnap.sleepWindowStart &&
+                _existingSnap.sleepWindowEnd &&
+                new Date(_existingSnap.sleepWindowEnd).getHours() < 14 &&
+                (
+                    (_existingSnap.sleepStages && _existingSnap.sleepStages.length > 0) ||
+                    _sleepFrozenMotionOnly
+                ));
+
+            // Schlaf-relevante Events: ab 18:00 Uhr des Vortages (Nacht spannt 2 Kalendertage!).
+            // Bsp: Einschlafen 23:00 Uhr = gestriger Tag => fehlt in todayEvents.
+            // sleepSearchEvents deckt 18:00 gestern bis jetzt, damit sleepWindowCalc den
+            // echten Einschlafzeitpunkt findet und OC-7-Vibrationsdaten vollstaendig sind.
+            const _sleepSearchBase = new Date();
+            _sleepSearchBase.setHours(18, 0, 0, 0);
+            if (new Date().getHours() < 18) { _sleepSearchBase.setDate(_sleepSearchBase.getDate() - 1); }
+            const sleepDate = _sleepSearchBase.getFullYear() + '-' + String(_sleepSearchBase.getMonth()+1).padStart(2,'0') + '-' + String(_sleepSearchBase.getDate()).padStart(2,'0');
+            const sleepSearchEvents = this.eventHistory.filter(e => (e.timestamp||0) >= _sleepSearchBase.getTime());
+            // Buffer-Supplement: falls In-Memory-Buffer nach Adapter-Neustart Abend-Events fehlen,
+            // aus gespeichertem JSON des Vortages nachladen (18:00-Fenster schliessen).
+            try {
+                const _bufMin = this.eventHistory.reduce((m, e) => Math.min(m, e.timestamp||Infinity), Infinity);
+                if (_bufMin > _sleepSearchBase.getTime() + 60000) {
+                    const _suppPath = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history', sleepDate + '.json');
+                    if (fs.existsSync(_suppPath)) {
+                        const _suppSnap = JSON.parse(fs.readFileSync(_suppPath, 'utf8'));
+                        const _suppEvts = (_suppSnap.eventHistory || []).filter(e => { const t=e.timestamp||0; return t>=_sleepSearchBase.getTime()&&t<_bufMin; });
+                        if (_suppEvts.length > 0) {
+                            sleepSearchEvents.push(..._suppEvts);
+                            sleepSearchEvents.sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+                            this.log.info('[AURA] sleepSearch: +'+_suppEvts.length+' Events aus '+sleepDate+'.json ergaenzt (Buffer-Gap)');
+                        }
+                    }
+                }
+            } catch(_suppE) { this.log.debug('[AURA] Buffer-Supplement: '+_suppE.message); }
+
+            // Raum-Verweildauer heute aus roomHistory berechnen (Minuten pro Raum)
+            const roomHistoryData = roomHistory?.val ? JSON.parse(roomHistory.val) : {};
+            const todayRoomMinutes = {};
+            if (roomHistoryData.history) {
+                for (const [room, hourlyArr] of Object.entries(roomHistoryData.history)) {
+                    if (Array.isArray(hourlyArr)) {
+                        todayRoomMinutes[room] = hourlyArr.reduce((a, b) => a + (b || 0), 0);
+                    }
+                }
+            }
+            // roomStats-State aktuell halten (gleiche Datenquelle f?r Admin + PWA)
+            try {
+                let existingStats = { today: {}, yesterday: {}, date: '' };
+                const rsState = await this.getStateAsync('analysis.activity.roomStats');
+                if (rsState && rsState.val) existingStats = JSON.parse(rsState.val);
+                existingStats.today = todayRoomMinutes;
+                existingStats.date = dateStr;
+                await this.setStateAsync('analysis.activity.roomStats', { val: JSON.stringify(existingStats), ack: true });
+            } catch(e) {}
+
+            // R?umliche Heuristik: max. Personen die heute gleichzeitig erkannt wurden
+            var _cfgSize = this.config.householdSize || 'single';
+            var _cfgBaseline = _cfgSize === 'single' ? 1 : _cfgSize === 'couple' ? 2 : 3;
+            const maxPersonsDetected = this._maxPersonsToday || _cfgBaseline;
+            // FP2 Bett-Praesenz: Minuten die Bett-Zone heute belegt war (inkl. Vorabend ab 18:00)
+            const bedPresenceMinutes = (function() {
+                var presStart = null; var total = 0;
+                var bedEvts = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })
+                    .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+                bedEvts.forEach(function(e) {
+                    var v = isActiveValue(e.value) || toPersonCount(e.value) > 0;
+                    if (v && !presStart) { presStart = e.timestamp||0; }
+                    else if (!v && presStart) { total += ((e.timestamp||0) - presStart) / 60000; presStart = null; }
+                });
+                if (presStart) total += (Date.now() - presStart) / 60000;
+                return Math.round(total);
+            })();
+
+            // Schlaf-Fenster aus FP2-Bett-Events berechnen (dynamisch).
+            // Dieses Fenster treibt die SCHLAFZEIT-Kachel (Einschlaf-/Aufwachzeit).
+            // Ohne FP2-Bett: start=null -> Schlafzeit-Karte zeigt 'keine Daten' (gewuenscht).
+            const sleepWindowCalc = (function() {
+                var bedEvts = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })
+                    .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+                if (bedEvts.length === 0) return { start: null, end: null };
+                // Fix A: Schlafbeginn per Gap-Fusion bestimmen
+                // Belegungs-Bloecke aufbauen, Luecken < 30min fusionieren (naecht. Wachphasen),
+                // laengsten fusionierten Block als Haupt-Schlafblock waehlen.
+                // Verhindert Re-Anchoring wenn Nutzer kurz aufsteht (WC, Kueche).
+                var GAP_TOLERANCE_MS = 30 * 60 * 1000;
+                var _rawBlocks = [];
+                var presStart = null;
+                for (var _si = 0; _si < bedEvts.length; _si++) {
+                    var _se = bedEvts[_si];
+                    var _sv = isActiveValue(_se.value) || toPersonCount(_se.value) > 0;
+                    var _shr = new Date(_se.timestamp||0).getHours();
+                    if (_sv && !presStart && (_shr >= 18 || _shr < 3)) { presStart = _se.timestamp||0; }
+                    else if (!_sv && presStart) {
+                        _rawBlocks.push({ start: presStart, end: _se.timestamp||0 });
+                        presStart = null;
+                    }
+                }
+                if (presStart) _rawBlocks.push({ start: presStart, end: Date.now() });
+                // Bloecke < 10 Min verwerfen, dann Luecken <= GAP_TOLERANCE_MS fusionieren
+                var _merged = [];
+                for (var _bi = 0; _bi < _rawBlocks.length; _bi++) {
+                    var _b = _rawBlocks[_bi];
+                    if ((_b.end - _b.start) < 10 * 60000) continue;
+                    if (_merged.length === 0) {
+                        _merged.push({ start: _b.start, end: _b.end });
+                    } else {
+                        var _lastM = _merged[_merged.length - 1];
+                        if ((_b.start - _lastM.end) <= GAP_TOLERANCE_MS) {
+                            _lastM.end = _b.end; // Naecht. Wachphase: fusionieren, nicht neu ankern
+                        } else {
+                            _merged.push({ start: _b.start, end: _b.end });
+                        }
+                    }
+                }
+                if (_merged.length === 0) return { start: null, end: null };
+                // Laengsten fusionierten Block als Haupt-Schlafblock waehlen
+                var _mainBlock = _merged.reduce(function(best, cur) {
+                    return (cur.end - cur.start) > (best.end - best.start) ? cur : best;
+                }, _merged[0]);
+                var sleepStartTs = _mainBlock.start;
+                if (!sleepStartTs) return { start: null, end: null };
+                // Aufwachzeit: erstes Mal nach Schlafbeginn dass Bett >= 15 Min leer war nach 04:00
+                var wakeTs = null;
+                var emptyStart = null;
+                var _firstEmpty = null;
+                for (var _wi = 0; _wi < bedEvts.length; _wi++) {
+                    var _we = bedEvts[_wi];
+                    if ((_we.timestamp||0) < sleepStartTs) continue;
+                    var _wv = isActiveValue(_we.value) || toPersonCount(_we.value) > 0;
+                    var _whr = new Date(_we.timestamp||0).getHours();
+                    if (!_wv && (_whr >= 4 && _whr <= 14)) {
+                        if (!emptyStart) emptyStart = _we.timestamp||0;
+                    } else if (_wv && emptyStart) {
+                        var _wdur = ((_we.timestamp||0) - emptyStart) / 60000;
+                        if (_wdur >= 15) { _firstEmpty = emptyStart; wakeTs = emptyStart + _wdur * 60000; emptyStart = null; break; }
+                        emptyStart = null;
+                    }
+                }
+                if (emptyStart) { var _wdur2 = (Date.now() - emptyStart) / 60000; if (_wdur2 >= 15) { _firstEmpty = emptyStart; wakeTs = Date.now(); } }
+                return { start: sleepStartTs, end: wakeTs, firstEmpty: _firstEmpty };
+            })();
+
+            // OC-4 Guard: Schlaffenster nur speichern wenn genuegend FP2-Bettzeit-Daten vorhanden.
+            // (Brainstorming OC-4: verhindert falsche Einschlafzeit nach Adapter-Neustart)
+            if (bedPresenceMinutes < 180 && sleepWindowCalc.start !== null) {
+                sleepWindowCalc.start = null;
+                sleepWindowCalc.end = null;
+                this.log.debug('[History] OC-4 Guard: bedPresenceMinutes=' + bedPresenceMinutes + 'min < 180, FP2-sleepWindow verworfen');
+            }
+            // Urspr++ngliche FP2-Fenstererkennung merken (vor Freeze-+?berschreibung) f++r sleepWindowSource
+            var _origFP2Window = sleepWindowCalc.start !== null;
+
+            // Schlaffenster aus Schlafzimmer-Bewegungsmelder (Fallback wenn kein FP2-Bett-Sensor).
+            // Sensor-Konfiguration: type=motion + sensorFunction=bed ??? isBedroomMotion=true.
+            // Pr+?zision: Einschlafzeit ??? letzte Bewegung vor ???45 Min Stille (18???03 Uhr).
+            //            Aufwachzeit ??? erste Bewegung nach 04 Uhr + mind. 3h nach Einschlafzeit.
+            // Besser als Fixfenster, aber schlechter als FP2 (keine Tief-/Ruhephasen-Erkennung).
+            // --- Globale Einschlafzeit-Kandidaten via computePersonSleep ---
+            // (personTag=null = globale Analyse, identischer Algorithmus wie per-Person)
+            var _fp2RawStart = sleepWindowCalc.start || null;
+            var garminSleepStartTs = null;
+            var vibRefinedSleepStartTs = null; // fp2_vib Kandidat (fuer Priority-Chain)
+
+            // Garmin Einschlafzeit lesen (async, bleibt ausserhalb der Funktion)
+            var _garminSleepStartId = (this.config.garminSleepStartStateId || '').trim()
+                || 'garmin.0.dailysleep.dailySleepDTO.sleepStartTimestampGMT';
+            try {
+                var _gSState = await this.getForeignStateAsync(_garminSleepStartId);
+                if (_gSState && _gSState.val != null) {
+                    var _gSVal = Number(_gSState.val);
+                    if (!isNaN(_gSVal) && _gSVal > 0) {
+                        var _gSHr = new Date(_gSVal).getHours();
+                        var _gSPlausibel = (_gSHr >= 18 || _gSHr < 4);
+                        var _gSInFP2Window = !_fp2RawStart || (Math.abs(_gSVal - _fp2RawStart) <= 3 * 3600000);
+                        var _gSNightOk = (_gSVal >= (_sleepSearchBase.getTime() - 2 * 3600000))
+                            && (_gSVal <= (_sleepSearchBase.getTime() + 16 * 3600000));
+                        if (_gSPlausibel && _gSInFP2Window && _gSNightOk) {
+                            garminSleepStartTs = _gSVal;
+                            this.log.debug('[SleepStart] Garmin plausibel: ' + new Date(garminSleepStartTs).toISOString());
+                        } else {
+                            this.log.debug('[SleepStart] Garmin ausserhalb Plausibilitaetsfenster: ' + new Date(_gSVal).toISOString());
+                        }
+                    }
+                }
+            } catch(_gse) { this.log.debug('[SleepStart] Garmin nicht lesbar: ' + _gse.message); }
+
+            // Alle Einschlafzeit-Kandidaten via computePersonSleep (Single-Source-of-Truth)
+            var _gR = computePersonSleep({
+                allEvents:    sleepSearchEvents,
+                personTag:    null,
+                fp2RawStart:  _fp2RawStart,
+                garminTs:     garminSleepStartTs,
+                garminWakeTs: null,
+                fp2WakeTs:    sleepWindowCalc.firstEmpty || null,
+                searchBase:   _sleepSearchBase,
+                wakeHardCap:  (function(){ var d=new Date(); d.setHours(12,0,0,0); return d.getTime(); })(),
+                startOverride: null,
+                wakeOverride:  null,
+                existingSnap:  null,
+                sleepDate:    sleepDate,
+                bathroomIds:  new Set((this.config.devices||[]).filter(function(d){return d.isBathroomSensor||d.sensorFunction==='bathroom';}).map(function(d){return d.id;})),
+                bedroomLocations: (this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed'||d.isBedroomMotion||d.isFP2Bed||d.isVibrationBed;}).map(function(d){return d.location;}).filter(function(l){return !!l;}).filter(function(v,i,a){return a.indexOf(v)===i;}),
+                hopDistFn:    this._roomHopDistance.bind(this),
+                log:          this.log
+            });
+
+            // Kandidaten aus Funktionsergebnis extrahieren (fuer Priority-Chain und sleepWindowSource)
+            var _findSrc = function(src) { return (_gR.allSleepStartSources.find(function(s){return s.source===src;})||{}).ts||null; };
+            vibRefinedSleepStartTs   = _findSrc('vib_refined');
+            var motionVibSleepStartTs  = _findSrc('motion_vib');
+            var lastOutsideSleepStartTs = _findSrc('last_outside');
+            var sleepWindowMotion    = { start: _gR._motionAnchor, end: null };
+            var sleepWindowHausStill = { start: _gR._hausStillTs,  end: null };
+            var allSleepStartSources = _gR.allSleepStartSources;
+            var sleepStartSource = _gR.sleepWindowSource || 'fixed';
+
+            // OC-23: Manueller Override der Einschlafzeit-Quelle
+            var _overrideApplied = false;
+            try {
+                // _directOverride: direkt uebergeben (bypasses State-Cache-Timing-Bug)
+                var _ovRaw = _directOverride
+                    ? JSON.stringify(_directOverride)
+                    : (await this.getStateAsync('analysis.sleep.startOverride'))?.val;
+                if (_ovRaw && _ovRaw !== 'null') {
+                    var _ov = JSON.parse(_ovRaw);
+                    var _ovWinMin = _sleepSearchBase.getTime();
+                    var _ovWinMax = _sleepSearchBase.getTime() + 10 * 3600000;
+                    var _ovSources = ['garmin','fp2_vib','fp2','motion_vib','haus_still','motion','fixed'];
+                    if (_ov && _ov.date === sleepDate && _ov.source && _ovSources.indexOf(_ov.source) >= 0
+                        && _ov.ts && _ov.ts >= _ovWinMin && _ov.ts <= _ovWinMax) {
+                        sleepWindowCalc.start = _ov.ts;
+                        sleepStartSource = _ov.source;
+                        _overrideApplied = true;
+                        this.log.info('[OC-23] Manueller Override aktiv: ' + _ov.source + ' = ' + new Date(_ov.ts).toISOString());
+                    }
+                }
+            } catch(_ovErr) { this.log.warn('[OC-23] Override-Fehler: ' + _ovErr.message); }
+
+            // Per-Person Overrides lesen (fuer personData-Block weiter unten)
+            var _personOverrides = {};
+            try {
+                var _povRaw = (await this.getStateAsync('analysis.sleep.personStartOverrides'))?.val;
+                if (_povRaw && _povRaw !== 'null') {
+                    var _povParsed = JSON.parse(_povRaw);
+                    if (_povParsed && typeof _povParsed === 'object') _personOverrides = _povParsed;
+                }
+            } catch(_povErr) { this.log.warn('[Per-Person Override] Lesefehler: ' + _povErr.message); }
+
+            // Per-Person Wake-Overrides lesen (analog Einschlaf-Overrides)
+            var _personWakeOverrides = {};
+            try {
+                var _pwovRaw = (await this.getStateAsync('analysis.sleep.personWakeOverrides'))?.val;
+                if (_pwovRaw && _pwovRaw !== 'null') {
+                    var _pwovParsed = JSON.parse(_pwovRaw);
+                    if (_pwovParsed && typeof _pwovParsed === 'object') _personWakeOverrides = _pwovParsed;
+                }
+            } catch(_pwovErr) { this.log.warn('[Per-Person Wake-Override] Lesefehler: ' + _pwovErr.message); }
+
+            // Priorit+?tskette anwenden (nur wenn nicht frozen)
+            if (!_overrideApplied) {
+            if (!_sleepFrozen) {
+                if (garminSleepStartTs) {
+                    sleepWindowCalc.start = garminSleepStartTs;
+                    sleepStartSource = 'garmin';
+                    this.log.info('[SleepStart] Garmin: ' + new Date(garminSleepStartTs).toISOString());
+                } else if (vibRefinedSleepStartTs) {
+                    sleepWindowCalc.start = vibRefinedSleepStartTs;
+                    sleepStartSource = 'fp2_vib';
+                    this.log.info('[SleepStart] Vib-Verfeinerung: ' + new Date(vibRefinedSleepStartTs).toISOString());
+                } else if (motionVibSleepStartTs) {
+                    sleepWindowMotion.start = motionVibSleepStartTs;
+                    sleepStartSource = 'motion_vib';
+                    this.log.info('[SleepStart] Motion+Vib-Verfeinerung: ' + new Date(motionVibSleepStartTs).toISOString());
+                }
+            } else {
+                // Frozen: bestehende Quellen-Daten ++bernehmen, Garmin-Override trotzdem erlauben
+                sleepStartSource = _existingSnap.sleepStartSource || sleepStartSource;
+                if (garminSleepStartTs) {
+                    sleepWindowCalc.start = garminSleepStartTs;
+                    sleepStartSource = 'garmin';
+                    this.log.info('[SleepStart] Garmin-Override auf Frozen: ' + new Date(garminSleepStartTs).toISOString());
+                }
+            }
+            }
+
+            // Schlaffenster fuer OC-7 (Sleep Score): FP2 ??? Bewegungsmelder ??? Fixfenster (Fallback-Kette).
+            // Betrifft NICHT sleepWindowStart/End im Snapshot -- die Schlafzeit-Kachel bleibt FP2-only.
+            var sleepWindowOC7 = sleepWindowCalc.start
+                ? sleepWindowCalc
+                : (_gR.sleepWindowStart
+                    ? { start: _gR.sleepWindowStart, end: sleepWindowCalc.end || null, firstEmpty: null }
+                    : (sleepWindowHausStill.start
+                        ? sleepWindowHausStill
+                        : (sleepWindowMotion.start
+                            ? sleepWindowMotion
+                            : (function() {
+                                var _fs = _sleepSearchBase.getTime() + 2 * 3600000;
+                                var _fe = _fs + 13 * 3600000;
+                                if (_fs > Date.now()) return { start: null, end: null };
+                                if (_fe > Date.now()) _fe = Date.now();
+                                return { start: _fs, end: _fe };
+                            })())));
+
+            // FP2-Roh-Aufwachzeit vor Garmin-Override sichern (fuer allWakeSources)
+            var _fp2RawWakeTs = sleepWindowCalc.firstEmpty || null;  // FP2-Abgangzeit vor Garmin-Override
+
+            // [FROZEN-Fix] Garmin-Wake vorab lesen damit Stage-Berechnung korrektes Fenster-Ende hat.
+            // Garmin-Wake wird normalerweise erst nach Stage-Calc gesetzt (Reihenfolge-Bug) - hier vorab.
+            if (sleepWindowOC7.start && !_sleepFrozen) {
+                try {
+                    var _gwIdPre = (this.config.garminSleepEndStateId || '').trim()
+                        || 'garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT';
+                    var _gwPre = await this.getForeignStateAsync(_gwIdPre);
+                    if (_gwPre && _gwPre.val != null) {
+                        var _gwPreVal = Number(_gwPre.val);
+                        if (!isNaN(_gwPreVal) && _gwPreVal > 0) {
+                            var _gwPreH = new Date(_gwPreVal).getUTCHours();
+                            var _gwPreOk = _gwPreVal >= sleepWindowOC7.start
+                                && _gwPreVal <= sleepWindowOC7.start + 20 * 3600000;
+                            if (_gwPreH >= 3 && _gwPreH < 14 && _gwPreOk) {
+                                if (!sleepWindowOC7.end || _gwPreVal < sleepWindowOC7.end) {
+                                    sleepWindowOC7.end = _gwPreVal;
+                                    this.log.debug('[OC-7] Garmin Wake vorab (Reihenfolge-Fix): ' + new Date(_gwPreVal).toISOString());
+                                }
+                            }
+                        }
+                    }
+                } catch(_gpe) {}
+            }
+
+            // --- OC-7: AURA SLEEP SCORE ---------------------------------------------------
+            // Klassifikation in 5-Minuten-Slots anhand Vibrationssensor (Detection + Staerke)
+            // Stages: 'deep' | 'light' | 'rem' | 'wake'
+            var sleepScore = null;
+            var sleepScoreRaw = null;
+            var sleepScoreCal = null;
+            var sleepScoreCalNights = 0;
+            var sleepScoreCalStatus = 'uncalibrated';
+            var sleepStages = [];
+            var _shouldRecalcStages = false;
+            if (_sleepFrozen) {
+                // Eingeschlafene Nacht: Schlafdaten aus bestehendem Snapshot uebernehmen
+                // Fix C: OC-23 Override bypasses FROZEN fuer Schlafstart (analog Garmin-Wake-Override)
+                if (!_overrideApplied) {
+                    // Fix 1: Garmin hat hoechste Prio auch bei Frozen (wurde in Prioritaetskette gesetzt)
+                    sleepWindowCalc.end = _existingSnap.sleepWindowEnd;
+                    if (garminSleepStartTs) {
+                        // Garmin-Wert bereits korrekt in sleepWindowCalc.start (aus Prioritaetskette)
+                        sleepWindowOC7 = { start: sleepWindowCalc.start, end: _existingSnap.sleepWindowEnd };
+                        this.log.info('[SleepStart] Garmin auf Frozen (automatisch): ' + new Date(sleepWindowCalc.start).toISOString());
+                    } else {
+                        sleepWindowCalc.start = _existingSnap.sleepWindowStart;
+                        sleepWindowOC7 = { start: _existingSnap.sleepWindowStart, end: _existingSnap.sleepWindowEnd };
+                    }
+                } else {
+                    sleepWindowCalc.end = _existingSnap.sleepWindowEnd;
+                    sleepWindowOC7 = { start: sleepWindowCalc.start, end: _existingSnap.sleepWindowEnd };
+                    this.log.info('[OC-23] Override auf Frozen Snapshot: start=' + new Date(sleepWindowCalc.start).toISOString() + ' end=' + new Date(_existingSnap.sleepWindowEnd).toISOString());
+                }
+                // [OC-28 + FROZEN-Fix] Stages neu berechnen wenn:
+                // (a) Garmin verschob Einschlafzeit um >5 Min, ODER
+                // (b) Schlaffenster laeuft noch / wurde gerade erst beendet (<30 Min zurueck)
+                var _frozenStartShift = (garminSleepStartTs && _existingSnap.sleepWindowStart)
+                    ? Math.abs(garminSleepStartTs - _existingSnap.sleepWindowStart) : 0;
+                var _frozenWinEnd = sleepWindowOC7.end || _existingSnap.sleepWindowEnd || 0;
+                var _stagesStillFresh = _frozenWinEnd > 0 && Date.now() < _frozenWinEnd + 30 * 60 * 1000;
+                if (_frozenStartShift > 5 * 60 * 1000 || _stagesStillFresh) {
+                    if (_stagesStillFresh)
+                        this.log.info('[OC-28] Stages neu berechnen: Fenster noch aktiv/gerade beendet (end=' + new Date(_frozenWinEnd).toLocaleTimeString() + ')');
+                    else
+                        this.log.info('[FROZEN-Fix] Garmin verschob Start um ' + Math.round(_frozenStartShift / 60000) + ' Min -> Stages neu berechnen');
+                    _shouldRecalcStages = true;
+                } else {
+                    if (_sleepFrozenMotionOnly && nightVibrationCount > 0) {
+                        this.log.info('[FROZEN-Vib] MotionOnly-Freeze aufgehoben \u2014 ' + nightVibrationCount + ' Vibrations-Events vorhanden -> Stages neu berechnen');
+                        _shouldRecalcStages = true;
+                    } else {
+                        sleepStages    = _existingSnap.sleepStages    || [];
+                        sleepScore     = _existingSnap.sleepScore     !== undefined ? _existingSnap.sleepScore     : null;
+                        sleepScoreRaw  = _existingSnap.sleepScoreRaw  !== undefined ? _existingSnap.sleepScoreRaw  : null;
+                        this.log.info('[History] Sleep FROZEN: ' + new Date(_existingSnap.sleepWindowStart).toLocaleTimeString() + '-' + new Date(_existingSnap.sleepWindowEnd).toLocaleTimeString() + ' bedPresMin=' + _existingSnap.bedPresenceMinutes);
+                    }
+                }
+            }
+            // Stages+Score: computed AFTER wake detection (see block below)
+
+            // Schlaf-Fenster-Quelle (fuer OC-7 Sensor-Indikator im Frontend)
+            // Reihenfolge: fp2 ??? motion (Bewegungsmelder) ??? fixed (Fixfenster)
+            var _motionAvail = sleepWindowMotion.start !== null;
+            var _hausStillAvail = sleepWindowHausStill.start !== null;
+            var sleepWindowSource = _sleepFrozen
+                ? (_existingSnap.sleepWindowSource || _gR.sleepWindowSource || 'fixed')
+                : (_gR.sleepWindowSource || 'fixed');
+
+            // Au+?erhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
+            var outsideBedEvents = [];
+
+            // [Multi-Person-Motion-Only Wake+Start-Fallback aus per-Person-Snapshot]
+            // Ziel: sleepWindowOC7.end setzen wenn bisher null (kein FP2, kein Garmin),
+            //       sleepWindowOC7.start korrigieren wenn invertiert (Abendberechnung).
+            // Wirkung: OBE-Dreiecke erscheinen, bedWasEmpty=false, naechster Tag eingefroren.
+            if (!_sleepFrozen && _existingSnap && _existingSnap.personData) {
+                var _ppWakeList = Object.keys(_existingSnap.personData).map(function(pk) {
+                    var ppd = _existingSnap.personData[pk];
+                    return (ppd && ppd.wakeConfirmed && ppd.sleepWindowEnd
+                        && new Date(ppd.sleepWindowEnd).getHours() < 14) ? ppd.sleepWindowEnd : null;
+                }).filter(Boolean).sort(function(a,b){return a-b;});
+                if (_ppWakeList.length > 0) {
+                    var _ppLatestWake = _ppWakeList[_ppWakeList.length - 1];
+                    if (!sleepWindowOC7.end) {
+                        sleepWindowOC7.end = _ppLatestWake;
+                        this.log.info('[OC-7] Multi-Person-Wake-Fallback: sleepWindowEnd=' + new Date(_ppLatestWake).toLocaleTimeString() + ' (' + _ppWakeList.length + ' Person(en))');
+                    }
+                    // Invertiertes Fenster korrigieren: start (heutiger Abend) > end (gestriger Morgen)
+                    if (sleepWindowOC7.start && sleepWindowOC7.end && sleepWindowOC7.start > sleepWindowOC7.end) {
+                        var _ppCorrectedStart = null;
+                        var _ppMidnightRef = _sleepSearchBase.getTime() + 6 * 3600000;
+                        Object.keys(_existingSnap.personData).forEach(function(pk) {
+                            var ppd = _existingSnap.personData[pk];
+                            if (!ppd || !ppd.allSleepStartSources) return;
+                            ppd.allSleepStartSources.forEach(function(src) {
+                                if (!src.ts || src.source === 'winstart') return;
+                                var srcHr = new Date(src.ts).getHours();
+                                if ((srcHr >= 18 || srcHr < 4) && src.ts < _ppMidnightRef + 4 * 3600000) {
+                                    if (!_ppCorrectedStart || src.ts < _ppCorrectedStart) _ppCorrectedStart = src.ts;
+                                }
+                            });
+                        });
+                        var _ppStartTs = _ppCorrectedStart || _sleepSearchBase.getTime();
+                        sleepWindowOC7.start = _ppStartTs;
+                        sleepWindowCalc.start = _ppStartTs;
+                        this.log.info('[OC-7] Multi-Person-Start-Korrektur: sleepWindowStart=' + new Date(_ppStartTs).toLocaleTimeString() + (_ppCorrectedStart ? ' (aus per-Person-Quellen)' : ' (Fallback gestern 18:00)'));
+                    }
+                }
+            }
+            if (sleepWindowOC7.start && sleepWindowOC7.end) {
+                // === PHASE 1: FP2-basierte Events (Bett-leer-Erkennung ? pr?zise Timestamps) ===
+                var _fp2Sorted = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })
+                    .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+                var _bedWasEmpty = false; var _emptyTs = null; var _fp2Events = [];
+                _fp2Sorted.forEach(function(_fe) {
+                    var _ts = _fe.timestamp || 0;
+                    if (_ts < sleepWindowOC7.start || _ts > sleepWindowOC7.end) return;
+                    var _active = isActiveValue(_fe.value) || toPersonCount(_fe.value) > 0;
+                    if (!_active && !_bedWasEmpty) { _bedWasEmpty = true; _emptyTs = _ts; }
+                    else if (_active && _bedWasEmpty && _emptyTs) {
+                        _bedWasEmpty = false;
+                        var _dur = Math.round((_ts - _emptyTs) / 60000);
+                        if (_dur >= 1) _fp2Events.push({ start: _emptyTs, end: _ts, duration: _dur });
+                        _emptyTs = null;
+                    }
+                });
+                if (_bedWasEmpty && _emptyTs) {
+                    var _lastDur = Math.round((sleepWindowOC7.end - _emptyTs) / 60000);
+                    if (_lastDur >= 1) _fp2Events.push({ start: _emptyTs, end: sleepWindowOC7.end, duration: _lastDur });
+                }
+                // === PHASE 2: Bewegungsmelder-Events (Bad/K?che ? Fallback + Erg?nzung zu FP2) ===
+                var _bathDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
+                var _kitchDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
+                var CLUSTER_GAP_MS = 5 * 60 * 1000;
+                var AFTER_EVT_MS = 3 * 60 * 1000;
+                // Mehrpersonenhaushalt: Konfiguration fuer Ausser-Bett-Zuordnung
+                var _cfgHousehold = this.config.householdSize || 'single';
+                var _isMultiPerson = (_cfgHousehold === 'couple' || _cfgHousehold === 'family');
+                var _hasFP2Bed = _fp2Events.length > 0;
+                // Topologie-Hop-Filter: Schlafzimmer-nahe Raeume per BFS ermitteln (Hop <= 2)
+                // Fallback: wenn Topo nicht verfuegbar -> kein Filter (graceful degradation)
+                var _configDevices = this.config.devices || [];
+                var _topoNearRooms = null;
+                try {
+                    var _topoState = await this.getStateAsync('analysis.topology.structure');
+                    if (_topoState && _topoState.val) {
+                        var _topoData = JSON.parse(_topoState.val);
+                        var _tRooms = _topoData.rooms || [];
+                        var _tMatrix = _topoData.matrix || [];
+                        if (_tRooms.length > 0) {
+                            var _bedRooms = new Set(_configDevices
+                                .filter(function(d) { return d.isFP2Bed || d.isVibrationBed || d.sensorFunction === 'bed'; })
+                                .map(function(d) { return (d.location || '').trim(); })
+                                .filter(function(l) { return l.length > 0; }));
+                            if (_bedRooms.size > 0) {
+                                _topoNearRooms = new Set(_bedRooms);
+                                var _tFrontier = Array.from(_bedRooms);
+                                for (var _tHop = 0; _tHop < 2; _tHop++) {
+                                    var _tNext = [];
+                                    _tFrontier.forEach(function(room) {
+                                        var _ri = _tRooms.indexOf(room);
+                                        if (_ri === -1) return;
+                                        for (var _j = 0; _j < _tRooms.length; _j++) {
+                                            if (_tMatrix[_ri] && _tMatrix[_ri][_j] === 1 && !_topoNearRooms.has(_tRooms[_j])) {
+                                                _topoNearRooms.add(_tRooms[_j]);
+                                                _tNext.push(_tRooms[_j]);
+                                            }
+                                        }
+                                    });
+                                    _tFrontier = _tNext;
+                                }
+                            }
+                        }
+                    }
+                } catch(_topoErr) { this.log.debug('[OC-7] Topology load failed: ' + (_topoErr.message||_topoErr)); }
+                // Alle Nicht-Schlafzimmer-Events im Schlaffenster (Bad + Kueche + andere Raeume)
+                var _motOutEvts = sleepSearchEvents.filter(function(e) {
+                    var _ts = e.timestamp || 0;
+                    if (_ts < sleepWindowOC7.start || _ts > sleepWindowOC7.end) return false;
+                    var _isBed = e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion;
+                    if (_isBed) return false;
+                    // Topologie-Hop-Filter: Sensoren > 2 Hops vom Schlafzimmer ignorieren
+                    if (_topoNearRooms && _topoNearRooms.size > 0) {
+                        var _evtLoc = (e.location || '').trim();
+                        if (_evtLoc && !_topoNearRooms.has(_evtLoc)) return false;
+                    }
+                    return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+                }).sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });                var _motEvents = []; var _curCluster = null;
+                _motOutEvts.forEach(function(e) {
+                    var _ts = e.timestamp || 0;
+                    var _isBath = e.isBathroomSensor || _bathDevIds.has(e.id);
+                    var _isOther = !_isBath; // Kueche zaehlt hier als anderer Raum (nur fuer outsideBedEvents-Dreieck relevant; isKitchenSensor bleibt fuer andere Algorithmen unveraendert)
+                    if (!_curCluster) {
+                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath, hasOther: _isOther, sensors: [{name: e.name||e.id, location: e.location||'', isBathroomSensor: _isBath, timestamp: _ts}] };
+                    } else if (_ts <= _curCluster.end + CLUSTER_GAP_MS) {
+                        _curCluster.end = _ts + AFTER_EVT_MS;
+                        if (_isBath) _curCluster.hasBath = true;
+                        if (_isOther) _curCluster.hasOther = true;
+                        var _sn = e.name||e.id; if (!_curCluster.sensors.some(function(s){return s.name===_sn;})) _curCluster.sensors.push({name: _sn, location: e.location||'', isBathroomSensor: _isBath, timestamp: _ts});
+                    } else {
+                        _motEvents.push(_curCluster);
+                        _curCluster = { start: _ts, end: _ts + AFTER_EVT_MS, hasBath: _isBath, hasOther: _isOther, sensors: [{name: e.name||e.id, location: e.location||'', isBathroomSensor: _isBath, timestamp: _ts}] };
+                    }
+                });
+                if (_curCluster) _motEvents.push(_curCluster);
+                // === PHASE 3: Zusammenf?hren ? FP2 hat Vorrang, Motion f?llt L?cken ===
+                // FP2-Solo-Dropout-Filter: kurze FP2-Abwesenheiten ohne Bestaetigung durch anderen Raum-Sensor erzeugen kein rotes Dreieck
+                var MIN_FP2_SOLO_MIN = 5;
+                var _fp2SoloDropoutsIgnored = 0;
+                var _allEvtCandidates = [];
+                _fp2Events.forEach(function(fp2) {
+                    // 2-Min-Vorpuffer: Bad-Sensor kann vor FP2-Leer-Erkennung feuern
+                    var _hasBath = sleepSearchEvents.some(function(e) {
+                        return (e.isBathroomSensor || _bathDevIds.has(e.id)) && (e.timestamp||0) >= fp2.start - 2*60*1000 && (e.timestamp||0) <= fp2.end;
+                    });
+                    // Sind ausserhalb des Schlafzimmers irgendwelche Nicht-Bett-Sensoren aktiv? (Bad + andere Raeume)
+                    var _hasAnySensorOutside = sleepSearchEvents.some(function(e) {
+                        var _ts2 = e.timestamp||0;
+                        if (_ts2 < fp2.start - 2*60*1000 || _ts2 > fp2.end + 2*60*1000) return false;
+                        if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion) return false;
+                        if (_topoNearRooms && _topoNearRooms.size > 0 && (e.location||'').trim() && !_topoNearRooms.has((e.location||'').trim())) return false;
+                        return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+                    });
+                    // Zusaetzlich: andere Raeume aktiv? (Kueche zaehlt als anderer Raum)
+                    var _hasOtherInFp2 = _hasBath && sleepSearchEvents.some(function(e) {
+                        var _ts2 = e.timestamp||0;
+                        if (_ts2 < fp2.start - 2*60*1000 || _ts2 > fp2.end) return false;
+                        var _isBath2 = e.isBathroomSensor || _bathDevIds.has(e.id);
+                        var _isBed2  = e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion;
+                        if (_isBath2 || _isBed2) return false;
+                        if (_topoNearRooms && _topoNearRooms.size > 0 && (e.location||"").trim() && !_topoNearRooms.has((e.location||"").trim())) return false;
+                        return (e.type === "motion" || e.type === "presence_radar_bool") && isActiveValue(e.value);
+                    });
+                    var _fp2Dur = fp2.duration;
+                    // FP2-Solo-Dropout: kein externer Sensor bestaetigt + unter Mindestdauer -> kein Dreieck
+                    if (!_hasBath && !_hasAnySensorOutside && _fp2Dur < MIN_FP2_SOLO_MIN) {
+                        _fp2SoloDropoutsIgnored++;
+                        return;
+                    }
+                    // confirmed=true: anderer Raumsensor bestaetigt Abwesenheit; confirmed=false: nur FP2 (Radar-Aussetzer moeglich)
+                    _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: _hasBath ? "bathroom" : "outside", confirmed: _hasBath || _hasAnySensorOutside });
+                    if (_hasBath && _hasOtherInFp2) {
+                        // FP2-Cluster hat Bad UND andere Aussenraeume -> zweiter Marker (rot) analog Phase-2-Fix v0.33.88
+                        _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: "outside", confirmed: true });
+                    }
+                });
+                if (_fp2SoloDropoutsIgnored > 0) {
+                    this.log.debug('[OC-7] ' + _fp2SoloDropoutsIgnored + ' FP2-Solo-Dropout(s) < ' + MIN_FP2_SOLO_MIN + 'min ignoriert (kein Aussensensor bestaetigt)');
+                }
+                _motEvents.forEach(function(mot) {
+                    var _overlaps = _allEvtCandidates.some(function(c) { return mot.start < c.end && mot.end > c.start; });
+                    if (!_overlaps) {
+                        var _dur = Math.max(1, Math.round((mot.end - mot.start) / 60000));
+                        var _motSensors = mot.sensors || [];
+                        if (mot.hasBath) {
+                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'bathroom', confirmed: true, sensors: _motSensors });
+                            if (mot.hasOther) {
+                                // Cluster hat Bad UND andere Aussenraeume -> zwei Marker (orange + rot)
+                                _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'outside', confirmed: true, sensors: _motSensors });
+                            }
+                        } else if (_isMultiPerson) {
+                            // Mehrpersonenhaushalt: Aktivitaet nur zuordnen wenn FP2 Bett-leer bestaetigt
+                            var _bedEmpty = _hasFP2Bed && _fp2Events.some(function(fp2) {
+                                return mot.start < fp2.end && mot.end > fp2.start;
+                            });
+                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: _bedEmpty ? 'outside' : 'other_person', confirmed: true, sensors: _motSensors });
+                        } else {
+                            _allEvtCandidates.push({ start: mot.start, end: mot.end, duration: _dur, type: 'outside', confirmed: true, sensors: _motSensors });
+                        }
+                    }
+                });
+                outsideBedEvents = _allEvtCandidates.sort(function(a,b) { return a.start - b.start; });
+            }
+            // OBE-Freeze-Fallback: wenn Snapshot eingefroren und frische Berechnung leer -> gespeicherte Events verwenden
+            if (outsideBedEvents.length === 0 && _sleepFrozen && _existingSnap && Array.isArray(_existingSnap.outsideBedEvents) && _existingSnap.outsideBedEvents.length > 0) {
+                outsideBedEvents = _existingSnap.outsideBedEvents;
+                this.log.debug('[outsideBedEvents] Frozen-Fallback: ' + outsideBedEvents.length + ' Events aus Snapshot wiederhergestellt.');
+            }
+
+            // --- Garmin Wake-Override + Aufwachzeit-Quellen --------------------------------
+            // Priorit+?tskette (absteigend): Garmin ??? FP2+Vib ??? FP2 ??? Motion ??? Fixed
+            // Garmin sleepEndTimestampGMT ++berstimmt alle anderen Quellen wenn plausibel (03-14 Uhr)
+            var garminWakeTs = null;
+            var fp2WakeTs    = _fp2RawWakeTs || null;  // FP2-Rohwert (vor Garmin-Override)
+            var _garminWakeId = (this.config.garminSleepEndStateId || '').trim()
+                || 'garmin.0.dailysleep.dailySleepDTO.sleepEndTimestampGMT';
+            try {
+                var _gwState = await this.getForeignStateAsync(_garminWakeId);
+                if (_gwState && _gwState.val != null) {
+                    var _gwVal = Number(_gwState.val);
+                    if (!isNaN(_gwVal) && _gwVal > 0) {
+                        var _gwHr = new Date(_gwVal).getHours();
+                        if (_gwHr >= 3 && _gwHr < 14) {
+                            garminWakeTs = _gwVal;
+                            this.log.debug('[Wake] Garmin plausibel: ' + new Date(garminWakeTs).toISOString());
+                        } else {
+                            this.log.debug('[Wake] Garmin ausserhalb 03-14h: ' + new Date(_gwVal).toISOString());
+                        }
+                    }
+                }
+            } catch(_gwe) { this.log.debug('[Wake] Garmin-End nicht lesbar: ' + _gwe.message); }
+
+            // Vibrationssensor-Best+?tigung: Letztes Vib-Event vor FP2-Leer-Signal (-?30min)
+            // Erh+?ht Konfidenz, +?ndert aber nicht den Timestamp
+            // ---- Aufwachzeit von computePersonSleep (Single-Source-of-Truth) ----
+            var allWakeSources = _gR.allWakeSources.map(function(s) {
+                return s.source === 'garmin' ? { source: 'garmin', ts: garminWakeTs || null } : s;
+            });
+            var wakeSource = garminWakeTs ? 'garmin' : (_gR.wakeSource || 'fixed');
+            var wakeConf   = garminWakeTs ? 'maximal' : (_gR.wakeConf   || 'niedrig');
+            if (garminWakeTs) {
+                sleepWindowOC7.end = garminWakeTs;
+                this.log.info('[Wake] Garmin-Override (global): ' + new Date(garminWakeTs).toISOString());
+            } else if (_gR.sleepWindowEnd) {
+                sleepWindowOC7.end = _gR.sleepWindowEnd;
+            }
+
+
+            // OC-WakeOv: Manueller Override der Aufwachzeit (global)
+            var _wakeOverrideApplied = false;
+            try {
+                var _wovRaw = (await this.getStateAsync('analysis.sleep.wakeOverride'))?.val;
+                if (_wovRaw && _wovRaw !== 'null') {
+                    var _wov = JSON.parse(_wovRaw);
+                    if (_wov && _wov.date === sleepDate && _wov.ts) {
+                        sleepWindowOC7.end = _wov.ts;
+                        wakeSource = _wov.source || 'override';
+                        _wakeOverrideApplied = true;
+                        this.log.info('[WakeOv] Override aktiv: ' + wakeSource + ' = ' + new Date(_wov.ts).toISOString());
+                    }
+                }
+            } catch(_wovE) { this.log.warn('[WakeOv] Fehler: ' + _wovE.message); }
+
+            // === STAGES + SCORE: Jetzt berechnen � sleepWindowOC7.end ist nach Wake-Detection gesetzt ===
+            // Non-frozen: End-Zeit jetzt bekannt (von Garmin/FP2/motion/other-room/override)
+            if (!_sleepFrozen && sleepWindowOC7.start && sleepWindowOC7.end) {
+                _shouldRecalcStages = true;
+            }
+            if (_shouldRecalcStages && sleepWindowOC7.start && sleepWindowOC7.end) {
+                var SLOT_MS = 5 * 60 * 1000;
+                var swStart = sleepWindowOC7.start;
+                var swEnd   = sleepWindowOC7.end;
+                var slotCount = Math.ceil((swEnd - swStart) / SLOT_MS);
+                var vibDetInWindow = sleepSearchEvents.filter(function(e) {
+                    return e.isVibrationBed && (e.timestamp||0) >= swStart && (e.timestamp||0) <= swEnd
+                        && (isActiveValue(e.value) || toPersonCount(e.value) > 0);
+                });
+                var vibStrInWindow = sleepSearchEvents.filter(function(e) {
+                    return e.isVibrationStrength && (e.timestamp||0) >= swStart && (e.timestamp||0) <= swEnd;
+                });
+                var deepSec = 0, lightSec = 0, remSec = 0, wakeSec = 0;
+                var consecutiveQuiet = 0;
+                for (var _sl = 0; _sl < slotCount; _sl++) {
+                    var slotS = swStart + _sl * SLOT_MS;
+                    var slotE = slotS + SLOT_MS;
+                    var slotDet = vibDetInWindow.filter(function(e) { return (e.timestamp||0) >= slotS && (e.timestamp||0) < slotE; }).length;
+                    var slotStrArr = vibStrInWindow.filter(function(e) { return (e.timestamp||0) >= slotS && (e.timestamp||0) < slotE; })
+                        .map(function(e) { return typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0; });
+                    var slotStrMax = slotStrArr.length > 0 ? Math.max.apply(null, slotStrArr) : 0;
+                    var hoursIn = (slotS - swStart) / 3600000;
+                    var stage;
+                    if (slotDet === 0) {
+                        consecutiveQuiet++;
+                        stage = consecutiveQuiet >= 5 ? 'deep' : 'light';
+                    } else if (slotDet >= 5 || slotStrMax > 28) {
+                        consecutiveQuiet = 0;
+                        stage = 'wake';
+                    } else if (slotDet >= 2 && hoursIn >= 2.5 && slotStrMax >= 12 && slotStrMax <= 28) {
+                        consecutiveQuiet = 0;
+                        stage = 'rem';
+                    } else {
+                        consecutiveQuiet = 0;
+                        stage = 'light';
+                    }
+                    sleepStages.push({ t: _sl * 5, s: stage });
+                    if (stage === 'deep')  deepSec  += 300;
+                    else if (stage === 'light') lightSec += 300;
+                    else if (stage === 'rem')   remSec   += 300;
+                    else                         wakeSec  += 300;
+                }
+                var totalSecSleep = deepSec + lightSec + remSec + wakeSec;
+                var durMin = (swEnd - swStart) / 60000;
+                var durScore = Math.max(20, Math.min(95, 25 + 0.12 * durMin));
+                var stageAdjustment = 0;
+                if (totalSecSleep > 0) {
+                    var dp = deepSec / totalSecSleep;
+                    var rp = remSec  / totalSecSleep;
+                    var lp = lightSec / totalSecSleep;
+                    var wp = wakeSec  / totalSecSleep;
+                    var coverage = Math.min(1, (totalSecSleep / 60) / Math.max(1, durMin));
+                    stageAdjustment = Math.max(-8, Math.min(8, Math.round((rp * 30 - wp * 50) * coverage)));
+                }
+                sleepScoreRaw = Math.round(Math.max(0, durScore + stageAdjustment));
+                sleepScore    = Math.round(Math.max(0, Math.min(100, sleepScoreRaw)));
+                this.log.debug('[SleepScore-V2] Score=' + sleepScore + ' dur=' + Math.round(durMin) + 'min durScore=' + Math.round(durScore) + ' adj=' + stageAdjustment + ' deep=' + (totalSecSleep>0?Math.round(deepSec/totalSecSleep*100):0) + '% rem=' + (totalSecSleep>0?Math.round(remSec/totalSecSleep*100):0) + '%');
+            }
+
+            // --- Garmin-Validierung (optional) --------------------------------------------
+            // Liest den Garmin-Sleep-Score wenn konfiguriert ? graceful fallback
+            var garminScore = null;
+            var garminDeepSec = null, garminLightSec = null, garminRemSec = null;
+            var garminStateId = (this.config.garminSleepScoreStateId || '').trim()
+                || 'garmin.0.dailysleep.dailySleepDTO.sleepScores.overall.value';
+            try {
+                var gScoreState = await this.getForeignStateAsync(garminStateId);
+                if (gScoreState && gScoreState.val != null) {
+                    garminScore = Number(gScoreState.val) || null;
+                    this.log.debug('[Garmin] Sleep Score gelesen: ' + garminScore);
+                }
+            } catch(e) { /* Garmin-Adapter nicht vorhanden */ }
+
+            // Optional: Schlafdauer-Felder von Garmin lesen
+            var garminDeepId  = (this.config.garminDeepSleepStateId  || '').trim() || 'garmin.0.dailysleep.dailySleepDTO.deepSleepSeconds';
+            var garminLightId = (this.config.garminLightSleepStateId || '').trim() || 'garmin.0.dailysleep.dailySleepDTO.lightSleepSeconds';
+            var garminRemId   = (this.config.garminRemSleepStateId   || '').trim() || 'garmin.0.dailysleep.dailySleepDTO.remSleepSeconds';
+            try {
+                var gd = await this.getForeignStateAsync(garminDeepId);
+                var gl = await this.getForeignStateAsync(garminLightId);
+                var gr = await this.getForeignStateAsync(garminRemId);
+                if (gd && gd.val != null) garminDeepSec  = Number(gd.val) || null;
+                if (gl && gl.val != null) garminLightSec = Number(gl.val) || null;
+                if (gr && gr.val != null) garminRemSec   = Number(gr.val) || null;
+            } catch(e) {}
+
+            // Sleep Validation State speichern (fuer SQL-Logging)
+            if (sleepScore !== null || garminScore !== null) {
+                var validationObj = {
+                    date: dateStr,
+                    auraScore: sleepScore,
+                    auraScoreCal: sleepScoreCal,
+                    garminScore: garminScore,
+                    delta: (sleepScore !== null && garminScore !== null) ? garminScore - sleepScore : null,
+                    garminDeepMin:  garminDeepSec  ? Math.round(garminDeepSec  / 60) : null,
+                    garminLightMin: garminLightSec ? Math.round(garminLightSec / 60) : null,
+                    garminRemMin:   garminRemSec   ? Math.round(garminRemSec   / 60) : null,
+                    timestamp: Date.now()
+                };
+                try {
+                    await this.setObjectNotExistsAsync('analysis.health.sleepValidation', {
+                        type: 'state', common: { name: 'Sleep Score Validation (AURA vs Garmin)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {}
+                    });
+                    await this.setStateAsync('analysis.health.sleepValidation', { val: JSON.stringify(validationObj), ack: true });
+                } catch(e) {}
+            }
+
+            // --- OC-7 DIAGNOSE-STATE (hilft beim Debuggen ob Sleep-Analyse l+?uft) ------
+            try {
+                await this.setObjectNotExistsAsync('analysis.health.saveDailyDebug', {
+                    type: 'state', common: { name: 'OC-7 Sleep Debug (letzter saveDailyHistory-Lauf)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {}
+                });
+                const _debugObj = {
+                    timestamp: new Date().toISOString(),
+                    dateStr: dateStr,
+                    eventHistoryCount: this.eventHistory.length,
+                    todayEventsCount: todayEvents.length,
+                    sleepSearchEventsCount: sleepSearchEvents.length,
+                    vibrationBedEventsTotal: sleepSearchEvents.filter(function(e){ return e.isVibrationBed; }).length,
+                    fp2BedEventsTotal: sleepSearchEvents.filter(function(e){ return e.isFP2Bed; }).length,
+                    bedPresenceMinutes: bedPresenceMinutes,
+                    sleepWindowCalcStart: sleepWindowCalc.start ? new Date(sleepWindowCalc.start).toISOString() : null,
+                    sleepWindowCalcEnd:   sleepWindowCalc.end   ? new Date(sleepWindowCalc.end).toISOString()   : null,
+                    sleepWindowOC7Start:  sleepWindowOC7.start  ? new Date(sleepWindowOC7.start).toISOString()  : null,
+                    sleepWindowOC7End:    sleepWindowOC7.end    ? new Date(sleepWindowOC7.end).toISOString()    : null,
+                    sleepStagesCount: sleepStages.length,
+                    sleepScore: sleepScore,
+                    oc4GuardFired: (bedPresenceMinutes < 180 && sleepWindowCalc.start === null && sleepSearchEvents.filter(function(e){ return e.isFP2Bed; }).length > 0),
+                };
+                await this.setStateAsync('analysis.health.saveDailyDebug', { val: JSON.stringify(_debugObj), ack: true });
+                this.log.info('[OC-7 Debug] stages=' + sleepStages.length + ' windowOC7=' + (_debugObj.sleepWindowOC7Start || 'NULL') + ' bedPresMin=' + bedPresenceMinutes + ' vibBedEvts=' + _debugObj.vibrationBedEventsTotal);
+            } catch(_de) { this.log.warn('[OC-7 Debug] Fehler beim Schreiben des Debug-States: ' + _de.message); }
+
+            // Vibration Bett: Erschuetterungen im Schlaf-Fenster (Fallback: 22-06)
+            var nightVibrationCount = todayEvents.filter(function(e) {
+                if (!e.isVibrationBed) return false;
+                var v = isActiveValue(e.value) || toPersonCount(e.value) > 0;
+                if (!v) return false;
+                var ts = e.timestamp||0;
+                if (sleepWindowCalc.start && sleepWindowCalc.end) {
+                    return ts >= sleepWindowCalc.start && ts <= sleepWindowCalc.end;
+                }
+                var hr = new Date(ts).getHours();
+                return hr >= 22 || hr < 6;
+            }).length;
+            // Vibration Staerke: Avg und Max im Schlaf-Fenster (fuer Parkinson/Epilepsie)
+            var _vibStrSum = 0; var _vibStrCount = 0; var _vibStrMax = 0;
+            todayEvents.forEach(function(e) {
+                if (!e.isVibrationStrength) return;
+                var ts = e.timestamp || 0;
+                var inWin = (sleepWindowCalc.start && sleepWindowCalc.end)
+                    ? (ts >= sleepWindowCalc.start && ts <= sleepWindowCalc.end)
+                    : (new Date(ts).getHours() >= 22 || new Date(ts).getHours() < 6);
+                if (!inWin) return;
+                var s = typeof e.value === 'number' ? e.value : parseFloat(e.value);
+                if (isNaN(s) || s <= 0) return;
+                _vibStrSum += s; _vibStrCount++; if (s > _vibStrMax) _vibStrMax = s;
+            });
+            const nightVibrationStrengthAvg = _vibStrCount > 0 ? Math.round(_vibStrSum / _vibStrCount) : null;
+            const nightVibrationStrengthMax = _vibStrCount > 0 ? _vibStrMax : null;
+
+            // ============================================================
+            // bedWasEmpty: Bett leer erkennen (Person auswaerts geschlafen)
+            // Alle drei Kriterien muessen erfuellt sein:
+            // 1. nightVibrationCount === 0 (kein Vibrationssensor)
+            // 2. Keine FP2-Bed-Events im Schlaffenster
+            // 3. Alle lokalen sleepStart-Quellen null (fp2, fp2_vib, haus_still, motion_vib)
+            // ============================================================
+            var _fp2InWindow = (sleepWindowOC7.start && sleepWindowOC7.end)
+                ? sleepSearchEvents.filter(function(e) {
+                    return e.isFP2Bed && (e.timestamp||0) >= sleepWindowOC7.start && (e.timestamp||0) <= sleepWindowOC7.end;
+                }).length : 0;
+            var _localSourcesNull = !allSleepStartSources.some(function(s) {
+                return (s.source === 'fp2' || s.source === 'fp2_vib' || s.source === 'haus_still' || s.source === 'motion_vib') && s.ts;
+            });
+            var bedWasEmpty = nightVibrationCount === 0 && _fp2InWindow === 0 && _localSourcesNull;
+            if (bedWasEmpty) {
+                sleepScore    = null;
+                sleepScoreRaw = null;
+                sleepStages   = [];
+                this.log.info('[bedWasEmpty] Bett leer erkannt: fp2InWindow=' + _fp2InWindow + ' vibCount=0 lokalNull=' + _localSourcesNull);
+            }
+
+            // Nykturie: Badezimmer-Sensor-Ereignisse ? dynamisches Schlaf-Fenster (Fallback: 22-06)
+            const _bathroomDevIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
+            const _kitchenDevIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
+            const nocturiaCount = (function() {
+                var nightHours = new Set();
+                var hasDyn = !!(sleepWindowCalc.start && sleepWindowCalc.end);
+                todayEvents.forEach(function(e) {
+                    if (!e.isBathroomSensor && !_bathroomDevIds.has(e.id)) return;
+                    var ts = e.timestamp || e.ts || 0;
+                    var hr = new Date(ts).getHours();
+                    if (hasDyn) {
+                        if (ts >= sleepWindowCalc.start && ts <= sleepWindowCalc.end) nightHours.add(hr);
+                    } else {
+                        if (hr >= 22 || hr < 6) nightHours.add(hr);
+                    }
+                });
+                return nightHours.size;
+            })();
+            const kitchenVisits = (function() {
+                var hours = new Set();
+                todayEvents.forEach(function(e) {
+                    if (!e.isKitchenSensor && !_kitchenDevIds.has(e.id)) return;
+                    var hr = new Date(e.timestamp || e.ts || 0).getHours();
+                    hours.add(hr);
+                });
+                return hours.size;
+            })();
+
+            // ============================================================
+            // Per-Person Smartwatch: async reads vor der personData-IIFE
+            // Format: { person: { sleepStartId: '...', wakeId: '...' } }
+            // Funktioniert mit jeder Smartwatch (Garmin, Samsung, Fitbit, etc.)
+            var _personGarminData = {};
+            var _garminAssign = (this.config.garminPersonAssignment && typeof this.config.garminPersonAssignment === 'object')
+                ? this.config.garminPersonAssignment : {};
+            for (var _gaPerson of Object.keys(_garminAssign)) {
+                var _gaEntry = _garminAssign[_gaPerson];
+                if (!_gaEntry || typeof _gaEntry !== 'object') continue;
+                var _gaSleepId = (_gaEntry.sleepStartId || '').trim();
+                var _gaWakeId  = (_gaEntry.wakeId  || '').trim();
+                if (!_gaSleepId && !_gaWakeId) continue;
+                try {
+                    var _gaStartSt2 = _gaSleepId ? await this.getForeignStateAsync(_gaSleepId) : null;
+                    var _gaEndSt2   = _gaWakeId  ? await this.getForeignStateAsync(_gaWakeId)  : null;
+                    var _gaStartV   = (_gaStartSt2 && _gaStartSt2.val != null) ? Number(_gaStartSt2.val) : null;
+                    var _gaEndV     = (_gaEndSt2   && _gaEndSt2.val   != null) ? Number(_gaEndSt2.val)   : null;
+                    var _gaStartH   = _gaStartV ? new Date(_gaStartV).getHours() : null;
+                    var _gaEndH     = _gaEndV   ? new Date(_gaEndV).getHours()   : null;
+                    var _gaSleepSt  = (_gaStartV && _gaStartH !== null && (_gaStartH >= 18 || _gaStartH < 4)
+                        && _gaStartV >= _sleepSearchBase.getTime() - 2*3600000
+                        && _gaStartV <= _sleepSearchBase.getTime() + 16*3600000) ? _gaStartV : null;
+                    var _gaWakeT    = (_gaEndV && _gaEndH !== null && _gaEndH >= 3 && _gaEndH < 14) ? _gaEndV : null;
+                    _personGarminData[_gaPerson] = { sleepStartTs: _gaSleepSt, wakeTs: _gaWakeT };
+                    if (_gaSleepSt) this.log.info('[Per-Person Watch] ' + _gaPerson + ' Einschlafen: ' + new Date(_gaSleepSt).toISOString());
+                    if (_gaWakeT)   this.log.info('[Per-Person Watch] ' + _gaPerson + ' Aufwachen: '  + new Date(_gaWakeT).toISOString());
+                } catch(_gaE) { this.log.debug('[Per-Person Watch] ' + _gaPerson + ' Fehler: ' + _gaE.message); }
+            }
+
+                        // Per-Person Nacht-Analyse Per-Person Nacht-Analyse
+            // ============================================================
+            const _self = this;
+            const personData = (function() {
+                var result = {};
+                var devices = (_self.config && _self.config.devices) ? _self.config.devices : [];
+                var personSensorIds = {};
+                devices.forEach(function(d) {
+                    if (!d.personTag || !d.personTag.trim()) return;
+                    var p = d.personTag.trim();
+                    if (!personSensorIds[p]) personSensorIds[p] = new Set();
+                    personSensorIds[p].add(d.id);
+                });
+                if (Object.keys(personSensorIds).length === 0) return result;
+                var winStart = sleepWindowCalc.start || sleepWindowOC7.start || _sleepSearchBase.getTime(); // Fallback: gestern 18:00 (analog _sleepSearchBase) statt 22:00 heute
+                var winEnd   = sleepWindowCalc.end   || (function(){ var d=new Date(); d.setHours(6,0,0,0); if(d.getTime()<winStart) d.setDate(d.getDate()+1); return d.getTime(); })();
+                var _wakeHardCapMs = (function(){ var _d = new Date(); _d.setHours(12, 0, 0, 0); return _d.getTime(); })();
+                Object.keys(personSensorIds).forEach(function(person) {
+                    var ids = personSensorIds[person];
+                    var personEvents = todayEvents.filter(function(e) { return ids.has(e.id); });
+                    var nightEvents = personEvents.filter(function(e) {
+                        var ts = e.timestamp||e.ts||0; return ts >= winStart && ts <= winEnd;
+                    });
+                    var nightActivityCount = nightEvents.length;
+                    var morning5 = new Date(winEnd); morning5.setHours(5,0,0,0);
+                    var morningEvt = personEvents.filter(function(e) {
+                        var ts=e.timestamp||e.ts||0; return ts >= morning5.getTime();
+                    }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                    var wakeTimeMin = morningEvt.length > 0 ? Math.round(((morningEvt[0].timestamp||0) - new Date(morningEvt[0].timestamp||0).setHours(0,0,0,0)) / 60000) : null;
+                    var bathroomIds2 = new Set(((_self.config && _self.config.devices)||[]).filter(function(d){ return d.isBathroomSensor || d.sensorFunction==='bathroom'; }).map(function(d){ return d.id; }));
+                    var bathroomNightEvents = todayEvents.filter(function(e) {
+                        if (!bathroomIds2.has(e.id)) return false;
+                        var ts = e.timestamp||e.ts||0; return ts >= winStart && ts <= winEnd;
+                    });
+                    var nocturiaAttr = 0;
+                    bathroomNightEvents.forEach(function(bathEvt) {
+                        var bathTs = bathEvt.timestamp||0;
+                        var recentPersonEvt = nightEvents.filter(function(e) { var ts=e.timestamp||0; return ts>=bathTs-10*60*1000&&ts<bathTs; });
+                        if (recentPersonEvt.length > 0) nocturiaAttr++;
+                    });
+                    // Per-Person Garmin (Zuweisung via config.garminPersonAssignment)
+                    var _pGarminInfo = _personGarminData[person] || {};
+                    var _pGarminTs = _pGarminInfo.sleepStartTs || null;
+                    var _pGarminWakeTs = _pGarminInfo.wakeTs || null;
+                    // computePersonSleep: einheitlicher Algorithmus (Single-Source-of-Truth)
+                    var _pResult = computePersonSleep({
+                        allEvents:     sleepSearchEvents,
+                        personTag:     person,
+                        fp2RawStart:   null,
+                        garminTs:      _pGarminTs,
+                        garminWakeTs:  _pGarminWakeTs,
+                        fp2WakeTs:     sleepWindowCalc.firstEmpty || null,
+                        searchBase:    _sleepSearchBase,
+                        wakeHardCap:   _wakeHardCapMs,
+                        startOverride: (_personOverrides&&_personOverrides[person])?_personOverrides[person]:null,
+                        wakeOverride:  (_personWakeOverrides&&_personWakeOverrides[person])?_personWakeOverrides[person]:null,
+                        existingSnap:  (_existingSnap&&_existingSnap.personData&&_existingSnap.personData[person])?_existingSnap.personData[person]:null,
+                        sleepDate:     sleepDate,
+                        bathroomIds:   _bathroomDevIds,
+                        bedroomLocations: (_self.config.devices||[]).filter(function(d){return d.sensorFunction==='bed'||d.isBedroomMotion||d.isFP2Bed||d.isVibrationBed;}).map(function(d){return d.location;}).filter(function(l){return !!l;}).filter(function(v,i,a){return a.indexOf(v)===i;}),
+                        hopDistFn:     _self._roomHopDistance.bind(_self),
+                        log:           _self.log
+                    });
+                    var sleepOnsetMin = null;
+                    if (_pResult.sleepWindowStart) {
+                        sleepOnsetMin = Math.round((_pResult.sleepWindowStart - new Date(_pResult.sleepWindowStart).setHours(0,0,0,0)) / 60000);
+                    }
+                    result[person] = {
+                        nightActivityCount:   nightActivityCount,
+                        wakeTimeMin:          wakeTimeMin,
+                        sleepOnsetMin:        sleepOnsetMin,
+                        nocturiaAttr:         nocturiaAttr,
+                        sleepWindowStart:     _pResult.sleepWindowStart,
+                        sleepWindowEnd:       _pResult.sleepWindowEnd,
+                        wakeSource:           _pResult.wakeSource,
+                        wakeConf:             _pResult.wakeConf,
+                        sleepStartSource:     _pResult.sleepStartSource,
+                        sleepStartOverridden: _pResult.sleepStartOverridden,
+                        allSleepStartSources: _pResult.allSleepStartSources,
+                        allWakeSources:       _pResult.allWakeSources,
+                        wakeConfirmed:        _pResult.wakeConfirmed,
+                        wakeOverridden:       _pResult.wakeOverridden,
+                        bedWasEmpty:          _pResult.bedWasEmpty,
+                        outsideBedEvents:     _pResult.outsideBedEvents,
+                        sleepStages:          _pResult.sleepStages,
+                        stagesWindowStart:    _pResult.stagesWindowStart,
+                        sleepScore:           _pResult.sleepScore,
+                        sleepScoreRaw:        _pResult.sleepScoreRaw,
+                        sleepScoreCalStatus:  'uncalibrated'
+                    };
+                });
+                return result;
+            })();
+
+            try { await this.setStateAsync('system.personData', { val: JSON.stringify(personData), ack: true }); } catch(e) {}
+
+
+            // --- Garmin-Kalibrierung: sleepScoreCal berechnen ---
+            try {
+                await this.setObjectNotExistsAsync('analysis.health.sleepScoreHistory', {
+                    type: 'state', common: { name: 'Sleep Score History for Calibration (JSON)', type: 'string', role: 'json', read: true, write: false, def: '[]' }, native: {}
+                });
+                var _scoreHistory = [];
+                var _histState = await this.getStateAsync('analysis.health.sleepScoreHistory');
+                if (_histState && _histState.val) { try { _scoreHistory = JSON.parse(_histState.val); if (!Array.isArray(_scoreHistory)) _scoreHistory = []; } catch(_) { _scoreHistory = []; } }
+                if (sleepScore !== null) {
+                    var _existingHIdx = _scoreHistory.findIndex(function(e) { return e.date === dateStr; });
+                    var _histEntry = { date: dateStr, aura: sleepScore, garmin: garminScore || null };
+                    if (_existingHIdx >= 0) _scoreHistory[_existingHIdx] = _histEntry; else _scoreHistory.push(_histEntry);
+                }
+                if (_scoreHistory.length > 60) _scoreHistory = _scoreHistory.slice(_scoreHistory.length - 60);
+                await this.setStateAsync('analysis.health.sleepScoreHistory', { val: JSON.stringify(_scoreHistory), ack: true });
+                var _calNights = _scoreHistory.filter(function(e) { return e.aura !== null && e.garmin !== null; });
+                sleepScoreCalNights = _calNights.length;
+                if (_calNights.length >= 7) {
+                    sleepScoreCalStatus = _calNights.length >= 14 ? 'calibrated' : 'calibrating';
+                    var _meanOffset = _calNights.reduce(function(sum, e) { return sum + (e.garmin - e.aura); }, 0) / _calNights.length;
+                    if (sleepScore !== null) {
+                        sleepScoreCal = Math.round(Math.max(0, Math.min(100, sleepScore + _meanOffset)));
+                    }
+                    this.log.debug('[SleepScoreCal] Status=' + sleepScoreCalStatus + ' nights=' + _calNights.length + ' offset=' + Math.round(_meanOffset) + ' cal=' + sleepScoreCal);
+                }
+            } catch (_calErr) {
+                this.log.warn('[SleepScoreCal] Fehler: ' + _calErr.message);
+            }
+            // =====================================================================
+            // INTIMACY DETECTION (OC-SEX): Vibrations-basierte Aktivitaetserkennung
+            // Zeitfenster: KEINS - Sex ist zeitlos! Voller sleepSearchEvents-Buffer.
+            // 5-Min-Slots, Pfad A (kurz+intensiv), Pfad B (laenger+moderat)
+            // Nur gespeichert wenn moduleSex === true (Datenschutz-Default: off)
+            // =====================================================================
+            var intimacyEvents = [];
+            var _calibInfo = { src: 'default', n: 0, calibA: 50, calibB: 30 };
+            if (this.config.moduleSex === true) {
+                try {
+                    // Kalibrierte oder Standard-Schwellen (aus native config oder Defaults)
+                    // --- ADAPTIVE KALIBRIERUNG (OC-SEX) ---
+                    // Prioritaet: 1. Auto aus Training-Labels, 2. Manuell (sexCalibThreshold), 3. Anomalie-Baseline, 4. Defaults
+                    var _calibA = 50, _calibB = 30, _calibSrc = 'default', _calibN = 0;
+                    // 1. Auto-Kalibrierung aus Training-Labels (ab 2 Labels)
+                    try {
+                        var _sexLabelsRaw = this.config.sexTrainingLabels || '';
+                        var _sexLabels = [];
+                        try { var _slP = JSON.parse(_sexLabelsRaw); if (Array.isArray(_slP)) _sexLabels = _slP.filter(function(l){return l&&l.date;}); } catch(_slPE){}
+                        if (_sexLabels.length >= 2) {
+                            var _calHistDir = require('path').join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                            var _sessionPeaks = [], _vaginalPeaks = [], _oralPeaks = [];
+                            var _sexTrainData = []; // Stufe 3: Features fuer Python
+                            var SLOT_CAL_MS = 5*60*1000;
+                            var _labelsUpdated = false;
+                            for (var _lbl of _sexLabels /* alle Typen inkl. Nullnummer (3. RF-Klasse), unlimitiert */) {
+                                // Fast-Path: gespeicherte Features direkt verwenden
+                                if (_lbl._features) {
+                                    var _lFP = _lbl._features, _lTypFP = (_lbl.type||'').toLowerCase();
+                                    if (_lTypFP !== 'nullnummer') _sessionPeaks.push(_lFP.medianPeak);
+                                    if (_lTypFP === 'vaginal') _vaginalPeaks.push(_lFP.medianPeak);
+                                    else if (_lTypFP === 'oral_hand') _oralPeaks.push(_lFP.medianPeak);
+                                    _sexTrainData.push({peak:_lFP.peakMax,durSlots:_lFP.durSlots,avgPeak:_lFP.avgPeak,variance:_lFP.variance,tierB:0,label:_lTypFP,date:_lbl.date||'',hourSin:_lFP.hourSin||0,hourCos:_lFP.hourCos||1,lightOn:_lFP.lightOn!==undefined?_lFP.lightOn:null,presenceOn:_lFP.presenceOn!==undefined?_lFP.presenceOn:null,roomTemp:_lFP.roomTemp||null,bathBefore:_lFP.bathBefore||0,bathAfter:_lFP.bathAfter||0});
+                                    continue;
+                                }
+                                try {
+                                    var _lPath = require('path').join(_calHistDir, _lbl.date + '.json');
+                                    if (!fs.existsSync(_lPath)) continue;
+                                    var _lSnap = JSON.parse(fs.readFileSync(_lPath, 'utf8'));
+                                    var _lAllEvts = (_lSnap.eventHistory || []).filter(function(e){ return e.type==='vibration_strength' && (e.isVibrationBed||e.isFP2Bed); });
+                                    if (_lAllEvts.length === 0) continue;
+                                    // Zeitfenster: +-45 Min um Label-Zeit, sonst alle Events des Tages
+                                    var _lT0 = null, _lT1 = null;
+                                    if (_lbl.time && /^\d{1,2}:\d{2}$/.test(_lbl.time)) {
+                                        var _lP = _lbl.time.split(':');
+                                        var _lBase = new Date(_lbl.date + 'T00:00:00');
+                                        _lBase.setHours(parseInt(_lP[0]), parseInt(_lP[1]), 0, 0);
+                                        _lT0 = _lBase.getTime() - 45*60000;
+                                        _lT1 = _lBase.getTime() + ((_lbl.durationMin||45) + 15)*60000;
+                                    }
+                                    var _lEvts = _lT0 !== null ? _lAllEvts.filter(function(e){ var t=e.timestamp||0; return t>=_lT0&&t<=_lT1; }) : _lAllEvts;
+                                    if (_lEvts.length === 0) continue;
+                                    // Slot-Peak-Median berechnen
+                                    _lEvts.sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
+                                    var _lFirst = _lEvts[0].timestamp||0, _lLast = (_lEvts[_lEvts.length-1].timestamp||0)+SLOT_CAL_MS;
+                                    var _lSlotPeaks = [];
+                                    for (var _lS=_lFirst; _lS<_lLast; _lS+=SLOT_CAL_MS) {
+                                        var _lSlotVals = _lEvts.filter(function(e){ var t=e.timestamp||0; return t>=_lS&&t<_lS+SLOT_CAL_MS; }).map(function(e){ return Number(e.value)||0; });
+                                        if (_lSlotVals.length > 0) _lSlotPeaks.push(Math.max.apply(null,_lSlotVals));
+                                    }
+                                    if (_lSlotPeaks.length > 0) {
+                                        _lSlotPeaks.sort(function(a,b){return a-b;});
+                                        var _lMedian = _lSlotPeaks[Math.floor(_lSlotPeaks.length/2)];
+                                        // Bug-Fix: Nullnummer-Peaks nicht in _sessionPeaks (wuerden calibA faelschlich senken)
+                                        var _lTypNorm = (_lbl.type||'').toLowerCase();
+                                        if (_lTypNorm !== 'nullnummer') _sessionPeaks.push(_lMedian);
+                                        if (_lTypNorm === 'vaginal') _vaginalPeaks.push(_lMedian);
+                                        else if (_lTypNorm === 'oral_hand') _oralPeaks.push(_lMedian);
+                                        // Stufe 3: Features fuer Python-Klassifikator
+                                        var _lPkMax = _lSlotPeaks[_lSlotPeaks.length-1];
+                                        var _lAvgP = Math.round(_lSlotPeaks.reduce(function(a,b){return a+b;},0)/_lSlotPeaks.length);
+                                        var _lVarP = Math.round(_lSlotPeaks.reduce(function(a,b){return a+(b-_lAvgP)*(b-_lAvgP);},0)/_lSlotPeaks.length);
+                                        // Kontext-Features aus Label-JSON EventHistory extrahieren
+                                        var _lCtxEvts = _lSnap.eventHistory || [];
+                                        var _lSessProxy = {start: _lT0||_lFirst, end: _lT1||(_lLast+_lFirst)};
+                                        var _lHrD=new Date(_lSessProxy.start); var _lHF=_lHrD.getHours()+_lHrD.getMinutes()/60;
+                                        var _lHSin=Math.round(Math.sin(2*Math.PI*_lHF/24)*1000)/1000;
+                                        var _lHCos=Math.round(Math.cos(2*Math.PI*_lHF/24)*1000)/1000;
+                                        var _lLitE=_lCtxEvts.filter(function(e){var t=e.timestamp||0;return (e.type==='light'||e.type==='dimmer')&&(typeof _ctxBedIds!=='undefined'?_ctxBedIds.has(e.id):false)&&t>=_lSessProxy.start-15*60000&&t<=_lSessProxy.end+30*60000;});
+                                        var _lLightOn=_lLitE.length>0?(Number(_lLitE[_lLitE.length-1].value)>0?1:0):null;
+                                        var _lPresE=_lCtxEvts.filter(function(e){var t=e.timestamp||0;return e.isFP2Bed&&t>=_lSessProxy.start-15*60000&&t<=_lSessProxy.end+30*60000;});
+                                        var _lPresOn=_lPresE.length>0?(Number(_lPresE[_lPresE.length-1].value)>0?1:0):null;
+                                        var _lTempE=_lCtxEvts.filter(function(e){var t=e.timestamp||0;return (e.type==='temperature'||e.type==='thermostat')&&(typeof _ctxBedIds!=='undefined'?_ctxBedIds.has(e.id):false)&&t>=_lSessProxy.start-15*60000&&t<=_lSessProxy.end+30*60000;});
+                                        var _lRoomT=_lTempE.length>0?(Number(_lTempE[_lTempE.length-1].value)||null):null;
+                                        var _lBathB=_lCtxEvts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||(typeof _ctxBathIds!=='undefined'&&_ctxBathIds.has(e.id)))&&e.type==='motion'&&t>=_lSessProxy.start-60*60000&&t<_lSessProxy.start;})?1:0;
+                                        var _lBathA=_lCtxEvts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||(typeof _ctxBathIds!=='undefined'&&_ctxBathIds.has(e.id)))&&e.type==='motion'&&t>_lSessProxy.end&&t<=_lSessProxy.end+60*60000;})?1:0;
+                                        // Features einmalig im Label speichern (Migration)
+                                         if (!_lbl._features) { _lbl._features = {peakMax:_lPkMax,medianPeak:_lMedian,durSlots:_lSlotPeaks.length,avgPeak:_lAvgP,variance:_lVarP,hourSin:_lHSin,hourCos:_lHCos,lightOn:_lLightOn,presenceOn:_lPresOn,roomTemp:_lRoomT,bathBefore:_lBathB,bathAfter:_lBathA}; _labelsUpdated = true; }
+                                         _sexTrainData.push({ peak: _lPkMax, durSlots: _lSlotPeaks.length, avgPeak: _lAvgP, variance: _lVarP, tierB: 0, label: _lTypNorm, date: _lbl.date||'', hourSin: _lHSin, hourCos: _lHCos, lightOn: _lLightOn, presenceOn: _lPresOn, roomTemp: _lRoomT, bathBefore: _lBathB, bathAfter: _lBathA });
+                                    }
+                                } catch(_lE) { this.log.debug('[OC-SEX] Calib-Label: '+_lE.message); }
+                            }
+                            // Angereicherte Labels persistieren (Fire-and-Forget)
+                            if (_labelsUpdated) { try { var _lblUpd=JSON.stringify(_sexLabels); this.config.sexTrainingLabels=_lblUpd; this.extendForeignObject('system.adapter.'+this.namespace,{native:{sexTrainingLabels:_lblUpd}},function(){}); this.log.debug('[OC-SEX] Labels angereichert ('+_sexLabels.filter(function(l){return l._features;}).length+' mit Features)'); } catch(_lSE){} }
+                            // Stufe 2: Typ-spezifische Kalibrierung
+                            if (_vaginalPeaks.length >= 2 && _oralPeaks.length >= 2) {
+                                _vaginalPeaks.sort(function(a,b){return a-b;}); _oralPeaks.sort(function(a,b){return a-b;});
+                                _calibA = Math.max(5, Math.round(_vaginalPeaks[0] * 1.0));
+                                _calibB = Math.max(3, Math.round(_oralPeaks[0] * 0.7));
+                                _calibSrc = 'labels_typed'; _calibN = _sessionPeaks.length;
+                                this.log.info('[OC-SEX] Stufe-2-Kalib: calibA='+_calibA+' (vaginal/'+_vaginalPeaks.length+'x) calibB='+_calibB+' (oral/'+_oralPeaks.length+'x)');
+                            } else if (_sessionPeaks.length >= 2) {
+                                _sessionPeaks.sort(function(a,b){return a-b;});
+                                var _minPeak = _sessionPeaks[0];
+                                _calibB = Math.max(3, Math.round(_minPeak * 0.7));
+                                _calibA = Math.max(5, Math.round(_minPeak * 1.1));
+                                _calibSrc = 'labels'; _calibN = _sessionPeaks.length;
+                                this.log.info('[OC-SEX] Kalibrierung aus '+_calibN+' Labels: calibA='+_calibA+' calibB='+_calibB+' (Peaks: '+_sessionPeaks.join(',')+')');
+                            }
+                        }
+                    } catch(_calE) { this.log.debug('[OC-SEX] Kalibrierung Fehler: '+_calE.message); }
+                    // 2. Manuell (sexCalibThreshold) - nur wenn keine Labels
+                    if (_calibSrc === 'default' && this.config.sexCalibThreshold && Number(this.config.sexCalibThreshold) > 0) {
+                        _calibB = Number(this.config.sexCalibThreshold);
+                        _calibA = Math.round(_calibB * 1.3);
+                        _calibSrc = 'manual';
+                    }
+                    // 3. Anomalie-Baseline (relativ zur Nacht-Vibration) - wenn noch kein Wert
+                    if (_calibSrc === 'default') {
+                        var _bsVals = sleepSearchEvents.filter(function(e){ return e.type==='vibration_strength'&&(e.isVibrationBed||e.isFP2Bed)&&((e.timestamp||0)>=_sexDayStart); }).map(function(e){ return Number(e.value)||0; }).filter(function(v){ return v>0; });
+                        if (_bsVals.length >= 10) {
+                            _bsVals.sort(function(a,b){return a-b;});
+                            var _bsP75 = _bsVals[Math.floor(_bsVals.length*0.75)];
+                            _calibA = Math.max(5, Math.round(_bsP75 * 2.5));
+                            _calibB = Math.max(3, Math.round(_bsP75 * 1.5));
+                            _calibSrc = 'baseline';
+                            this.log.debug('[OC-SEX] Anomalie-Baseline: P75='+_bsP75+' calibA='+_calibA+' calibB='+_calibB);
+                        }
+                    }
+                    // calibInfo fuer Snapshot
+                    var _calibInfo = { src: _calibSrc, n: _calibN, calibA: _calibA, calibB: _calibB };
+                    // --- ENDE KALIBRIERUNG ---
+                    // Alle Vibrations-Events ab Mitternacht des aktuellen Tages (Kalender-Tag-Logik)
+                    var _sexDayStart = new Date(dateStr + 'T00:00:00').getTime();
+                    var _intimEvts = sleepSearchEvents.filter(function(e) {
+                        return (e.type==='vibration_strength'||e.type==='vibration_trigger')
+                            && (e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion))
+                            && (e.timestamp||0) >= _sexDayStart;
+                    }).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
+                    var _intimVibStr  = _intimEvts.filter(function(e){return e.type==='vibration_strength';});
+                    var _intimVibTrig = _intimEvts.filter(function(e){return e.type==='vibration_trigger';});
+                    // 5-Min-Slot-Analyse: dynamisches Fenster von erstem bis letztem Event
+                    var SLOT_MS = 5*60*1000;
+                    var _intimSlots = [];
+                    if (_intimEvts.length >= 4) {
+                        var _tFirst = _intimEvts[0].timestamp||0;
+                        var _tLast  = (_intimEvts[_intimEvts.length-1].timestamp||0) + SLOT_MS;
+                        for (var _iS=_tFirst; _iS<_tLast; _iS+=SLOT_MS) {
+                            var _iE=_iS+SLOT_MS;
+                            var _str=_intimVibStr.filter(function(e){return (e.timestamp||0)>=_iS&&(e.timestamp||0)<_iE;});
+                            var _trig=_intimVibTrig.filter(function(e){return (e.timestamp||0)>=_iS&&(e.timestamp||0)<_iE;});
+                            var _strVals=_str.map(function(e){return Number(e.value)||0;});
+                            var _strMax=_strVals.length>0?Math.max.apply(null,_strVals):0;
+                            var _strAvg=_strVals.length>0?Math.round(_strVals.reduce(function(a,b){return a+b;},0)/_strVals.length):0;
+                            _intimSlots.push({start:_iS,end:_iE,strCnt:_str.length,trigCnt:_trig.length,strMax:_strMax,strAvg:_strAvg});
+                        }
+                    }
+                    // ZWEISTUFIGE KANDIDATEN-ERKENNUNG (5-Min-Slots):
+                    // Pfad A (kurz+intensiv / Quickie): Peak >= calibA, >= 2 konsekutive Slots (>= 10 min)
+                    // Pfad B (laenger+moderat): Peak >= calibB, >= 6 Slots (>= 30 min), max 24 Slots (120 min)
+                    var _iCand=[];
+                    var _iRunA=[];
+                    _intimSlots.forEach(function(sl,i){
+                        var _a=(sl.trigCnt>=2||sl.strCnt>=1)&&sl.strMax>=_calibA;
+                        if(_a){_iRunA.push(i);}
+                        else{if(_iRunA.length>=2)_iCand.push({run:_iRunA.slice(),tier:'A'}); _iRunA=[];}
+                    });
+                    if(_iRunA.length>=2)_iCand.push({run:_iRunA.slice(),tier:'A'});
+                    var _iCoveredA=new Set();
+                    _iCand.forEach(function(c){c.run.forEach(function(i){_iCoveredA.add(i);});});
+                    var _iRunB=[];
+                    _intimSlots.forEach(function(sl,i){
+                        if(_iCoveredA.has(i)){if(_iRunB.length>=6&&_iRunB.length<=24)_iCand.push({run:_iRunB.slice(),tier:'B'}); _iRunB=[]; return;}
+                        var _b=(sl.trigCnt>=1||sl.strCnt>=1)&&sl.strMax>=_calibB;
+                        if(_b){_iRunB.push(i);}
+                        else{if(_iRunB.length>=6&&_iRunB.length<=24)_iCand.push({run:_iRunB.slice(),tier:'B'}); _iRunB=[];}
+                    });
+                    if(_iRunB.length>=6&&_iRunB.length<=24)_iCand.push({run:_iRunB.slice(),tier:'B'});
+                    // Garmin HR laden (optional)
+                    var _garminHRVals = [];
+                    if (this.config.sexGarminHRStateId) {
+                        try {
+                            var _hrState = await this.getForeignStateAsync((this.config.sexGarminHRStateId||'').trim());
+                            if (_hrState && _hrState.val) {
+                                var _hrParsed = typeof _hrState.val==='string' ? JSON.parse(_hrState.val) : _hrState.val;
+                                if (Array.isArray(_hrParsed)) _garminHRVals = _hrParsed;
+                            }
+                        } catch(_hrE){ this.log.debug('[OC-SEX] Garmin HR nicht lesbar: '+_hrE.message); }
+                    }
+                    _iCand.forEach(function(cObj){
+                        var run=cObj.run||cObj;
+                        var _sl0=_intimSlots[run[0]], _slN=_intimSlots[run[run.length-1]];
+                        var _evtStart=_sl0.start, _evtEnd=_slN.end;
+                        var _durMin=Math.round(run.length*5); // 5-Min-Slots
+                        var _runSlots=run.map(function(i){return _intimSlots[i];});
+                        var _peakMax=Math.max.apply(null,_runSlots.map(function(s){return s.strMax;}));
+                        var _avgAvg=Math.round(_runSlots.reduce(function(a,s){return a+s.strAvg;},0)/_runSlots.length);
+                        var _avgTrig=Math.round(_runSlots.reduce(function(a,s){return a+s.trigCnt;},0)/_runSlots.length);
+                        var _sStr=Math.min(100,Math.round((_peakMax/120)*100));
+                        var _sDens=Math.min(100,Math.round((_avgTrig/10)*100));
+                        var _sDur=Math.min(100,Math.round((_durMin/60)*100)); // normiert auf 60 Min
+                        var _score=Math.round(_sStr*0.5+_sDens*0.3+_sDur*0.2);
+                        // Stufe 1: Schwellen relativ zu calibA (statt fest 80/55)
+                        var _vagThresh=Math.round(_calibA*1.5);
+                        var _highSlots=_runSlots.filter(function(s){return s.strMax>=_vagThresh&&s.strCnt>=2;});
+                        var _type=cObj.tier==='B'?'oral_hand':(_highSlots.length>=1?'vaginal':(_peakMax>=_calibA?'oral_hand':'intim'));
+                        var _hrMax=null, _hrAvg=null;
+                        if(_garminHRVals.length>0){
+                            var _hrInWin=_garminHRVals.filter(function(h){
+                                var _t=h.startGMT?new Date(h.startGMT).getTime():(h.timestamp||0);
+                                return _t>=_evtStart-5*60000&&_t<=_evtEnd+5*60000;
+                            });
+                            if(_hrInWin.length>0){
+                                var _hrVs=_hrInWin.map(function(h){return Number(h.value||h.heartRate||0);}).filter(function(v){return v>0;});
+                                if(_hrVs.length>0){
+                                    _hrMax=Math.max.apply(null,_hrVs);
+                                    _hrAvg=Math.round(_hrVs.reduce(function(a,b){return a+b;},0)/_hrVs.length);
+                                    if(_hrMax>100) _score=Math.min(100,_score+(_type==='vaginal'?15:10));
+                                }
+                            }
+                        }
+                        intimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:_hrMax,garminHRAvg:_hrAvg,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
+                    });
+                    // Gap-Toleranz-Merge: Sessions mit Abstand <30 Min zu einer zusammenfassen
+                    var _gapMs = 30 * 60 * 1000;
+                    intimacyEvents.sort(function(a,b){return a.start-b.start;});
+                    var _gMerged = [];
+                    for (var _gmi = 0; _gmi < intimacyEvents.length; _gmi++) {
+                        var _gCur = intimacyEvents[_gmi];
+                        if (_gMerged.length === 0 || _gCur.start - _gMerged[_gMerged.length-1].end > _gapMs) {
+                            _gMerged.push(Object.assign({}, _gCur, {slots: (_gCur.slots||[]).slice()}));
+                        } else {
+                            var _gPrev = _gMerged[_gMerged.length-1];
+                            var _gRank = {'vaginal':3,'oral_hand':2,'intim':1};
+                            if ((_gRank[_gCur.type]||0) > (_gRank[_gPrev.type]||0)) _gPrev.type = _gCur.type;
+                            _gPrev.end = Math.max(_gPrev.end, _gCur.end);
+                            _gPrev.duration = Math.round((_gPrev.end - _gPrev.start) / 60000);
+                            _gPrev.peakStrength = Math.max(_gPrev.peakStrength, _gCur.peakStrength);
+                            _gPrev.avgStrength = Math.round((_gPrev.avgStrength + _gCur.avgStrength) / 2);
+                            _gPrev.avgTrigger = Math.round((_gPrev.avgTrigger + _gCur.avgTrigger) / 2);
+                            _gPrev.score = Math.round((_gPrev.score + _gCur.score) / 2);
+                            _gPrev.slots = (_gPrev.slots||[]).concat(_gCur.slots||[]);
+                            if (_gCur.garminHRMax != null) _gPrev.garminHRMax = (_gPrev.garminHRMax != null) ? Math.max(_gPrev.garminHRMax, _gCur.garminHRMax) : _gCur.garminHRMax;
+                            if (_gCur.garminHRAvg != null) _gPrev.garminHRAvg = (_gPrev.garminHRAvg != null) ? Math.round((_gPrev.garminHRAvg + _gCur.garminHRAvg)/2) : _gCur.garminHRAvg;
+                        }
+                    }
+                    if (_gMerged.length < intimacyEvents.length) { this.log.info('[OC-SEX] Gap-Merge(daily): ' + intimacyEvents.length + ' ? ' + _gMerged.length + ' Session(s)'); intimacyEvents = _gMerged; }
+                    // Kontext-Sensor-IDs (sensorFunction-basiert)
+                    var _ctxBedIds  = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.id;}));
+                var _ctxBedRoom = (this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.location;}).filter(Boolean)[0] || null;
+                    var _ctxBathIds = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bathroom'||d.isBathroomSensor;}).map(function(d){return d.id;}));
+                    // Topologie BFS: Raeume mit Hop<=2 vom Schlafzimmer
+                    var _nearbyRooms = new Set();
+                    try {
+                        var _topoSt = await this.getStateAsync('analysis.topology.structure');
+                        if (_topoSt && _topoSt.val) {
+                            var _topoObj = JSON.parse(_topoSt.val);
+                            var _topoRms = _topoObj.rooms||[], _topoMat = _topoObj.matrix||[];
+                            var _bedRms = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.location;}).filter(Boolean));
+                            _bedRms.forEach(function(bedRoom) {
+                                var _bi=_topoRms.indexOf(bedRoom); if(_bi===-1) return;
+                                var _dist=new Array(_topoRms.length).fill(Infinity); _dist[_bi]=0;
+                                var _q=[_bi];
+                                while(_q.length>0){var _c=_q.shift();if(_dist[_c]>=1)continue;for(var _j=0;_j<_topoRms.length;_j++){if(_topoMat[_c]&&_topoMat[_c][_j]===1&&_dist[_j]===Infinity){_dist[_j]=_dist[_c]+1;_q.push(_j);}}}
+                                _topoRms.forEach(function(rm,idx){if(_dist[idx]===1)_nearbyRooms.add(rm);});
+                            });
+                        }
+                    } catch(_topoE){ /* ignorieren */ }
+                    var _nearbyRoomSensorIds = (this.config.devices||[]).filter(function(d){return d.type==='motion'&&!d.isBathroomSensor&&d.sensorFunction!=='bed'&&_nearbyRooms.has(d.location);}).map(function(d){return d.id;});
+                var _nearbyRoomSensorIds = (this.config.devices||[]).filter(function(d){return d.type==='motion'&&!d.isBathroomSensor&&d.sensorFunction!=='bed'&&_nearbyRooms.has(d.location);}).map(function(d){return d.id;});
+                var _extractCtx = function(session, evts) {
+                        var _wS=session.start-15*60000, _wE=session.end+30*60000;
+                        var _wEvts=evts.filter(function(e){var t=e.timestamp||0;return t>=_wS&&t<=_wE;});
+                        var _hrD=new Date(session.start);
+                        var _hF=_hrD.getHours()+_hrD.getMinutes()/60;
+                        var _hSin=Math.round(Math.sin(2*Math.PI*_hF/24)*1000)/1000;
+                        var _hCos=Math.round(Math.cos(2*Math.PI*_hF/24)*1000)/1000;
+                        var _lEvts=_wEvts.filter(function(e){return (e.type==='light'||e.type==='dimmer')&&(_ctxBedRoom?e.location===_ctxBedRoom:_ctxBedIds.has(e.id));});
+                        var _lightOn=_lEvts.length>0?(Number(_lEvts[_lEvts.length-1].value)>0?1:0):null;
+                        var _pEvts=_wEvts.filter(function(e){return e.isFP2Bed;});
+                        var _presOn=_pEvts.length>0?(Number(_pEvts[_pEvts.length-1].value)>0?1:0):null;
+                        var _tEvts=_wEvts.filter(function(e){return (e.type==='temperature'||e.type==='thermostat'||e.type==='heating_valve')&&(_ctxBedRoom?e.location===_ctxBedRoom:_ctxBedIds.has(e.id));});
+                        var _roomTemp=_tEvts.length>0?(Number(_tEvts[_tEvts.length-1].value)||null):null;
+                        var _bathB=evts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||_ctxBathIds.has(e.id))&&e.type==='motion'&&t>=session.start-60*60000&&t<session.start;})?1:0;
+                        var _bathA=evts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||_ctxBathIds.has(e.id))&&e.type==='motion'&&t>session.end&&t<=session.end+60*60000;})?1:0;
+                        // nearbyRoomMotion: Bewegung in Hop<=2 Raeumen waehrend Session
+                        var _nrM=_nearbyRooms.size>0?evts.some(function(e){var t=e.timestamp||0;return e.type==='motion'&&_nearbyRooms.has(e.location)&&t>=session.start-5*60000&&t<=session.end+5*60000;})?1:0:null;
+                        return {hourSin:_hSin,hourCos:_hCos,lightOn:_lightOn,presenceOn:_presOn,roomTemp:_roomTemp,bathBefore:_bathB,bathAfter:_bathA,nearbyRoomMotion:_nrM};
+                    };
+                    // Stufe 3: Python-Klassifikator (wenn genug Trainings-Daten vorhanden)
+                    var _pyClassInfo = null;
+                    var _sexTD = (typeof _sexTrainData !== 'undefined') ? _sexTrainData : [];
+                    if (_sexTD.length >= 3) { // Python auch bei 0 Events (Stufe-3-Status aktuell halten, Modell trainieren)
+                        try {
+                            var _pyPredSess = intimacyEvents.map(function(e) {
+                                var _sl = e.slots || [];
+                                var _strs = _sl.map(function(s){return s.strMax||0;});
+                                var _avg2 = _strs.length>0 ? _strs.reduce(function(a,b){return a+b;},0)/_strs.length : 0;
+                                var _var2 = _strs.length>0 ? _strs.reduce(function(a,b){return a+(b-_avg2)*(b-_avg2);},0)/_strs.length : 0;
+                                var _ctx2 = _extractCtx(e, sleepSearchEvents);
+                                return Object.assign({ peak: e.peakStrength, durSlots: _sl.length, avgPeak: Math.round(_avg2), variance: Math.round(_var2), tierB: (e.tier==='B'?1:0) }, _ctx2);
+                            });
+                            var _pyRes = await new Promise(function(resolve, reject) {
+                                var _pyTout = setTimeout(function(){ reject(new Error('timeout')); }, 15000);
+                                pythonBridge.send(this, 'CLASSIFY_SEX_SESSIONS',
+                                    { train: _sexTD, predict: _pyPredSess },
+                                    function(r){ clearTimeout(_pyTout); resolve(r); });
+                            }.bind(this));
+                            if (_pyRes && _pyRes.payload) {
+                                _pyClassInfo = _pyRes.payload;
+                                if (_pyClassInfo.trained && Array.isArray(_pyClassInfo.results)) {
+                                    _pyClassInfo.results.forEach(function(r, i) {
+                                        if (!intimacyEvents[i]) return;
+                                        if (r.type === 'nullnummer' && r.confidence >= 0.60) {
+                                            this.log.info('[OC-SEX-PY] Session '+i+' als Nullnummer klassifiziert � wird entfernt');
+                                            intimacyEvents[i] = null;
+                                        } else if (r.type && r.type !== 'nullnummer' && r.confidence >= 0.55) {
+                                            intimacyEvents[i].type = r.type;
+                                            intimacyEvents[i].pyConf = Math.round(r.confidence * 100);
+                                        }
+                                    }.bind(this));
+                                    intimacyEvents = intimacyEvents.filter(function(e){ return e !== null; });
+                                }
+                            }
+                        } catch(_pyE) { this.log.debug('[OC-SEX-PY] '+_pyE.message); }
+                    }
+                    _calibInfo.pyClassifier = _pyClassInfo ? { trained: _pyClassInfo.trained||false, n: _pyClassInfo.n_samples||0, counts: _pyClassInfo.class_counts||{}, msg: _pyClassInfo.status_msg||'', feature_importances: _pyClassInfo.feature_importances||[], loo_accuracy: (_pyClassInfo.loo_accuracy!=null?_pyClassInfo.loo_accuracy:null), confusion_matrix: (_pyClassInfo.confusion_matrix||null), loo_details: (_pyClassInfo.loo_details||[]), nearbyRoomSensorIds: _nearbyRoomSensorIds } : null;
+                    // Fallback: bestehende pyClassifier-Info erhalten wenn Python nicht verfuegbar war (Adapter-Neustart-Schutz)
+                    if (!_calibInfo.pyClassifier) { try { var _pyFbPath=path.join(utils.getAbsoluteDefaultDataDir(),'cogni-living','history',dateStr+'.json'); if(fs.existsSync(_pyFbPath)){var _pyFbJ=JSON.parse(fs.readFileSync(_pyFbPath,'utf8'));if(_pyFbJ.sexCalibInfo&&_pyFbJ.sexCalibInfo.pyClassifier&&_pyFbJ.sexCalibInfo.pyClassifier.trained){_calibInfo.pyClassifier=_pyFbJ.sexCalibInfo.pyClassifier;this.log.debug('[OC-SEX] pyClassifier aus JSON erhalten (Neustart-Schutz, trained='+_calibInfo.pyClassifier.trained+')');}} } catch(_pyFbE){this.log.debug('[OC-SEX] pyClassifier-Fallback: '+_pyFbE.message);} }
+                    if(intimacyEvents.length>0){
+                        this.log.info('[OC-SEX] '+intimacyEvents.length+' Event(s) erkannt. calibA='+_calibA+' calibB='+_calibB+' Scores: '+intimacyEvents.map(function(e){return e.score+'('+e.type+')';}).join(', '));
+                    } else {
+                        this.log.debug('[OC-SEX] daily: 0 Events (calibA='+_calibA+', calibB='+_calibB+', '+_intimEvts.length+' Vib-Events gesamt)');
+                    }
+                } catch(_intimErr) {
+                    this.log.warn('[OC-SEX] Fehler bei Intimacy-Detection: '+_intimErr.message);
+                }
+            }
+            // OC-SEX Dedup: Verhindert dass Events vom Vorabend (sleepSearch ab 18:00 gestern)
+            // doppelt in heute UND gestern gespeichert werden. Wenn ein erkanntes Event
+            // bereits in der gestrigen JSON-Datei steht, wird es aus dem heutigen Snapshot gefiltern.
+            try {
+                var _ddPrev = new Date(); _ddPrev.setDate(_ddPrev.getDate() - 1);
+                var _ddPrevStr = _ddPrev.getFullYear() + '-' + String(_ddPrev.getMonth()+1).padStart(2,'0') + '-' + String(_ddPrev.getDate()).padStart(2,'0');
+                var _ddPrevPath = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history', _ddPrevStr + '.json');
+                if (fs.existsSync(_ddPrevPath) && intimacyEvents.length > 0) {
+                    var _ddPrevSnap = JSON.parse(fs.readFileSync(_ddPrevPath, 'utf8'));
+                    var _ddPrevStarts = new Set((_ddPrevSnap.intimacyEvents || []).map(function(e) { return e.start; }));
+                    var _ddBefore = intimacyEvents.length;
+                    intimacyEvents = intimacyEvents.filter(function(e) { return !_ddPrevStarts.has(e.start); });
+                    if (intimacyEvents.length < _ddBefore) {
+                        this.log.info('[OC-SEX] Dedup: ' + (_ddBefore - intimacyEvents.length) + ' doppeltes Event(s) aus ' + _ddPrevStr + '.json gefiltert (Event gehoert zum Vortag)');
+                    }
+                }
+            } catch(_ddE) { this.log.debug('[OC-SEX] Dedup-Fehler: ' + _ddE.message); }
+
+            // Nullnummer-Session-Filter: Entfernt Sessions die per Label als Fehlalarm markiert wurden
+            try {
+                var _nnLabels=[];
+                try{var _nnRaw=JSON.parse(this.config.sexTrainingLabels||'[]');if(Array.isArray(_nnRaw))_nnLabels=_nnRaw.filter(function(l){return l&&l.date===dateStr&&l.type==='nullnummer'&&l.time;});}catch(_nnPE){}
+                if (_nnLabels.length>0&&intimacyEvents.length>0){
+                    var _nnBefore=intimacyEvents.length;
+                    intimacyEvents=intimacyEvents.filter(function(e){
+                        return !_nnLabels.some(function(nl){
+                            var _nlP=nl.time.split(':').map(Number);
+                            var _nlMs=new Date(dateStr+'T00:00:00').setHours(_nlP[0],_nlP[1],0,0);
+                            return Math.abs((e.start||0)-_nlMs)<30*60000;
+                        });
+                    });
+                    if(intimacyEvents.length<_nnBefore)this.log.info('[OC-SEX] Nullnummer-Filter(daily): '+(_nnBefore-intimacyEvents.length)+' Session(s) entfernt, '+intimacyEvents.length+' behalten');
+                }
+            } catch(_nnE){this.log.debug('[OC-SEX] Nullnummer-Filter: '+_nnE.message);}
+
+                        const snapshot = {
+                date: dateStr,
+                timestamp: Date.now(),
+                roomHistory: roomHistoryData,
+                todayRoomMinutes: todayRoomMinutes,   // { 'EG Bad': 25, ... }
+                geminiNight: geminiNight?.val || null,
+                geminiDay: geminiDay?.val || null,
+                anomalyScore: anomalyScore?.val !== undefined && anomalyScore?.val !== null
+                    ? Number(anomalyScore.val) : null,
+                todayVector: (() => {
+                    // Prim?r: aus analysis.health.todayVector State (rawEventLog-basiert)
+                    // Fallback: direkt aus eventHistory des heutigen Tages berechnen
+                    let vec = todayVector?.val ? JSON.parse(todayVector.val) : null;
+                    const vecIsEmpty = !vec || vec.every(v => v === 0);
+                    if (vecIsEmpty && todayEvents.length > 0) {
+                        // Fallback: Vector aus heutigen Events berechnen
+                        vec = new Array(48).fill(0);
+                        const dayStart = new Date().setHours(0,0,0,0);
+                        todayEvents.forEach(e => {
+                            const ts = e.timestamp || e.ts || 0;
+                            if (ts >= dayStart) {
+                                const d = new Date(ts);
+                                const slot = d.getHours() * 2 + Math.floor(d.getMinutes() / 30);
+                                if (slot >= 0 && slot < 48) vec[slot]++;
+                            }
+                        });
+                    }
+                    return vec || new Array(48).fill(0);
+                })(),
+                batteryLevel: battery,
+                freshAirCount: freshAirCount,
+                freshAirLongCount: freshAirLongCount,
+                windowOpenings: freshAirCount,
+                gaitSpeed: (() => {
+                    // Berechne heutige Gait-Speed direkt aus Sequenzen (kein async noetig)
+                    try {
+                        const seqState = this._lastSeqState; // wird unten gesetzt
+                        if (!seqState) return null;
+                        const allSeqs = JSON.parse(seqState);
+                        const todayStr = dateStr; // bereits oben definiert
+                        const todaySeqs = allSeqs.filter(s => (s.timestamp || '').startsWith(todayStr));
+                        if (todaySeqs.length < 1) return null;
+
+                        const allHallwayDevs = (this.config.devices || []).filter(d => d.isHallway || d.sensorFunction === 'hallway');
+                        // Prim+?rflur-Logik: wenn mind. ein Sensor als Prim+?rflur markiert, nur diesen verwenden
+                        const primaryHallwayDevs = allHallwayDevs.filter(d => d.isPrimaryHallway);
+                        const activeHallwayDevs = primaryHallwayDevs.length > 0 ? primaryHallwayDevs : allHallwayDevs;
+                        const hallwayConf = activeHallwayDevs.map(d => d.location || d.name || '');
+                        const hallwayKw = ['flur', 'diele', 'gang', 'korridor'];
+                        // Keyword-Fallback nur wenn kein Flur konfiguriert (Sensorliste ist Master)
+                        const isHallway = (loc) => hallwayConf.includes(loc) || (hallwayConf.length === 0 && hallwayKw.some(k => (loc || '').toLowerCase().includes(k)));
+
+                        const transits = [];
+                        for (const seq of todaySeqs) {
+                            const steps = seq.steps || [];
+                            if (steps.length < 3) continue;
+                            for (let i = 1; i < steps.length - 1; i++) {
+                                if (!isHallway(steps[i].loc)) continue;
+                                if (isHallway(steps[i-1].loc) || isHallway(steps[i+1].loc)) continue;
+                                const transit = (steps[i+1].t_delta || 0) - (steps[i].t_delta || 0);
+                                if (transit >= 1 && transit <= 20) transits.push(transit);
+                            }
+                        }
+                        if (transits.length < 2) return null;
+                        transits.sort((a, b) => a - b);
+                        const median = transits[Math.floor(transits.length / 2)];
+                        return Math.round(median * 10) / 10;
+                    } catch(e) { return null; }
+                })(),
+                eventHistory: todayEvents,
+                nocturiaCount: nocturiaCount,
+                kitchenVisits: kitchenVisits,
+                sleepWindowStart: sleepWindowOC7.start,   // ms-Timestamp Schlafbeginn (OC7-Fenster inkl. Vib-Fallback)
+                sleepWindowEnd:   sleepWindowOC7.end,     // ms-Timestamp Aufwachen
+                maxPersonsDetected: maxPersonsDetected,
+                bedPresenceMinutes: bedPresenceMinutes,
+                nightVibrationCount: nightVibrationCount,
+                nightVibrationStrengthAvg: nightVibrationStrengthAvg,
+                nightVibrationStrengthMax: nightVibrationStrengthMax,
+                personData: personData,
+                sleepScore: sleepScore,
+                sleepScoreRaw: sleepScoreRaw,
+                sleepScoreCal: sleepScoreCal,
+                sleepScoreCalNights: sleepScoreCalNights,
+                sleepScoreCalStatus: sleepScoreCalStatus,
+                sleepStages: sleepStages,
+                stagesWindowStart: _sleepFrozen
+                    ? (_existingSnap.stagesWindowStart ?? _existingSnap.sleepWindowStart ?? null)
+                    : (sleepWindowOC7.start ?? null),
+                garminScore: garminScore,
+                garminDeepMin: garminDeepSec ? Math.round(garminDeepSec/60) : null,
+                garminLightMin: garminLightSec ? Math.round(garminLightSec/60) : null,
+                garminRemMin: garminRemSec ? Math.round(garminRemSec/60) : null,
+                sleepWindowSource: sleepWindowSource,
+                outsideBedEvents: outsideBedEvents,
+                intimacyEvents: intimacyEvents,
+                sexCalibInfo: _calibInfo,
+                wakeSource: wakeSource,
+                wakeConf: wakeConf,
+                allWakeSources: allWakeSources,
+                sleepStartSource: sleepStartSource,
+                allSleepStartSources: allSleepStartSources,
+                wakeConfirmed: !!(sleepWindowOC7.end && new Date().getHours() >= 10 && (Date.now() - (sleepWindowOC7.end || 0)) >= 3600000),
+                sleepDate: sleepDate,
+                sleepStartOverridden: _overrideApplied,
+                sleepStartOverrideSource: _overrideApplied ? sleepStartSource : null,
+                wakeOverridden: _wakeOverrideApplied,
+                bedWasEmpty: bedWasEmpty
+            };
+
+            const dataDir = utils.getAbsoluteDefaultDataDir();
+            const historyDir = path.join(dataDir, 'cogni-living', 'history');
+            if (!fs.existsSync(historyDir)) fs.mkdirSync(historyDir, { recursive: true });
+
+            const filePath = path.join(historyDir, `${dateStr}.json`);
+            fs.writeFileSync(filePath, JSON.stringify(snapshot));
+            this.log.info(`? History saved: ${filePath}`);
+
+            // Kalibrier-Log: Sensorquellen gegen Garmin (fuer spaetere Auswertung ohne Smartwatch)
+            try {
+                const absDeltaMin = (candidateTs, refTs) => {
+                    if (!candidateTs || !refTs) return null;
+                    return Math.abs(Math.round((candidateTs - refTs) / 60000));
+                };
+                const calibrationEntry = {
+                    date: dateStr,
+                    ts: Date.now(),
+                    chosen: { sleepStartSource: sleepStartSource || null, wakeSource: wakeSource || null, wakeConf: wakeConf || null },
+                    references: { garminSleepStartTs: garminSleepStartTs || null, garminWakeTs: garminWakeTs || null },
+                    candidatesStart: { garmin: garminSleepStartTs || null, fp2_vib: vibRefinedSleepStartTs || null, fp2: _fp2RawStart || null, motion: sleepWindowMotion.start || null, fixed: _fixedSleepStartTs || null },
+                    candidatesWake: { garmin: garminWakeTs || null, fp2_vib: fp2VibWakeTs || null, fp2_other: fp2OtherWakeTs || null, fp2: fp2WakeTs || null, other: otherRoomWakeTs || null, motion: (sleepWindowSource === 'motion') ? fp2WakeTs : null, vibration_alone: vibAloneWakeTs || null, vibration: vibWakeTs || null, fixed: (sleepWindowSource === 'fixed') ? fp2WakeTs : null },
+                    absDeltaToGarminMin: {
+                        sleepStart: { fp2_vib: absDeltaMin(vibRefinedSleepStartTs, garminSleepStartTs), fp2: absDeltaMin(_fp2RawStart, garminSleepStartTs), motion: absDeltaMin(sleepWindowMotion.start, garminSleepStartTs), fixed: absDeltaMin(_fixedSleepStartTs, garminSleepStartTs) },
+                        wake: { fp2_vib: absDeltaMin(fp2VibWakeTs, garminWakeTs), fp2_other: absDeltaMin(fp2OtherWakeTs, garminWakeTs), fp2: absDeltaMin(fp2WakeTs, garminWakeTs), other: absDeltaMin(otherRoomWakeTs, garminWakeTs), vibration_alone: absDeltaMin(vibAloneWakeTs, garminWakeTs), vibration: absDeltaMin(vibWakeTs, garminWakeTs) }
+                    }
+                };
+                let calibrationLog = [];
+                const calState = await this.getStateAsync('analysis.health.sleepCalibrationLog');
+                if (calState && calState.val) {
+                    try { calibrationLog = JSON.parse(calState.val); if (!Array.isArray(calibrationLog)) calibrationLog = []; } catch(_) { calibrationLog = []; }
+                }
+                calibrationLog.push(calibrationEntry);
+                if (calibrationLog.length > 120) calibrationLog = calibrationLog.slice(calibrationLog.length - 120);
+                await this.setStateAsync('analysis.health.sleepCalibrationLog', { val: JSON.stringify(calibrationLog), ack: true });
+            } catch (calErr) {
+                this.log.warn('[SleepCalibration] Log konnte nicht gespeichert werden: ' + calErr.message);
+            }
+
+            // N?chtliche Drift-Pr?fung (nach dem Speichern)
+            this._checkDriftAlarm(historyDir).catch(e => this.log.warn(`[Drift] Alarm-Check Fehler: ${e.message}`));
+
+        } catch(e) { this.log.error(`History Save Error: ${e.message}`); }
+    }
+
+    async _checkDriftAlarm(historyDir) {
+        const setup = require('./lib/setup');
+        const COOLDOWN_DAYS = 14;
+        const MIN_DAYS      = 10;
+
+        // Cooldown pr?fen
+        try {
+            const lastAlarm = await this.getStateAsync('analysis.drift.lastAlarmDate').catch(() => null);
+            if (lastAlarm && lastAlarm.val) {
+                const daysSince = (Date.now() - new Date(lastAlarm.val).getTime()) / 86400000;
+                if (daysSince < COOLDOWN_DAYS) {
+                    this.log.debug(`[Drift] Cooldown aktiv (${daysSince.toFixed(0)} von ${COOLDOWN_DAYS} Tagen)`);
+                    return;
+                }
+            }
+        } catch(e) {}
+
+        // Letzte 60 Tage laden
+        const days = [];
+        for (let i = 1; i <= 60; i++) {
+            const d = new Date(); d.setDate(d.getDate() - i);
+            const ds = d.toISOString().slice(0, 10);
+            const fp = path.join(historyDir, `${ds}.json`);
+            if (fs.existsSync(fp)) {
+                try {
+                    const h = JSON.parse(fs.readFileSync(fp, 'utf8'));
+                    const vec = h.todayVector || [];
+                    const act = vec.reduce((a, b) => a + b, 0);
+                    const gs  = (h.gaitSpeed > 0 && h.gaitSpeed < 60) ? h.gaitSpeed : 0;
+                    const nt  = h.nightMotionCount !== undefined ? h.nightMotionCount
+                                : Array.isArray(h.eventHistory)
+                                    ? h.eventHistory.filter(e => { const hr = new Date(e.timestamp||e.ts||0).getHours(); return hr>=22||hr<6; }).length
+                                    : 0;
+                    days.push({ date: ds, act, gs, nt });
+                } catch(e) {}
+            }
+        }
+        days.sort((a, b) => a.date.localeCompare(b.date));
+        if (days.length < MIN_DAYS) { this.log.debug(`[Drift] Zu wenig Daten (${days.length})`); return; }
+
+        // Mediane als Normalisierung
+        const median = arr => { const s=[...arr].sort((a,b)=>a-b); return s[Math.floor(s.length/2)]||1; };
+        const actVals = days.map(d=>d.act).filter(v=>v>0);
+        const mAct = median(actVals)||1;
+        const actNorm = days.map(d => d.act>0 ? Math.min(200, Math.round((d.act/mAct)*100)) : 0);
+
+        // Page-Hinkley (einfach, JS-intern, keine Python n?tig)
+        const ph = (vals, direction='up', k=0.5) => {
+            const cal = Math.min(14, Math.max(7, Math.floor(vals.length/2)));
+            const calVals = vals.slice(0, cal).filter(v=>v>0);
+            if (calVals.length < 3) return { score: 0, threshold: 50, alarm: false };
+            const mu  = calVals.reduce((a,b)=>a+b,0)/calVals.length;
+            const std = Math.sqrt(calVals.reduce((a,b)=>a+(b-mu)**2,0)/calVals.length)||1;
+            const th  = Math.max(30, 3*std*Math.sqrt(Math.max(1, vals.length-cal)));
+            let M=0, m=0, score=0;
+            for (let i=cal; i<vals.length; i++) {
+                const x = direction==='down' ? -vals[i] : vals[i];
+                const muD = direction==='down' ? -mu : mu;
+                M = M + (x - muD - k*std);
+                m = Math.min(m, M);
+                score = Math.max(0, M - m);
+            }
+            return { score: Math.round(score*10)/10, threshold: Math.round(th*10)/10, alarm: score > th };
+        };
+
+        const actR   = ph(actNorm, 'down');
+        const gaitR  = ph(days.map(d=>d.gs).filter(v=>v>0), 'up');
+        const nightR = ph(days.map(d=>d.nt), 'up');
+
+        this.log.debug(`[Drift] Scores ? Aktivit?t: ${actR.score}/${actR.threshold} | Gait: ${gaitR.score}/${gaitR.threshold} | Nacht: ${nightR.score}/${nightR.threshold}`);
+
+        // Pushover nur wenn mindestens eine Metrik Alarm schl?gt
+        const alarms = [];
+        if (actR.alarm)   alarms.push(`?? Aktivit?t sinkt (Score ${actR.score}/${actR.threshold})`);
+        if (gaitR.alarm)  alarms.push(`?? Ganggeschwindigkeit steigt (Score ${gaitR.score}/${gaitR.threshold})`);
+        if (nightR.alarm) alarms.push(`?? Nacht-Unruhe nimmt zu (Score ${nightR.score}/${nightR.threshold})`);
+
+        if (alarms.length > 0) {
+            const msg = `?? DRIFT ERKANNT (${days.length} Tage Datenbasis)\n\n${alarms.join('\n')}\n\nBitte Admin-UI ? Drift-Monitor f?r Details ?ffnen.`;
+            setup.sendNotification(this, msg, true, false, '?? NUUKANNI: Verhaltens-Drift');
+            await this.setObjectNotExistsAsync('analysis.drift.lastAlarmDate', { type: 'state', common: { name: 'Letzter Drift-Alarm', type: 'string', role: 'text', read: true, write: false, def: '' }, native: {} });
+            await this.setStateAsync('analysis.drift.lastAlarmDate', { val: new Date().toISOString(), ack: true });
+            this.log.warn(`[Drift] ?? Alarm ausgel?st: ${alarms.join(' | ')}`);
+        }
+    }
+
+    async integrateRoomTime() {
+        if (!this.isPresent) return;
+        try {
+            let currentRoom = null;
+            try {
+                const trState = await this.getStateAsync('analysis.prediction.trackerTopRoom');
+                const tpState = await this.getStateAsync('analysis.prediction.trackerConfidence');
+                if (trState && trState.val && tpState && tpState.val && tpState.val > 0.3) {
+                    if (trState.val !== 'Unknown' && trState.val !== 'Init...') currentRoom = trState.val;
+                }
+            } catch(e) {}
+
+            if (!currentRoom) {
+                const devices = this.config.devices || [];
+                for (const dev of devices) {
+                    if (dev.type === 'motion' && dev.location) {
+                        try {
+                            const s = await this.getForeignStateAsync(dev.id);
+                            if (s && (s.val === true || s.val === 'on' || s.val === 1)) {
+                                currentRoom = dev.location;
+                                break;
+                            }
+                        } catch(e) {}
+                    }
+                }
+            }
+
+            if (!currentRoom) return;
+
+            const devices = this.config.devices || [];
+            let normalizedRoom = currentRoom;
+            const match = devices.find(d => d.location && d.location.toLowerCase() === currentRoom.toLowerCase());
+            if (match) normalizedRoom = match.location;
+
+            const histId = 'analysis.activity.roomHistory';
+            const histState = await this.getStateAsync(histId);
+            const todayStr = new Date().toLocaleDateString();
+            let histData = { history: {}, date: todayStr };
+
+            if (histState && histState.val) { try { histData = JSON.parse(histState.val); } catch(e){} }
+
+            if (histData.date !== todayStr) { histData.history = {}; histData.date = todayStr; }
+            if (!histData.history[normalizedRoom]) histData.history[normalizedRoom] = new Array(24).fill(0);
+
+            const currentHour = new Date().getHours();
+            if (histData.history[normalizedRoom][currentHour] < 60) histData.history[normalizedRoom][currentHour]++;
+
+            await this.setStateAsync(histId, { val: JSON.stringify(histData), ack: true });
+
+        } catch(e) { this.log.warn(`[Integrator] Error: ${e.message}`); }
+    }
+
+    async onMessage(obj) {
+        if (typeof obj === 'object' && obj.message) {
+            if (obj.command === 'getHistoryData') {
+                const requestedDate = obj.message.date;
+                const dataDir = utils.getAbsoluteDefaultDataDir();
+                const filePath = path.join(dataDir, 'cogni-living', 'history', `${requestedDate}.json`);
+                if (fs.existsSync(filePath)) {
+                    try {
+                        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                        this.sendTo(obj.from, obj.command, { success: true, data: data }, obj.callback);
+                    } catch(e) { this.sendTo(obj.from, obj.command, { success: false, error: "Corrupt" }, obj.callback); }
+                } else { this.sendTo(obj.from, obj.command, { success: false, error: "No data" }, obj.callback); }
+            }
+            else if (obj.command === 'getOverviewData') {
+                const digestCount = this.dailyDigests.length;
+
+                let hourlyActivity = new Array(48).fill(0);
+                let hourlyDetails = Array.from({ length: 48 }, () => []);
+                try {
+                    const vecState = await this.getStateAsync('analysis.health.todayVector');
+                    if (vecState && vecState.val) hourlyActivity = JSON.parse(vecState.val);
+
+                    const detState = await this.getStateAsync('analysis.health.todayRoomDetails');
+                    if (detState && detState.val) hourlyDetails = JSON.parse(detState.val);
+                } catch(e) {}
+
+                // LOAD YESTERDAY'S DATA
+                let yesterdayActivity = new Array(48).fill(0);
+                try {
+                    const y = new Date(); y.setDate(y.getDate() - 1);
+                    const yStr = y.toISOString().split('T')[0];
+                    const dataDir = utils.getAbsoluteDefaultDataDir();
+                    const yPath = path.join(dataDir, 'cogni-living', 'history', `${yStr}.json`);
+                    if (fs.existsSync(yPath)) {
+                        const yData = JSON.parse(fs.readFileSync(yPath, 'utf8'));
+                        if (yData && yData.todayVector) yesterdayActivity = yData.todayVector;
+                    }
+                } catch(e) { /* Ignore */ }
+
+                let roomStats = { today: {}, yesterday: {} };
+                try { const rs = await this.getStateAsync('analysis.activity.roomStats'); if (rs && rs.val) roomStats = JSON.parse(rs.val); } catch(e) {}
+
+                // BATTERY FALLBACK
+                let activityTrendVal = null;
+                try { const at = await this.getStateAsync('analysis.health.activityTrend'); if(at) activityTrendVal = at.val; } catch(e){}
+
+                if (activityTrendVal === undefined || activityTrendVal === null) {
+                    const totalEvents = hourlyActivity.reduce((a, b) => a + b, 0);
+                    const fallbackTrend = Math.min(2, Math.max(-2, (100 - totalEvents) / 50));
+                    activityTrendVal = fallbackTrend;
+                }
+
+                let detected = false; let desc = ''; let tId = ''; let tVal = '';
+                try {
+                    const dState = await this.getStateAsync('analysis.automation.patternDetected');
+                    if (dState && dState.val) {
+                        detected = true;
+                        const descS = await this.getStateAsync('analysis.automation.description'); desc = descS ? descS.val : '';
+                        const tIdS = await this.getStateAsync('analysis.automation.targetId'); tId = tIdS ? tIdS.val : '';
+                        const tValS = await this.getStateAsync('analysis.automation.targetValue'); tVal = tValS ? tValS.val : '';
+                    }
+                } catch(e){}
+
+                const isSunny = await this.checkSolarCondition();
+                const hasSolar = (this.config.devices || []).some(d => d.isSolar);
+                const solarActive = isSunny && hasSolar;
+                let presenceWho = ''; try { const pw = await this.getStateAsync('system.presenceWho'); if(pw && pw.val) presenceWho = pw.val; } catch(e){}
+
+                this.sendTo(obj.from, obj.command, {
+                    success: true,
+                    eventHistory: this.eventHistory.slice(0, 2000),
+                    stats: {
+                        digestCount,
+                        isPresent: this.isPresent,
+                        hourlyActivity,
+                        hourlyDetails,
+                        yesterdayActivity,
+                        solarActive,
+                        presenceWho,
+                        roomStats,
+                        activityTrend: activityTrendVal,
+                        modules: this.activeModules
+                    },
+                    automation: { detected, description: desc, targetId: tId, targetValue: tVal }
+                }, obj.callback);
+            }
+            else if (obj.command === 'checkThermostats') { try { const results = await automation.scanThermostats(this); this.sendTo(obj.from, obj.command, { success: true, results }, obj.callback); } catch (e) { this.sendTo(obj.from, obj.command, { success: false, error: e.message }, obj.callback); } }
+            else if (obj.command === 'scanDevices') { try { const results = await scanner.scanForDevices(this, obj.message || {}); this.sendTo(obj.from, obj.command, { success: true, devices: results }, obj.callback); } catch (e) {} }
+            else if (obj.command === 'getEnums') {
+                const functions = await this.getForeignObjectsAsync('enum.functions.*', 'enum');
+                const list = [];
+                if (functions) {
+                    for (const id in functions) {
+                        let n = functions[id].common.name;
+                        if (n && typeof n === 'object') n = n.de || n.en || Object.values(n)[0] || JSON.stringify(n);
+                        list.push({ id: id, name: String(n || id) });
+                    }
+                }
+                const rooms = await this.getForeignObjectsAsync('enum.rooms.*', 'enum');
+                const roomList = [];
+                if (rooms) {
+                    for (const id in rooms) {
+                        let n = rooms[id].common.name;
+                        if (n && typeof n === 'object') n = n.de || n.en || Object.values(n)[0] || JSON.stringify(n);
+                        roomList.push(String(n || id.split('.').pop()));
+                    }
+                }
+                this.sendTo(obj.from, obj.command, { success: true, enums: list, rooms: roomList }, obj.callback);
+            }
+            // --- FIX: ROBUST CALENDAR SEARCH & HANDLERS ---
+            else if (obj.command === 'getCalendarNames') {
+                try {
+                    // Loop through ALL ical instances to find calendars, regardless of frontend default
+                    const instances = await this.getObjectViewAsync('system', 'instance', { startkey: 'system.adapter.ical.', endkey: 'system.adapter.ical.\u9999' });
+                    const names = new Set();
+
+                    if (instances && instances.rows) {
+                        for (const row of instances.rows) {
+                            const instId = row.id.replace('system.adapter.', '');
+                            const state = await this.getForeignStateAsync(`${instId}.data.table`);
+
+                            let foundSpecific = false;
+                            if (state && state.val) {
+                                const table = typeof state.val === 'string' ? JSON.parse(state.val) : state.val;
+                                if (Array.isArray(table)) {
+                                    table.forEach(entry => {
+                                        if(entry.calendarName) {
+                                            names.add(entry.calendarName);
+                                            foundSpecific = true;
+                                        }
+                                    });
+                                }
+                            }
+
+                            // FALLBACK: If no specific "calendarName" found in events, use Instance ID
+                            // This ensures we always find at least "ical.0" if it exists.
+                            if (!foundSpecific) {
+                                names.add(instId);
+                            }
+                        }
+                    }
+
+                    const finalNames = Array.from(names);
+                    if (finalNames.length === 0) finalNames.push('Standard'); // Absolute fallback
+
+                    this.sendTo(obj.from, obj.command, { success: true, names: finalNames }, obj.callback);
+                } catch(e) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: "Scan Error: " + e.message }, obj.callback);
+                }
+            }
+            else if (obj.command === 'refreshCalendar') {
+                try {
+                    await automation.updateSchedulePreview(this);
+                    this.sendTo(obj.from, obj.command, { success: true }, obj.callback);
+                } catch(e) {
+                    this.log.warn(`refreshCalendar failed: ${e.message}`);
+                    this.sendTo(obj.from, obj.command, { success: false, error: e.message }, obj.callback);
+                }
+            }
+            else if (obj.command === 'updateTopologyMatrix') {
+                try {
+                    const newMatrix = obj.message.matrix;
+                    if (!newMatrix || !Array.isArray(newMatrix)) {
+                        throw new Error('Invalid matrix data');
+                    }
+                    
+                    // Lade aktuelle Topologie
+                    const state = await this.getStateAsync('analysis.topology.structure');
+                    if (state && state.val) {
+                        const topo = JSON.parse(state.val);
+                        topo.matrix = newMatrix;
+                        topo.updated = Date.now();
+                        
+                        // Speichere aktualisierte Matrix
+                        await this.setStateAsync('analysis.topology.structure', { val: JSON.stringify(topo), ack: true });
+                        
+                        this.log.debug(`??? Topology Matrix manually updated by user.`);
+                        this.sendTo(obj.from, obj.command, { success: true }, obj.callback);
+                    } else {
+                        throw new Error('No topology data found');
+                    }
+                } catch(e) {
+                    this.log.warn(`updateTopologyMatrix failed: ${e.message}`);
+                    this.sendTo(obj.from, obj.command, { success: false, error: e.message }, obj.callback);
+                }
+            }
+            else if (obj.command === 'pythonBridge') {
+                // Generic Python Bridge Handler - leitet alle Commands an Python weiter
+                try {
+                    const pythonCommand = obj.message.command;
+                    const pythonData = obj.message;
+                    
+                    this.log.debug(`[PythonBridge] Forwarding command: ${pythonCommand}`);
+                    
+                    pythonBridge.send(this, pythonCommand, pythonData, (response) => {
+                        // Callback wenn Python antwortet
+                        this.sendTo(obj.from, obj.command, response, obj.callback);
+                    });
+                } catch(e) {
+                    this.log.warn(`pythonBridge command failed: ${e.message}`);
+                    this.sendTo(obj.from, obj.command, { type: 'ERROR', payload: e.message }, obj.callback);
+                }
+            }
+            else if (obj.command === 'testApiKey') {
+                try {
+                    const testKey = obj.message ? obj.message.apiKey : '';
+                    if (!testKey) throw new Error("Kein API Key ?bergeben.");
+
+                    const testAI = new GoogleGenerativeAI(testKey);
+                    const model = testAI.getGenerativeModel({ model: GEMINI_MODEL });
+                    const result = await model.generateContent("Say Hello");
+                    const response = await result.response;
+                    const text = response.text();
+
+                    this.sendTo(obj.from, obj.command, { success: true, message: "Verbindung erfolgreich: " + text.substring(0, 20) + "..." }, obj.callback);
+                } catch(e) {
+                    this.sendTo(obj.from, obj.command, { success: false, message: e.message }, obj.callback);
+                }
+            }
+            else if (obj.command === 'testContext') {
+                try {
+                    const isSunny = await this.checkSolarCondition();
+                    const instances = await this.getObjectViewAsync('system', 'instance', { startkey: 'system.adapter.ical.', endkey: 'system.adapter.ical.\u9999' });
+                    const calCount = instances && instances.rows ? instances.rows.length : 0;
+
+                    this.sendTo(obj.from, obj.command, {
+                        success: true,
+                        weather: `Sonne: ${isSunny}, Temp: ${this.sensorLastValues[this.config.outdoorSensorId] || '?'}?C`,
+                        calendar: `${calCount} Kalender-Adapter gefunden.`
+                    }, obj.callback);
+                } catch(e) {
+                    this.sendTo(obj.from, obj.command, { success: false }, obj.callback);
+                }
+            }
+        else if (obj.command === 'setSleepStartOverride') {
+            try {
+                var _ovMsg = obj.message || {};
+                var _allowedOvSrc = ['garmin','fp2_vib','fp2','motion_vib','last_outside','gap60','haus_still','motion','fixed'];
+                if (!_ovMsg.date || !_ovMsg.source || !_ovMsg.ts || _allowedOvSrc.indexOf(_ovMsg.source) < 0) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Ungueltige Override-Daten' }, obj.callback); return;
+                }
+                var _ovPayload = { date: _ovMsg.date, source: _ovMsg.source, ts: _ovMsg.ts, setBy: 'ui', setAt: Date.now() };
+                await this.setStateAsync('analysis.sleep.startOverride', { val: JSON.stringify(_ovPayload), ack: true });
+                await this.saveDailyHistory(_ovPayload);
+                var _ovDataDir = utils.getAbsoluteDefaultDataDir();
+                var _ovNow = new Date();
+                var _ovDateStr = _ovNow.getFullYear() + '-' + String(_ovNow.getMonth()+1).padStart(2,'0') + '-' + String(_ovNow.getDate()).padStart(2,'0');
+                var _ovPath = path.join(_ovDataDir, 'cogni-living', 'history', _ovDateStr + '.json');
+                if (fs.existsSync(_ovPath)) {
+                    var _ovSnap = JSON.parse(fs.readFileSync(_ovPath, 'utf8'));
+                    this.sendTo(obj.from, obj.command, { success: true, data: _ovSnap }, obj.callback);
+                } else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_ovE) { this.sendTo(obj.from, obj.command, { success: false, error: _ovE.message }, obj.callback); }
+        }
+        else if (obj.command === 'clearSleepStartOverride') {
+            try {
+                await this.setStateAsync('analysis.sleep.startOverride', { val: 'null', ack: true });
+                await this.saveDailyHistory();
+                var _clDataDir = utils.getAbsoluteDefaultDataDir();
+                var _clNow = new Date();
+                var _clDateStr = _clNow.getFullYear() + '-' + String(_clNow.getMonth()+1).padStart(2,'0') + '-' + String(_clNow.getDate()).padStart(2,'0');
+                var _clPath = path.join(_clDataDir, 'cogni-living', 'history', _clDateStr + '.json');
+                if (fs.existsSync(_clPath)) {
+                    var _clSnap = JSON.parse(fs.readFileSync(_clPath, 'utf8'));
+                    this.sendTo(obj.from, obj.command, { success: true, data: _clSnap }, obj.callback);
+                } else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_clE) { this.sendTo(obj.from, obj.command, { success: false, error: _clE.message }, obj.callback); }
+        }
+        else if (obj.command === 'setPersonSleepStartOverride') {
+            try {
+                var _povMsg = obj.message || {};
+                var _povAllowed = ['fp2_vib','fp2','motion_vib','vib_refined','gap60','last_outside','haus_still','winstart','motion','other'];
+                if (!_povMsg.person || !_povMsg.date || !_povMsg.source || !_povMsg.ts
+                    || _povAllowed.indexOf(_povMsg.source) < 0) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Ungueltige Per-Person Override-Daten' }, obj.callback); return;
+                }
+                var _povRawOld = (await this.getStateAsync('analysis.sleep.personStartOverrides'))?.val;
+                var _povAll = (_povRawOld && _povRawOld !== 'null') ? JSON.parse(_povRawOld) : {};
+                _povAll[_povMsg.person] = { date: _povMsg.date, source: _povMsg.source, ts: _povMsg.ts, setBy: 'ui', setAt: Date.now() };
+                await this.setStateAsync('analysis.sleep.personStartOverrides', { val: JSON.stringify(_povAll), ack: true });
+                await this.saveDailyHistory();
+                var _povDir = utils.getAbsoluteDefaultDataDir();
+                var _povNow = new Date();
+                var _povPath = require('path').join(_povDir, 'cogni-living', 'history', _povNow.getFullYear() + '-' + String(_povNow.getMonth()+1).padStart(2,'0') + '-' + String(_povNow.getDate()).padStart(2,'0') + '.json');
+                if (fs.existsSync(_povPath)) {
+                    var _povSnap = JSON.parse(fs.readFileSync(_povPath, 'utf8'));
+                    this.sendTo(obj.from, obj.command, { success: true, data: _povSnap }, obj.callback);
+                } else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_povE) { this.sendTo(obj.from, obj.command, { success: false, error: _povE.message }, obj.callback); }
+        }
+        else if (obj.command === 'clearPersonSleepStartOverride') {
+            try {
+                var _pcMsg = obj.message || {};
+                if (!_pcMsg.person) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'person fehlt' }, obj.callback); return;
+                }
+                var _pcRawOld = (await this.getStateAsync('analysis.sleep.personStartOverrides'))?.val;
+                var _pcAll = (_pcRawOld && _pcRawOld !== 'null') ? JSON.parse(_pcRawOld) : {};
+                delete _pcAll[_pcMsg.person];
+                await this.setStateAsync('analysis.sleep.personStartOverrides', { val: JSON.stringify(_pcAll), ack: true });
+                await this.saveDailyHistory();
+                var _pcDir = utils.getAbsoluteDefaultDataDir();
+                var _pcNow = new Date();
+                var _pcPath = require('path').join(_pcDir, 'cogni-living', 'history', _pcNow.getFullYear() + '-' + String(_pcNow.getMonth()+1).padStart(2,'0') + '-' + String(_pcNow.getDate()).padStart(2,'0') + '.json');
+                if (fs.existsSync(_pcPath)) {
+                    var _pcSnap = JSON.parse(fs.readFileSync(_pcPath, 'utf8'));
+                    this.sendTo(obj.from, obj.command, { success: true, data: _pcSnap }, obj.callback);
+                } else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_pcE) { this.sendTo(obj.from, obj.command, { success: false, error: _pcE.message }, obj.callback); }
+        }
+        else if (obj.command === 'setWakeOverride') {
+            try {
+                var _wovMsg = obj.message || {};
+                var _wovAllowed = ['garmin','fp2_vib','fp2','fp2_other','motion_vib','last_outside','haus_still','motion','vibration_alone','other','fixed','override'];
+                if (!_wovMsg.date || !_wovMsg.source || !_wovMsg.ts || _wovAllowed.indexOf(_wovMsg.source) < 0) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Ungueltige Wake-Override-Daten' }, obj.callback); return;
+                }
+                var _wovPayload = { date: _wovMsg.date, source: _wovMsg.source, ts: _wovMsg.ts, setBy: 'ui', setAt: Date.now() };
+                await this.setStateAsync('analysis.sleep.wakeOverride', { val: JSON.stringify(_wovPayload), ack: true });
+                await this.saveDailyHistory(_wovPayload);
+                var _wovDataDir = utils.getAbsoluteDefaultDataDir();
+                var _wovNow = new Date();
+                var _wovPath = require('path').join(_wovDataDir, 'cogni-living', 'history', _wovNow.getFullYear() + '-' + String(_wovNow.getMonth()+1).padStart(2,'0') + '-' + String(_wovNow.getDate()).padStart(2,'0') + '.json');
+                if (fs.existsSync(_wovPath)) { var _wovSnap = JSON.parse(fs.readFileSync(_wovPath, 'utf8')); this.sendTo(obj.from, obj.command, { success: true, data: _wovSnap }, obj.callback); }
+                else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_wovE) { this.sendTo(obj.from, obj.command, { success: false, error: _wovE.message }, obj.callback); }
+        }
+        else if (obj.command === 'clearWakeOverride') {
+            try {
+                await this.setStateAsync('analysis.sleep.wakeOverride', { val: 'null', ack: true });
+                await this.saveDailyHistory();
+                var _cwovDir = utils.getAbsoluteDefaultDataDir();
+                var _cwovNow = new Date();
+                var _cwovPath = require('path').join(_cwovDir, 'cogni-living', 'history', _cwovNow.getFullYear() + '-' + String(_cwovNow.getMonth()+1).padStart(2,'0') + '-' + String(_cwovNow.getDate()).padStart(2,'0') + '.json');
+                if (fs.existsSync(_cwovPath)) { var _cwovSnap = JSON.parse(fs.readFileSync(_cwovPath, 'utf8')); this.sendTo(obj.from, obj.command, { success: true, data: _cwovSnap }, obj.callback); }
+                else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_cwovE) { this.sendTo(obj.from, obj.command, { success: false, error: _cwovE.message }, obj.callback); }
+        }
+        else if (obj.command === 'setPersonWakeOverride') {
+            try {
+                var _pwovMsg = obj.message || {};
+                var _pwovAllowed = ['garmin','fp2_vib','fp2','fp2_other','motion_vib','motion_vib_wake','vib_refined','gap60','last_outside','haus_still','vibration_alone','vibration','other','fixed','override'];
+                if (!_pwovMsg.person || !_pwovMsg.date || !_pwovMsg.source || !_pwovMsg.ts || _pwovAllowed.indexOf(_pwovMsg.source) < 0) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Ungueltige Per-Person Wake-Override-Daten' }, obj.callback); return;
+                }
+                var _pwovRawOld = (await this.getStateAsync('analysis.sleep.personWakeOverrides'))?.val;
+                var _pwovAll = (_pwovRawOld && _pwovRawOld !== 'null') ? JSON.parse(_pwovRawOld) : {};
+                _pwovAll[_pwovMsg.person] = { date: _pwovMsg.date, source: _pwovMsg.source, ts: _pwovMsg.ts, setBy: 'ui', setAt: Date.now() };
+                await this.setStateAsync('analysis.sleep.personWakeOverrides', { val: JSON.stringify(_pwovAll), ack: true });
+                await this.saveDailyHistory();
+                var _pwovDir = utils.getAbsoluteDefaultDataDir();
+                var _pwovNow = new Date();
+                var _pwovPath = require('path').join(_pwovDir, 'cogni-living', 'history', _pwovNow.getFullYear() + '-' + String(_pwovNow.getMonth()+1).padStart(2,'0') + '-' + String(_pwovNow.getDate()).padStart(2,'0') + '.json');
+                if (fs.existsSync(_pwovPath)) { var _pwovSnap = JSON.parse(fs.readFileSync(_pwovPath, 'utf8')); this.sendTo(obj.from, obj.command, { success: true, data: _pwovSnap }, obj.callback); }
+                else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_pwovE) { this.sendTo(obj.from, obj.command, { success: false, error: _pwovE.message }, obj.callback); }
+        }
+        else if (obj.command === 'clearPersonWakeOverride') {
+            try {
+                var _cpwovMsg = obj.message || {};
+                if (!_cpwovMsg.person) { this.sendTo(obj.from, obj.command, { success: false, error: 'person fehlt' }, obj.callback); return; }
+                var _cpwovRaw = (await this.getStateAsync('analysis.sleep.personWakeOverrides'))?.val;
+                var _cpwovAll = (_cpwovRaw && _cpwovRaw !== 'null') ? JSON.parse(_cpwovRaw) : {};
+                delete _cpwovAll[_cpwovMsg.person];
+                await this.setStateAsync('analysis.sleep.personWakeOverrides', { val: JSON.stringify(_cpwovAll), ack: true });
+                await this.saveDailyHistory();
+                var _cpwovDir = utils.getAbsoluteDefaultDataDir();
+                var _cpwovNow = new Date();
+                var _cpwovPath = require('path').join(_cpwovDir, 'cogni-living', 'history', _cpwovNow.getFullYear() + '-' + String(_cpwovNow.getMonth()+1).padStart(2,'0') + '-' + String(_cpwovNow.getDate()).padStart(2,'0') + '.json');
+                if (fs.existsSync(_cpwovPath)) { var _cpwovSnap = JSON.parse(fs.readFileSync(_cpwovPath, 'utf8')); this.sendTo(obj.from, obj.command, { success: true, data: _cpwovSnap }, obj.callback); }
+                else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
+            } catch(_cpwovE) { this.sendTo(obj.from, obj.command, { success: false, error: _cpwovE.message }, obj.callback); }
+        }
+        else if (obj.command === 'reanalyzeSexDay') {
+            try {
+                const _raDate = (obj.message && obj.message.date) ? obj.message.date : null;
+                if (!_raDate || !/^\d{4}-\d{2}-\d{2}$/.test(_raDate)) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Kein gueltiges Datum' }, obj.callback); return;
+                }
+                if (this.config.moduleSex !== true) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Sex-Modul nicht aktiviert' }, obj.callback); return;
+                }
+                const _raDir = utils.getAbsoluteDefaultDataDir();
+                const _raPath = path.join(_raDir, 'cogni-living', 'history', _raDate + '.json');
+                if (!fs.existsSync(_raPath)) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Keine Daten fuer diesen Tag' }, obj.callback); return;
+                }
+                const _raSnap = JSON.parse(fs.readFileSync(_raPath, 'utf8'));
+                const _raAllEvts = _raSnap.eventHistory || [];
+                // --- KALIBRIERUNG ---
+                var _raCalibA = 50, _raCalibB = 30, _raCalibSrc = 'default', _raCalibN = 0;
+                try {
+                    var _raSexLabels = [];
+                    try { var _raSlP = JSON.parse(this.config.sexTrainingLabels || ''); if (Array.isArray(_raSlP)) _raSexLabels = _raSlP.filter(function(l){return l&&l.date;}); } catch(_rlE){}
+                    if (_raSexLabels.length >= 2) {
+                        var _raCalDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                        var _raSessPeaks = [], _raVaginalPeaks = [], _raOralPeaks = [];
+                        var _raSexTrainData = [];
+                        var _raSlotCalMs = 5*60*1000;
+                        var _raLabelsUpdated = false;                        for (var _raLbl of _raSexLabels /* alle Typen inkl. Nullnummer (3. RF-Klasse), unlimitiert */) {                            // Fast-Path: gespeicherte Features direkt verwenden (kein JSON-Lesen)                            if (_raLbl._features) {                                var _raFP = _raLbl._features, _raLTypFP = (_raLbl.type||'').toLowerCase();                                if (_raLTypFP !== 'nullnummer') _raSessPeaks.push(_raFP.medianPeak);                                if (_raLTypFP === 'vaginal') _raVaginalPeaks.push(_raFP.medianPeak);                                else if (_raLTypFP === 'oral_hand') _raOralPeaks.push(_raFP.medianPeak);                                _raSexTrainData.push({peak:_raFP.peakMax,durSlots:_raFP.durSlots,avgPeak:_raFP.avgPeak,variance:_raFP.variance,tierB:0,label:_raLTypFP,date:_raLbl.date||'',hourSin:_raFP.hourSin||0,hourCos:_raFP.hourCos||1,lightOn:_raFP.lightOn!==undefined?_raFP.lightOn:null,presenceOn:_raFP.presenceOn!==undefined?_raFP.presenceOn:null,roomTemp:_raFP.roomTemp||null,bathBefore:_raFP.bathBefore||0,bathAfter:_raFP.bathAfter||0,nearbyRoomMotion:_raFP.nearbyRoomMotion||0});                                continue;                            }                            try {
+                                var _raLPath = path.join(_raCalDir, _raLbl.date + '.json');
+                                if (!fs.existsSync(_raLPath)) continue;
+                                var _raLSnap = JSON.parse(fs.readFileSync(_raLPath, 'utf8'));
+                                var _raLAllE = (_raLSnap.eventHistory || []).filter(function(e){ return e.type==='vibration_strength'&&(e.isVibrationBed||e.isFP2Bed); });
+                                if (_raLAllE.length === 0) continue;
+                                var _raLT0 = null, _raLT1 = null;
+                                if (_raLbl.time && /^\d{1,2}:\d{2}$/.test(_raLbl.time)) {
+                                    var _raLP = _raLbl.time.split(':');
+                                    var _raLBase = new Date(_raLbl.date + 'T00:00:00');
+                                    _raLBase.setHours(parseInt(_raLP[0]), parseInt(_raLP[1]), 0, 0);
+                                    _raLT0 = _raLBase.getTime() - 45*60000;
+                                    _raLT1 = _raLBase.getTime() + ((_raLbl.durationMin||45)+15)*60000;
+                                }
+                                var _raLEvts = _raLT0!==null ? _raLAllE.filter(function(e){var t=e.timestamp||0;return t>=_raLT0&&t<=_raLT1;}) : _raLAllE;
+                                if (_raLEvts.length === 0) continue;
+                                _raLEvts.sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
+                                var _raLFirst=_raLEvts[0].timestamp||0, _raLLast=(_raLEvts[_raLEvts.length-1].timestamp||0)+_raSlotCalMs;
+                                var _raLSPeaks=[];
+                                for (var _raLS=_raLFirst; _raLS<_raLLast; _raLS+=_raSlotCalMs) {
+                                    var _raLSVals=_raLEvts.filter(function(e){var t=e.timestamp||0;return t>=_raLS&&t<_raLS+_raSlotCalMs;}).map(function(e){return Number(e.value)||0;});
+                                    if (_raLSVals.length>0) _raLSPeaks.push(Math.max.apply(null,_raLSVals));
+                                }
+                                if (_raLSPeaks.length>0){
+                                    _raLSPeaks.sort(function(a,b){return a-b;});
+                                    var _raLMed=_raLSPeaks[Math.floor(_raLSPeaks.length/2)];
+                                    // Bug-Fix: Nullnummer-Peaks ausschliessen
+                                    var _raLTyp=(_raLbl.type||'').toLowerCase();
+                                    if (_raLTyp!=='nullnummer') _raSessPeaks.push(_raLMed);
+                                    if (_raLTyp==='vaginal') _raVaginalPeaks.push(_raLMed);
+                                    else if (_raLTyp==='oral_hand') _raOralPeaks.push(_raLMed);
+                                    var _raLPkMax=_raLSPeaks[_raLSPeaks.length-1];
+                                    var _raLAvgP=Math.round(_raLSPeaks.reduce(function(a,b){return a+b;},0)/_raLSPeaks.length);
+                                    var _raLVarP=Math.round(_raLSPeaks.reduce(function(a,b){return a+(b-_raLAvgP)*(b-_raLAvgP);},0)/_raLSPeaks.length);
+                                    // Features einmalig im Label speichern (Migration — kein erneutes JSON-Lesen)
+                                     
+                                    // Kontext-Features aus eventHistory extrahieren (identisch zu saveDailyHistory)
+                                    var _raLCtxE = _raLSnap.eventHistory || [];
+                                    var _raLSessP = {start: _raLT0||_raLFirst, end: _raLT1||(_raLLast+_raLFirst)};
+                                    var _raLHrD = new Date(_raLSessP.start); var _raLHF = _raLHrD.getHours()+_raLHrD.getMinutes()/60;
+                                    var _raLHSin = Math.round(Math.sin(2*Math.PI*_raLHF/24)*1000)/1000;
+                                    var _raLHCos = Math.round(Math.cos(2*Math.PI*_raLHF/24)*1000)/1000;
+                                    var _raLLitE = _raLCtxE.filter(function(e){var t=e.timestamp||0;return (e.type==='light'||e.type==='light_status')&&t>=_raLSessP.start&&t<=_raLSessP.end;});
+                                    var _raLLightOn = _raLLitE.length>0?(Number(_raLLitE[_raLLitE.length-1].value)>0?1:0):null;
+                                    var _raLPresE = _raLCtxE.filter(function(e){var t=e.timestamp||0;return e.isFP2Bed&&t>=_raLSessP.start&&t<=_raLSessP.end;});
+                                    var _raLPresOn = _raLPresE.length>0?(Number(_raLPresE[_raLPresE.length-1].value)>0?1:0):null;
+                                    var _raLTempE = _raLCtxE.filter(function(e){var t=e.timestamp||0;return (e.type==='temperature'||e.type==='temp')&&t>=_raLSessP.start&&t<=_raLSessP.end;});
+                                    var _raLRoomT = _raLTempE.length>0?(Number(_raLTempE[_raLTempE.length-1].value)||null):null;
+                                    var _raLBathB = _raLCtxE.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||e.type==='bathroom_motion')&&t>=(_raLSessP.start-3600000)&&t<_raLSessP.start;});
+                                    var _raLBathA = _raLCtxE.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||e.type==='bathroom_motion')&&t>_raLSessP.end&&t<=(_raLSessP.end+3600000);});
+                                    // Features vollständig speichern (incl. Kontext) — immer überschreiben für Re-Migration
+                                    _raLbl._features = {peakMax:_raLPkMax,medianPeak:_raLMed,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP,hourSin:_raLHSin,hourCos:_raLHCos,lightOn:_raLLightOn,presenceOn:_raLPresOn,roomTemp:_raLRoomT,bathBefore:_raLBathB?1:0,bathAfter:_raLBathA?1:0,nearbyRoomMotion:0}; _raLabelsUpdated = true;
+                                     _raSexTrainData.push({peak:_raLPkMax,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP,tierB:0,label:_raLTyp,date:_raLbl.date||'',hourSin:_raLHSin,hourCos:_raLHCos,lightOn:_raLLightOn,presenceOn:_raLPresOn,roomTemp:_raLRoomT,bathBefore:_raLBathB?1:0,bathAfter:_raLBathA?1:0,nearbyRoomMotion:0});
+                                }
+                            } catch(_raLE){ this.log.debug('[OC-SEX-RA] Calib: '+_raLE.message); }
+                        }
+                        // Angereicherte Labels persistieren (Fire-and-Forget)
+                        if (_raLabelsUpdated) { try { var _raLblUpd=JSON.stringify(_raSexLabels); this.config.sexTrainingLabels=_raLblUpd; this.extendForeignObjectAsync('system.adapter.'+this.namespace,{native:{sexTrainingLabels:_raLblUpd}}).catch(function(){}); this.log.debug('[OC-SEX-RA] Labels angereichert ('+_raSexLabels.filter(function(l){return l._features;}).length+' mit Features)'); } catch(_rlSE){} }
+                        if (_raVaginalPeaks.length>=2&&_raOralPeaks.length>=2){
+                            _raVaginalPeaks.sort(function(a,b){return a-b;}); _raOralPeaks.sort(function(a,b){return a-b;});
+                            _raCalibA=Math.max(5,Math.round(_raVaginalPeaks[0]*1.0)); _raCalibB=Math.max(3,Math.round(_raOralPeaks[0]*0.7));
+                            _raCalibSrc='labels_typed'; _raCalibN=_raSessPeaks.length;
+                        } else if (_raSessPeaks.length>=2){
+                            _raSessPeaks.sort(function(a,b){return a-b;});var _raMinP=_raSessPeaks[0];
+                            _raCalibB=Math.max(3,Math.round(_raMinP*0.7));_raCalibA=Math.max(5,Math.round(_raMinP*1.1));
+                            _raCalibSrc='labels';_raCalibN=_raSessPeaks.length;
+                        }
+                    }
+                } catch(_raCalE){ this.log.debug('[OC-SEX-RA] Kalibrierung: '+_raCalE.message); }
+                if (_raCalibSrc==='default'&&this.config.sexCalibThreshold&&Number(this.config.sexCalibThreshold)>0){_raCalibB=Number(this.config.sexCalibThreshold);_raCalibA=Math.round(_raCalibB*1.3);_raCalibSrc='manual';}
+                if (_raCalibSrc==='default'){var _raBsVals=_raAllEvts.filter(function(e){return e.type==='vibration_strength'&&(e.isVibrationBed||e.isFP2Bed);}).map(function(e){return Number(e.value)||0;}).filter(function(v){return v>0;});if(_raBsVals.length>=10){_raBsVals.sort(function(a,b){return a-b;});var _raBsP75=_raBsVals[Math.floor(_raBsVals.length*0.75)];_raCalibA=Math.max(5,Math.round(_raBsP75*2.5));_raCalibB=Math.max(3,Math.round(_raBsP75*1.5));_raCalibSrc='baseline';}}
+                var _raCalibInfo = { src: _raCalibSrc, n: _raCalibN, calibA: _raCalibA, calibB: _raCalibB };
+                // --- SEX-DETEKTION ---
+                var _raDayStart = new Date(_raDate + 'T00:00:00').getTime();
+                var _raIntimEvts=_raAllEvts.filter(function(e){return (e.type==='vibration_strength'||e.type==='vibration_trigger')&&(e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion))&&((e.timestamp||0)>=_raDayStart);}).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
+                var _raVibStr=_raIntimEvts.filter(function(e){return e.type==='vibration_strength';});
+                var _raVibTrig=_raIntimEvts.filter(function(e){return e.type==='vibration_trigger';});
+                var _raSlotMs=5*60*1000;
+                var _raSlots=[];
+                if(_raIntimEvts.length>=4){var _raTFirst=_raIntimEvts[0].timestamp||0,_raTLast=(_raIntimEvts[_raIntimEvts.length-1].timestamp||0)+_raSlotMs;for(var _raIS=_raTFirst;_raIS<_raTLast;_raIS+=_raSlotMs){var _raIE=_raIS+_raSlotMs;var _raStr=_raVibStr.filter(function(e){return (e.timestamp||0)>=_raIS&&(e.timestamp||0)<_raIE;});var _raTrg=_raVibTrig.filter(function(e){return (e.timestamp||0)>=_raIS&&(e.timestamp||0)<_raIE;});var _raSVals=_raStr.map(function(e){return Number(e.value)||0;});var _raSMax=_raSVals.length>0?Math.max.apply(null,_raSVals):0;var _raSAvg=_raSVals.length>0?Math.round(_raSVals.reduce(function(a,b){return a+b;},0)/_raSVals.length):0;_raSlots.push({start:_raIS,end:_raIE,strCnt:_raStr.length,trigCnt:_raTrg.length,strMax:_raSMax,strAvg:_raSAvg});}}
+                var _raCand=[],_raRunA=[];
+                _raSlots.forEach(function(sl,i){var _a=(sl.trigCnt>=2||sl.strCnt>=1)&&sl.strMax>=_raCalibA;if(_a){_raRunA.push(i);}else{if(_raRunA.length>=2)_raCand.push({run:_raRunA.slice(),tier:'A'});_raRunA=[];}});
+                if(_raRunA.length>=2)_raCand.push({run:_raRunA.slice(),tier:'A'});
+                var _raCovA=new Set();_raCand.forEach(function(c){c.run.forEach(function(i){_raCovA.add(i);});});
+                var _raRunB=[];
+                _raSlots.forEach(function(sl,i){if(_raCovA.has(i)){if(_raRunB.length>=6&&_raRunB.length<=24)_raCand.push({run:_raRunB.slice(),tier:'B'});_raRunB=[];return;}var _b=(sl.trigCnt>=1||sl.strCnt>=1)&&sl.strMax>=_raCalibB;if(_b){_raRunB.push(i);}else{if(_raRunB.length>=6&&_raRunB.length<=24)_raCand.push({run:_raRunB.slice(),tier:'B'});_raRunB=[];}});
+                if(_raRunB.length>=6&&_raRunB.length<=24)_raCand.push({run:_raRunB.slice(),tier:'B'});
+                var _raIntimacyEvents=[];
+                _raCand.forEach(function(cObj){var run=cObj.run;var _sl0=_raSlots[run[0]],_slN=_raSlots[run[run.length-1]];var _evtStart=_sl0.start,_evtEnd=_slN.end;var _durMin=Math.round(run.length*5);var _runSlots=run.map(function(i){return _raSlots[i];});var _peakMax=Math.max.apply(null,_runSlots.map(function(s){return s.strMax;}));var _avgAvg=Math.round(_runSlots.reduce(function(a,s){return a+s.strAvg;},0)/_runSlots.length);var _avgTrig=Math.round(_runSlots.reduce(function(a,s){return a+s.trigCnt;},0)/_runSlots.length);var _sStr=Math.min(100,Math.round((_peakMax/120)*100));var _sDens=Math.min(100,Math.round((_avgTrig/10)*100));var _sDur=Math.min(100,Math.round((_durMin/60)*100));var _score=Math.round(_sStr*0.5+_sDens*0.3+_sDur*0.2);var _raVagThr=Math.round(_raCalibA*1.5);var _highSlots=_runSlots.filter(function(s){return s.strMax>=_raVagThr&&s.strCnt>=2;});var _type=cObj.tier==='B'?'oral_hand':(_highSlots.length>=1?'vaginal':(_peakMax>=_raCalibA?'oral_hand':'intim'));_raIntimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:null,garminHRAvg:null,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});});
+                this.log.info('[OC-SEX-RA] '+_raDate+': '+_raIntimacyEvents.length+' Event(s). calibA='+_raCalibA+' calibB='+_raCalibB);
+                // Gap-Toleranz-Merge: Sessions mit Abstand <30 Min zu einer zusammenfassen
+                var _raGapMs = 30 * 60 * 1000;
+                _raIntimacyEvents.sort(function(a,b){return a.start-b.start;});
+                var _raGMerged = [];
+                for (var _ragmi = 0; _ragmi < _raIntimacyEvents.length; _ragmi++) {
+                    var _raGCur = _raIntimacyEvents[_ragmi];
+                    if (_raGMerged.length === 0 || _raGCur.start - _raGMerged[_raGMerged.length-1].end > _raGapMs) {
+                        _raGMerged.push(Object.assign({}, _raGCur, {slots: (_raGCur.slots||[]).slice()}));
+                    } else {
+                        var _raGPrev = _raGMerged[_raGMerged.length-1];
+                        var _raGRank = {'vaginal':3,'oral_hand':2,'intim':1};
+                        if ((_raGRank[_raGCur.type]||0) > (_raGRank[_raGPrev.type]||0)) _raGPrev.type = _raGCur.type;
+                        _raGPrev.end = Math.max(_raGPrev.end, _raGCur.end);
+                        _raGPrev.duration = Math.round((_raGPrev.end - _raGPrev.start) / 60000);
+                        _raGPrev.peakStrength = Math.max(_raGPrev.peakStrength, _raGCur.peakStrength);
+                        _raGPrev.avgStrength = Math.round((_raGPrev.avgStrength + _raGCur.avgStrength) / 2);
+                        _raGPrev.avgTrigger = Math.round((_raGPrev.avgTrigger + _raGCur.avgTrigger) / 2);
+                        _raGPrev.score = Math.round((_raGPrev.score + _raGCur.score) / 2);
+                        _raGPrev.slots = (_raGPrev.slots||[]).concat(_raGCur.slots||[]);
+                    }
+                }
+                if (_raGMerged.length < _raIntimacyEvents.length) { this.log.info('[OC-SEX-RA] Gap-Merge: ' + _raIntimacyEvents.length + ' ? ' + _raGMerged.length + ' Session(s)'); _raIntimacyEvents = _raGMerged; }
+                // Kontext-Sensor-IDs (sensorFunction-basiert)
+                var _raBedIds  = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.id;}));
+                var _raBathIds = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bathroom'||d.isBathroomSensor;}).map(function(d){return d.id;}));
+                var _raBedRoom = (this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.location;}).filter(Boolean)[0] || null;
+                // Topologie BFS: Raeume mit Hop<=2 vom Schlafzimmer
+                var _raNearbyRooms = new Set();
+                try {
+                    var _raTopoSt = await this.getStateAsync('analysis.topology.structure');
+                    if (_raTopoSt && _raTopoSt.val) {
+                        var _raTopoObj=JSON.parse(_raTopoSt.val);
+                        var _raTopoRms=_raTopoObj.rooms||[], _raTopoMat=_raTopoObj.matrix||[];
+                        var _raBedRms=new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.location;}).filter(Boolean));
+                        _raBedRms.forEach(function(bedRoom){
+                            var _bi=_raTopoRms.indexOf(bedRoom); if(_bi===-1) return;
+                            var _dist=new Array(_raTopoRms.length).fill(Infinity); _dist[_bi]=0;
+                            var _q=[_bi];
+                            while(_q.length>0){var _c=_q.shift();if(_dist[_c]>=1)continue;for(var _j2=0;_j2<_raTopoRms.length;_j2++){if(_raTopoMat[_c]&&_raTopoMat[_c][_j2]===1&&_dist[_j2]===Infinity){_dist[_j2]=_dist[_c]+1;_q.push(_j2);}}}
+                            _raTopoRms.forEach(function(rm,idx){if(_dist[idx]===1)_raNearbyRooms.add(rm);});
+                        });
+                    }
+                } catch(_raTopoE){ /* ignorieren */ }
+                var _raNearbyRoomSensorIds = (this.config.devices||[]).filter(function(d){return d.type==='motion'&&!d.isBathroomSensor&&d.sensorFunction!=='bed'&&_raNearbyRooms.has(d.location);}).map(function(d){return d.id;});
+                var _raExtractCtx = function(session, evts) {
+                    var _wS=session.start-15*60000, _wE=session.end+30*60000;
+                    var _wE2=evts.filter(function(e){var t=e.timestamp||0;return t>=_wS&&t<=_wE;});
+                    var _hrD=new Date(session.start); var _hF=_hrD.getHours()+_hrD.getMinutes()/60;
+                    var _hSin=Math.round(Math.sin(2*Math.PI*_hF/24)*1000)/1000;
+                    var _hCos=Math.round(Math.cos(2*Math.PI*_hF/24)*1000)/1000;
+                    var _lE=_wE2.filter(function(e){return (e.type==='light'||e.type==='dimmer')&&(_raBedRoom?e.location===_raBedRoom:_raBedIds.has(e.id));});
+                    var _lOn=_lE.length>0?(Number(_lE[_lE.length-1].value)>0?1:0):null;
+                    var _pE=_wE2.filter(function(e){return e.isFP2Bed;});
+                    var _pOn=_pE.length>0?(Number(_pE[_pE.length-1].value)>0?1:0):null;
+                    var _tE=_wE2.filter(function(e){return (e.type==='temperature'||e.type==='thermostat'||e.type==='heating_valve')&&(_raBedRoom?e.location===_raBedRoom:_raBedIds.has(e.id));});
+                    var _rT=_tE.length>0?(Number(_tE[_tE.length-1].value)||null):null;
+                    var _bB=evts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||_raBathIds.has(e.id))&&e.type==='motion'&&t>=session.start-60*60000&&t<session.start;})?1:0;
+                    var _bA=evts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||_raBathIds.has(e.id))&&e.type==='motion'&&t>session.end&&t<=session.end+60*60000;})?1:0;
+                    var _nrM2=_raNearbyRooms.size>0?evts.some(function(e){var t=e.timestamp||0;return e.type==='motion'&&_raNearbyRooms.has(e.location)&&t>=session.start-5*60000&&t<=session.end+5*60000;})?1:0:null;
+                    return {hourSin:_hSin,hourCos:_hCos,lightOn:_lOn,presenceOn:_pOn,roomTemp:_rT,bathBefore:_bB,bathAfter:_bA,nearbyRoomMotion:_nrM2};
+                };
+                // Stufe 3: Python-Klassifikator (skipPy=true beim Batch-Reanalyze ? kein Callback-Konflikt)
+                var _raPyInfo = null;
+                var _raSkipPy = (obj.message && obj.message.skipPy === true);
+                if (!_raSkipPy && _raSexTrainData.length >= 3) { // Python auch mit 0 Events aufrufen (Modell trainieren/speichern)
+                    try {
+                        var _raPyPred = _raIntimacyEvents.map(function(e) {
+                            var _sl=e.slots||[]; var _strs=_sl.map(function(s){return s.strMax||0;});
+                            var _avg3=_strs.length>0?_strs.reduce(function(a,b){return a+b;},0)/_strs.length:0;
+                            var _var3=_strs.length>0?_strs.reduce(function(a,b){return a+(b-_avg3)*(b-_avg3);},0)/_strs.length:0;
+                            var _raCtx=_raExtractCtx(e, _raAllEvts);
+                            return Object.assign({peak:e.peakStrength,durSlots:_sl.length,avgPeak:Math.round(_avg3),variance:Math.round(_var3),tierB:(e.tier==='B'?1:0)},_raCtx);
+                        });
+                        var _raPyRes = await new Promise(function(resolve,reject){
+                            var _raTout=setTimeout(function(){reject(new Error('timeout'));},15000);
+                            pythonBridge.send(this,'CLASSIFY_SEX_SESSIONS',{train:_raSexTrainData,predict:_raPyPred},function(r){clearTimeout(_raTout);resolve(r);});
+                        }.bind(this));
+                        if (_raPyRes&&_raPyRes.payload){
+                            _raPyInfo=_raPyRes.payload;
+                            if (_raPyInfo.trained&&Array.isArray(_raPyInfo.results)){
+                                _raPyInfo.results.forEach(function(r,i){
+                                    if (!_raIntimacyEvents[i]) return;
+                                    if (r.type==='nullnummer'&&r.confidence>=0.60){
+                                        this.log.info('[OC-SEX-RA-PY] Session '+i+' als Nullnummer klassifiziert � wird entfernt');
+                                        _raIntimacyEvents[i]=null;
+                                    } else if (r.type&&r.type!=='nullnummer'&&r.confidence>=0.55){
+                                        _raIntimacyEvents[i].type=r.type;
+                                        _raIntimacyEvents[i].pyConf=Math.round(r.confidence*100);
+                                    }
+                                }.bind(this));
+                                _raIntimacyEvents=_raIntimacyEvents.filter(function(e){return e!==null;});
+                            }
+                        }
+                    } catch(_raPyE){ this.log.debug('[OC-SEX-RA-PY] '+_raPyE.message); }
+                }
+                _raCalibInfo.pyClassifier = _raPyInfo ? {trained:_raPyInfo.trained||false,n:_raPyInfo.n_samples||0,counts:_raPyInfo.class_counts||{},msg:_raPyInfo.status_msg||'',feature_importances:_raPyInfo.feature_importances||[],loo_accuracy:(_raPyInfo.loo_accuracy!=null?_raPyInfo.loo_accuracy:null),confusion_matrix:_raPyInfo.confusion_matrix||null,loo_details:_raPyInfo.loo_details||[],nearbyRoomSensorIds:_raNearbyRoomSensorIds} : null;
+                // Nullnummer-Override (Session-Level): Nur gematchte Sessions entfernen, nicht den ganzen Tag
+                var _raNullLabels=[];
+                try{var _rnRaw=JSON.parse(this.config.sexTrainingLabels||'[]');if(Array.isArray(_rnRaw))_raNullLabels=_rnRaw.filter(function(l){return l&&l.date===_raDate&&l.type==='nullnummer'&&l.time;});}catch(_rnE){}
+                if (_raNullLabels.length>0){
+                    var _rnBefore=_raIntimacyEvents.length;
+                    _raIntimacyEvents=_raIntimacyEvents.filter(function(e){
+                        return !_raNullLabels.some(function(nl){
+                            var _nlP=nl.time.split(':').map(Number);
+                            var _nlMs=new Date(_raDate+'T00:00:00').setHours(_nlP[0],_nlP[1],0,0);
+                            return Math.abs((e.start||0)-_nlMs)<30*60000;
+                        });
+                    });
+                    this.log.info('[OC-SEX-RA] '+_raDate+': Nullnummer-Filter: '+(_rnBefore-_raIntimacyEvents.length)+' Session(s) entfernt, '+_raIntimacyEvents.length+' behalten');
+                }
+                _raSnap.intimacyEvents = _raIntimacyEvents;
+                _raSnap.sexCalibInfo = _raCalibInfo;
+                _raSnap.timestamp = Date.now();
+                fs.writeFileSync(_raPath, JSON.stringify(_raSnap), 'utf8');
+                this.sendTo(obj.from, obj.command, { success: true, data: _raSnap }, obj.callback);
+            } catch(_raE) {
+                this.log.warn('[OC-SEX-RA] Fehler: '+_raE.message);
+                this.sendTo(obj.from, obj.command, { success: false, error: _raE.message }, obj.callback);
+            }
+        }
+        // reanalyzeAllSexDays: Gibt Liste aller Tage zurueck - Frontend ruft reanalyzeSexDay sequenziell auf
+        else if (obj.command === 'reanalyzeAllSexDays') {
+            try {
+                if (this.config.moduleSex !== true) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Sex-Modul nicht aktiviert' }, obj.callback); return;
+                }
+                const _allDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                if (!fs.existsSync(_allDir)) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'History-Verzeichnis nicht gefunden' }, obj.callback); return;
+                }
+                // Nur Tage mit eventHistory zurueckgeben (nicht leere Dateien)
+                const _allFiles = fs.readdirSync(_allDir).filter(function(f) { return /^\d{4}-\d{2}-\d{2}\.json$/.test(f); }).sort();
+                const _allDates = [];
+                for (var _adFi = 0; _adFi < _allFiles.length; _adFi++) {
+                    try {
+                        var _adSnap = JSON.parse(fs.readFileSync(path.join(_allDir, _allFiles[_adFi]), 'utf8'));
+                        if ((_adSnap.eventHistory || []).length > 0) _allDates.push(_allFiles[_adFi].replace('.json', ''));
+                    } catch(e) {}
+                }
+                this.log.info('[ReanalyzeAll] ' + _allDates.length + ' Tage mit Daten gefunden.');
+                this.sendTo(obj.from, obj.command, { success: true, dates: _allDates }, obj.callback);
+            } catch(_allE) {
+                this.log.warn('[ReanalyzeAll] Fehler: ' + _allE.message);
+                this.sendTo(obj.from, obj.command, { success: false, error: _allE.message }, obj.callback);
+            }
+        }
+        // getSexMonthSummary: Kompakte Zusammenfassung aller Sessions eines Monats
+        else if (obj.command === 'getSexMonthSummary') {
+            try {
+                const _smMonth = (obj.message && obj.message.month) ? obj.message.month : null;
+                if (!_smMonth || !/^\d{4}-\d{2}$/.test(_smMonth)) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Kein gueltiges YYYY-MM' }, obj.callback); return;
+                }
+                const _smHistDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                const _smSummary = {};
+                const _smYear = parseInt(_smMonth.split('-')[0]);
+                const _smMon  = parseInt(_smMonth.split('-')[1]);
+                const _smDays = new Date(_smYear, _smMon, 0).getDate();
+                for (let _sd = 1; _sd <= _smDays; _sd++) {
+                    const _sdStr = _smYear+'-'+String(_smMon).padStart(2,'0')+'-'+String(_sd).padStart(2,'0');
+                    const _sdPath = path.join(_smHistDir, _sdStr+'.json');
+                    if (fs.existsSync(_sdPath)) {
+                        try {
+                            const _sdSnap = JSON.parse(fs.readFileSync(_sdPath, 'utf8'));
+                            const _sdEvts = (_sdSnap.intimacyEvents || []).map(function(e){
+                                return {type:e.type,duration:e.duration,score:e.score,start:e.start,end:e.end,pyConf:e.pyConf};
+                            });
+                            if (_sdEvts.length > 0) _smSummary[_sdStr] = _sdEvts;
+                        } catch(_sdE) {}
+                    }
+                }
+                this.sendTo(obj.from, obj.command, { success: true, data: _smSummary }, obj.callback);
+            } catch(_smE) {
+                this.sendTo(obj.from, obj.command, { success: false, error: _smE.message }, obj.callback);
+            }
+        }
+        // getManualSexSessions: Liest sex-manual.json
+        else if (obj.command === 'getManualSexSessions') {
+            try {
+                var _msDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                var _msPath = path.join(_msDir, 'sex-manual.json');
+                var _msEntries = [];
+                if (fs.existsSync(_msPath)) {
+                    try { _msEntries = JSON.parse(fs.readFileSync(_msPath, 'utf8')); } catch(_mse) {}
+                }
+                if (!Array.isArray(_msEntries)) _msEntries = [];
+                this.sendTo(obj.from, obj.command, { success: true, entries: _msEntries }, obj.callback);
+            } catch(_msE) {
+                this.sendTo(obj.from, obj.command, { success: false, error: _msE.message }, obj.callback);
+            }
+        }
+        // saveManualSexSession: Fuegt neue manuelle Session zu sex-manual.json hinzu
+        else if (obj.command === 'saveManualSexSession') {
+            try {
+                var _svDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                var _svPath = path.join(_svDir, 'sex-manual.json');
+                var _svEntries = [];
+                if (fs.existsSync(_svPath)) {
+                    try { _svEntries = JSON.parse(fs.readFileSync(_svPath, 'utf8')); } catch(_sve) {}
+                }
+                if (!Array.isArray(_svEntries)) _svEntries = [];
+                var _svNew = {
+                    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                    date: obj.message.date || '',
+                    type: obj.message.type || 'sonstiges',
+                    createdAt: Date.now()
+                };
+                if (obj.message.time) _svNew.time = obj.message.time;
+                if (obj.message.durationMin) _svNew.durationMin = parseInt(obj.message.durationMin) || 0;
+                _svEntries.push(_svNew);
+                _svEntries.sort(function(a, b) { return b.date.localeCompare(a.date); });
+                fs.writeFileSync(_svPath, JSON.stringify(_svEntries), 'utf8');
+                this['log']['info']('[ManualSex] gespeichert: ' + _svNew.date + ' ' + _svNew.type);
+                this.sendTo(obj.from, obj.command, { success: true, entries: _svEntries }, obj.callback);
+            } catch(_svE) {
+                this.sendTo(obj.from, obj.command, { success: false, error: _svE.message }, obj.callback);
+            }
+        }
+        // deleteManualSexSession: Loescht Eintrag aus sex-manual.json per ID
+        else if (obj.command === 'deleteManualSexSession') {
+            try {
+                var _dlDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                var _dlPath = path.join(_dlDir, 'sex-manual.json');
+                var _dlEntries = [];
+                if (fs.existsSync(_dlPath)) {
+                    try { _dlEntries = JSON.parse(fs.readFileSync(_dlPath, 'utf8')); } catch(_dle) {}
+                }
+                if (!Array.isArray(_dlEntries)) _dlEntries = [];
+                var _dlId = obj.message && obj.message.id;
+                _dlEntries = _dlEntries.filter(function(e) { return e.id !== _dlId; });
+                fs.writeFileSync(_dlPath, JSON.stringify(_dlEntries), 'utf8');
+                this['log']['info']('[ManualSex] geloescht: ' + _dlId);
+                this.sendTo(obj.from, obj.command, { success: true, entries: _dlEntries }, obj.callback);
+            } catch(_dlE) {
+                this.sendTo(obj.from, obj.command, { success: false, error: _dlE.message }, obj.callback);
+            }
+        }
+        // clearIntimacyEventsForDay: Loescht intimacyEvents aus dem Tages-JSON (nach Nullnummer-Label setzen)
+        else if (obj.command === 'clearIntimacyEventsForDay') {
+            try {
+                var _clDate = obj.message && obj.message.date;
+                if (!_clDate || !/^\d{4}-\d{2}-\d{2}$/.test(_clDate)) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Kein gueltiges Datum' }, obj.callback); return;
+                }
+                var _clDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                var _clPath = path.join(_clDir, _clDate + '.json');
+                if (!fs.existsSync(_clPath)) {
+                    this.sendTo(obj.from, obj.command, { success: true, cleared: false }, obj.callback); return;
+                }
+                var _clSnap = JSON.parse(fs.readFileSync(_clPath, 'utf8'));
+                var _clPrev = (_clSnap.intimacyEvents || []).length;
+                _clSnap.intimacyEvents = [];
+                fs.writeFileSync(_clPath, JSON.stringify(_clSnap), 'utf8');
+                this.log.info('[OC-SEX] clearIntimacyEventsForDay(' + _clDate + '): ' + _clPrev + ' Events geloescht');
+                this.sendTo(obj.from, obj.command, { success: true, cleared: true, prevCount: _clPrev }, obj.callback);
+            } catch(_clE) {
+                this.log.warn('[OC-SEX] clearIntimacyEventsForDay Fehler: ' + _clE.message);
+                this.sendTo(obj.from, obj.command, { success: false, error: _clE.message }, obj.callback);
+            }
+        }
+        // removeSingleIntimacyEvent: Entfernt EINE Session per Start-Timestamp (Session-Level Nullnummer)
+        else if (obj.command === 'removeSingleIntimacyEvent') {
+            try {
+                var _rsDate = obj.message && obj.message.date;
+                var _rsStartMs = obj.message && Number(obj.message.startMs);
+                if (!_rsDate || !/^\d{4}-\d{2}-\d{2}$/.test(_rsDate) || !_rsStartMs) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Kein gueltiges Datum oder startMs' }, obj.callback); return;
+                }
+                var _rsDir = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
+                var _rsPath = path.join(_rsDir, _rsDate + '.json');
+                if (!fs.existsSync(_rsPath)) {
+                    this.sendTo(obj.from, obj.command, { success: true, removed: false, remaining: 0 }, obj.callback); return;
+                }
+                var _rsSnap = JSON.parse(fs.readFileSync(_rsPath, 'utf8'));
+                var _rsPrev = (_rsSnap.intimacyEvents || []).length;
+                _rsSnap.intimacyEvents = (_rsSnap.intimacyEvents || []).filter(function(e) {
+                    return Math.abs((e.start || 0) - _rsStartMs) > 5 * 60 * 1000;
+                });
+                var _rsRemoved = _rsPrev - _rsSnap.intimacyEvents.length;
+                fs.writeFileSync(_rsPath, JSON.stringify(_rsSnap), 'utf8');
+                this.log.info('[OC-SEX] removeSingleIntimacyEvent('+_rsDate+' ~'+new Date(_rsStartMs).toTimeString().slice(0,8)+'): '+_rsRemoved+' entfernt, '+_rsSnap.intimacyEvents.length+' verbleibend');
+                this.sendTo(obj.from, obj.command, { success: true, removed: _rsRemoved > 0, prevCount: _rsPrev, remaining: _rsSnap.intimacyEvents.length }, obj.callback);
+            } catch(_rsE) {
+                this.log.warn('[OC-SEX] removeSingleIntimacyEvent Fehler: ' + _rsE.message);
+                this.sendTo(obj.from, obj.command, { success: false, error: _rsE.message }, obj.callback);
+            }
+        }
+        }
+    }
+
+    runPythonHealthCheck() {
+        if (!this.activeModules.health) return;
+        this.log.debug('?? Triggering Python Health Check (Activity Trend)...');
+        try {
+            const rawEvents = this.rawEventLog || [];
+            pythonBridge.send(this, 'CALCULATE_HEALTH_TREND', { events: rawEvents });
+        } catch(e) { this.log.warn('Failed to trigger Python Health Check'); }
+    }
+
+    async onStateChange(id, state) {
+        if (!state || this.dependencyInstallInProgress) return;
+        if (id.includes('telegram') && id.endsWith('communicate.request') && state.val) return;
+
+        if (this.config.infrasoundEnabled && id === this.config.infrasoundSensorId && this.activeModules.security) {
+            this.handleInfrasound(state.val);
+            return;
+        }
+
+        if (state.ack && id.endsWith('pulse')) return;
+
+        if (id === `${this.namespace}.system.mode`) {
+            if (state.val && Object.values(setup.SYSTEM_MODES).includes(state.val)) {
+                this.currentSystemMode = state.val;
+                if (state.val === setup.SYSTEM_MODES.VACATION) await recorder.setPresence(this, false);
+                else await recorder.setPresence(this, true);
+
+                if (this.isProVersion) {
+                    let learnActive = false;
+                    let learnDuration = 0;
+                    let learnLabel = 'manual';
+                    if (this.currentSystemMode === 'party') { learnActive = true; learnDuration = 360; learnLabel = 'Party Mode'; }
+                    else if (this.currentSystemMode === 'guest') { learnActive = true; learnDuration = 1440; learnLabel = 'Guest Mode'; }
+                    pythonBridge.send(this, 'SET_LEARNING_MODE', { active: learnActive, duration: learnDuration, label: learnLabel });
+                    await this.setStateAsync('analysis.security.learningStatus', { val: JSON.stringify({ active: learnActive, label: learnLabel, timestamp: Date.now() }), ack: true });
+                }
+            }
+            if (!state.ack) this.setState(id, { val: this.currentSystemMode, ack: true });
+            return;
+        }
+
+        if (id.endsWith('analysis.energy.warmupSources') && state.ack) this.protectAiMemory(state.val);
+        if (id.endsWith('analysis.energy.warmupTimes') && state.ack && this.activeModules.energy) automation.checkCalendarTriggers(this);
+
+        if (!state.ack) {
+            // WICHTIG: Spezifische Trigger VOR dem generischen 'analysis.trigger' pr?fen,
+            // da 'analysis.triggerBriefing' sonst von der generischen Bedingung abgefangen wird.
+            if (id.includes('triggerBriefing') && state.val && !id.includes('Weekly')) { this.setState(id, { val: false, ack: true }); aiAgent.sendMorningBriefing(this); return; }
+            if (id.includes('triggerWeeklyBriefing') && state.val) { this.setState(id, { val: false, ack: true }); aiAgent.sendWeeklyBriefing(this); return; }
+            if (id.includes('triggerDailyDigest') && state.val) { this.setState(id, { val: false, ack: true }); if (this.isProVersion) aiAgent.createDailyDigest(this, pythonBridge); return; }
+            if (id.includes('analysis.trigger') && state.val) { this.setState(id, { val: false, ack: true }); aiAgent.runGeminiAnalysis(this); return; }
+            if (id.includes('automation.triggerAction') && state.val) { this.setState(id, { val: false, ack: true }); aiAgent.executeAutomationAction(this); return; }
+            if (id.includes('analysis.training.triggerSecurity') && state.val) { this.setState(id, { val: false, ack: true }); if (this.isProVersion) { try { const seqState = await this.getStateAsync('LTM.trainingData.sequences'); if (seqState && seqState.val) { const sequences = JSON.parse(seqState.val); this.setStateAsync('analysis.training.status', { val: 'Sec-Training started...', ack: true }); pythonBridge.send(this, 'TRAIN_SECURITY', { sequences }); } } catch(e) {} } return; }
+
+            if (id.includes('analysis.training.triggerHealth') && state.val) {
+                this.setState(id, { val: false, ack: true });
+                try {
+                    // Health Reports sind f?r alle verf?gbar (nicht nur Pro!)
+                    aiAgent.generateHealthReport(this, 'NIGHT');
+                    setTimeout(() => aiAgent.generateHealthReport(this, 'DAY'), 12000);
+                    
+                    // Training nur fuer Pro-Version
+                    if (this.isProVersion) {
+                        this.runPythonHealthCheck();
+                        const s = await this.getStateAsync('LTM.dailyDigests');
+                        if (s && s.val) {
+                            const digests = JSON.parse(s.val);
+                            pythonBridge.send(this, 'TRAIN_HEALTH', { digests });
+                        }
+                    }
+
+                    // Disease-Score-Berechnung: nutzt numerische History-Dateien (nicht LTM AI-Digests!)
+                    // Zuerst heutigen Snapshot sichern, damit er beim Laden verfuegbar ist
+                    try { await this.saveDailyHistory(); } catch(e) {}
+                    try {
+                        const _dsDataDir = utils.getAbsoluteDefaultDataDir();
+                        const _dsHistDir = path.join(_dsDataDir, 'cogni-living', 'history');
+                        const _histDigests = [];
+                        const _bathroomIds = new Set((this.config.devices || []).filter(function(d) { return d.isBathroomSensor || d.sensorFunction === 'bathroom'; }).map(function(d) { return d.id; }));
+                        const _kitchenIds  = new Set((this.config.devices || []).filter(function(d) { return d.isKitchenSensor || d.sensorFunction === 'kitchen'; }).map(function(d) { return d.id; }));
+                        for (let _di = 0; _di <= 59; _di++) {
+                            const _dObj = new Date(); _dObj.setDate(_dObj.getDate() - _di);
+                            const _dStr = _dObj.toISOString().slice(0, 10);
+                            const _fp = path.join(_dsHistDir, (_dStr + '.json'));
+                            if (fs.existsSync(_fp)) {
+                                try {
+                                    const _h = JSON.parse(fs.readFileSync(_fp, 'utf8'));
+                                    const _vec = _h.todayVector || [];
+                                    const _actSum = _vec.reduce(function(a, b) { return a + b; }, 0);
+                                    const _nightEv = Array.isArray(_h.eventHistory)
+                                        ? _h.eventHistory.filter(function(e) { const hr = new Date(e.timestamp||e.ts||0).getHours(); return hr >= 22 || hr < 6; }).length
+                                        : (_h.nightMotionCount || 0);
+                                    const _rooms = Object.keys(_h.todayRoomMinutes || {}).filter(function(k) { return (_h.todayRoomMinutes[k]||0) > 0; }).length || 1;
+                                    const _bathArr = Array.isArray(_h.eventHistory) ? _h.eventHistory.filter(function(e) { return e.isBathroomSensor; }).map(function(e) { return Math.floor((e.timestamp||e.ts||0) / 3600000); }) : [];
+                                    const _bathSet = new Set(_bathArr);
+                                    // Fallback fuer nocturiaCount aus alten History-Dateien ohne Flag
+                                    var _nocturiaVal = _h.nocturiaCount;
+                                    if (_nocturiaVal === undefined && Array.isArray(_h.eventHistory)) {
+                                        var _nightBathHours = new Set(_h.eventHistory.filter(function(e) {
+                                            if (!e.isBathroomSensor && !_bathroomIds.has(e.id)) return false;
+                                            var hr = new Date(e.timestamp || e.ts || 0).getHours();
+                                            return hr >= 22 || hr < 6;
+                                        }).map(function(e) { return new Date(e.timestamp || e.ts || 0).getHours(); }));
+                                        _nocturiaVal = _nightBathHours.size;
+                                    }
+                                    var _kitchenVal = _h.kitchenVisits;
+                                    if (_kitchenVal === undefined && Array.isArray(_h.eventHistory)) {
+                                        var _kitchenHrs = new Set(_h.eventHistory.filter(function(e) {
+                                            return e.isKitchenSensor || _kitchenIds.has(e.id);
+                                        }).map(function(e) { return new Date(e.timestamp || e.ts || 0).getHours(); }));
+                                        _kitchenVal = _kitchenHrs.size;
+                                    }
+                                    _histDigests.push({
+                                        date: _dStr,
+                                        activityPercent: _actSum,
+                                        gaitSpeed: _h.gaitSpeed || 0,
+                                        nightEvents: _nightEv,
+                                        uniqueRooms: _rooms,
+                                        bathroomVisits: _bathSet.size,
+                                        nocturiaCount: _nocturiaVal || 0,
+                                        kitchenVisits: _kitchenVal || 0,
+                                        maxPersonsDetected: _h.maxPersonsDetected || 0,
+                                        bedPresenceMinutes: _h.bedPresenceMinutes || 0,
+                                        nightVibrationCount: _h.nightVibrationCount || 0
+                                    });
+                                } catch(e) {}
+                            }
+                        }
+                        _histDigests.sort(function(a, b) { return a.date.localeCompare(b.date); });
+                        this.log.info('[DiseaseScore] History-Tage geladen: ' + _histDigests.length);
+                        // Aktivierte Profile aus Config lesen (dynamisch, nicht hardcoded)
+                        const _allProfiles = ['fallRisk','dementia','frailty','depression','diabetes2','sleepDisorder','cardiovascular','parkinson','copd','socialIsolation','epilepsy','diabetes1','longCovid','bipolar'];
+                        const _healthProfiles = this.config.healthProfiles || {};
+                        const _enabledProfiles = _allProfiles.filter(function(p) { return _healthProfiles[p] && _healthProfiles[p].enabled; });
+                        // Fallback: Wenn keine Profile aktiviert, trotzdem Basis-Profile berechnen
+                        const _activeProfiles = _enabledProfiles.length > 0 ? _enabledProfiles : ['fallRisk', 'dementia', 'frailty'];
+                        if (_histDigests.length >= 5) {
+                            pythonBridge.send(this, 'ANALYZE_DISEASE_SCORES', { digests: _histDigests, enabledProfiles: _activeProfiles }, (result) => {
+                                if (!result || !result.payload || result.payload.error) { this.log.warn('[DiseaseScore] Fehler: ' + JSON.stringify(result)); return; }
+                                const scores = result.payload;
+                                this.setStateAsync('analysis.health.disease.scores', { val: JSON.stringify(scores), ack: true }).catch(() => {});
+                                for (const [p, d] of Object.entries(scores)) {
+                                    if (d && d.score !== null && d.score !== undefined) this.setStateAsync('analysis.health.disease.' + p, { val: d.score, ack: true }).catch(() => {});
+                                }
+                                this.log.info('[DiseaseScore] Gespeichert: ' + Object.keys(scores).map(function(k) { return k + '=' + (scores[k] && scores[k].score); }).join(', '));
+                                // Phase 3: Proaktives Screening direkt nach Disease-Scores
+                                pythonBridge.send(this, 'ANALYZE_SCREENING', { digests: _histDigests }, (screenResult) => {
+                                    if (!screenResult || !screenResult.payload) { this.log.warn('[Screening] Kein Ergebnis'); return; }
+                                    this.setStateAsync('analysis.health.screening.hints', { val: JSON.stringify(screenResult.payload), ack: true }).catch(() => {});
+                                    const hints = (screenResult.payload.hints || []);
+                                    this.log.info('[Screening] ' + hints.length + ' Hinweis(e): ' + hints.map(function(h) { return h.disease + '(' + Math.round(h.confidence * 100) + '%)'; }).join(', '));
+                                });
+                            });
+                        } else {
+                            const _insuf = {};
+                            for (const _p of _activeProfiles) {
+                                _insuf[_p] = { score: null, level: 'INSUFFICIENT_DATA', dataPoints: _histDigests.length, message: _histDigests.length + '/5 Tage Datenbasis. Taeglich waechst die Basis.' };
+                            }
+                            this.setStateAsync('analysis.health.disease.scores', { val: JSON.stringify(_insuf), ack: true }).catch(() => {});
+                            this.log.info('[DiseaseScore] Zu wenig Tage: ' + _histDigests.length + '/5');
+                        }
+                    } catch(dsErr) { this.log.warn('[DiseaseScore] Fehler: ' + dsErr.message); }
+
+                    // History-Snapshot nach Analyse aktualisieren (damit PWA/Charts frische Daten sehen)
+                    // Nach ~30s (NIGHT 0s + DAY 12s + Gemini ~10s + Puffer) ist alles fertig ? PWA-Polling informieren
+                    setTimeout(() => {
+                        this.saveDailyHistory().catch(e => {});
+                        pwaServer.markAnalysisDone();
+                    }, 30000);
+                } catch(e) {
+                    this.log.warn(`triggerHealth error: ${e.message}`);
+                }
+                return;
+            }
+
+            if (id.includes('analysis.training.triggerEnergy') && state.val) {
+                this.setState(id, { val: false, ack: true });
+                // Trigger Energy Prediction (PINN + Warmup + Ventilation)
+                await this.triggerEnergyPrediction();
+                return;
+            }
+            if (id.includes('analysis.training.triggerComfort') && state.val) {
+                this.setState(id, { val: false, ack: true });
+                if (this.isProVersion) {
+                    try {
+                        const s = await this.getStateAsync('LTM.rawEventLog');
+                        if(s && s.val) {
+                            const deviceMap = {};
+                        if (this.config.devices) this.config.devices.forEach(d => { if (d.id && d.type) deviceMap[d.id] = d.type; });
+                            pythonBridge.send(this, 'TRAIN_COMFORT', { events: JSON.parse(s.val), deviceMap: deviceMap });
+                        }
+                    } catch(e){}
+                }
+                return;
+            }
+            if (id.includes('analysis.training.triggerTopology') && state.val) {
+                this.setState(id, { val: false, ack: true });
+                topology.updateTopology(this);
+                if (this.isProVersion) {
+                    try {
+                        const seqState = await this.getStateAsync('LTM.trainingData.sequences');
+                        if (seqState && seqState.val) pythonBridge.send(this, 'TRAIN_TOPOLOGY', { sequences: JSON.parse(seqState.val) });
+                    } catch(e) {}
+                }
+                return;
+            }
+        }
+
+        const dev = (this.config.devices || []).find(d => d.id === id);
+        if (dev) {
+            const evt = await recorder.processSensorEvent(this, id, state, dev);
+            if (evt) {
+                this.setState('analysis.visualization.pulse', { val: Date.now(), ack: true });
+            }
+            if (evt && (evt.type === 'motion' || evt.type === 'presence_radar_bool' || evt.type === 'door') && evt.location && this.isProVersion) {
+                deadMan.updateLocation(this, evt.location);
+            }
+            if (isActiveValue(state.val)) {
+                if (dev.type && (dev.type === 'window' || dev.type === 'door' || dev.type === 'fenster' || dev.type === 'tur' || dev.type === 'contact' || dev.type === 'kontakt')) {
+                    this.analyzeWindowOpening(dev);
+                }
+            }
+            if (dev.type === 'temperature' || dev.type === 'thermostat') {
+                if (this.activeModules.energy) automation.cleanupGhostInterventions(this);
+            }
+            // Raeumliche Unmoeglichkeits-Heuristik: nur steigende Flanken person-relevanter Sensoren
+            // isPersonPresenceActivity = strikte Whitelist: Bewegung, Praesenz, Vibration, Tuer/Fenster
+            if (dev.location && recorder.isPersonPresenceActivity(dev.type, state.val)) {
+                if (!this.sensorLastActive) this.sensorLastActive = {};
+                this.sensorLastActive[id] = Date.now();
+                var _sLog = { ts: Date.now(), sensorId: id, sensorName: dev.name || id, room: dev.location, type: dev.type };
+                this.setStateAsync('system.personCount.sensorActivity', { val: JSON.stringify(_sLog), ack: true }).catch(function(){});
+                this._checkSpatialImpossibility(id, dev.location);
+            }
+        }
+    }
+
+    // BFS: k?rzester Pfad in Hops zwischen zwei R?umen (?ber Topologie-Matrix)
+    _roomHopDistance(roomA, roomB) {
+        if (roomA === roomB) return 0;
+        var topo = this._cachedTopoMatrix;
+        if (!topo || !topo.rooms || !topo.matrix) return -1;
+        var rooms = topo.rooms;
+        var matrix = topo.matrix;
+        var idxA = rooms.indexOf(roomA);
+        var idxB = rooms.indexOf(roomB);
+        if (idxA < 0 || idxB < 0) return -1;
+        var visited = {};
+        visited[idxA] = true;
+        var queue = [[idxA, 0]];
+        while (queue.length > 0) {
+            var item = queue.shift();
+            var curr = item[0]; var dist = item[1];
+            for (var i = 0; i < rooms.length; i++) {
+                if (!visited[i] && matrix[curr] && matrix[curr][i] > 0) {
+                    if (i === idxB) return dist + 1;
+                    visited[i] = true;
+                    queue.push([i, dist + 1]);
+                }
+            }
+        }
+        return -1; // keine Verbindung gefunden
+    }
+
+    _checkSpatialImpossibility(triggerId, triggerLocation) {
+        // Topologie asynchron laden beim ersten Aufruf
+        if (!this._cachedTopoMatrix) {
+            this.getStateAsync('analysis.topology.structure').then((s) => {
+                if (s && s.val) { try { this._cachedTopoMatrix = JSON.parse(s.val); } catch(e) {} }
+            }).catch(function(){});
+            return;
+        }
+        var topo = this._cachedTopoMatrix;
+        if (!topo || !topo.rooms || !topo.matrix) return;
+
+        // Festes 5s-Fenster auf steigende Flanken (sensorLastActive) ? kein fallendes Flanken-Problem
+        var ACTIVE_WINDOW_MS = 5000;
+        // Mindestens 2 Hops: in 5s physikalisch unm?glich f?r eine Person
+        var MIN_HOPS = 2;
+        var now = Date.now();
+        var _self = this;
+        var devicesById = {};
+        (this.config.devices || []).forEach(function(d) { if (d.id) devicesById[d.id] = d; });
+
+        var multiPersonDetected = false;
+        var bestMatch = null; // bester Treffer fuer Log (meiste Hops)
+        Object.keys(this.sensorLastActive || {}).forEach(function(otherId) {
+            if (otherId === triggerId) return;
+            var lastActiveTs = _self.sensorLastActive[otherId];
+            if (!lastActiveTs || (now - lastActiveTs) > ACTIVE_WINDOW_MS) return;
+            var otherDev = devicesById[otherId];
+            if (!otherDev || !otherDev.location || otherDev.location === triggerLocation) return;
+            var hopDist = _self._roomHopDistance(triggerLocation, otherDev.location);
+            if (hopDist >= MIN_HOPS) {
+                multiPersonDetected = true;
+                var deltaMs = Math.round(now - lastActiveTs);
+                _self.log.info('[PersonCount] Rauml. Unmoglichkeit: ' + triggerLocation + ' <-> ' + otherDev.location +
+                    ' (' + hopDist + ' Hops, ' + deltaMs + 'ms) -> mind. 2 Personen');
+                // Besten Treffer merken (meiste Hops = zuverlaessigste Erkennung)
+                if (!bestMatch || hopDist > bestMatch.hops) {
+                    var triggerDev = devicesById[triggerId];
+                    bestMatch = {
+                        ts:                now,
+                        triggerSensorId:   triggerId,
+                        triggerSensorName: triggerDev ? (triggerDev.name || triggerId) : triggerId,
+                        triggerRoom:       triggerLocation,
+                        otherSensorId:     otherId,
+                        otherSensorName:   otherDev.name || otherId,
+                        otherRoom:         otherDev.location,
+                        hops:              hopDist,
+                        deltaMs:           deltaMs
+                    };
+                }
+            }
+        });
+
+        if (multiPersonDetected && bestMatch) {
+            var prevCount = this._livePersonCount || 1;
+            bestMatch.personCountBefore = prevCount;
+            bestMatch.personCountAfter  = 2;
+            // State schreiben -> SQL-Adapter loggt jeden Wert-Wechsel automatisch
+            this.setStateAsync('system.personCount.heuristicDetection', { val: JSON.stringify(bestMatch), ack: true }).catch(function(){});
+
+            if (prevCount < 2) {
+                this._livePersonCount = 2;
+                if (!this._maxPersonsToday || this._maxPersonsToday < 2) this._maxPersonsToday = 2;
+                this.setStateAsync('system.currentPersonCount', { val: 2, ack: true }).catch(function(){});
+                this.setStateAsync('system.householdType', { val: 'multi', ack: true }).catch(function(){});
+            }
+            if (this._multiPersonResetTimer) clearTimeout(this._multiPersonResetTimer);
+            var _cfg = this.config.householdSize || 'single';
+            var _baseCount = _cfg === 'single' ? 1 : _cfg === 'couple' ? 2 : 3;
+            var _baseHT = _baseCount >= 2 ? 'multi' : 'single';
+            this._multiPersonResetTimer = setTimeout(function() {
+                _self._livePersonCount = _baseCount;
+                _self.setStateAsync('system.currentPersonCount', { val: _baseCount, ack: true }).catch(function(){});
+                _self.setStateAsync('system.householdType', { val: _baseHT, ack: true }).catch(function(){});
+                _self.log.info('[PersonCount] Reset auf Config-Baseline: ' + _cfg);
+            }, 60 * 60 * 1000); // 1 Stunde
+        }
+    }
+
+    async protectAiMemory(newSourcesJson) {
+        if (!this.memoryCache || (Date.now() - this.bootTime > 300000)) return;
+        try {
+            const newSources = JSON.parse(newSourcesJson);
+            const oldSources = this.memoryCache.sources;
+            let restoreNeeded = false;
+            for (const room in oldSources) {
+                if (oldSources[room].includes('AI') && newSources[room] && !newSources[room].includes('AI')) { restoreNeeded = true; break; }
+            }
+            if (restoreNeeded) {
+                await this.setStateAsync('analysis.energy.warmupTimes', { val: JSON.stringify(this.memoryCache.times), ack: true });
+                await this.setStateAsync('analysis.energy.warmupSources', { val: JSON.stringify(this.memoryCache.sources), ack: true });
+            }
+        } catch(e) {}
+    }
+
+    async loadSystemMode() { try { const state = await this.getStateAsync(setup.SYSTEM_DP_MODE); if (state && state.val) this.currentSystemMode = state.val; } catch (e) { this.currentSystemMode = setup.SYSTEM_MODES.NORMAL; } }
+    async checkWifiPresence() {
+        const presenceDevices = this.config.presenceDevices || [];
+        if (presenceDevices.length === 0) return false;
+
+        const presentPeople = [];
+        const now = Date.now();
+        const TIMEOUT_MS = 5 * 60 * 1000; // 5 Minuten
+
+        for (const deviceId of presenceDevices) {
+            try {
+                // Versuche verschiedene States zu finden: isOnline, last_seen, uptime, etc.
+                let isOnline = false;
+                
+                // 1. Pr?fe isOnline State
+                try {
+                    const onlineState = await this.getForeignStateAsync(`${deviceId}.isOnline`);
+                    if (onlineState && onlineState.val === true) isOnline = true;
+                } catch(e) {}
+
+                // 2. Pr?fe last_seen Timestamp (falls vorhanden)
+                if (!isOnline) {
+                    try {
+                        const lastSeenState = await this.getForeignStateAsync(`${deviceId}.last_seen`);
+                        if (lastSeenState && lastSeenState.ts) {
+                            const diffMs = now - lastSeenState.ts;
+                            if (diffMs < TIMEOUT_MS) isOnline = true;
+                        }
+                    } catch(e) {}
+                }
+
+                // 3. Pr?fe uptime (falls vorhanden)
+                if (!isOnline) {
+                    try {
+                        const uptimeState = await this.getForeignStateAsync(`${deviceId}.uptime`);
+                        if (uptimeState && typeof uptimeState.val === 'number' && uptimeState.val > 0) isOnline = true;
+                    } catch(e) {}
+                }
+
+                // 4. Fallback: Pr?fe State selbst (manche Adapter haben nur den Hauptstate)
+                if (!isOnline) {
+                    try {
+                        const mainState = await this.getForeignStateAsync(deviceId);
+                        if (mainState) {
+                            // Pr?fe Timestamp des States
+                            const diffMs = now - (mainState.ts || 0);
+                            if (diffMs < TIMEOUT_MS && (mainState.val === true || mainState.val === 'online' || mainState.val === 1)) {
+                                isOnline = true;
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                if (isOnline) {
+                    // Extrahiere Namen aus Device-ID (z.B. "alias.0.Smartphone.Marc" -> "Marc")
+                    const parts = deviceId.split('.');
+                    const name = parts[parts.length - 1] || deviceId;
+                    presentPeople.push(name);
+                }
+            } catch(e) {
+                this.log.warn(`checkWifiPresence: Error checking ${deviceId}: ${e.message}`);
+            }
+        }
+
+        // Aktualisiere presenceWho State
+        const presenceWho = presentPeople.length > 0 ? presentPeople.join(', ') : 'Niemand';
+        await this.setStateAsync('system.presenceWho', { val: presenceWho, ack: true });
+
+        return presentPeople.length > 0;
+    }
+    async runAutopilot() { await aiAgent.runGeminiAnalysis(this); if(this.activeModules.health) { this.updateHealthVector(); this.triggerGaitAnalysis(); } if(this.activeModules.energy) this.triggerEnergyPrediction(); }
+    async checkSolarCondition() {
+        // Pr?ft verschiedene Wetter-Adapter auf sonniges Wetter
+        const weatherAdapters = ['weatherunderground.0', 'accuweather.0', 'daswetter.0'];
+        const weatherPaths = ['forecast.current.weather', 'Current.WeatherText', 'NextHours.Location_1.Day_1.current.symbol_desc'];
+        
+        for (const adapter of weatherAdapters) {
+            for (const path of weatherPaths) {
+                try {
+                    const stateId = `${adapter}.${path}`;
+                    const state = await this.getForeignStateAsync(stateId);
+                    if (state && state.val) {
+                        const text = String(state.val).toLowerCase();
+                        // Pr?fe auf sonnige Keywords (DE + EN)
+                        if (text.includes('sunny') || text.includes('heiter') || 
+                            text.includes('klar') || text.includes('sonn') || 
+                            text.includes('clear')) {
+                            this.log.debug(`?? Solar Condition: SUNNY detected via ${stateId}`);
+                            return true;
+                        }
+                    }
+                } catch(e) {
+                    // Adapter nicht vorhanden - weiter versuchen
+                }
+            }
+        }
+        return false;
+    }
+    triggerGaitAnalysis() {
+        if (!this.isProVersion) return;
+        
+        // Ganganalyse basierend auf Motion-Sensor-Sequenzen
+        try {
+            this.getStateAsync('LTM.trainingData.sequences', (err, state) => {
+                if (err || !state || !state.val) return;
+                
+                try {
+                    const sequences = JSON.parse(state.val);
+                    if (!sequences || sequences.length === 0) return;
+                    
+                    // Sende Sequenzen an Python f?r Ganganalyse
+                    pythonBridge.send(this, 'ANALYZE_GAIT', { sequences });
+                    
+                    this.log.debug(`?? Gait Analysis triggered with ${sequences.length} sequences`);
+                } catch(e) {
+                    this.log.warn(`triggerGaitAnalysis parse error: ${e.message}`);
+                }
+            });
+        } catch(e) {
+            this.log.warn(`triggerGaitAnalysis error: ${e.message}`);
+        }
+    }
+    async triggerEnergyPrediction() {
+        if (!this.isProVersion || !this.activeModules.energy) return;
+        try {
+            // Sammle aktuelle Temperaturen
+            const current_temps = {};
+            const solar_flags = {};
+            const devices = this.config.devices || [];
+            
+            for (const dev of devices) {
+                if ((dev.type === 'temperature' || dev.type === 'thermostat') && dev.location) {
+                    try {
+                        const state = await this.getForeignStateAsync(dev.id);
+                        if (state && typeof state.val === 'number') {
+                            current_temps[dev.location] = state.val;
+                            solar_flags[dev.location] = dev.isSolar || false;
+                        }
+                    } catch(e) {}
+                }
+            }
+
+            // Au?entemperatur (falls vorhanden)
+            let t_out = 10.0;
+            if (this.config.weatherTempId) {
+                try {
+                    const wState = await this.getForeignStateAsync(this.config.weatherTempId);
+                    if (wState && typeof wState.val === 'number') t_out = wState.val;
+                } catch(e) {}
+            }
+
+            const is_sunny = await this.checkSolarCondition();
+
+            // Warmup-Ziele laden
+            let warmup_targets = {};
+            try {
+                const wt = await this.getStateAsync('analysis.energy.warmupTargets');
+                if (wt && wt.val) warmup_targets = JSON.parse(wt.val);
+            } catch(e) {}
+
+            pythonBridge.send(this, 'PREDICT_ENERGY', {
+                current_temps,
+                t_out,
+                is_sunny,
+                solar_flags,
+                warmup_targets
+            });
+            
+            this.log.info(`?? Energy Prediction triggered (${Object.keys(current_temps).length} rooms)`);
+        } catch(e) {
+            this.log.warn(`triggerEnergyPrediction Error: ${e.message}`);
+        }
+    }
+    updateHealthVector() {
+        // Berechnet den 48-Slot Activity Vector f?r heute (00:00-23:59, 30-Min-Slots)
+        if (!this.rawEventLog || this.rawEventLog.length === 0) return;
+
+        const todayVector = new Array(48).fill(0);
+        const todayDetails = Array.from({ length: 48 }, () => []);
+        const todayStart = new Date().setHours(0, 0, 0, 0);
+
+        // Z?hle Events pro 30-Min-Slot
+        this.rawEventLog.forEach(entry => {
+            const eventTime = new Date(entry.timestamp);
+            if (eventTime.getTime() >= todayStart) {
+                const hour = eventTime.getHours();
+                const minute = eventTime.getMinutes();
+                const slotIndex = hour * 2 + Math.floor(minute / 30);
+                
+                if (slotIndex >= 0 && slotIndex < 48) {
+                    todayVector[slotIndex]++;
+                    todayDetails[slotIndex].push({
+                        time: eventTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+                        location: entry.location || 'Unbekannt',
+                        type: entry.type || 'Event'
+                    });
+                }
+            }
+        });
+
+        // Setze States
+        this.setStateAsync('analysis.health.todayVector', { 
+            val: JSON.stringify(todayVector), 
+            ack: true 
+        });
+        
+        this.setStateAsync('analysis.health.todayRoomDetails', { 
+            val: JSON.stringify(todayDetails), 
+            ack: true 
+        });
+    }
+    async handleInfrasound(value) {
+        // Verarbeitet Infraschall-Sensor-Daten f?r Anomalie-Erkennung
+        if (!this.config.infrasoundEnabled || typeof value !== 'number') return;
+        
+        const threshold = this.config.infrasoundThreshold || 0.04;
+        
+        // F?ge Wert zum Buffer hinzu (f?r Korrelation mit Events)
+        this.pressureBuffer.push({
+            timestamp: Date.now(),
+            value: value
+        });
+        
+        // Halte Buffer klein (letzte 100 Werte = ca. 5-10 Minuten bei 5s Polling)
+        if (this.pressureBuffer.length > 100) {
+            this.pressureBuffer.shift();
+        }
+        
+        // Pr?fe auf Schwellwert-?berschreitung (potenzielle Anomalie)
+        if (value > threshold && !this.infrasoundLocked) {
+            this.infrasoundLocked = true;
+            this.log.warn(`?? Infraschall-Alarm: ${value.toFixed(4)} > ${threshold} (Threshold)`);
+            
+            // Trigger Korrelation mit letzten Events
+            await this.triggerInfrasoundCorrelation(value, 'threshold_exceeded');
+            
+            // Lock f?r 5 Minuten (Spam-Schutz)
+            setTimeout(() => {
+                this.infrasoundLocked = false;
+            }, 5 * 60 * 1000);
+        }
+    }
+    async triggerInfrasoundCorrelation(pressure, eventType) {
+        // Korreliert Infraschall-Anomalie mit letzten Events (forensische Analyse)
+        if (!this.isPresent) {
+            // Nur wenn niemand zuhause ist ? potenzielle Sicherheits-Anomalie!
+            const recentEvents = this.eventHistory.slice(0, 10);
+            const eventLog = recentEvents.map(e => 
+                `${new Date(e.timestamp).toLocaleTimeString('de-DE')} - ${e.location || 'Unknown'}: ${e.name}`
+            ).join('\n');
+            
+            this.log.warn(`?? FORENSIC: Infraschall bei Abwesenheit! Pressure: ${pressure.toFixed(4)}, Events:\n${eventLog}`);
+            
+            // Optional: Sende Benachrichtigung (nur bei Abwesenheit!)
+            if (this.config.infrasoundArmingId) {
+                try {
+                    const armState = await this.getForeignStateAsync(this.config.infrasoundArmingId);
+                    if (armState && armState.val === true) {
+                        // System ist "scharf" ? Alarm!
+                        await this.setStateAsync('analysis.safety.infrasoundAlert', {
+                            val: JSON.stringify({
+                                timestamp: Date.now(),
+                                pressure: pressure.toFixed(4),
+                                eventType: eventType,
+                                recentEvents: recentEvents.slice(0, 3)
+                            }),
+                            ack: true
+                        });
+                        
+                        this.log.error(`?? INFRASCHALL-ALARM: Anomalie bei Abwesenheit (scharf)!`);
+                    }
+                } catch(e) {}
+            }
+        } else {
+            // Bei Anwesenheit nur Debug-Log
+            this.log.debug(`?? Infraschall: ${pressure.toFixed(4)} (Bewohner anwesend - normal)`);
+        }
+    }
+    async analyzeWindowOpening(device) {
+        // Analysiert Fenster-/T?r?ffnungen f?r L?ftungsempfehlungen
+        if (!device || !device.location) return;
+
+        try {
+            // Hole aktuelle Raumtemperatur
+            const tempDevices = (this.config.devices || []).filter(d => 
+                d.location === device.location && (d.type === 'temperature' || d.type === 'thermostat')
+            );
+            
+            if (tempDevices.length === 0) return;
+            
+            const tempState = await this.getForeignStateAsync(tempDevices[0].id);
+            if (!tempState || typeof tempState.val !== 'number') return;
+            
+            const roomTemp = tempState.val;
+            
+            // Hole Au?entemperatur
+            let outsideTemp = null;
+            if (this.config.weatherTempId) {
+                const outState = await this.getForeignStateAsync(this.config.weatherTempId);
+                if (outState && typeof outState.val === 'number') {
+                    outsideTemp = outState.val;
+                }
+            }
+            
+            // Einfache L?ftungslogik: Wenn Au?entemperatur verf?gbar
+            if (outsideTemp !== null) {
+                const tempDiff = Math.abs(roomTemp - outsideTemp);
+                
+                // Empfehlung: L?ften wenn Temperatur-Differenz > 3?C
+                if (tempDiff > 3.0) {
+                    this.log.debug(`?? L?ftung in ${device.location}: Temp-Differenz ${tempDiff.toFixed(1)}?C (Innen: ${roomTemp}?C, Au?en: ${outsideTemp}?C)`);
+                    
+                    // Optional: State setzen f?r Benachrichtigungen
+                    await this.setStateAsync('analysis.ventilation.lastWindow', {
+                        val: JSON.stringify({
+                            room: device.location,
+                            timestamp: Date.now(),
+                            tempDiff: tempDiff.toFixed(1),
+                            recommendation: tempDiff > 5 ? 'Gute L?ftungsm?glichkeit!' : 'L?ften empfohlen'
+                        }),
+                        ack: true
+                    });
+                }
+            }
+        } catch(e) {
+            this.log.warn(`analyzeWindowOpening error: ${e.message}`);
+        }
+    }
+    async appendToLog(entry) {
+        // F?gt einen Eintrag zum Event-Log hinzu (f?r manuelle Events oder externe Systeme)
+        if (!entry || typeof entry !== 'object') return;
+        
+        const logEntry = {
+            timestamp: entry.timestamp || Date.now(),
+            id: entry.id || Date.now().toString(),
+            name: entry.name || 'Manual Event',
+            type: entry.type || 'custom',
+            location: entry.location || 'Unknown',
+            value: entry.value || null
+        };
+        
+        this.eventHistory.unshift(logEntry);
+        if (this.eventHistory.length > 5000) this.eventHistory.pop();
+        
+        // Persistiere Event History
+        await this.setStateAsync('events.history', { 
+            val: JSON.stringify(this.eventHistory), 
+            ack: true 
+        });
+        
+        this.log.debug(`?? Manual event logged: ${logEntry.name} (${logEntry.location})`);
+    }
+    sendNotification(message) { /* ... */ }
+}
+
+if (require.main !== module) module.exports = (options) => new CogniLiving(options);
+else new CogniLiving();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
