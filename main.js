@@ -578,6 +578,8 @@ class CogniLiving extends utils.Adapter {
     }
 
     async startSystem() {
+        // _historyDir fuer ai_agent.js (Morning Briefing) vorbelegen
+        this._historyDir = require('path').join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
         await setup.initZombies(this);
         try { this.isProVersion = await setup.checkLicense(this.config.licenseKey); } catch(e) {}
         if (!this.config.inactivityThresholdHours || this.config.inactivityThresholdHours < 0.1) this.config.inactivityThresholdHours = 12;
