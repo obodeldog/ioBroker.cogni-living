@@ -1,8 +1,18 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 21.04.2026 | **Version:** 0.33.187
+**Letzte Aktualisierung:** 21.04.2026 | **Version:** 0.33.188
 
 ---
 
+## ✅ Sitzung 21.04.2026 — Version 0.33.188
+
+### ✅ Abgeschlossen
+- **[Freeze-Fix] Sleep-Abend-Sperre fuer Multi-Person ohne Garmin/Vibration**: In `saveDailyHistory()` wird jetzt eine neue Freeze-Bedingung geprüft: wenn die bestehende JSON eine vollständige Nacht hat (sleepWindowStart + sleepWindowEnd vor 14:00, Mindestdauer 3h) UND die aktuelle Uhrzeit zwischen 18:00 und 22:00 liegt UND keine neuen Bett-Events (isFP2Bed / isVibrationBed / isBedroomMotion) in der neuen Nacht-Periode vorhanden sind -> Datei wird NICHT überschrieben. Behebt den Bug dass bei Multi-Person-Haushalten ohne Garmin/Vibration die tägliche JSON um 18:00 mit einer leeren Abend-Analyse überschrieben wurde -> "Bett war leer" für Heute und Vortag.
+- **[TESTING.md] Testbereiche 18-20 hinzugefügt**: OC-24 Sensor-Rauschen, OC-12 Gateway-Ausfall, OC-11 Gelernte Raumübergangszeiten, Sleep-Freeze Abend-Sperre — je 4-7 Testfälle mit ID, Erwartungswert, Prüfdatum-Spalte.
+
+### Nächster logischer Schritt
+- Nächste Nacht abwarten: um 19:00 Uhr sollte der Freeze-Log erscheinen, HealthTab zeigt korrekte Vorherige Nacht statt "Bett war leer"
+
+---
 ## ✅ Sitzung 21.04.2026 — Version 0.33.187
 
 ### ✅ Abgeschlossen

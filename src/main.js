@@ -1345,7 +1345,24 @@ class CogniLiving extends utils.Adapter {
                 new Date(_existingSnap.sleepWindowEnd).getHours() < 14 &&
                 (
                     (_existingSnap.sleepStages && _existingSnap.sleepStages.length > 0) ||
-                    _sleepFrozenMotionOnly
+                    _sleepFrozenMotionOnly ||
+                    // OC-12/Freeze-Fix: Abend-Sperre (18-22 Uhr) — vollstaendige Nacht vorhanden, noch keine neue Einschlafquelle
+                    // Verhindert dass die korrekte Nacht-JSON um 18:00 durch eine leere Abend-Analyse ueberschrieben wird
+                    // (trifft v.a. Multi-Person-Haushalte ohne Garmin/Vibration wo sleepStages+wakeConfirmed fehlen)
+                    (() => {
+                        const _eH = new Date().getHours();
+                        if (_eH < 18 || _eH >= 22) return false;
+                        const _hasComplete = !!((_existingSnap.sleepWindowEnd - _existingSnap.sleepWindowStart) >= 3 * 3600000);
+                        if (!_hasComplete) return false;
+                        // Gibt es bereits Bett-Events in der neuen Nacht-Periode?
+                        const _hasFreshBedEvt = (this.eventHistory || []).some(function(e) {
+                            return (e.timestamp || 0) >= (new Date().setHours(18,0,0,0)) &&
+                                   (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion);
+                        });
+                        if (_hasFreshBedEvt) return false; // neue Nacht hat begonnen
+                        this.log.debug('[Freeze] Abend-Sperre aktiv: vollstaendige Nacht gespeichert, keine neue Bett-Aktivitaet seit 18:00');
+                        return true;
+                    }).call(this)
                 ));
 
             // Schlaf-relevante Events: ab 18:00 Uhr des Vortages (Nacht spannt 2 Kalendertage!).
