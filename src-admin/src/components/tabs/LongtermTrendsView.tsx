@@ -30,7 +30,24 @@ interface DailyDataPoint {
     nightVibrationCount?: number | null;
     maxPersonsDetected?: number | null;
     nocturiaCount?: number | null;
-    personData?: Record<string, { nightActivityCount: number; wakeTimeMin: number | null; sleepOnsetMin: number | null; nocturiaAttr: number }>;
+    personData?: Record<string, {
+        // Phase 1 (immer verfuegbar)
+        nightActivityCount: number;
+        wakeTimeMin: number | null;
+        sleepOnsetMin: number | null;
+        nocturiaAttr: number;
+        // Phase 2 (seit v0.33.196+, erfordert computePersonSleep-Ergebnisse)
+        sleepWindowStart: number | null;
+        sleepWindowEnd: number | null;
+        sleepScore: number | null;
+        sleepScoreRaw: number | null;
+        sleepStages: Array<{t: number; s: string}> | null;
+        // Phase 2 (seit v0.33.197+, erfordert personenspezifische Sensor-Tags)
+        bedPresenceMinutes: number | null;
+        nightVibrationCount: number | null;
+        nightVibrationStrengthAvg: number | null;
+        nightVibrationStrengthMax: number | null;
+    }>;
     sleepWindowStart?: number | null;   // ms-Timestamp Schlafbeginn
     sleepWindowEnd?: number | null;     // ms-Timestamp Aufwachen
     nightVibrationStrengthAvg?: number | null;
@@ -1078,29 +1095,41 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
 
                     {/* ═══ OC-7 SCHLAF-SCORE & PHASEN ═══ */}
                     {(() => {
-                        const hasSleepScoreData = dailyDataRaw.some((d: any) => d.sleepScore != null);
-                        const hasSleepStageData = dailyDataRaw.some((d: any) => d.sleepStages != null);
-                        if (!hasSleepScoreData && !hasSleepStageData) return null;
+                        const hasSleepScoreData  = dailyDataRaw.some((d: any) => d.sleepScore != null);
+                        const hasSleepStageData  = dailyDataRaw.some((d: any) => d.sleepStages != null);
+                        const hasPersonSleepScore  = isMultiPerson && personNames.some(p => dailyDataRaw.some((d: any) => d.personData?.[p]?.sleepScore != null));
+                        const hasPersonSleepStages = isMultiPerson && personNames.some(p => dailyDataRaw.some((d: any) => d.personData?.[p]?.sleepStages != null));
+                        if (!hasSleepScoreData && !hasSleepStageData && !hasPersonSleepScore && !hasPersonSleepStages) return null;
 
-                        const sorted = [...dailyDataRaw].sort((a: any, b: any) => a.date.localeCompare(b.date));
-                        const sleepChartData = sorted.map((d: any) => {
-                            const stages = d.sleepStages as Array<{t: number, s: string}> | null;
-                            let deep: number | null = null, light: number | null = null, rem: number | null = null, wake: number | null = null;
-                            if (stages && stages.length > 0) {
-                                const total = stages.length;
-                                deep  = Math.round(stages.filter((s: any) => s.s === 'deep').length  / total * 100);
-                                light = Math.round(stages.filter((s: any) => s.s === 'light').length / total * 100);
-                                rem   = Math.round(stages.filter((s: any) => s.s === 'rem').length   / total * 100);
-                                wake  = Math.round(stages.filter((s: any) => s.s === 'wake').length  / total * 100);
-                            }
-                            return {
-                                date: d.date ? d.date.substring(5) : '',
-                                score: d.sleepScore != null ? Number(d.sleepScore) : null,
-                                garminScore: d.garminScore != null ? Number(d.garminScore) : null,
-                                deep, light, rem, wake,
-                                hasStages: stages != null,
-                            };
-                        }).filter((d: any) => d.date);
+                        // ============================================================
+                        // GLOBALE HILFSFUNKTION: Baut Score+Phasen-Daten.
+                        // person = undefined → aggregierte Felder (Einpersonenhaushalt).
+                        // person = 'Ingrid'  → personData['Ingrid'] (Mehrpersonenhaushalt).
+                        // ============================================================
+                        const buildSleepChartData = (person?: string) => {
+                            const sorted = [...dailyDataRaw].sort((a: any, b: any) => a.date.localeCompare(b.date));
+                            return sorted.map((d: any) => {
+                                const scoreVal = person != null ? (d.personData?.[person]?.sleepScore ?? null) : (d.sleepScore ?? null);
+                                const stagesVal: Array<{t: number; s: string}> | null = person != null
+                                    ? (d.personData?.[person]?.sleepStages ?? null)
+                                    : (d.sleepStages ?? null);
+                                let deep: number | null = null, light: number | null = null, rem: number | null = null, wake: number | null = null;
+                                if (stagesVal && stagesVal.length > 0) {
+                                    const total = stagesVal.length;
+                                    deep  = Math.round(stagesVal.filter((s: any) => s.s === 'deep').length  / total * 100);
+                                    light = Math.round(stagesVal.filter((s: any) => s.s === 'light').length / total * 100);
+                                    rem   = Math.round(stagesVal.filter((s: any) => s.s === 'rem').length   / total * 100);
+                                    wake  = Math.round(stagesVal.filter((s: any) => s.s === 'wake').length  / total * 100);
+                                }
+                                return {
+                                    date: d.date ? d.date.substring(5) : '',
+                                    score: scoreVal != null ? Number(scoreVal) : null,
+                                    garminScore: d.garminScore != null ? Number(d.garminScore) : null,
+                                    deep, light, rem, wake,
+                                    hasStages: stagesVal != null && stagesVal.length > 0,
+                                };
+                            }).filter((d: any) => d.date);
+                        };
 
                         const scoreColor = (s: number | null) => {
                             if (s == null) return isDark ? '#444' : '#ccc';
@@ -1108,11 +1137,97 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             if (s >= 60) return '#fd7e14';
                             return '#dc3545';
                         };
-                        const avgScores = sleepChartData.filter((d: any) => d.score != null).map((d: any) => d.score as number);
-                        const avgScore = avgScores.length > 0 ? Math.round(avgScores.reduce((a, b) => a + b, 0) / avgScores.length) : null;
-                        const stageNights = sleepChartData.filter((d: any) => d.hasStages);
-                        const avgDeep = stageNights.length > 0 ? Math.round(stageNights.reduce((s: number, d: any) => s + (d.deep || 0), 0) / stageNights.length) : null;
-                        const avgRem  = stageNights.length > 0 ? Math.round(stageNights.reduce((s: number, d: any) => s + (d.rem  || 0), 0) / stageNights.length) : null;
+
+                        // Render-Helfer Score (Ein- und Mehrpersonenhaushalt nutzen dieselbe Funktion)
+                        const renderSleepScore = (person?: string) => {
+                            const data = buildSleepChartData(person);
+                            if (!data.some((d: any) => d.score != null)) return null;
+                            const vals = data.filter((d: any) => d.score != null).map((d: any) => d.score as number);
+                            const avg = vals.length > 0 ? Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length) : null;
+                            const lbl = person ? ` · ${person}` : '';
+                            return (
+                                <Grid item xs={12} md={6} key={'score-' + (person || 'agg')}>
+                                    <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#1565c0' }}>AURA-SLEEPSCORE{lbl}</Typography>
+                                            <ChartHelp text={"Tagesbalken = AURA-Sleepscore der Nacht (0–100). Grün ≥80, Orange 60–79, Rot <60. Lila Linie = Garmin-Vergleichsscore (falls konfiguriert)."} />
+                                        </Box>
+                                        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
+                                            {avg != null ? `Ø ${avg} · ${vals.length} Nächte mit Daten` : 'Noch keine Schlaf-Score-Daten'}
+                                        </Typography>
+                                        <ResponsiveContainer width="100%" height={180}>
+                                            <ComposedChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor(data.length / 7)} />
+                                                <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} domain={[0, 100]} />
+                                                <Tooltip formatter={(v: any, name: string) => [v, name === 'score' ? 'AURA-Score' : 'Garmin-Score']}
+                                                    contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}`, fontSize: '0.7rem' }} />
+                                                <ReferenceArea y1={0}  y2={60}  fill="rgba(220,53,69,0.08)" />
+                                                <ReferenceArea y1={60} y2={80}  fill="rgba(253,126,20,0.08)" />
+                                                <ReferenceArea y1={80} y2={100} fill="rgba(40,167,69,0.08)" />
+                                                <ReferenceLine y={80} stroke="#28a74555" strokeDasharray="4 3" label={{ value: '80', position: 'insideRight', fontSize: 9, fill: '#28a745' }} />
+                                                <Bar dataKey="score" name="score" radius={[3,3,0,0]} maxBarSize={30}>
+                                                    {data.map((entry: any, i: number) => <Cell key={i} fill={scoreColor(entry.score)} opacity={0.85} />)}
+                                                </Bar>
+                                                <Line type="monotone" dataKey="garminScore" stroke="#ab47bc" strokeWidth={1.5} dot={{ r: 3, fill: '#ab47bc' }} name="garminScore" connectNulls />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                        <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                                            <span style={{color:'#dc3545'}}>■ &lt;60</span><span style={{color:'#fd7e14'}}>■ 60–79</span>
+                                            <span style={{color:'#28a745'}}>■ ≥80</span><span style={{color:'#ab47bc'}}>◆ Garmin</span>
+                                        </Box>
+                                    </Paper>
+                                </Grid>
+                            );
+                        };
+
+                        // Render-Helfer Phasen (Ein- und Mehrpersonenhaushalt nutzen dieselbe Funktion)
+                        const renderSleepStages = (person?: string) => {
+                            const data = buildSleepChartData(person);
+                            const stageNights = data.filter((d: any) => d.hasStages);
+                            if (stageNights.length === 0) return null;
+                            const avgDeep = Math.round(stageNights.reduce((s: number, d: any) => s + (d.deep || 0), 0) / stageNights.length);
+                            const avgRem  = Math.round(stageNights.reduce((s: number, d: any) => s + (d.rem  || 0), 0) / stageNights.length);
+                            const lbl = person ? ` · ${person}` : '';
+                            return (
+                                <Grid item xs={12} md={6} key={'stages-' + (person || 'agg')}>
+                                    <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#1565c0' }}>SCHLAFPHASEN-ANTEILE{lbl}</Typography>
+                                            <ChartHelp text={"Gestapelte Balken: prozentualer Anteil von Tiefschlaf (dunkelblau), Leichtschlaf (hellblau), REM (lila) und Wachliegen (gelb) pro Nacht. Gestrichelte Linie = AURA-Score (rechte Achse). Optimalwerte: Tiefschlaf 15–25%, REM 20–25% (Walker 2017)."} />
+                                        </Box>
+                                        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
+                                            Ø Tief: {avgDeep}% · Ø REM: {avgRem}% · {stageNights.length} Nächte
+                                        </Typography>
+                                        <ResponsiveContainer width="100%" height={180}>
+                                            <ComposedChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor(data.length / 7)} />
+                                                <YAxis yAxisId="pct" stroke={lineColor} style={{ fontSize: '0.6rem' }} domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
+                                                <YAxis yAxisId="score" orientation="right" stroke="#1565c055" style={{ fontSize: '0.6rem' }} domain={[0, 100]} tickFormatter={(v: number) => `${v}`} />
+                                                <Tooltip formatter={(v: any, name: string) => {
+                                                    const lbs: Record<string, string> = { deep: 'Tiefschlaf', light: 'Leichtschlaf', rem: 'REM', wake: 'Wachliegen', score: 'AURA-Score' };
+                                                    return [name === 'score' ? String(v) : `${v}%`, lbs[name] || name];
+                                                }} contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}`, fontSize: '0.7rem' }} />
+                                                <Bar yAxisId="pct" dataKey="deep"  name="deep"  stackId="ph" fill="#1565c0" opacity={0.85} />
+                                                <Bar yAxisId="pct" dataKey="light" name="light" stackId="ph" fill="#42a5f5" opacity={0.85} />
+                                                <Bar yAxisId="pct" dataKey="rem"   name="rem"   stackId="ph" fill="#ab47bc" opacity={0.85} />
+                                                <Bar yAxisId="pct" dataKey="wake"  name="wake"  stackId="ph" fill="#ffd54f" opacity={0.85} radius={[3,3,0,0]} />
+                                                <Line yAxisId="score" type="monotone" dataKey="score" stroke="#1565c0" strokeWidth={2} dot={{ r: 2 }} name="score" connectNulls strokeDasharray="5 3" />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                        <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                                            <span style={{color:'#1565c0'}}>■ Tief</span><span style={{color:'#42a5f5'}}>■ Leicht</span>
+                                            <span style={{color:'#ab47bc'}}>■ REM</span><span style={{color:'#ffd54f'}}>■ Wachliegen</span>
+                                            <span style={{color:'#1565c0', opacity:0.7}}>--- Score</span>
+                                        </Box>
+                                    </Paper>
+                                </Grid>
+                            );
+                        };
+
+                        // Einpersonenhaushalt: Aggregat-Charts | Mehrpersonenhaushalt: pro Person
+                        const renderPersons: Array<string | undefined> = isMultiPerson ? personNames : [undefined];
 
                         return (
                             <Box sx={{ mt: 3, borderLeft: '4px solid #1565c0', borderRadius: '0 8px 8px 0', bgcolor: isDark ? 'rgba(21,101,192,0.05)' : 'rgba(21,101,192,0.03)', pl: 2, pr: 0.5, pt: 2, pb: 1 }}>
@@ -1123,92 +1238,12 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     <ChartHelp text={"AURA-Sleepscore: Tief×200 + REM×150 + Leicht×80 − Wach×250 (max. 100). Balkenfarbe: Grün ≥80 (gut), Orange 60–79 (mittel), Rot <60 (schlecht). Lila Linie = Garmin-Score zum Vergleich. Gestapelte Phasen-Balken zeigen Anteile von Tiefschlaf, Leichtschlaf, REM und Wachliegen pro Nacht."} />
                                 </Box>
                                 <Grid container spacing={2}>
-                                    {/* Option A: Score-Übersicht */}
-                                    {hasSleepScoreData && (
-                                        <Grid item xs={12} md={6}>
-                                            <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#1565c0' }}>
-                                                        AURA-SLEEPSCORE
-                                                    </Typography>
-                                                    <ChartHelp text={"Tagesbalken = AURA-Sleepscore der Nacht (0–100). Grün ≥80, Orange 60–79, Rot <60. Lila Linie = Garmin-Vergleichsscore (falls konfiguriert)."} />
-                                                </Box>
-                                                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
-                                                    {avgScore != null ? `Ø ${avgScore} · ${avgScores.length} Nächte mit Daten` : 'Noch keine Schlaf-Score-Daten'}
-                                                </Typography>
-                                                <ResponsiveContainer width="100%" height={180}>
-                                                    <ComposedChart data={sleepChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor(sleepChartData.length / 7)} />
-                                                        <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} domain={[0, 100]} />
-                                                        <Tooltip
-                                                            formatter={(v: any, name: string) => [v, name === 'score' ? 'AURA-Score' : 'Garmin-Score']}
-                                                            contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}`, fontSize: '0.7rem' }}
-                                                        />
-                                                        <ReferenceArea y1={0}  y2={60}  fill="rgba(220,53,69,0.08)" />
-                                                        <ReferenceArea y1={60} y2={80}  fill="rgba(253,126,20,0.08)" />
-                                                        <ReferenceArea y1={80} y2={100} fill="rgba(40,167,69,0.08)" />
-                                                        <ReferenceLine y={80} stroke="#28a74555" strokeDasharray="4 3" label={{ value: '80', position: 'insideRight', fontSize: 9, fill: '#28a745' }} />
-                                                        <Bar dataKey="score" name="score" radius={[3,3,0,0]} maxBarSize={30}>
-                                                            {sleepChartData.map((entry: any, i: number) => (
-                                                                <Cell key={i} fill={scoreColor(entry.score)} opacity={0.85} />
-                                                            ))}
-                                                        </Bar>
-                                                        <Line type="monotone" dataKey="garminScore" stroke="#ab47bc" strokeWidth={1.5} dot={{ r: 3, fill: '#ab47bc' }} name="garminScore" connectNulls />
-                                                    </ComposedChart>
-                                                </ResponsiveContainer>
-                                                <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-                                                    <span style={{color:'#dc3545'}}>■ &lt;60</span>
-                                                    <span style={{color:'#fd7e14'}}>■ 60–79</span>
-                                                    <span style={{color:'#28a745'}}>■ ≥80</span>
-                                                    <span style={{color:'#ab47bc'}}>◆ Garmin</span>
-                                                </Box>
-                                            </Paper>
-                                        </Grid>
-                                    )}
-                                    {/* Option B: Phasen-Anteile */}
-                                    {hasSleepStageData && (
-                                        <Grid item xs={12} md={6}>
-                                            <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#1565c0' }}>
-                                                        SCHLAFPHASEN-ANTEILE
-                                                    </Typography>
-                                                    <ChartHelp text={"Gestapelte Balken: prozentualer Anteil von Tiefschlaf (dunkelblau), Leichtschlaf (hellblau), REM (lila) und Wachliegen (gelb) pro Nacht. Gestrichelte Linie = AURA-Score (rechte Achse). Optimalwerte: Tiefschlaf 15–25%, REM 20–25% (Walker 2017)."} />
-                                                </Box>
-                                                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
-                                                    {avgDeep != null ? `Ø Tief: ${avgDeep}% · Ø REM: ${avgRem}% · ${stageNights.length} Nächte` : 'Noch keine Phasen-Daten'}
-                                                </Typography>
-                                                <ResponsiveContainer width="100%" height={180}>
-                                                    <ComposedChart data={sleepChartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor(sleepChartData.length / 7)} />
-                                                        <YAxis yAxisId="pct" stroke={lineColor} style={{ fontSize: '0.6rem' }} domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
-                                                        <YAxis yAxisId="score" orientation="right" stroke="#1565c055" style={{ fontSize: '0.6rem' }} domain={[0, 100]} tickFormatter={(v: number) => `${v}`} />
-                                                        <Tooltip
-                                                            formatter={(v: any, name: string) => {
-                                                                const labels: Record<string, string> = { deep: 'Tiefschlaf', light: 'Leichtschlaf', rem: 'REM', wake: 'Wachliegen', score: 'AURA-Score' };
-                                                                return [name === 'score' ? String(v) : `${v}%`, labels[name] || name];
-                                                            }}
-                                                            contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}`, fontSize: '0.7rem' }}
-                                                        />
-                                                        <Bar yAxisId="pct" dataKey="deep"  name="deep"  stackId="ph" fill="#1565c0" opacity={0.85} />
-                                                        <Bar yAxisId="pct" dataKey="light" name="light" stackId="ph" fill="#42a5f5" opacity={0.85} />
-                                                        <Bar yAxisId="pct" dataKey="rem"   name="rem"   stackId="ph" fill="#ab47bc" opacity={0.85} />
-                                                        <Bar yAxisId="pct" dataKey="wake"  name="wake"  stackId="ph" fill="#ffd54f" opacity={0.85} radius={[3,3,0,0]} />
-                                                        <Line yAxisId="score" type="monotone" dataKey="score" stroke="#1565c0" strokeWidth={2} dot={{ r: 2 }} name="score" connectNulls strokeDasharray="5 3" />
-                                                    </ComposedChart>
-                                                </ResponsiveContainer>
-                                                <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-                                                    <span style={{color:'#1565c0'}}>■ Tief</span>
-                                                    <span style={{color:'#42a5f5'}}>■ Leicht</span>
-                                                    <span style={{color:'#ab47bc'}}>■ REM</span>
-                                                    <span style={{color:'#ffd54f'}}>■ Wachliegen</span>
-                                                    <span style={{color:'#1565c0', opacity:0.7}}>--- Score</span>
-                                                </Box>
-                                            </Paper>
-                                        </Grid>
-                                    )}
+                                    {renderPersons.map(person => (
+                                        <React.Fragment key={person || 'agg'}>
+                                            {renderSleepScore(person)}
+                                            {renderSleepStages(person)}
+                                        </React.Fragment>
+                                    ))}
                                 </Grid>
                             </Box>
                         );
@@ -1217,13 +1252,17 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                     {/* SCHLAF & SENSORIK Gruppe */}
                     {(() => {
                         // Pruefe ob Schlaf-Daten vorhanden sind (erst ab v0.33.3)
-                        const hasBedData = dailyDataRaw.some((d: any) => d.bedPresenceMinutes != null);
-                        const hasVibData = dailyDataRaw.some((d: any) => d.nightVibrationCount != null);
+                        const hasBedData    = dailyDataRaw.some((d: any) => d.bedPresenceMinutes != null);
+                        const hasVibData    = dailyDataRaw.some((d: any) => d.nightVibrationCount != null);
                         const hasVibStrData = dailyDataRaw.some((d: any) => d.nightVibrationStrengthAvg != null);
-                        const hasSleepWindow = dailyDataRaw.some((d: any) => d.sleepWindowStart != null);
-                        const hasPersonData = dailyDataRaw.some((d: any) => d.maxPersonsDetected != null);
+                        const hasSleepWindow  = dailyDataRaw.some((d: any) => d.sleepWindowStart != null);
+                        const hasPersonData   = dailyDataRaw.some((d: any) => d.maxPersonsDetected != null);
                         const hasNocturiaData = dailyDataRaw.some((d: any) => d.nocturiaCount != null);
-                        if (!hasBedData && !hasVibData && !hasPersonData) return null;
+                        // Per-Person-Daten (seit v0.33.197, nur wenn Sensoren personTag tragen)
+                        const hasPersonBedData    = isMultiPerson && personNames.some(p => dailyDataRaw.some((d: any) => d.personData?.[p]?.bedPresenceMinutes != null));
+                        const hasPersonVibData    = isMultiPerson && personNames.some(p => dailyDataRaw.some((d: any) => d.personData?.[p]?.nightVibrationCount != null));
+                        const hasPersonVibStrData = isMultiPerson && personNames.some(p => dailyDataRaw.some((d: any) => d.personData?.[p]?.nightVibrationStrengthAvg != null));
+                        if (!hasBedData && !hasVibData && !hasPersonData && !hasPersonBedData && !hasPersonVibData) return null;
 
                         // Hilfsfunktion: Moving Average direkt aus dailyDataRaw
                         const makeRawMiniData = (field: string) => {
@@ -1268,105 +1307,114 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
 
                                 <Grid container spacing={2} sx={{ mt: 0 }}>
                                     {/* BETT-PRAESENZ */}
-                                    {hasBedData && (() => {
-                                        const data = makeRawMiniData('bedPresenceMinutes').map((d: any) => ({
-                                            ...d,
-                                            hours: d.value != null ? Math.round((d.value / 60) * 10) / 10 : null,
-                                            movingAvgH: d.movingAvg != null ? Math.round((d.movingAvg / 60) * 10) / 10 : null,
-                                        }));
-                                        const avgH = data.filter((d: any) => d.hours != null).map((d: any) => d.hours);
-                                        const meanH = avgH.length > 0 ? Math.round(avgH.reduce((a: number, b: number) => a + b, 0) / avgH.length * 10) / 10 : 0;
-                                        return (
-                                            <Grid item xs={12} md={6} lg={4}>
-                                                <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#7b1fa2' }}>
-                                                            BETT-PRÄSENZ
+                                    {/* BETT-PRÄSENZ: Einpersonenhaushalt = Aggregat, Mehrpersonenhaushalt = pro Person (wenn Sensor personTag traegt) */}
+                                    {(hasBedData || hasPersonBedData) && (() => {
+                                        // Render-Helfer: Baut Bett-Präsenz-Chart fuer eine Person oder Aggregat
+                                        const renderBedPresence = (person?: string) => {
+                                            const raw = person != null
+                                                ? buildPersonSeriesData('bedPresenceMinutes' as any, 'bedPresenceMinutes', person)
+                                                : makeRawMiniData('bedPresenceMinutes');
+                                            if (!raw.some((d: any) => d.value != null)) return null;
+                                            const data = raw.map((d: any) => ({
+                                                ...d,
+                                                hours: d.value != null ? Math.round((d.value / 60) * 10) / 10 : null,
+                                                movingAvgH: d.movingAvg != null ? Math.round((d.movingAvg / 60) * 10) / 10 : null,
+                                            }));
+                                            const avgH = data.filter((d: any) => d.hours != null).map((d: any) => d.hours as number);
+                                            const meanH = avgH.length > 0 ? Math.round(avgH.reduce((a: number, b: number) => a + b, 0) / avgH.length * 10) / 10 : 0;
+                                            const lbl = person ? ` · ${person}` : '';
+                                            return (
+                                                <Grid item xs={12} md={6} lg={4} key={'bed-' + (person || 'agg')}>
+                                                    <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                            <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#7b1fa2' }}>
+                                                                BETT-PRÄSENZ{lbl}
+                                                            </Typography>
+                                                            <ChartHelp text={"Zeigt wie viele Stunden pro Nacht die Bett-Zone des FP2 belegt war. Grün = 6–9h (optimal), Gelb = 4–6h (wenig), Rot = unter 4h oder über 10h (auffällig). Nur wenn FP2 mit Funktion 'Bett/Schlafzimmer' konfiguriert ist."} />
+                                                        </Box>
+                                                        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                                                            Ø {meanH}h/Nacht · 0–24 Uhr
                                                         </Typography>
-                                                        <ChartHelp text={"Zeigt wie viele Stunden pro Nacht die Bett-Zone des FP2 belegt war. Grün = 6–9h (optimal), Gelb = 4–6h (wenig), Rot = unter 4h oder über 10h (auffällig). Nur wenn FP2 mit Funktion 'Bett/Schlafzimmer' konfiguriert ist."} />
-                                                    </Box>
-                                                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                                                        Ø {meanH}h/Nacht · 0–24 Uhr
-                                                    </Typography>
-                                                    <ResponsiveContainer width="100%" height={150}>
-                                                        <ComposedChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                                                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                                                            <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
-                                                                interval={Math.floor(data.length / 6)} />
-                                                            <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }}
-                                                                tickFormatter={(v: number) => `${v}h`} domain={[0, 12]} />
-                                                            <Tooltip
-                                                                formatter={(v: any, name: string) => [
-                                                                    name === 'hours' ? `${v}h` : `Ø ${v}h`,
-                                                                    name === 'hours' ? 'Bettzeit' : '7-Tage-Ø'
-                                                                ]}
-                                                                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#444' : '#ddd'}`, fontSize: '0.7rem' }}
-                                                            />
-                                                            {/* Zonen: rot <4, gelb 4-6, gruen 6-9, blau >10 */}
-                                                            <ReferenceArea y1={0} y2={4}  fill="rgba(220,53,69,0.12)" />
-                                                            <ReferenceArea y1={4} y2={6}  fill="rgba(253,126,20,0.12)" />
-                                                            <ReferenceArea y1={6} y2={9}  fill="rgba(40,167,69,0.12)" />
-                                                            <ReferenceArea y1={9} y2={12} fill="rgba(253,126,20,0.08)" />
-                                                            <ReferenceLine y={7} stroke="#7b1fa255" strokeDasharray="4 3" />
-                                                            <Bar dataKey="hours" name="hours" radius={[2,2,0,0]}>
-                                                                {data.map((entry: any, i: number) => {
-                                                                    const h = entry.hours;
-                                                                    const col = h == null ? '#555' : h < 4 ? '#dc3545' : h < 6 ? '#fd7e14' : h <= 9 ? '#28a745' : '#fd7e14';
-                                                                    return <Cell key={i} fill={col} opacity={0.8} />;
-                                                                })}
-                                                            </Bar>
-                                                            <Line type="monotone" dataKey="movingAvgH" stroke="#7b1fa2" strokeWidth={2}
-                                                                dot={false} name="movingAvgH" connectNulls />
-                                                        </ComposedChart>
-                                                    </ResponsiveContainer>
-                                                    <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                                        <span style={{color:'#dc3545'}}>■ &lt;4h</span>
-                                                        <span style={{color:'#fd7e14'}}>■ 4–6h</span>
-                                                        <span style={{color:'#28a745'}}>■ 6–9h (optimal)</span>
-                                                    </Box>
-                                                </Paper>
-                                            </Grid>
-                                        );
+                                                        <ResponsiveContainer width="100%" height={150}>
+                                                            <ComposedChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                                                                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                                <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor(data.length / 6)} />
+                                                                <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} tickFormatter={(v: number) => `${v}h`} domain={[0, 12]} />
+                                                                <Tooltip
+                                                                    formatter={(v: any, name: string) => [name === 'hours' ? `${v}h` : `Ø ${v}h`, name === 'hours' ? 'Bettzeit' : '7-Tage-Ø']}
+                                                                    contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#444' : '#ddd'}`, fontSize: '0.7rem' }}
+                                                                />
+                                                                <ReferenceArea y1={0} y2={4}  fill="rgba(220,53,69,0.12)" />
+                                                                <ReferenceArea y1={4} y2={6}  fill="rgba(253,126,20,0.12)" />
+                                                                <ReferenceArea y1={6} y2={9}  fill="rgba(40,167,69,0.12)" />
+                                                                <ReferenceArea y1={9} y2={12} fill="rgba(253,126,20,0.08)" />
+                                                                <ReferenceLine y={7} stroke="#7b1fa255" strokeDasharray="4 3" />
+                                                                <Bar dataKey="hours" name="hours" radius={[2,2,0,0]}>
+                                                                    {data.map((entry: any, i: number) => {
+                                                                        const h = entry.hours;
+                                                                        const col = h == null ? '#555' : h < 4 ? '#dc3545' : h < 6 ? '#fd7e14' : h <= 9 ? '#28a745' : '#fd7e14';
+                                                                        return <Cell key={i} fill={col} opacity={0.8} />;
+                                                                    })}
+                                                                </Bar>
+                                                                <Line type="monotone" dataKey="movingAvgH" stroke="#7b1fa2" strokeWidth={2} dot={false} name="movingAvgH" connectNulls />
+                                                            </ComposedChart>
+                                                        </ResponsiveContainer>
+                                                        <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                                            <span style={{color:'#dc3545'}}>■ &lt;4h</span>
+                                                            <span style={{color:'#fd7e14'}}>■ 4–6h</span>
+                                                            <span style={{color:'#28a745'}}>■ 6–9h (optimal)</span>
+                                                        </Box>
+                                                    </Paper>
+                                                </Grid>
+                                            );
+                                        };
+                                        // Einpersonenhaushalt / keine personenspezifischen FP2-Daten: Aggregat
+                                        // Mehrpersonenhaushalt mit personenspezifischen Daten: pro Person
+                                        const bedPersons: Array<string | undefined> = (isMultiPerson && hasPersonBedData) ? personNames : [undefined];
+                                        return <>{bedPersons.map(p => renderBedPresence(p))}</>;
                                     })()}
 
-                                    {/* NACHT-VIBRATION */}
-                                    {hasVibData && (() => {
-                                        const data = makeRawMiniData('nightVibrationCount');
-                                        const avgVib = data.filter((d: any) => d.value != null).map((d: any) => d.value as number);
-                                        const meanVib = avgVib.length > 0 ? Math.round(avgVib.reduce((a, b) => a + b, 0) / avgVib.length) : 0;
-                                        return (
-                                            <Grid item xs={12} md={6} lg={4}>
-                                                <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#e91e63' }}>
-                                                            SCHLAF-UNRUHE (VIBRATION)
+                                    {/* SCHLAF-UNRUHE (VIBRATION): Einpersonenhaushalt = Aggregat, Mehrpersonenhaushalt = pro Person */}
+                                    {(hasVibData || hasPersonVibData) && (() => {
+                                        const renderVibration = (person?: string) => {
+                                            const data = person != null
+                                                ? buildPersonSeriesData('nightVibrationCount' as any, 'nightVibrationCount', person)
+                                                : makeRawMiniData('nightVibrationCount');
+                                            if (!data.some((d: any) => d.value != null)) return null;
+                                            const avgVib = data.filter((d: any) => d.value != null).map((d: any) => d.value as number);
+                                            const meanVib = avgVib.length > 0 ? Math.round(avgVib.reduce((a: number, b: number) => a + b, 0) / avgVib.length) : 0;
+                                            const lbl = person ? ` · ${person}` : '';
+                                            return (
+                                                <Grid item xs={12} md={6} lg={4} key={'vib-' + (person || 'agg')}>
+                                                    <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                            <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#e91e63' }}>
+                                                                SCHLAF-UNRUHE (VIBRATION){lbl}
+                                                            </Typography>
+                                                            <ChartHelp text={"Zählt Vibrationsimpulse am Bett zwischen 22:00 und 06:00 Uhr. Viele Impulse deuten auf unruhigen Schlaf hin. Relevant für: Schlafstörungen, Parkinson-Tremor (nächtlich), REM-Schlafstörung. Nur wenn Vibrationssensor mit Funktion 'Bett/Schlafzimmer' konfiguriert ist."} />
+                                                        </Box>
+                                                        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                                                            Ø {meanVib} Impulse/Nacht · 22–06 Uhr
                                                         </Typography>
-                                                        <ChartHelp text={"Zählt Vibrationsimpulse am Bett zwischen 22:00 und 06:00 Uhr. Viele Impulse deuten auf unruhigen Schlaf hin. Relevant für: Schlafstörungen, Parkinson-Tremor (nächtlich), REM-Schlafstörung. Nur wenn Vibrationssensor mit Funktion 'Bett/Schlafzimmer' konfiguriert ist."} />
-                                                    </Box>
-                                                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                                                        Ø {meanVib} Impulse/Nacht · 22–06 Uhr
-                                                    </Typography>
-                                                    <ResponsiveContainer width="100%" height={150}>
-                                                        <ComposedChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                                                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                                                            <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
-                                                                interval={Math.floor(data.length / 6)} />
-                                                            <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} />
-                                                            <Tooltip
-                                                                formatter={(v: any, name: string) => [
-                                                                    name === 'value' ? `${v} Impulse` : `Ø ${v}`,
-                                                                    name === 'value' ? 'Nacht-Vibration' : '7-Tage-Ø'
-                                                                ]}
-                                                                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#444' : '#ddd'}`, fontSize: '0.7rem' }}
-                                                            />
-                                                            <Bar dataKey="value" name="value" fill="#e91e63" opacity={0.75} radius={[2,2,0,0]} />
-                                                            <Line type="monotone" dataKey="movingAvg" stroke="#880e4f" strokeWidth={2}
-                                                                dot={false} name="movingAvg" connectNulls />
-                                                        </ComposedChart>
-                                                    </ResponsiveContainer>
-                                                </Paper>
-                                            </Grid>
-                                        );
+                                                        <ResponsiveContainer width="100%" height={150}>
+                                                            <ComposedChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                                                                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                                <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor(data.length / 6)} />
+                                                                <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} />
+                                                                <Tooltip
+                                                                    formatter={(v: any, name: string) => [name === 'value' ? `${v} Impulse` : `Ø ${v}`, name === 'value' ? 'Nacht-Vibration' : '7-Tage-Ø']}
+                                                                    contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#444' : '#ddd'}`, fontSize: '0.7rem' }}
+                                                                />
+                                                                <Bar dataKey="value" name="value" fill="#e91e63" opacity={0.75} radius={[2,2,0,0]} />
+                                                                <Line type="monotone" dataKey="movingAvg" stroke="#880e4f" strokeWidth={2} dot={false} name="movingAvg" connectNulls />
+                                                            </ComposedChart>
+                                                        </ResponsiveContainer>
+                                                    </Paper>
+                                                </Grid>
+                                            );
+                                        };
+                                        const vibPersons: Array<string | undefined> = (isMultiPerson && hasPersonVibData) ? personNames : [undefined];
+                                        return <>{vibPersons.map(p => renderVibration(p))}</>;
                                     })()}
 
                                     {/* PERSONENBELEGUNG */}
@@ -1579,74 +1627,77 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     })()}
 
 
-                                    {/* VIBRATIONS-INTENSITÄT */}
-                                    {hasVibStrData && (() => {
-                                        const sorted = [...dailyDataRaw].sort((a: any, b: any) => a.date.localeCompare(b.date));
-                                        const data = sorted.map((d: any, i: number) => {
-                                            const vals = sorted.slice(Math.max(0, i-6), i+1)
-                                                .filter((x: any) => x.nightVibrationStrengthAvg != null)
-                                                .map((x: any) => Number(x.nightVibrationStrengthAvg));
-                                            const avg = vals.length > 0 ? Math.round(vals.reduce((a: number,b: number) => a+b,0) / vals.length) : null;
-                                            return {
-                                                date: d.date ? d.date.substring(5) : '',
-                                                avg: d.nightVibrationStrengthAvg != null ? Number(d.nightVibrationStrengthAvg) : null,
-                                                max: d.nightVibrationStrengthMax != null ? Number(d.nightVibrationStrengthMax) : null,
-                                                movingAvg: avg,
-                                            };
-                                        }).filter((d: any) => d.date);
-                                        const avgVals = data.filter((d: any) => d.avg != null).map((d: any) => d.avg as number);
-                                        const maxVals = data.filter((d: any) => d.max != null).map((d: any) => d.max as number);
-                                        const meanAvg = avgVals.length > 0 ? Math.round(avgVals.reduce((a: number,b: number) => a+b,0) / avgVals.length) : 0;
-                                        // Dynamische Y-Achse: max der Daten + 20% Puffer, mindestens 30, aufgerundet auf 10er
-                                        const rawMax = maxVals.length > 0 ? Math.max(...maxVals) : (avgVals.length > 0 ? Math.max(...avgVals) : 30);
-                                        const vibYMax = Math.max(30, Math.ceil(rawMax * 1.2 / 10) * 10);
-                                        return (
-                                            <Grid item xs={12} md={6} lg={4}>
-                                                <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#e65100' }}>
-                                                            VIBRATIONS-INTENSITÄT
+                                    {/* VIBRATIONS-INTENSITÄT: Einpersonenhaushalt = Aggregat, Mehrpersonenhaushalt = pro Person */}
+                                    {(hasVibStrData || hasPersonVibStrData) && (() => {
+                                        const renderVibStrength = (person?: string) => {
+                                            const sortedLocal = [...dailyDataRaw].sort((a: any, b: any) => a.date.localeCompare(b.date));
+                                            const data = sortedLocal.map((d: any, i: number) => {
+                                                const avgField = person != null ? d.personData?.[person]?.nightVibrationStrengthAvg : d.nightVibrationStrengthAvg;
+                                                const maxField = person != null ? d.personData?.[person]?.nightVibrationStrengthMax : d.nightVibrationStrengthMax;
+                                                const vals = sortedLocal.slice(Math.max(0, i-6), i+1).map((x: any) => {
+                                                    const v = person != null ? x.personData?.[person]?.nightVibrationStrengthAvg : x.nightVibrationStrengthAvg;
+                                                    return v != null ? Number(v) : null;
+                                                }).filter((v): v is number => v != null);
+                                                const movingAvg = vals.length > 0 ? Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length) : null;
+                                                return {
+                                                    date: d.date ? d.date.substring(5) : '',
+                                                    avg: avgField != null ? Number(avgField) : null,
+                                                    max: maxField != null ? Number(maxField) : null,
+                                                    movingAvg,
+                                                };
+                                            }).filter((d: any) => d.date);
+                                            if (!data.some((d: any) => d.avg != null)) return null;
+                                            const avgVals = data.filter((d: any) => d.avg != null).map((d: any) => d.avg as number);
+                                            const maxVals = data.filter((d: any) => d.max != null).map((d: any) => d.max as number);
+                                            const meanAvg = avgVals.length > 0 ? Math.round(avgVals.reduce((a: number,b: number) => a+b,0) / avgVals.length) : 0;
+                                            const rawMax = maxVals.length > 0 ? Math.max(...maxVals) : (avgVals.length > 0 ? Math.max(...avgVals) : 30);
+                                            const vibYMax = Math.max(30, Math.ceil(rawMax * 1.2 / 10) * 10);
+                                            const lbl = person ? ` · ${person}` : '';
+                                            return (
+                                                <Grid item xs={12} md={6} lg={4} key={'vibstr-' + (person || 'agg')}>
+                                                    <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                            <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#e65100' }}>
+                                                                VIBRATIONS-INTENSITÄT{lbl}
+                                                            </Typography>
+                                                            <ChartHelp text={"Durchschnittliche und maximale Vibrationsstärke im Schlaffenster. Hohe Werte (>80) können auf Parkinson-Tremor, Epilepsie oder intensive Schlafbewegungen hinweisen. Niedriger Count + hohe Stärke = medizinisch relevant."} />
+                                                        </Box>
+                                                        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
+                                                            Ø {meanAvg} · Skala 0–{vibYMax} · Schlaffenster
                                                         </Typography>
-                                                        <ChartHelp text={"Durchschnittliche und maximale Vibrationsstärke im Schlaffenster. Hohe Werte (>80) können auf Parkinson-Tremor, Epilepsie oder intensive Schlafbewegungen hinweisen. Niedriger Count + hohe Stärke = medizinisch relevant."} />
-                                                    </Box>
-                                                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
-                                                        Ø {meanAvg} · Skala 0–{vibYMax} · Schlaffenster
-                                                    </Typography>
-                                                    <ResponsiveContainer width="100%" height={150}>
-                                                        <ComposedChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                                                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                                                            <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
-                                                                interval={Math.floor(data.length / 6)} />
-                                                            <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} domain={[0, vibYMax]} />
-                                                            <Tooltip
-                                                                formatter={(v: any, name: string) => [
-                                                                    v,
-                                                                    name === 'avg' ? 'Ø Stärke' : name === 'max' ? 'Max Stärke' : 'Ø 7 Tage'
-                                                                ]}
-                                                                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}` }}
-                                                            />
-                                                            <ReferenceArea y1={0}   y2={30}          fill="rgba(40,167,69,0.08)" />
-                                                            <ReferenceArea y1={30}  y2={80}          fill="rgba(253,126,20,0.08)" />
-                                                            <ReferenceArea y1={80}  y2={vibYMax}     fill="rgba(220,53,69,0.12)" />
-                                                            <Bar dataKey="avg" name="avg" radius={[2,2,0,0]}>
-                                                                {data.map((entry: any, i: number) => {
-                                                                    const v = entry.avg;
-                                                                    const col = v == null ? '#555' : v > 80 ? '#dc3545' : v > 30 ? '#fd7e14' : '#28a745';
-                                                                    return <Cell key={i} fill={col} opacity={0.8} />;
-                                                                })}
-                                                            </Bar>
-                                                            <Line type="monotone" dataKey="movingAvg" stroke="#e65100" strokeWidth={1.5}
-                                                                dot={false} name="movingAvg" connectNulls />
-                                                        </ComposedChart>
-                                                    </ResponsiveContainer>
-                                                    <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-                                                        <span style={{color:'#28a745'}}>■ &lt;30 (normal)</span>
-                                                        <span style={{color:'#fd7e14'}}>■ 30–80 (erhöht)</span>
-                                                        <span style={{color:'#dc3545'}}>■ &gt;80 (auffällig)</span>
-                                                    </Box>
-                                                </Paper>
-                                            </Grid>
-                                        );
+                                                        <ResponsiveContainer width="100%" height={150}>
+                                                            <ComposedChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                                                                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                                <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor(data.length / 6)} />
+                                                                <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} domain={[0, vibYMax]} />
+                                                                <Tooltip
+                                                                    formatter={(v: any, name: string) => [v, name === 'avg' ? 'Ø Stärke' : name === 'max' ? 'Max Stärke' : 'Ø 7 Tage']}
+                                                                    contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}` }}
+                                                                />
+                                                                <ReferenceArea y1={0}  y2={30}      fill="rgba(40,167,69,0.08)" />
+                                                                <ReferenceArea y1={30} y2={80}      fill="rgba(253,126,20,0.08)" />
+                                                                <ReferenceArea y1={80} y2={vibYMax} fill="rgba(220,53,69,0.12)" />
+                                                                <Bar dataKey="avg" name="avg" radius={[2,2,0,0]}>
+                                                                    {data.map((entry: any, i: number) => {
+                                                                        const v = entry.avg;
+                                                                        const col = v == null ? '#555' : v > 80 ? '#dc3545' : v > 30 ? '#fd7e14' : '#28a745';
+                                                                        return <Cell key={i} fill={col} opacity={0.8} />;
+                                                                    })}
+                                                                </Bar>
+                                                                <Line type="monotone" dataKey="movingAvg" stroke="#e65100" strokeWidth={1.5} dot={false} name="movingAvg" connectNulls />
+                                                            </ComposedChart>
+                                                        </ResponsiveContainer>
+                                                        <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                                                            <span style={{color:'#28a745'}}>■ &lt;30 (normal)</span>
+                                                            <span style={{color:'#fd7e14'}}>■ 30–80 (erhöht)</span>
+                                                            <span style={{color:'#dc3545'}}>■ &gt;80 (auffällig)</span>
+                                                        </Box>
+                                                    </Paper>
+                                                </Grid>
+                                            );
+                                        };
+                                        const vibStrPersons: Array<string | undefined> = (isMultiPerson && hasPersonVibStrData) ? personNames : [undefined];
+                                        return <>{vibStrPersons.map(p => renderVibStrength(p))}</>;
                                     })()}
 
                                     {/* SCHLAFZEIT (Sleep Consistency) — immer sichtbar, zeigt Leer-Zustand wenn keine FP2-Daten */}
@@ -1679,16 +1730,17 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                         };
 
                                         // Mehrpersonenhaushalt: eine Kachel pro Person aus personData
+                                        // Nutzt sleepWindowStart/End (ms-Timestamps, wie globaler Pfad) — praeziser als sleepOnsetMin
                                         if (isMultiPerson) {
                                             return (
                                                 <>
                                                     {personNames.map(person => {
                                                         const pData = sorted
-                                                            .filter((d: any) => d.personData?.[person]?.sleepOnsetMin != null || d.personData?.[person]?.wakeTimeMin != null)
+                                                            .filter((d: any) => d.personData?.[person]?.sleepWindowStart != null || d.personData?.[person]?.sleepWindowEnd != null)
                                                             .map((d: any) => ({
                                                                 date: d.date ? d.date.substring(5) : '',
-                                                                sleepStart: minsToOffset(d.personData?.[person]?.sleepOnsetMin ?? null),
-                                                                wakeTime: minsToOffset(d.personData?.[person]?.wakeTimeMin ?? null),
+                                                                sleepStart: toMinsFrom18(d.personData?.[person]?.sleepWindowStart),
+                                                                wakeTime:   toMinsFrom18(d.personData?.[person]?.sleepWindowEnd),
                                                             }));
                                                         return (
                                                             <Grid item xs={12} md={6} lg={4} key={'sleeptime-' + person}>

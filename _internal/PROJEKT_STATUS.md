@@ -1,5 +1,49 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 22.04.2026 | **Version:** 0.33.194
+**Letzte Aktualisierung:** 22.04.2026 | **Version:** 0.33.197
+
+---
+
+## 📍 Sitzung 22.04.2026 — Version 0.33.197
+
+### ✅ Abgeschlossen
+- **[Phase 2] Multi-Person-Support LongtermTrendsView — vollständig**: Alle verbleibenden Charts (AURA-SLEEPSCORE, SCHLAFPHASEN-ANTEILE, BETT-PRÄSENZ, SCHLAF-UNRUHE (VIBRATION), VIBRATIONS-INTENSITÄT) rendern jetzt pro Person im Mehrpersonenhaushalt.
+  - **Backend**: `personData[person]` IIFE erweitert um `bedPresenceMinutes` (FP2-Bettzeit dieser Person), `nightVibrationCount`, `nightVibrationStrengthAvg/Max` (Vibrationssensor dieser Person). Berechnung identisch zum globalen Aggregat-Pfad → kein Code-Duplikat.
+  - **TypeScript-Interface**: `personData` jetzt vollständig typisiert (14 Felder, inkl. `sleepScore`, `sleepStages`, `sleepWindowStart/End`, `bedPresenceMinutes`, `nightVibrationStrengthAvg/Max`).
+  - **SCHLAFZEIT** (Verbesserung Phase 1): Mehrpersonenpfad nutzt nun `personData[person].sleepWindowStart/End` (ms-Timestamps, präziser als `sleepOnsetMin`/`wakeTimeMin`).
+  - **AURA-SLEEPSCORE** + **SCHLAFPHASEN-ANTEILE**: Neue globale Funktion `buildSleepChartData(person?)` → Einpersonenhaushalt = Aggregat-Felder, Mehrpersonenhaushalt = `personData[person]`. Render-Helfer `renderSleepScore()` und `renderSleepStages()` iterieren über `personNames` (Mehrperson) oder `[undefined]` (Einperson). Keine Code-Verdopplung.
+  - **BETT-PRÄSENZ**: Render-Helfer `renderBedPresence(person?)` — Multi: nur wenn Sensor den personTag trägt (`hasPersonBedData`), sonst Aggregat.
+  - **SCHLAF-UNRUHE (VIBRATION)**: Render-Helfer `renderVibration(person?)` — gleiche Logik.
+  - **VIBRATIONS-INTENSITÄT**: Render-Helfer `renderVibStrength(person?)` — gleiche Logik, inklusive per-Person `avg/max` und dynamischer Y-Achse.
+  - **Graceful Fallback**: Wenn Sensoren keinen personTag tragen (keine per-Person-Daten), zeigt jedes Chart automatisch das Haushalts-Aggregat. Kein Leerstand.
+
+### 🔧 Restbaustein (kein Code-Aufwand, Hardware-Limit)
+- **GANGGESCHWINDIGKEIT**: Echte Per-Person-Ganggeschwindigkeit nicht möglich ohne personenspezifische Sensor-Tags am Flur. Bleibt Haushalt-Aggregat mit Info-Badge.
+
+### 🎯 Nächster logischer Schritt
+- Adapter updaten (v0.33.197) auf Gondelsheim und Mehrpersonenhaushalt testen: AURA-SLEEPSCORE/Phasen pro Person, Bett-Präsenz Robert/Ingrid getrennt
+
+---
+
+## 📍 Sitzung 22.04.2026 — Version 0.33.196
+
+### ✅ Abgeschlossen
+- **[Phase 1] Multi-Person-Support LongtermTrendsView**: Alle Charts im Gesundheits-Tab "Langzeit-Trends" sind jetzt Mehrpersonenhaushalt-fähig.
+  - **Neue globale Hilfsfunktion `buildPersonSeriesData(field, personDataField?, person?)`**: Einzige Funktion für Datenvorbereitung — `person = undefined` → aggregierte Root-Felder (Einpersonenhaushalt), `person = 'Ingrid'` → `personData['Ingrid'][personDataField]` (Mehrpersonenhaushalt). Kein Code-Duplikat; Algorithmus-Änderungen wirken für beide Haushaltstypen.
+  - **Multi-Person-Erkennung** via `personNames` (alle bekannten Personen-Keys aus `personData`) + `isMultiPerson = personNames.length > 1`.
+  - **Info-Banner** (türkis) wenn Mehrpersonenhaushalt erkannt: zeigt Personennamen und erklärt welche Charts pro Person vs. Haushalt angezeigt werden.
+  - **NACHT-UNRUHE**: Mehrpersonen → pro Person aus `personData.nightActivityCount`; je eine Kachel pro Person statt Aggregat.
+  - **NYKTURIE**: Mehrpersonen → pro Person aus `personData.nocturiaAttr`; je eine Kachel pro Person.
+  - **SCHLAFZEIT**: Mehrpersonen → pro Person aus `personData.sleepOnsetMin` + `personData.wakeTimeMin` (Minuten-ab-Mitternacht, mit `minsToOffset()`-Konvertierung auf Chart-Koordinaten); je eine Kachel pro Person.
+  - **AKTIVITÄTS-BELASTUNG**: Untertitel ergänzt mit "Haushalt gesamt (alle N Personen)" Badge wenn Multi-Person.
+  - **GANGGESCHWINDIGKEIT**: Info-Badge "Haushalt gesamt — Flur-Sensor nicht personenspezifisch" wenn Multi-Person.
+  - **Einpersonenhaushalt**: 100% unverändertes Verhalten (alle Konditionale zeigen Aggregat-Pfad).
+
+### 🔧 Offene Baustellen (Phase 2 — erfordert Backend-Erweiterungen)
+- `personData` im History-File fehlen noch: `sleepScore`, `sleepStages`, `bedPresenceMinutes`, `sleepWindowStart/End` pro Person, `vibrationCount/Strength` pro Person → dann auch AURA-SLEEPSCORE, SCHLAFPHASEN, BETT-PRÄSENZ, VIBRATIONS-SENSORIK pro Person
+- GANGGESCHWINDIGKEIT: echte Per-Person-Ganggeschwindigkeit nicht möglich ohne personenspezifische Sensor-Tags am Flur
+
+### 🎯 Nächster logischer Schritt
+- Adapter updaten (v0.33.196) und Mehrpersonenhaushalt (Gondelsheim) testen: Banner erscheint, Nacht-Unruhe zeigt Ingrid + Robert getrennt, Nykturie + Schlafzeit pro Person korrekt
 
 ---
 
