@@ -1967,22 +1967,7 @@ export default function HealthTab(props: any) {
                                         )}
                                     </div>
                                 )}
-                                {/* OC-31 DEV: Nacht-Aufstehen-Events Debug-Badge */}
-                                {auraSleepData?.nachtAufstehenEvents && auraSleepData.nachtAufstehenEvents.length > 0 && (
-                                    <div style={{marginTop:'4px', padding:'3px 6px', borderRadius:'4px',
-                                                 background: isDark?'#1a237e':'#e8eaf6',
-                                                 border:'1px dashed #5c6bc0', fontSize:'0.5rem',
-                                                 color: isDark?'#9fa8da':'#3949ab'}}>
-                                        <span title='OC-31: Nacht-Aufstehen wurde als kurzNachtaufstehen erkannt und aus Einschlaf-Kandidaten gefiltert'>
-                                            🚶 {auraSleepData.nachtAufstehenEvents.length}× kurzNachtaufstehen:{' '}
-                                            {auraSleepData.nachtAufstehenEvents.map((e: any, i: number) => (
-                                                <span key={i} style={{marginRight:'4px'}}>
-                                                    {new Date(e.departureTs).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}–{new Date(e.returnTs).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}
-                                                </span>
-                                            ))}
-                                        </span>
-                                    </div>
-                                )}
+
                             </div>
                             <div style={{textAlign:'center'}}>
                                 <div style={{

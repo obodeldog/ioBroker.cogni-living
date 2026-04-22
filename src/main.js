@@ -222,10 +222,18 @@ function computePersonSleep(p) {
             var _bedroomLocSet = new Set(bedroomLocations);
             var _searchMs = searchBase.getTime ? searchBase.getTime() : searchBase;
             var _windows = [];
-            // Nur Motion-Events (val=true) im Schlaffenster betrachten
+            // Nur Motion-Events im Nacht-Fenster (21:00-09:00) betrachten
+            // Verhindert dass Tagesbewegungen (z.B. 13:13 Uhr) als Nacht-Aufstehen fehlinterpretiert werden
+            // Ausserdem: obere Grenze = wakeHardCap (kein Scannen nach dem Aufwachen)
+            var _wakeCapMs = wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : Infinity;
             var _motAll = allEvents.filter(function(e) {
-                return e.type === 'motion' && (e.value === true || e.value === 'true' || e.value === 1) &&
-                       (e.timestamp || 0) >= _searchMs;
+                if (e.type !== 'motion') return false;
+                if (!(e.value === true || e.value === 'true' || e.value === 1)) return false;
+                var _eTs = e.timestamp || 0;
+                if (_eTs < _searchMs || _eTs >= _wakeCapMs) return false;
+                // Nur Nacht-Stunden: 21:00 - 09:00 (verhindert Tages-FP)
+                var _eHour = new Date(_eTs).getHours();
+                return (_eHour >= 21 || _eHour <= 9);
             }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
             // Fuer jeden externen Motion-Event: prüfe ob Rückkehr folgt
             for (var _wi = 0; _wi < _motAll.length; _wi++) {

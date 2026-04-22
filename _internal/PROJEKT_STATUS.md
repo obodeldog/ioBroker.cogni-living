@@ -1,5 +1,5 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 22.04.2026 | **Version:** 0.33.191
+**Letzte Aktualisierung:** 22.04.2026 | **Version:** 0.33.192
 
 ---
 
