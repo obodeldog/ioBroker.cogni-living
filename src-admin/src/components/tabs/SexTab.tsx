@@ -1510,6 +1510,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
             loo_accuracy?: number | null;
             confusion_matrix?: { tp: number; fp: number; tn: number; fn: number } | null;
             loo_details?: Array<{ date: string; actual: string; predicted: string; correct: boolean; cell: string }> | null;
+            nearbyRoomSensorIds?: string[] | null;
         } | null;
     } | null>(null);
 
@@ -1776,9 +1777,12 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     const _rfLightDev  = _devs.find((d: any) => ['light','dimmer'].includes((d.type||'').toLowerCase()) && (_rfBedRoom ? (d.location||'') === _rfBedRoom : (d.sensorFunction||'').toLowerCase().includes('bed')));
     const _rfPressDev  = _devs.find((d: any) => ['fp2','presence','fp2_presence'].includes((d.type||'').toLowerCase()));
     const _rfTempDev   = _devs.find((d: any) => ['temperature','thermostat','heating_valve'].includes((d.type||'').toLowerCase()) && (_rfBedRoom ? (d.location||'') === _rfBedRoom : (d.sensorFunction||'').toLowerCase().includes('bed')));
-    const _rfBathDevs  = _devs.filter((d: any) => (d.type||'').toLowerCase() === 'motion' && (d.sensorFunction||'').toLowerCase().includes('bath'));
+    const _rfBathDevs  = _devs.filter((d: any) => d.isBathroomSensor === true);
     const _rfBathDev   = _rfBathDevs[0] ?? null;
-    const _rfNearbyDevs= _devs.filter((d: any) => (d.type||'').toLowerCase() === 'motion' && !(d.sensorFunction||'').toLowerCase().includes('bath') && !(d.sensorFunction||'').toLowerCase().includes('bed'));
+    const _rfNearbyIds  = calibInfo?.pyClassifier?.nearbyRoomSensorIds ?? null;
+    const _rfNearbyDevs = _rfNearbyIds
+        ? _devs.filter((d: any) => _rfNearbyIds.includes(d.id))
+        : _devs.filter((d: any) => (d.type||'').toLowerCase() === 'motion' && !d.isBathroomSensor && (d.sensorFunction||'') !== 'bed');
     const _rfNearbyDev = _rfNearbyDevs[0] ?? null;
     const _vibLabel = vibStrengthId ? `Bett-Sensor: ${vibStrengthId}` : 'Kein Bett-Vibrationssensor konfiguriert';
     const RF_SENSOR_TIPS: Record<string, string> = {
@@ -1794,8 +1798,8 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
         'room_temp_norm':     _rfTempDev   ? `Temperatursensor (${_rfBedRoom||'Schlafzimmer'}): ${_devLabel(_rfTempDev)}`      : `Kein Temperatursensor im Schlafzimmer gefunden (${_rfBedRoom||'kein Bett-Sensor konfiguriert'})`,
         'bath_before':        _rfBathDevs.length > 0 ? `Bad-Sensoren: ${_rfBathDevs.map(_devLabel).join(', ')} | Bewegung 60 Min VOR Session` : 'Kein Bad-Sensor konfiguriert (Sensortyp: motion, Funktion: bathroom)',
         'bath_after':         _rfBathDevs.length > 0 ? `Bad-Sensoren: ${_rfBathDevs.map(_devLabel).join(', ')} | Bewegung 60 Min NACH Session` : 'Kein Bad-Sensor konfiguriert (Sensortyp: motion, Funktion: bathroom)',
-        'nearby_room_motion': _rfNearbyDevs.length > 0 ? `Nachbarzimmer (Hop=1): ${_rfNearbyDevs.map(_devLabel).join(', ')}` : 'Kein Nachbarzimmer-Sensor konfiguriert (Sensortyp: motion)',
-        'nearby_room_mo':     _rfNearbyDevs.length > 0 ? `Nachbarzimmer (Hop=1): ${_rfNearbyDevs.map(_devLabel).join(', ')}` : 'Kein Nachbarzimmer-Sensor konfiguriert (Sensortyp: motion)',
+        'nearby_room_motion': _rfNearbyDevs.length > 0 ? `Nachbarzimmer (Hop=1, aus Topologie): ${_rfNearbyDevs.map(_devLabel).join(', ')}` : (_rfNearbyIds ? 'Keine Nachbarräume in Topologie (Hop=1)' : 'Kein Nachbarzimmer-Sensor konfiguriert (Sensortyp: motion)'),
+        'nearby_room_mo':     _rfNearbyDevs.length > 0 ? `Nachbarzimmer (Hop=1, aus Topologie): ${_rfNearbyDevs.map(_devLabel).join(', ')}` : (_rfNearbyIds ? 'Keine Nachbarräume in Topologie (Hop=1)' : 'Kein Nachbarzimmer-Sensor konfiguriert (Sensortyp: motion)'),
     };
 
     const viewDayStart = new Date(viewDate).setHours(0, 0, 0, 0);

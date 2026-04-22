@@ -1,4 +1,4 @@
-# HANDBUCH — ioBroker Cogni-Living (AURA)
+﻿# HANDBUCH — ioBroker Cogni-Living (AURA)
 **Zweck:** Algorithmus-Dokumentation, wissenschaftliche Grundlagen, Bedienungsanleitung-Basis.
 **Regel:** Neue Features hier dokumentieren, Tooltips im Frontend als Kurzfassung.
 **Nicht hier:** Deploy-Schritte, Bugfixes → PROJEKT_STATUS.md | Ideen → BRAINSTORMING.md
@@ -1041,9 +1041,35 @@ Wenn ein solcher kurzer Ausflug erkannt wird, werden Sensordaten aus diesem Zeit
 | Matratzensensor (Vibration verfeinert) | **Ja** | Dieser Sensor misst "wann war die Matratze zuletzt längere Zeit still" — nach einem Aufstehen und Zurücklegen kann dieser Wert zurückgesetzt werden und eine falsche Zeit anzeigen |
 | Bewegungsmelder, Lücken-Erkennung, "Haus still" | **Ja** | Diese Quellen sind direkt von den Bewegungen betroffen |
 
-### Was passiert bei längerer Abwesenheit?
+### Was passiert bei längerer Abwesenheit? (OC-31 Stage 2)
 
-Wer länger als 20 Minuten aufbleibt (z.B. schläft auf dem Sofa ein oder legt sich ins Gästebett), wird **nicht** als kurzes Aufstehen erkannt. In diesem Fall behandelt AURA die Situation korrekt als eine neue potenzielle Einschlafphase.
+Wer länger als 20 Minuten aufbleibt — oder sogar 2 Stunden am PC sitzt — wird von **Stage 2** der Schlafzustandsmaschine erfasst. Hier gilt das Prinzip: **einmal eingeschlafen, immer eingeschlafen** (in dieser Nacht).
+
+**Beispiel:** Robert schläft um 22:08 ein. Um 23:50 geht er zum PC (2 Stunden). Um 02:30 kommt er zurück ins Bett. AURA zeigt:
+- Einschlafen: **22:08** (bleibt eingefroren)
+- Schlafbalken: 22:08–23:50 Schlaf, 23:50–02:30 **gelber Wachphasen-Block**, ab 02:30 wieder Schlaf
+- Schlafeffizienz: korrekt berechnet (PC-Zeit abgezogen)
+
+Stage 2 erkennt dabei beliebig viele Wachphasen pro Nacht (mehrfaches Aufstehen).
+
+### 🛏 Wann bin ich ins Bett gegangen? ("Ins-Bett-Zeit")
+
+Seit v0.33.194 erkennt AURA auch, **wann eine Person das Bett betreten hat** — unabhängig davon, wann sie eingeschlafen ist. Diese "Ins-Bett-Zeit" wird im Schlafbalken als gelbes Segment **vor der Einschlafzeit** dargestellt.
+
+**Warum ist das interessant?**
+- Garmin zeigt nur "eingeschlafen um HH:MM" — AURA zeigt zusätzlich "ins Bett um HH:MM"
+- Die Differenz = Einschlaf-Latenz ("Wie lange brauche ich zum Einschlafen?")
+- Ideal: Einschlaf-Latenz < 20 Min. Regelmäßig > 30 Min kann auf Einschlafprobleme hinweisen.
+
+**Wie wird die Ins-Bett-Zeit erkannt?**
+
+| Sensor | Erkennungs-Logik |
+|---|---|
+| Radar (FP2/mmWave) | Erstes "Bett belegt"-Signal ab 18:00 Uhr |
+| Vibrationssensor (Matratze) | Erste Aktivität, der innerhalb von 5 Min eine weitere folgt |
+| Bewegungsmelder (Schlafzimmer) | Erste Bewegung ohne anschließenden Abgang für 10 Min |
+
+Der Zeitstempel erscheint als **"🛏 HH:MM"** links unten am Schlafbalken (statt der Einschlafzeit).
 
 ### Logs für die Fehleranalyse
 

@@ -1,5 +1,21 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 22.04.2026 | **Version:** 0.33.193
+**Letzte Aktualisierung:** 22.04.2026 | **Version:** 0.33.194
+
+---
+
+## 📍 Sitzung 22.04.2026 — Version 0.33.194
+
+### ✅ Abgeschlossen
+- **[bedEntryTs] "Ins Bett gegangen"-Erkennung in `computePersonSleep`**: Neues Feld `bedEntryTs` erkennt den Zeitpunkt, zu dem eine Person das Bett betritt — unabhängig vom Einschlafzeitpunkt. Priorität: FP2/Radar (erste `isFP2Bed`-Event ab 18 Uhr) → Vibration (erste Aktivität mit Folge-Event ≤5 Min) → PIR (erste Schlafzimmer-Bewegung ohne Abgang innerhalb 10 Min). Dient als Balken-Startpunkt im Frontend (gelbes "Wachliegen"-Segment vor der Einschlafzeit).
+- **[OC-31 Stage 2] Zustandsmaschine in `computePersonSleep`**: Neue `_smWakePhases`-Berechnung erkennt alle Abwesenheiten NACH `sleepStart` (min. 5 Min Außerhalb-Aktivität → Rückkehr ins Schlafzimmer). Der `sleepStart` bleibt dabei eingefroren — jede Abwesenheit (kurz oder lang) wird als "Wachphase" erfasst. Dies löst das "PC-um-Mitternacht"-Szenario: 21:30 ins Bett → 22:08 eingeschlafen → 23:50-02:30 am PC → sleepStart bleibt 22:08, PC-Zeit als Wake-Phase sichtbar.
+- **[UI] Gelbes Vor-Schlaf-Segment**: Im Schlafbalken erscheint ein gelbes "Wachliegen"-Segment von `bedEntryTs` bis `sleepStart`, wenn die Differenz >5 Min beträgt. Label zeigt "🛏 HH:MM" (Ins-Bett-Zeit) an der linken Seite der Zeitachse.
+- **[UI] Wake-Phasen-Overlay**: Lange Abwesenheiten nach `sleepStart` werden als gelbe Blöcke (`smWakePhases`) per `position:absolute`-Overlay auf dem Schlafbalken dargestellt mit Tooltip "Wachphase: HH:MM – HH:MM (N Min)".
+- **[Version] Bump auf 0.33.194** in `io-package.json` + `package.json`.
+
+### Nächster logischer Schritt
+- OC-31 Stage 2 beobachten: Erkennt die Zustandsmaschine die PC-Abwesenheit korrekt als Wachphase?
+- `bedEntryTs` validieren: Stimmt der erkannte "Ins-Bett"-Zeitpunkt mit der Wahrnehmung überein?
+- Ggf. OC-31 Stage 3 (LSTM/HMM) vorbereiten wenn Trainingsdaten vorhanden
 
 ---
 

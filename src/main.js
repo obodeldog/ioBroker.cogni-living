@@ -70,6 +70,39 @@ function computePersonSleep(p) {
             && (e.timestamp || 0) >= searchFromTs;
     }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
 
+    // bedEntryTs: Wann ist die Person ins Bett gegangen (nicht Einschlafzeit)
+    // Prioritaet: FP2 > Vibration (sustained 5-Min) > PIR-Fallback
+    // Ergibt gelbes 'Wachliegen'-Segment vor sleepStart im Balken
+    var bedEntryTs = (function() {
+        var _fp2 = bedEvts.filter(function(e) {
+            var _hr = new Date(e.timestamp || 0).getHours();
+            return e.isFP2Bed && (_hr >= 18 || _hr < 3);
+        });
+        if (_fp2.length > 0) return _fp2[0].timestamp || 0;
+        var _vib = bedEvts.filter(function(e) {
+            var _hr = new Date(e.timestamp || 0).getHours();
+            return (e.isVibrationBed && !e.isVibrationStrength) && (_hr >= 18 || _hr < 3);
+        });
+        for (var _bi = 0; _bi < _vib.length - 1; _bi++) {
+            if ((_vib[_bi + 1].timestamp || 0) - (_vib[_bi].timestamp || 0) <= 5 * 60000)
+                return _vib[_bi].timestamp || 0;
+        }
+        var _pir = bedEvts.filter(function(e) {
+            var _hr = new Date(e.timestamp || 0).getHours();
+            return e.isBedroomMotion && (_hr >= 18 || _hr < 3);
+        });
+        for (var _bi2 = 0; _bi2 < _pir.length; _bi2++) {
+            var _pTs = _pir[_bi2].timestamp || 0;
+            var _hasOut = allEvents.some(function(e) {
+                return isMine(e) && !e.isBedroomMotion && !e.isFP2Bed && !e.isVibrationBed &&
+                       e.type === 'motion' && isActiveValue(e.value) &&
+                       (e.timestamp||0) > _pTs && (e.timestamp||0) <= _pTs + 10*60000;
+            });
+            if (!_hasOut) return _pTs;
+        }
+        return null;
+    })();
+
     var vibRefine = function(anchorTs) {
         var maxTs = anchorTs + 3 * 3600000;
         var evts = allEvents.filter(function(e) {
@@ -626,11 +659,49 @@ function computePersonSleep(p) {
         outsideBedEvents:     obe,
         sleepStages:          sleepStages,
         stagesWindowStart:    stagesWinStart,
+
+        // OC-31 Stage 2: State Machine - erkennt lange Abwesenheiten NACH sleepStart
+        // Jede Abwesenheit (egal wie lang) wird als Wake-Phase eingetragen
+        // sleepStart bleibt eingefroren — nur outsideBedEvents/smWakePhases wachsen
+        var _smWakePhases = (function() {
+            if (!sleepStart || !bedroomLocations || bedroomLocations.length === 0) return [];
+            var _bedroomLocSet = new Set(bedroomLocations);
+            var _wakeCapMs = wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000);
+            var _phases = [];
+            var _inBed = true;
+            var _deptTs = null;
+            var _postEvts = allEvents.filter(function(e) {
+                return isMine(e) && e.type === 'motion' && isActiveValue(e.value) &&
+                       (e.timestamp || 0) > sleepStart && (e.timestamp || 0) < _wakeCapMs;
+            }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+            for (var _si = 0; _si < _postEvts.length; _si++) {
+                var _sEvt = _postEvts[_si];
+                var _sTs  = _sEvt.timestamp || 0;
+                var _isOutside = !_bedroomLocSet.has(_sEvt.location || '');
+                if (_inBed && _isOutside) {
+                    _deptTs = _sTs; _inBed = false;
+                } else if (!_inBed && !_isOutside) {
+                    if (_deptTs && (_sTs - _deptTs) > 5 * 60000) { // min 5 Min Abwesenheit
+                        _phases.push({
+                            type: 'wake',
+                            start: _deptTs,
+                            end: _sTs,
+                            durationMin: Math.round((_sTs - _deptTs) / 60000),
+                            source: 'sm_stage2'
+                        });
+                    }
+                    _inBed = true; _deptTs = null;
+                }
+            }
+            return _phases;
+        })();
         sleepScore:           sleepScore,
         sleepScoreRaw:        sleepScoreRaw,
         _motionAnchor:        motionAnchor,
         _hausStillTs:         hausStillTs,
-        nachtAufstehenEvents: _nachtAufstehenWindows
+        nachtAufstehenEvents: _nachtAufstehenWindows,
+        bedEntryTs:          bedEntryTs,
+        smWakePhases:        _smWakePhases
     };
 }
 
@@ -2998,7 +3069,9 @@ class CogniLiving extends utils.Adapter {
                 wakeOverridden: _wakeOverrideApplied,
                 bedWasEmpty: bedWasEmpty,
                 noisySensors: noisySensors,
-                nachtAufstehenEvents: (_gR && _gR.nachtAufstehenEvents) ? _gR.nachtAufstehenEvents : []
+                nachtAufstehenEvents: (_gR && _gR.nachtAufstehenEvents) ? _gR.nachtAufstehenEvents : [],
+                bedEntryTs:   (_gR && _gR.bedEntryTs)   ? _gR.bedEntryTs   : null,
+                smWakePhases: (_gR && _gR.smWakePhases) ? _gR.smWakePhases : []
             };
 
             const dataDir = utils.getAbsoluteDefaultDataDir();

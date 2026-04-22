@@ -180,6 +180,8 @@ export default function HealthTab(props: any) {
     const [sleepCalMAE, setSleepCalMAE] = useState<{nNights:number, computedAt:number, sleepStart:Record<string,{mae:number,n:number}>, wake:Record<string,{mae:number,n:number}>} | null>(null);
     const [sourceOverrideHistory, setSourceOverrideHistory] = useState<Record<string,number>>({});
     const [nachtAufstehenEvents, setNachtAufstehenEvents] = useState<{departureTs:number,returnTs:number,departureSensor:string,returnSensor:string}[]>([]);
+    const [bedEntryTs, setBedEntryTs] = useState<number|null>(null);
+    const [smWakePhases, setSmWakePhases] = useState<{type:string,start:number,end:number,durationMin:number,source:string}[]>([]);
     const [nativeDevices, setNativeDevices] = useState<any[]>([]);
     const [topoData, setTopoData] = useState<{rooms:string[], matrix:number[][]} | null>(null);
 
@@ -238,7 +240,7 @@ export default function HealthTab(props: any) {
                     if (d.roomHistory && d.roomHistory.history) setRoomHistory(d.roomHistory.history);
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [] });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, smWakePhases: d.smWakePhases ?? [] });
                     setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                     setGeminiNight(d.geminiNight || "Keine Daten");
                     setGeminiNightTs(d.geminiNightTs || null);
@@ -724,7 +726,7 @@ export default function HealthTab(props: any) {
             .then((histRes: any) => {
                 if (histRes && histRes.success && histRes.data) {
                     const d = histRes.data;
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [] });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, smWakePhases: d.smWakePhases ?? [] });
                     setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                 }
             });
@@ -1532,6 +1534,13 @@ export default function HealthTab(props: any) {
         const preStageMs = (swStart && stagesWindowStart && stagesWindowStart > swStart && swEnd)
             ? stagesWindowStart - swStart : 0;
         const totalWindowMs = (swStart && swEnd) ? swEnd - swStart : null;
+        // bedEntryTs: Ins-Bett-Zeit (vor Einschlafzeit) aus Snapshot
+        const _bedEntryRaw: number | null = (sd as any)?.bedEntryTs ?? null;
+        const bedEntryTsVal: number | null = (_bedEntryRaw && swStart && _bedEntryRaw < swStart - 5*60000) ? _bedEntryRaw : null;
+        const bedEntrySegMs = (bedEntryTsVal && swStart) ? swStart - bedEntryTsVal : 0;
+        const newBarTotalMs = (bedEntrySegMs > 0 && totalWindowMs) ? bedEntrySegMs + totalWindowMs : totalWindowMs;
+        // smWakePhases: Wake-Phasen aus State Machine (OC-31 Stage 2) - als Overlay auf dem Balken
+        const _smPhases: {type:string,start:number,end:number,durationMin:number}[] = (sd as any)?.smWakePhases ?? [];
         // Kein-Daten-Bereich NACH dem letzten Stage-Slot (Stages decken oft nur Anfang der Nacht ab)
         const lastSlotEndMs = (stagesWindowStart && renderedStages.length > 0)
             ? stagesWindowStart + (renderedStages[renderedStages.length - 1].t + 5) * 60000
@@ -2114,7 +2123,19 @@ export default function HealthTab(props: any) {
                             )}
 
                             {/* Der Balken — proportionale Slots (5 min), no-data-Segment vor Stage-Fenster */}
+                            {/* Wrapper mit position:relative für smWakePhases-Overlay (OC-31 Stage 2) */}
+                            <div style={{position:'relative', width:'100%'}}>
                             <div style={{display:'flex', width:'100%', height:'28px', borderRadius:'4px', overflow:'hidden'}}>
+                                {/* Gelbes Vor-Schlaf-Segment: Ins-Bett-Zeit → Einschlafzeit (Wachliegen) */}
+                                {bedEntryTsVal && newBarTotalMs && (
+                                    <div style={{
+                                        width: (bedEntrySegMs / newBarTotalMs * 100) + '%',
+                                        flexShrink: 0,
+                                        backgroundColor: '#ffd54f',
+                                        opacity: 0.75,
+                                        minWidth: 0
+                                    }} title={'🛏 Ins Bett gegangen: ' + fmtTime(bedEntryTsVal) + ' · Wachliegen ' + Math.round(bedEntrySegMs/60000) + ' Min bis Einschlafen (' + (swStart ? fmtTime(swStart) : '?') + ')'} />
+                                )}
                                 {preStageMs > 0 && totalWindowMs && (
                                     <div style={{
                                         width: (preStageMs / totalWindowMs * 100) + '%',
@@ -2150,6 +2171,26 @@ export default function HealthTab(props: any) {
                                     }} title={'Keine Sensordaten (' + (lastSlotEndMs ? fmtTime(lastSlotEndMs) : '?') + '–' + (swEnd ? fmtTime(swEnd) : '?') + ')'} />
                                 )}
                             </div>
+                            {/* OC-31 Stage 2: Wake-Phasen-Overlay (lange Abwesenheiten nach Einschlafzeit) */}
+                            {swStart && swEnd && _smPhases.length > 0 && _smPhases.map((ph, i) => {
+                                const _totalMs = swEnd - swStart;
+                                const _left = Math.max(0, Math.min(100, ((ph.start - swStart) / _totalMs) * 100));
+                                const _width = Math.max(0.5, Math.min(100 - _left, ((ph.end - ph.start) / _totalMs) * 100));
+                                return (
+                                    <div key={i} style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: _left + '%',
+                                        width: _width + '%',
+                                        height: '28px',
+                                        backgroundColor: '#ffd54f',
+                                        opacity: 0.82,
+                                        pointerEvents: 'none',
+                                        zIndex: 2
+                                    }} title={'⏱ Wachphase: ' + fmtTime(ph.start) + ' – ' + fmtTime(ph.end) + ' (' + ph.durationMin + ' Min)'} />
+                                );
+                            })}
+                            </div>{/* Ende Wrapper */}
 
                             {/* Dreiecks-Marker UNTER Balken: Außerhalb rot ▲, Radar-Aussetzer grau ▲ */}
                             {swStart && swEnd && (markerItems.below.length > 0 || markerItems.dropout.length > 0) && (
@@ -2183,7 +2224,12 @@ export default function HealthTab(props: any) {
                             {/* Zeitachse: Start, volle Stunden, Ende */}
                             {swStart && swEnd && (
                                 <div style={{position:'relative', height:'14px', marginTop:'3px'}}>
-                                    <span style={{position:'absolute', left:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa'}}>{fmtTime(swStart)}</span>
+                                    {/* bedEntryTs-Label: Zeitstempel links vom Balken wenn Wachliegen vorhanden */}
+                                    {bedEntryTsVal ? (
+                                        <span style={{position:'absolute', left:0, fontSize:'0.55rem', color:'#ffd54f', fontWeight:'bold'}} title="Ins Bett gegangen">🛏 {fmtTime(bedEntryTsVal)}</span>
+                                    ) : (
+                                        <span style={{position:'absolute', left:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa'}}>{fmtTime(swStart)}</span>
+                                    )}
                                     {(() => {
                                         const totalMs = swEnd - swStart;
                                         const marks: React.ReactNode[] = [];

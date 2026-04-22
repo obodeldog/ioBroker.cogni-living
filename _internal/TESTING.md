@@ -440,6 +440,19 @@
 | T-FRZ5 | **Normale Freeze-Logik bleibt**: Normalnacht MIT Garmin/Vibration | Normaler _sleepFrozen-Pfad greift unabhaengig von Abend-Sperre. Keine Regressionen | - | - |
 
 
+## Testbereich 22: INS-BETT-GEGANGEN + WAKE-PHASEN OC-31 Stage 2 (v0.33.194)
+
+| ID | Testfall | Erwartetes Ergebnis | Geprueft am | OK? |
+|---|---|---|---|---|
+| T-BE1 | **FP2 vorhanden**: FP2-Sensor meldet erste Bett-Präsenz um 21:28. Einschlafen laut vib_refined 22:05. | `bedEntryTs` = 21:28. Balken startet um 21:28 mit gelbem Vor-Segment (37 Min). Zeitachse zeigt "🛏 21:28" links. | - | - |
+| T-BE2 | **Nur Vibrationssensor**: Vibration um 21:30, nächste Vibration um 21:33 (≤5 Min). Einschlafen 22:05. | `bedEntryTs` = 21:30 (first vibration with follower ≤5 Min). Gelbes Vor-Segment 35 Min. | - | - |
+| T-BE3 | **Nur PIR (Schlafzimmer)**: Bewegungsmelder 21:32. Keine Abgang-Aktivität für 10 Min danach. | `bedEntryTs` = 21:32. Gelbes Vor-Segment vorhanden. | - | - |
+| T-BE4 | **bedEntryTs ≤5 Min vor sleepStart**: Person lag nur kurz wach (z.B. 22:02 ins Bett, 22:06 eingeschlafen). | Kein gelbes Vor-Segment (Differenz ≤5 Min). Zeitachse startet normal bei sleepStart. | - | - |
+| T-BE5 | **PC-Szenario**: Einschlafen 22:08. Um 23:50 Flur-PIR (Person geht zum PC). Rückkehr 02:30 Schlafzimmer-PIR. | `smWakePhases` enthält 1 Eintrag: {start: 23:50, end: 02:30, durationMin: 160}. Gelber Overlay-Block im Balken. Tooltip: "⏱ Wachphase: 23:50 – 02:30 (160 Min)". sleepStart bleibt 22:08. | - | - |
+| T-BE6 | **Kurze Abwesenheit ≤5 Min**: Person steht 03:00 auf, kehrt 03:04 zurück. | Kein smWakePhase (Mindestdauer 5 Min). Kein Overlay. | - | - |
+| T-BE7 | **Mehrpersonenhaushalt**: Ingrid (Zimmer A) steht auf. Robert (Zimmer B) bleibt. | Ingrids smWakePhases zeigt Abwesenheit. Roberts smWakePhases ist leer (isMine-Filter). | - | - |
+| T-BE8 | **Mehrere Aufsteh-Ereignisse**: Einschlafen 22:00. Toilette 01:00-01:08, PC 03:00-04:30. | `smWakePhases` = [{01:00-01:08, 8 Min}, {03:00-04:30, 90 Min}]. Zwei gelbe Overlay-Blöcke. | - | - |
+
 ## Testbereich 21: NACHT-AUFSTEHEN-FILTER OC-31 Stage 1 (v0.33.191)
 
 | ID | Testfall | Erwartetes Ergebnis | Geprueft am | OK? |

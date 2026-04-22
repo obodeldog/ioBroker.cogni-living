@@ -892,14 +892,19 @@ Innerhalb `computePersonSleep()`:
 - Garmin/FP2/vib_refined (prio ≤ 3) bleiben immer erhalten
 - Ergebnis: `nachtAufstehenEvents` im JSON + Debug-Badge in HealthTab
 
-**Stage 2 — Zustandsmaschine (noch offen):**
+**Stage 2 — Zustandsmaschine (✅ implementiert v0.33.194):**
 
 Zustände: `SCHLAFEN → AUFGESTANDEN → ZURÜCKGEKEHRT → SCHLAFEN`
 
-Regeln (ohne Training):
-- AUFGESTANDEN: Motion außerhalb Bett nach hausStill-Periode (> 30 Min Stille)
-- ZURÜCKGEKEHRT: Motion in Schlafzimmer innerhalb konfigurierbarer Zeit
-- SCHLAFEN: Neue haus_still-Periode nach Rückkehr
+Implementierung in `computePersonSleep` als `_smWakePhases`-IIFE:
+- Scannt alle `isMine`-Motion-Events nach `sleepStart`
+- Erster Outside-Sensor (nicht in bedroomLocations) = Abgang
+- Erster Inside-Sensor (in bedroomLocations) = Rückkehr
+- Mindestdauer 5 Min → Wake-Phase `{type:'wake', start, end, durationMin, source:'sm_stage2'}`
+- `sleepStart` bleibt unveränderlich eingefroren
+- Ergebnis: `smWakePhases`-Array im Snapshot + gelbe Overlay-Blöcke im Schlafbalken
+
+Zusatz: **`bedEntryTs`** (ebenfalls v0.33.194): erkennt den Zeitpunkt "Person geht ins Bett" vor dem eigentlichen Einschlafzeitpunkt. Priorität: FP2 > Vibration (sustained 5 Min) > PIR. Visualisiert als gelbes Vor-Segment und "🛏 HH:MM"-Label im Balken.
 
 Vorteil gegenüber Stage 1: Erkennt auch komplexere Muster (mehrfaches Aufstehen, Person schläft in anderem Zimmer ein).
 
