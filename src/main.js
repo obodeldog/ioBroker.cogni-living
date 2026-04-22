@@ -1833,7 +1833,23 @@ class CogniLiving extends utils.Adapter {
             }
             }
 
-            // Schlaffenster fuer OC-7 (Sleep Score): FP2 ??? Bewegungsmelder ??? Fixfenster (Fallback-Kette).
+            // Fix: allSleepStartSources korrekt befuellen
+            // (1) Frozen: vorherige Nacht-Quellen aus Snapshot wiederherstellen
+            if (_sleepFrozen && _existingSnap && Array.isArray(_existingSnap.allSleepStartSources)) {
+                var _hasFrozenTs = _existingSnap.allSleepStartSources.some(function(s) { return !!s.ts; });
+                if (_hasFrozenTs) {
+                    allSleepStartSources = _existingSnap.allSleepStartSources;
+                    this.log.debug('[allSleepStartSources] Frozen: ' + allSleepStartSources.filter(function(s){return !!s.ts;}).map(function(s){return s.source+':'+new Date(s.ts).toLocaleTimeString();}).join(', '));
+                }
+            }
+            // (2) Garmin-Timestamp injizieren (nicht in computePersonSleep verfuegbar)
+            if (garminSleepStartTs) {
+                allSleepStartSources = allSleepStartSources.map(function(s) {
+                    return s.source === 'garmin' ? { source: 'garmin', ts: garminSleepStartTs, prio: 0 } : s;
+                });
+            }
+
+                        // Schlaffenster fuer OC-7 (Sleep Score): FP2 ??? Bewegungsmelder ??? Fixfenster (Fallback-Kette).
             // Betrifft NICHT sleepWindowStart/End im Snapshot -- die Schlafzeit-Kachel bleibt FP2-only.
             var sleepWindowOC7 = sleepWindowCalc.start
                 ? sleepWindowCalc
