@@ -454,6 +454,45 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
         }));
     };
 
+    // ============================================================
+    // GLOBALE HILFSFUNKTION: Baut Serien-Daten für Ein- UND Mehrpersonenhaushalt.
+    // person = undefined  → nutzt aggregierte Root-Felder (Einpersonenhaushalt).
+    // person = 'Ingrid'   → nutzt personData['Ingrid'][personDataField] (Mehrpersonenhaushalt).
+    // Kein Algorithmus-Duplikat: Änderungen hier gelten für beide Haushaltstypen.
+    // ============================================================
+    const buildPersonSeriesData = (
+        field: keyof DailyDataPoint,
+        personDataField?: string,
+        person?: string
+    ): Array<{ date: string; value: number | null; movingAvg: number | null }> => {
+        const sorted = [...dailyDataRaw].sort((a: any, b: any) => a.date.localeCompare(b.date));
+        const vals: (number | null)[] = sorted.map((d: any) => {
+            if (person !== undefined && personDataField) {
+                const v = d.personData?.[person]?.[personDataField];
+                return v != null ? Number(v) : null;
+            }
+            const v = (d as any)[field];
+            return v != null ? Number(v) : null;
+        });
+        return sorted.map((d: any, i: number) => {
+            const slice = vals.slice(Math.max(0, i - 6), i + 1).filter((v): v is number => v != null);
+            const movingAvg = slice.length > 0
+                ? Math.round(slice.reduce((a: number, b: number) => a + b, 0) / slice.length * 10) / 10
+                : null;
+            return {
+                date: d.date ? d.date.substring(5) : '',
+                value: vals[i],
+                movingAvg,
+            };
+        }).filter((d: any) => d.date);
+    };
+
+    // Mehrpersonenhaushalt-Erkennung (stabil, auch wenn trendsData noch nicht geladen ist)
+    const personNames = [...new Set<string>(
+        dailyDataRaw.flatMap((d: any) => d.personData ? Object.keys(d.personData) : [])
+    )].sort();
+    const isMultiPerson = personNames.length > 1;
+
     // Tooltip-Factory fuer Mini-Charts mit optionalem Aufschluessel
     const MiniTooltip = ({ active, payload, label, extraData, extraLabel }: any) => {
         if (!active || !payload || payload.length === 0) return null;
@@ -575,6 +614,17 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                 </Typography>
             )}
 
+            {/* Multi-Person Banner */}
+            {!loading && !error && isMultiPerson && (
+                <Paper sx={{ p: 1.5, mb: 2, bgcolor: isDark ? 'rgba(0,137,123,0.1)' : 'rgba(0,137,123,0.06)', border: '1px solid #00897b55', borderRadius: 1, display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                    <Typography variant="caption" sx={{ fontSize: '0.72rem', color: isDark ? '#80cbc4' : '#004d40', lineHeight: 1.7 }}>
+                        👥 <strong>Mehrpersonenhaushalt erkannt</strong> ({personNames.join(', ')}) —
+                        Nacht-Unruhe, Nykturie und Schlafzeit werden pro Person angezeigt.
+                        Aktivitäts-Belastung und Ganggeschwindigkeit zeigen den Haushalt gesamt.
+                    </Typography>
+                </Paper>
+            )}
+
             {/* Haupt-Graph: AKTIVITÄTS-BELASTUNG */}
             {!loading && !error && trendsData && (
                 <>
@@ -593,6 +643,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             return (
                                 <Typography variant="caption" sx={{ color: isDark ? '#888' : '#666', display: 'block', mb: 1 }}>
                                     Ø {base}% (14-Tage-Median) | {trend} · 0–24 Uhr
+                                    {isMultiPerson && <span style={{ color: '#ff9800', marginLeft: 8 }}>· Haushalt gesamt (alle {personNames.length} Personen)</span>}
                                 </Typography>
                             );
                         })()}
@@ -673,6 +724,11 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     </Typography>
                                     <ChartHelp text={"Misst wie lange du durchschnittlich brauchst, um den Flur zu durchqueren (Median in Sekunden). Eine länger werdende Durchquerungszeit kann auf nachlassende Mobilität hinweisen. Typischer Normalbereich: 3–15 Sekunden. Nur Sensoren die als Flur markiert sind werden berücksichtigt."} />
                                 </Box>
+                                {isMultiPerson && (
+                                    <Typography variant="caption" sx={{ display: 'block', color: '#ff9800', fontSize: '0.62rem', fontStyle: 'italic', mb: 0.3 }}>
+                                        👥 Haushalt gesamt — Flur-Sensor nicht personenspezifisch
+                                    </Typography>
+                                )}
                                 <Typography variant="caption" sx={{ display: 'block', color: trendsData.gait?.status === 'VERSCHLECHTERT' ? 'error.main' : 'text.secondary' }}>
                                     Ø {trendsData.gait?.avg?.toFixed(1) || 'N/A'} Sek. | {trendsData.gait?.status || 'N/A'} · 0–24 Uhr
                                 </Typography>
@@ -689,35 +745,70 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                             </Paper>
                         </Grid>
 
-                        {/* 2. Nacht-Unruhe (personalisierte Anomalie) */}
-                        <Grid item xs={12} md={6} lg={4}>
-                            <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
-                                        NACHT-UNRUHE
+                        {/* 2. Nacht-Unruhe — Einpersonenhaushalt: Aggregat | Mehrpersonenhaushalt: pro Person */}
+                        {isMultiPerson ? personNames.map(person => (
+                            <Grid item xs={12} md={6} lg={4} key={'night-' + person}>
+                                <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
+                                            NACHT-UNRUHE · {person}
+                                        </Typography>
+                                        <ChartHelp text={"Zählt Bewegungsereignisse zwischen 22:00 und 08:00 Uhr in Schlafräumen dieser Person (aus personData). Viele Ereignisse deuten auf unruhigen Schlaf oder häufiges Aufstehen hin."} />
+                                    </Box>
+                                    {(() => {
+                                        const data = buildPersonSeriesData('nightEvents', 'nightActivityCount', person);
+                                        const vals = data.filter((d: any) => d.value != null).map((d: any) => d.value as number);
+                                        const mean = vals.length > 0 ? Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length) : 0;
+                                        return (
+                                            <>
+                                                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                                                    Ø {mean} Ereignisse/Nacht · 22–08 Uhr
+                                                </Typography>
+                                                <ResponsiveContainer width="100%" height={150}>
+                                                    <ComposedChart data={data}>
+                                                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor(data.length / 6)} />
+                                                        <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} />
+                                                        <Tooltip content={<CustomTooltip />} />
+                                                        <Bar dataKey="value" fill="#fd7e14" opacity={0.8} name="Bewegungen" radius={[2,2,0,0]} />
+                                                        <Line type="monotone" dataKey="movingAvg" stroke="#546e7a" strokeWidth={2} dot={false} name="Ø 7 Tage" connectNulls />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                            </>
+                                        );
+                                    })()}
+                                </Paper>
+                            </Grid>
+                        )) : (
+                            <Grid item xs={12} md={6} lg={4}>
+                                <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: isDark ? '#00e676' : '#00a152' }}>
+                                            NACHT-UNRUHE
+                                        </Typography>
+                                        <ChartHelp text={"Zählt Bewegungsereignisse zwischen 22:00 und 08:00 Uhr in Schlafräumen. Viele Ereignisse deuten auf unruhigen Schlaf oder häufiges Aufstehen hin. Nur Sensoren die als Nacht markiert sind werden berücksichtigt. Der Trend vergleicht die letzten 7 Tage mit dem 4-Wochen-Durchschnitt."} />
+                                    </Box>
+                                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                                        Ø {trendsData.night?.avg || 0} Events | {trendsData.night?.trend || 'N/A'} · 22–08 Uhr
+                                        {trendsData.night?.last_night_normal !== undefined && (
+                                            <span style={{ color: trendsData.night.last_night_normal ? '#28a745' : '#fd7e14', marginLeft: 6 }}>
+                                                · Letzte Nacht: {trendsData.night.last_night_normal ? 'normal' : 'ungewöhnlich'}
+                                            </span>
+                                        )}
                                     </Typography>
-                                    <ChartHelp text={"Zählt Bewegungsereignisse zwischen 22:00 und 08:00 Uhr in Schlafräumen. Viele Ereignisse deuten auf unruhigen Schlaf oder häufiges Aufstehen hin. Nur Sensoren die als Nacht markiert sind werden berücksichtigt. Der Trend vergleicht die letzten 7 Tage mit dem 4-Wochen-Durchschnitt."} />
-                                </Box>
-                                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                                    Ø {trendsData.night?.avg || 0} Events | {trendsData.night?.trend || 'N/A'} · 22–08 Uhr
-                                    {trendsData.night?.last_night_normal !== undefined && (
-                                        <span style={{ color: trendsData.night.last_night_normal ? '#28a745' : '#fd7e14', marginLeft: 6 }}>
-                                            · Letzte Nacht: {trendsData.night.last_night_normal ? 'normal' : 'ungewöhnlich'}
-                                        </span>
-                                    )}
-                                </Typography>
-                                <ResponsiveContainer width="100%" height={150}>
-                                    <ComposedChart data={makeMiniData(trendsData.night?.timeline || [], trendsData.night?.values || [])}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                                        <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor((trendsData.night?.timeline?.length || 1) / 6)} />
-                                        <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Bar dataKey="value" fill="#fd7e14" opacity={0.8} name="Bewegungen" radius={[2,2,0,0]} />
-                                        <Line type="monotone" dataKey="movingAvg" stroke="#546e7a" strokeWidth={2} dot={false} name="Ø 7 Tage" connectNulls />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
-                            </Paper>
-                        </Grid>
+                                    <ResponsiveContainer width="100%" height={150}>
+                                        <ComposedChart data={makeMiniData(trendsData.night?.timeline || [], trendsData.night?.values || [])}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                            <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }} interval={Math.floor((trendsData.night?.timeline?.length || 1) / 6)} />
+                                            <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} />
+                                            <Tooltip content={<CustomTooltip />} />
+                                            <Bar dataKey="value" fill="#fd7e14" opacity={0.8} name="Bewegungen" radius={[2,2,0,0]} />
+                                            <Line type="monotone" dataKey="movingAvg" stroke="#546e7a" strokeWidth={2} dot={false} name="Ø 7 Tage" connectNulls />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                </Paper>
+                            </Grid>
+                        )}
 
                         {/* 3. Raum-Mobilität */}
                         <Grid item xs={12} md={6} lg={4}>
@@ -1396,6 +1487,58 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                 </Paper>
                                             );
                                         };
+                                        // Einpersonenhaushalt: Aggregat-Chart | Mehrpersonenhaushalt: pro Person
+                                        if (isMultiPerson) {
+                                            return (
+                                                <>
+                                                    {personNames.map(person => {
+                                                        const pData = buildPersonSeriesData('nocturiaCount', 'nocturiaAttr', person);
+                                                        const pVals = pData.filter((d: any) => d.value != null).map((d: any) => d.value as number);
+                                                        const pMean = pVals.length > 0 ? Math.round(pVals.reduce((a: number, b: number) => a + b, 0) / pVals.length * 10) / 10 : 0;
+                                                        return (
+                                                            <Grid item xs={12} md={6} lg={4} key={'nocturia-' + person}>
+                                                                <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#00acc1' }}>
+                                                                            NYKTURIE · {person}
+                                                                        </Typography>
+                                                                        <ChartHelp text={"Zählt zugeordnete Toilettenbesuche dieser Person im Schlaffenster. >2 Besuche/Nacht = Nykturie-Hinweis. Frühzeichen bei Diabetes T2, Herzinsuffizienz, Harnwegsinfekt."} />
+                                                                    </Box>
+                                                                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                                                                        Ø {pMean} Besuche/Nacht · {avgWinLabel}
+                                                                    </Typography>
+                                                                    <ResponsiveContainer width="100%" height={150}>
+                                                                        <ComposedChart data={pData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                                                                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                                            <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                                interval={Math.floor(pData.length / 6)} />
+                                                                            <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }} domain={[0, 6]} />
+                                                                            <Tooltip
+                                                                                formatter={(v: any, name: string) => [name === 'value' ? `${v}x` : `Ø ${v}x`, name === 'value' ? 'Toilettengänge' : '7-Tage-Ø']}
+                                                                                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#444' : '#ddd'}`, fontSize: '0.7rem' }}
+                                                                            />
+                                                                            <ReferenceArea y1={0} y2={2} fill="rgba(40,167,69,0.12)" />
+                                                                            <ReferenceArea y1={2} y2={6} fill="rgba(253,126,20,0.12)" />
+                                                                            <ReferenceLine y={2} stroke="#fd7e1455" strokeDasharray="4 3"
+                                                                                label={{ value: 'Nykturie-Grenze', position: 'insideRight', fontSize: 8, fill: '#fd7e14' }} />
+                                                                            <Bar dataKey="value" name="value" radius={[2,2,0,0]}>
+                                                                                {pData.map((entry: any, i: number) => {
+                                                                                    const v = entry.value;
+                                                                                    const col = v == null ? '#555' : v >= 2 ? '#fd7e14' : '#00acc1';
+                                                                                    return <Cell key={i} fill={col} opacity={0.8} />;
+                                                                                })}
+                                                                            </Bar>
+                                                                            <Line type="monotone" dataKey="movingAvg" stroke="#006064" strokeWidth={2}
+                                                                                dot={false} name="movingAvg" connectNulls />
+                                                                        </ComposedChart>
+                                                                    </ResponsiveContainer>
+                                                                </Paper>
+                                                            </Grid>
+                                                        );
+                                                    })}
+                                                </>
+                                            );
+                                        }
                                         return (
                                             <Grid item xs={12} md={6} lg={4}>
                                                 <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
@@ -1529,6 +1672,77 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                         const yMin = 1080;
                                         const yMax = 2040;
                                         const ticks = [1080, 1200, 1320, 1440, 1560, 1680, 1800, 1920, 2040];
+                                        // Konvertierung Minuten-ab-Mitternacht → Offset-ab-18:00 (für personData.sleepOnsetMin / wakeTimeMin)
+                                        const minsToOffset = (mins: number | null) => {
+                                            if (mins == null) return null;
+                                            return mins < 1080 ? mins + 1440 : mins;
+                                        };
+
+                                        // Mehrpersonenhaushalt: eine Kachel pro Person aus personData
+                                        if (isMultiPerson) {
+                                            return (
+                                                <>
+                                                    {personNames.map(person => {
+                                                        const pData = sorted
+                                                            .filter((d: any) => d.personData?.[person]?.sleepOnsetMin != null || d.personData?.[person]?.wakeTimeMin != null)
+                                                            .map((d: any) => ({
+                                                                date: d.date ? d.date.substring(5) : '',
+                                                                sleepStart: minsToOffset(d.personData?.[person]?.sleepOnsetMin ?? null),
+                                                                wakeTime: minsToOffset(d.personData?.[person]?.wakeTimeMin ?? null),
+                                                            }));
+                                                        return (
+                                                            <Grid item xs={12} md={6} lg={4} key={'sleeptime-' + person}>
+                                                                <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
+                                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#5c6bc0' }}>
+                                                                            SCHLAFZEIT · {person}
+                                                                        </Typography>
+                                                                        <ChartHelp text={"Zeigt Einschlaf- und Aufwachzeit dieser Person pro Nacht (aus Personenanalyse). Konsistente Schlafzeiten fördern Gesundheit."} />
+                                                                    </Box>
+                                                                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
+                                                                        Einschlaf- & Aufwachzeit (Personenanalyse)
+                                                                    </Typography>
+                                                                    {pData.length >= 1 ? (
+                                                                        <>
+                                                                            <ResponsiveContainer width="100%" height={150}>
+                                                                                <LineChart data={pData} margin={{ top: 5, right: 5, left: 10, bottom: 5 }}>
+                                                                                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                                                                    <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                                        interval={Math.floor(pData.length / 6)} />
+                                                                                    <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                                        domain={[yMin, yMax]} ticks={ticks}
+                                                                                        tickFormatter={(v: number) => fmtMins(v)} />
+                                                                                    <Tooltip
+                                                                                        formatter={(v: any, name: string) => [fmtMins(v), name === 'sleepStart' ? 'Einschlafen' : 'Aufwachen']}
+                                                                                        contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}` }}
+                                                                                    />
+                                                                                    <Line type="monotone" dataKey="sleepStart" stroke="#5c6bc0" strokeWidth={2}
+                                                                                        dot={{ r: 3, fill: '#5c6bc0' }} name="sleepStart" connectNulls />
+                                                                                    <Line type="monotone" dataKey="wakeTime" stroke="#80cbc4" strokeWidth={2}
+                                                                                        dot={{ r: 3, fill: '#80cbc4' }} name="wakeTime" connectNulls />
+                                                                                </LineChart>
+                                                                            </ResponsiveContainer>
+                                                                            <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1.5 }}>
+                                                                                <span style={{color:'#5c6bc0'}}>■ Einschlafen</span>
+                                                                                <span style={{color:'#80cbc4'}}>■ Aufwachen</span>
+                                                                            </Box>
+                                                                        </>
+                                                                    ) : (
+                                                                        <Box sx={{ height: 150, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
+                                                                            <Typography variant="caption" sx={{ textAlign: 'center', fontStyle: 'italic' }}>
+                                                                                Noch keine Schlafzeitdaten für {person}
+                                                                            </Typography>
+                                                                        </Box>
+                                                                    )}
+                                                                </Paper>
+                                                            </Grid>
+                                                        );
+                                                    })}
+                                                </>
+                                            );
+                                        }
+
+                                        // Einpersonenhaushalt: globales Schlaffenster aus FP2
                                         return (
                                             <Grid item xs={12} md={6} lg={4}>
                                                 <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
