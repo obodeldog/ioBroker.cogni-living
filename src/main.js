@@ -227,7 +227,12 @@ function computePersonSleep(p) {
 
         if (_sleepCandAll.length > 0) {
             var _trusted = _sleepCandAll.filter(function(c) { return c.prio <= 2; });
-            if (_trusted.length > 0) {
+            // OC-16/Fix: Kein Garmin/FP2 + vib_refined vorhanden -> Vibration als trusted Fallback
+            // Verhindert dass Bewegungen anderer Personen (Multi-Haushalt) die Vibrations-Einschlafzeit verdraengen
+            if (_trusted.length === 0 && candVibRefined) {
+                sleepStart = candVibRefined; sleepStartSrc = 'vib_refined';
+                if (log) log.info(logPfx + 'Onset vib_refined (trusted fallback, kein FP2/Garmin): ' + new Date(sleepStart).toLocaleTimeString());
+            } else if (_trusted.length > 0) {
                 var _t = _trusted[0];
                 sleepStart = _t.ts; sleepStartSrc = _t.source;
                 if (log) log.info(logPfx + 'Onset trusted: ' + _t.source + ' @ ' + new Date(sleepStart).toISOString());

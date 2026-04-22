@@ -1,8 +1,17 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 21.04.2026 | **Version:** 0.33.189
+**Letzte Aktualisierung:** 22.04.2026 | **Version:** 0.33.190
 
 ---
 
+## ✅ Sitzung 22.04.2026 — Version 0.33.190
+
+### ✅ Abgeschlossen
+- **[Fix] vib_refined als trusted Fallback im Cluster-Algorithmus**: Wenn kein Garmin/FP2/fp2_vib vorhanden ist UND `vib_refined` (Matratze-Stillheit-Sensor) einen Zeitstempel hat → wird dieser direkt als Einschlafzeit übernommen, ohne Clustering. Verhindert dass Bewegungsereignisse anderer Personen im Mehrpersonenhaushalt (z.B. Ingrid aktiv um 01:58/02:46) die korrekte frühe Einschlafzeit (Robert vib_refined 21:30) überschreiben. Reale Fallanalyse: Gondelsheim 22.04.2026 — Robert korrekt um 21:30 im Bett, Algorithmus hatte fälschlicherweise 02:46 gewählt.
+
+### Nächster logischer Schritt
+- Adapter updaten und nächste Nacht beobachten: Roberts Einschlafzeit sollte ~21:30 zeigen statt 02:46
+
+---
 ## ✅ Sitzung 21.04.2026 — Version 0.33.189
 
 ### ✅ Abgeschlossen
