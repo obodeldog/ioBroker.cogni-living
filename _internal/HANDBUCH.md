@@ -1004,102 +1004,50 @@ Wenn Uhrzeit + Raum auf Schlaf/Siesta hindeuten (Wahrscheinlichkeit > 65%), wird
 
 ---
 
-## 🚶 OC-31 STAGE 1: NACHT-AUFSTEHEN-FILTER (kurzNachtaufstehen) — ab v0.33.191
+## 🚶 Kurzes Aufstehen in der Nacht — wie AURA damit umgeht (ab v0.33.191)
 
-### Zweck
+### Was passiert, wenn jemand nachts kurz aufsteht?
 
-Verhindert, dass ein kurzes nächtliches Aufstehen (Toilettengang, Wasserholen, Medikament nehmen o.ä.) als neues "Einschlafen" fehlinterpretiert wird.
+Jeder kennt es: Man schläft um 22 Uhr ein, steht kurz nach 2 Uhr auf — Toilette, ein Glas Wasser, eine Tablette — und legt sich wieder hin. Diese kurze Unterbrechung hat mit dem eigentlichen Einschlafen nichts zu tun.
 
-Ohne diesen Filter kann der Cluster-Algorithmus Motion-Events aus der Abwesenheitsphase (z.B. 02:44 Flur-Bewegung) als Einschlaf-Kandidaten verwenden — obwohl die Person bereits seit 21:30 schläft.
+Ohne eine spezielle Erkennung könnte AURA diese Bewegungen aber falsch interpretieren: Der Bewegungsmelder im Flur schlägt um 2:44 Uhr an, der Sensor im Schlafzimmer kurz danach. Für einen "dummen" Algorithmus sieht das aus wie: *"Person hat gerade das Bett verlassen und ist zurückgekommen — vielleicht ist das der Einschlafzeitpunkt."* Ergebnis: AURA zeigt 2:46 Uhr als Einschlafzeit an, obwohl die Person bereits seit 22 Uhr schläft.
 
-### Architektur: Wo ist der Filter eingehängt?
+### Das Beispiel aus der Praxis (Robert, 21./22.04.2026)
 
-```
-allEvents (Sensor-Log)
-        │
-        ▼
-┌───────────────────────────────────────────────┐
-│  computePersonSleep()                         │
-│                                               │
-│  1. hausStillTs / candVibRefined berechnen    │
-│  2. _sleepCandAll aufbauen (alle Quellen)     │
-│                                               │
-│  ► OC-31: _detectNachtAufstehen()  ◄──────── │
-│    → Sucht: Abgang außerhalb Bett             │
-│    → Prüft: Rückkehr ins Bett ≤ 20 Min        │
-│    → Entfernt Kandidaten in diesem Fenster    │
-│                                               │
-│  3. Cluster-Algorithmus / Trusted-Logik       │
-│  4. sleepStart bestimmen                      │
-└───────────────────────────────────────────────┘
-```
+Robert legt sich um **21:30 Uhr** ins Bett. Der Matratzensensor bestätigt das. Um **2:44 Uhr** steht er kurz auf (Flur-Bewegungsmelder schlägt an), um **2:51 Uhr** ist er wieder im Schlafzimmer.
 
-### Algorithmus Stage 1 — Schritt für Schritt
+Ohne den Filter: AURA wertet die 2:44-Bewegung als mögliche Einschlafzeit und wählt **2:46 Uhr** — komplett falsch.
 
-```
-EINGABE:
-  allEvents          — alle Sensor-Events der Nacht
-  bedroomLocations   — Raum-IDs des Schlafzimmers (z.B. ['schlaf'])
-  hopDistFn          — Topologie-Matrix-Funktion (BFS-Hops)
-  searchBase         — frühester Einschlaf-Zeitpunkt
+Mit dem Filter: AURA erkennt das Muster "kurz raus, kurz rein" und ignoriert diese Zeitspanne. Die Einschlafzeit bleibt bei **21:30 Uhr**.
 
-SCHRITT 1 — Kandidaten filtern:
-  Alle motion-Events (value=true) ab searchBase nach Timestamp sortieren
+### Wie erkennt AURA das Muster?
 
-SCHRITT 2 — Abgang erkennen:
-  Für jeden Event E außerhalb von bedroomLocations:
-    • Hop-Distanz zu Schlafzimmer berechnen (BFS über Topologie)
-    • Falls Hop-Distanz > 4: ignorieren (zu weit = Artefakt/Spinne/andere Person)
-    • Hinweis: personTag wird NICHT gefiltert (Flur, Bad etc. sind Shared-Sensoren)
+AURA überwacht während der Nacht (21:00–09:00 Uhr) alle Bewegungssensoren im Haus und sucht nach folgendem Muster:
 
-SCHRITT 3 — Rückkehr suchen:
-  Innerhalb 20 Minuten nach E:
-    Gibt es einen motion-Event R IN bedroomLocations?
-    → JA: Aufstehen erkannt!
-    → NEIN: kein Nacht-Aufstehen, E bleibt im Pool
+1. **Jemand verlässt das Schlafzimmer** — ein Bewegungsmelder außerhalb des Schlafzimmers schlägt an (Flur, Bad, Küche — maximal 4 "Türen" vom Schlafzimmer entfernt, damit entfernte Räume wie Keller ignoriert werden)
+2. **Jemand kehrt innerhalb von 20 Minuten zurück** — der Schlafzimmer-Sensor schlägt wieder an
 
-SCHRITT 4 — Fenster erstellen:
-  Fenster = [E.ts - 2 Min  …  R.ts + 3 Min]
-  (Puffer verhindert Off-by-One-Fehler durch Sensor-Latenz)
+Wenn dieses Muster erkannt wird, sagt AURA: *"In diesem Zeitraum war jemand kurz auf — alle Sensordaten aus diesem Fenster ignorieren wir für die Einschlafzeit-Berechnung."*
 
-SCHRITT 5 — Kandidaten bereinigen:
-  Aus _sleepCandAll werden alle Kandidaten entfernt, die:
-    • prio >= 4 (motion_vib, gap60, motion, last_outside, haus_still)
-    • UND deren Timestamp in einem Nacht-Aufstehen-Fenster liegt
-  Garmin / FP2 / vib_refined (prio <= 3) bleiben IMMER erhalten.
+### Was wird ignoriert, was nicht?
 
-AUSGABE:
-  _nachtAufstehenWindows: [{start, end, departureTs, returnTs, departureSensor, returnSensor}]
-  Diese werden im JSON-Snapshot als `nachtAufstehenEvents` gespeichert.
-```
+Wenn ein solcher kurzer Ausflug erkannt wird, werden Sensordaten aus diesem Zeitraum **nicht** als Einschlafzeitpunkt gewertet — aber nur für weniger zuverlässige Quellen:
 
-### Einpersonen- vs. Mehrpersonenhaushalt
+| Quelle | Wird gefiltert? | Warum |
+|---|---|---|
+| Smartwatch (Garmin, Fitbit) | **Nein** | Die Uhr wird durchgehend getragen und erkennt den Schlafzustand unabhängig von Bewegungen im Haus |
+| Radar-Sensor (FP2/mmWave) kombiniert | **Nein** | Radar erkennt Atem und Mikrobewegungen — wurde beim Einschlafen kalibriert und ändert sich durch kurzes Aufstehen nicht |
+| Radar-Sensor allein | **Nein** | Gleicher Grund |
+| Matratzensensor (Vibration verfeinert) | **Ja** | Dieser Sensor misst "wann war die Matratze zuletzt längere Zeit still" — nach einem Aufstehen und Zurücklegen kann dieser Wert zurückgesetzt werden und eine falsche Zeit anzeigen |
+| Bewegungsmelder, Lücken-Erkennung, "Haus still" | **Ja** | Diese Quellen sind direkt von den Bewegungen betroffen |
 
-| Aspekt | Verhalten |
-|---|---|
-| Einpersonenhaushalt (kein personTag) | Identisch — alle Motion-Events werden geprüft |
-| Mehrpersonenhaushalt (personTag vorhanden) | Abgang: **alle** Sensoren ≤4 Hops (incl. Shared-Räume) werden geprüft |
-| Rückkehr-Erkennung | Immer auf `bedroomLocations` der jeweiligen Person beschränkt |
-| Shared-Sensoren (Flur, Bad) | Werden für Abgang-Erkennung **einbezogen** — korrekt, da Person durch Shared-Räume geht |
+### Was passiert bei längerer Abwesenheit?
 
-### Wichtige Einschränkungen (bekannt, Stage 1)
+Wer länger als 20 Minuten aufbleibt (z.B. schläft auf dem Sofa ein oder legt sich ins Gästebett), wird **nicht** als kurzes Aufstehen erkannt. In diesem Fall behandelt AURA die Situation korrekt als eine neue potenzielle Einschlafphase.
 
-- **Kein Cross-Person-Tracking**: Wenn Person A aufsteht und Person B gleichzeitig aufsteht, könnte das B-Event fälschlich als A-Rückkehr gewertet werden. Stage 2 (Zustandsmaschine) löst das.
-- **20-Min-Fenster**: Lange Abwesenheiten (>20 Min) werden nicht erkannt — die Kandidaten bleiben im Pool. Das ist gewollt (echtes "Schlafen gehen" nach Aufstehen = neue Einschlafzeit).
-- **Hop-Lücken**: Räume ohne Bewegungsmelder werden topologisch überbrückt (BFS zählt Hops über alle Räume, nicht nur solche mit Sensoren). Ein Flur ohne PIR erhöht trotzdem die Hop-Distanz.
+### Logs für die Fehleranalyse
 
-### UI-Feedback (Entwicklungsmodus)
-
-In der HealthTab erscheint unterhalb der Einschlafzeit-Quelle ein blaues Debug-Badge:
-
-```
-🚶 2× kurzNachtaufstehen: 02:44–02:51  03:12–03:18
-```
-
-Dieses Badge ist für den Endkunden nicht relevant und wird in einer späteren Version ausgeblendet oder in den Debug-Modus verschoben.
-
-### Logs
-
+Im System-Log erscheint bei erkanntem Nacht-Aufstehen:
 ```
 [cPS:global] OC-31: 1 Nacht-Aufstehen erkannt: 02:44-02:51 (flur_motion)
 [cPS:global] OC-31: 2 Kandidaten als Nacht-Aufstehen gefiltert.

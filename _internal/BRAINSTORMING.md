@@ -952,3 +952,23 @@ BFS in `_roomHopDistance()` arbeitet auf Raum-Adjacency, nicht auf Sensor-Adjace
 - Anti-Pattern: N=1 setzen wenn eine typische Hausstruktur Flure/Verbindungsräume hat
 
 **Für OC-31:** Hop-Limit = 4 gewählt — deckt Schlafzimmer + Flur + Bad + Übergangszimmer ab, ohne Keller/Garage einzubeziehen.
+
+---
+
+### Architektur-Hinweis: FP2 → "Radar" umbenennen (22.04.2026)
+
+**Problem:** Der Begriff "FP2" stammt vom Aqara FP2-Sensor (Produktname). Im Code, in der UI und in gespeicherten JSON-Daten tauchen die Quellennamen `fp2` und `fp2_vib` überall auf. Mit dem Shelly Presence Gen4 und anderen mmWave-Radar-Sensoren passt dieser Produktname nicht mehr.
+
+**Gewünschtes Ziel:** Nutzer sehen in der UI "Radar" oder "Radar + Vibration" statt "FP2".
+
+**Empfehlung für die Umsetzung:**
+
+- **Intern (Code, JSON, ioBroker-States):** Keys `fp2` / `fp2_vib` beibehalten. Eine Umbenennung würde alle bestehenden JSON-History-Dateien und Kalibrierungsdaten unlesbar machen (alte Nächte würden als unbekannte Quelle erscheinen).
+- **Extern (UI-Labels):** Nur die Anzeigenamen in der Frontend-Label-Map ändern:
+  - `fp2` → "Radar-Präsenz"
+  - `fp2_vib` → "Radar + Vibration"
+  - `fp2_other` → "Radar (andere Zone)"
+
+**Scope:** Nur `src-admin/src/components/tabs/HealthTab.tsx` — die `srcLabel`-Map und `srcInfo`-Map aktualisieren. Kein Backend-Code, keine JSON-Migration nötig.
+
+**Priorität:** NIEDRIG — kosmetisch, kein Einfluss auf Genauigkeit. Sinnvoll vor einem öffentlichen Release oder wenn der Shelly Presence Gen4 aktiv im Einsatz ist.

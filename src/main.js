@@ -296,12 +296,14 @@ function computePersonSleep(p) {
         ].filter(function(c) { return c.ts != null; });
 
         // OC-31: Kandidaten die in einem Nacht-Aufstehen-Fenster liegen herausfiltern
-        // (betrifft prio >= 4: motion_vib, gap60, motion, last_outside, haus_still)
-        // Garmin/FP2/vib_refined bleiben unangetastet
+        // (betrifft prio >= 3: vib_refined, motion_vib, gap60, motion, last_outside, haus_still)
+        // Option A: vib_refined (prio 3) ebenfalls filtern, da 'letzte Matratzen-Stille' nach Rückkehr
+        // neu gesetzt wird und damit einen falschen Einschlaf-Timestamp ergeben kann.
+        // Nur Garmin (prio 0), fp2_vib (prio 1), fp2 (prio 2) bleiben absolut unangetastet.
         if (_nachtAufstehenWindows.length > 0) {
             var _candBefore = _sleepCandAll.length;
             _sleepCandAll = _sleepCandAll.filter(function(c) {
-                if (c.prio <= 3) return true;
+                if (c.prio <= 2) return true; // Garmin + fp2_vib + fp2 immer behalten
                 var _tsC = c.ts;
                 return !_nachtAufstehenWindows.some(function(w) {
                     return _tsC >= w.start && _tsC <= w.end;
