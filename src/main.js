@@ -211,6 +211,68 @@ function computePersonSleep(p) {
     }
         if (!overrideApplied) {
         // Cluster-basierte Einschlafzeit-Auswahl
+        // OC-31 Stage 1: Nacht-Aufstehen-Erkennung
+        // Erkennt kurze Abwesenheiten (Aufstehen+Rückkehr) im Schlaffenster
+        // und entfernt dadurch verursachte Falsch-Kandidaten aus dem Pool.
+        // Funktioniert fuer Ein- und Mehrpersonenhaushalt identisch:
+        //   - Abgang: Sensor ausserhalb Schlafzimmer ≤4 Hops, personTag egal (Shared-Sensoren eingeschlossen)
+        //   - Rückkehr: Sensor IN Schlafzimmer-Location innerhalb 20 Min
+        var _nachtAufstehenWindows = (function() {
+            if (!bedroomLocations || bedroomLocations.length === 0) return [];
+            var _bedroomLocSet = new Set(bedroomLocations);
+            var _searchMs = searchBase.getTime ? searchBase.getTime() : searchBase;
+            var _windows = [];
+            // Nur Motion-Events (val=true) im Schlaffenster betrachten
+            var _motAll = allEvents.filter(function(e) {
+                return e.type === 'motion' && (e.value === true || e.value === 'true' || e.value === 1) &&
+                       (e.timestamp || 0) >= _searchMs;
+            }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+            // Fuer jeden externen Motion-Event: prüfe ob Rückkehr folgt
+            for (var _wi = 0; _wi < _motAll.length; _wi++) {
+                var _wEvt = _motAll[_wi];
+                var _wTs  = _wEvt.timestamp || 0;
+                var _wLoc = _wEvt.location || '';
+                // Sensor muss ausserhalb Schlafzimmer sein
+                if (_bedroomLocSet.has(_wLoc)) continue;
+                // Hop-Distanz prüfen (≤4 vom Schlafzimmer): verhindert Keller/Spinnen-Artefakte
+                if (hopDistFn && _wLoc) {
+                    var _minHop = 999;
+                    for (var _bli = 0; _bli < bedroomLocations.length; _bli++) {
+                        var _h = hopDistFn(bedroomLocations[_bli], _wLoc);
+                        if (_h !== null && _h !== undefined && _h < _minHop) _minHop = _h;
+                    }
+                    if (_minHop > 4) continue; // Zu weit weg → ignorieren
+                }
+                // Abgang bereits in einem bestehenden Fenster? → überspringen
+                if (_windows.some(function(w) { return _wTs >= w.start && _wTs <= w.end; })) continue;
+                // Rückkehr ins Schlafzimmer innerhalb 20 Min suchen
+                var _retEvt = null;
+                for (var _ri = _wi + 1; _ri < _motAll.length; _ri++) {
+                    var _rEvt = _motAll[_ri];
+                    var _rTs  = _rEvt.timestamp || 0;
+                    if (_rTs > _wTs + 20 * 60000) break; // 20-Min-Fenster überschritten
+                    if (_bedroomLocSet.has(_rEvt.location || '')) { _retEvt = _rEvt; break; }
+                }
+                if (!_retEvt) continue; // Keine Rückkehr → kein Nacht-Aufstehen
+                _windows.push({
+                    start: _wTs - 2 * 60000,
+                    end:   (_retEvt.timestamp || 0) + 3 * 60000,
+                    departureTs:    _wTs,
+                    returnTs:       _retEvt.timestamp || 0,
+                    departureSensor: _wEvt.name   || _wEvt.id   || _wLoc,
+                    returnSensor:    _retEvt.name || _retEvt.id || (_retEvt.location || '')
+                });
+            }
+            return _windows;
+        })();
+        if (_nachtAufstehenWindows.length > 0 && log) {
+            log.info(logPfx + 'OC-31: ' + _nachtAufstehenWindows.length + ' Nacht-Aufstehen erkannt: ' +
+                _nachtAufstehenWindows.map(function(w) {
+                    return new Date(w.departureTs).toLocaleTimeString() + '-' + new Date(w.returnTs).toLocaleTimeString() +
+                           ' (' + w.departureSensor + ')';
+                }).join(', '));
+        }
+
         // Stufe 1: Trusted (Garmin/FP2) immer vorrangig
         // Stufe 2: Dominantester Cluster innerhalb 90 Min fuer restliche Quellen
         var _sleepCandAll = [
@@ -224,6 +286,23 @@ function computePersonSleep(p) {
             { source: 'last_outside', ts: candLastOutside,  prio: 7 },
             { source: 'haus_still',   ts: hausStillTs,      prio: 8 }
         ].filter(function(c) { return c.ts != null; });
+
+        // OC-31: Kandidaten die in einem Nacht-Aufstehen-Fenster liegen herausfiltern
+        // (betrifft prio >= 4: motion_vib, gap60, motion, last_outside, haus_still)
+        // Garmin/FP2/vib_refined bleiben unangetastet
+        if (_nachtAufstehenWindows.length > 0) {
+            var _candBefore = _sleepCandAll.length;
+            _sleepCandAll = _sleepCandAll.filter(function(c) {
+                if (c.prio <= 3) return true;
+                var _tsC = c.ts;
+                return !_nachtAufstehenWindows.some(function(w) {
+                    return _tsC >= w.start && _tsC <= w.end;
+                });
+            });
+            if (_sleepCandAll.length < _candBefore && log) {
+                log.info(logPfx + 'OC-31: ' + (_candBefore - _sleepCandAll.length) + ' Kandidaten als Nacht-Aufstehen gefiltert.');
+            }
+        }
 
         if (_sleepCandAll.length > 0) {
             var _trusted = _sleepCandAll.filter(function(c) { return c.prio <= 2; });
@@ -540,7 +619,8 @@ function computePersonSleep(p) {
         sleepScore:           sleepScore,
         sleepScoreRaw:        sleepScoreRaw,
         _motionAnchor:        motionAnchor,
-        _hausStillTs:         hausStillTs
+        _hausStillTs:         hausStillTs,
+        nachtAufstehenEvents: _nachtAufstehenWindows
     };
 }
 
@@ -2907,7 +2987,8 @@ class CogniLiving extends utils.Adapter {
                 sleepStartOverrideSource: _overrideApplied ? sleepStartSource : null,
                 wakeOverridden: _wakeOverrideApplied,
                 bedWasEmpty: bedWasEmpty,
-                noisySensors: noisySensors
+                noisySensors: noisySensors,
+                nachtAufstehenEvents: (_gR && _gR.nachtAufstehenEvents) ? _gR.nachtAufstehenEvents : []
             };
 
             const dataDir = utils.getAbsoluteDefaultDataDir();

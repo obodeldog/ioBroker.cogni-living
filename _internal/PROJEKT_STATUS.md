@@ -1,5 +1,31 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 22.04.2026 | **Version:** 0.33.190
+**Letzte Aktualisierung:** 22.04.2026 | **Version:** 0.33.191
+
+---
+
+## 📍 Sitzung 22.04.2026 — Version 0.33.191
+
+### ✅ Abgeschlossen
+- **[OC-31 Stage 1] Nacht-Aufstehen-Filter in `computePersonSleep`**: Neuer regelbasierter Pre-Filter erkennt kurze nächtliche Abwesenheiten (Toilettengang, Medikament etc.) und entfernt die dadurch verursachten Motion-Kandidaten aus dem Einschlaf-Pool. Abgang: Motion-Sensor außerhalb Schlafzimmer ≤4 Hops (personTag-unabhängig, Shared-Sensoren eingeschlossen). Rückkehr: Motion in bedroomLocations innerhalb 20 Min. Garmin/FP2/vib_refined (prio ≤ 3) werden nie gefiltert. Funktioniert identisch für Ein- und Mehrpersonenhaushalt.
+- **[OC-31 UI] Debug-Badge in HealthTab**: Unterhalb der Einschlafzeit-Kachel erscheint ein blaues 🚶-Badge das erkannte `kurzNachtaufstehen`-Events mit Uhrzeiten anzeigt (Entwicklungsmodus).
+- **[OC-31 Doku] HANDBUCH.md**: Vollständige Algorithmus-Dokumentation mit ASCII-Diagramm, Schritt-für-Schritt-Ablauf, Ein-/Mehrpersonenhaushalt-Vergleich und bekannten Einschränkungen.
+- **[OC-31 Testing] TESTING.md**: 10 Testfälle in Testbereich 21 (T-NA1 bis T-NA10) für alle Szenarien.
+- **[BRAINSTORMING] OC-31 Stage 2+3**: Stage 2 (Zustandsmaschine) und Stage 3 (LSTM/HMM) dokumentiert mit Architekturhinweisen und Datenbedarf.
+- **[BRAINSTORMING] OC-32**: Topologie-Matrix sensor-aware machen — Problem und Lösungsansatz für `hopToNearestSensor()` dokumentiert.
+- **[BRAINSTORMING] Hop-Lücken-Hinweis**: Architekturhinweis für alle Hop-basierten Algorithmen zur großzügigen N-Wahl bei Transiträumen ohne Sensoren.
+
+### Nächster logischer Schritt
+- Roberts nächste Nacht beobachten: OC-31 sollte 02:44-02:51 als kurzNachtaufstehen erkennen und filtern → sleepStart bleibt bei 21:30
+
+---
+
+## ⛔ PFLICHT-REGEL FÜR DEN AI-ASSISTENTEN
+
+**Keine Code-Änderungen ohne explizite Bestätigung des Nutzers.**
+
+- Algorithmus-Änderungen (Prioritäten, Schwellwerte, Logik-Entscheidungen): IMMER erst erklären, diskutieren, Zustimmung einholen — dann erst umsetzen.
+- Ausnahme: reine Dokumentations-/Formatänderungen, Versionsbumps nach besprochener Änderung.
+- Bei Bugs oder Auffälligkeiten: Analyse und Erklärung liefern, Lösungsvorschlag machen — aber WARTEN bis der Nutzer "ja, mach das" sagt.
 
 ---
 

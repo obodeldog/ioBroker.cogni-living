@@ -874,3 +874,81 @@ Prioritaet: Phase 9+ -- erst wenn FP2 stabil laeuft und Kundenbedarf bestaetigt
 Fuer konkrete Deploy-Schritte, Versionshistorie und implementierte Features:
 â†’ PROJEKT_STATUS.md
 
+
+
+---
+
+### OC-31: Event-Sequenz-Filter / Nacht-Aufstehen-Erkennung (21.04.2026)
+
+**Problem:** Der Cluster-Algorithmus ist "kontext-blind" — ein kurzes nächtliches Aufstehen (Toilettengang, Medikament etc.) generiert Motion-Events, die fälschlich als neue Einschlafzeit interpretiert werden. Robert-Beispiel: schläft ab 21:30, steht 02:44 kurz auf → Algorithmus wählt 02:46 als Einschlafzeit.
+
+**✅ Stage 1 implementiert (v0.33.191) — Regelbasierter Nacht-Aufstehen-Filter:**
+
+Innerhalb `computePersonSleep()`:
+- Scannt alle Motion-Events im Schlaffenster auf Abgang+Rückkehr-Muster
+- Abgang: Sensor außerhalb Schlafzimmer ≤4 Hops (ohne personTag-Filter — Shared-Sensoren eingeschlossen)
+- Rückkehr: Sensor in bedroomLocations der Person innerhalb 20 Min
+- Kandidaten prio ≥ 4 in erkannten Fenstern werden aus Pool entfernt
+- Garmin/FP2/vib_refined (prio ≤ 3) bleiben immer erhalten
+- Ergebnis: `nachtAufstehenEvents` im JSON + Debug-Badge in HealthTab
+
+**Stage 2 — Zustandsmaschine (noch offen):**
+
+Zustände: `SCHLAFEN → AUFGESTANDEN → ZURÜCKGEKEHRT → SCHLAFEN`
+
+Regeln (ohne Training):
+- AUFGESTANDEN: Motion außerhalb Bett nach hausStill-Periode (> 30 Min Stille)
+- ZURÜCKGEKEHRT: Motion in Schlafzimmer innerhalb konfigurierbarer Zeit
+- SCHLAFEN: Neue haus_still-Periode nach Rückkehr
+
+Vorteil gegenüber Stage 1: Erkennt auch komplexere Muster (mehrfaches Aufstehen, Person schläft in anderem Zimmer ein).
+
+**Stage 3 — Gelerntes Modell / LSTM / HMM (Langfrist-Roadmap):**
+
+Benötigt Trainingsdaten: Event-Sequenzen + Ground-Truth (manuell annotiert oder aus OC-16 MAE-Kalibrierung).
+
+Modell-Optionen:
+- **HMM** (Hidden Markov Model): Geringer Datenbedarf, interpretierbar, gut für diskrete Zustände
+- **LSTM**: Lernt zeitliche Muster, besser für komplexe Sequenzen, braucht mehr Daten
+- **Rule-Mined**: Zuerst Stage 1+2 für 50+ Nächte laufen lassen → Muster analysieren → LSTM trainieren
+
+Keine unmittelbare Umsetzung — erst wenn OC-16 Kalibrierung 7+ Nächte gesammelt hat.
+
+---
+
+### OC-32: Topologie-Matrix sensor-aware machen (21.04.2026)
+
+**Problem:** Die aktuelle Topologie-Matrix `analysis.topology.structure` ist rein raum-basiert. BFS zählt Hops zwischen Räumen unabhängig davon, ob der Durchgangsraum einen Bewegungsmelder hat.
+
+**Konkretes Beispiel:**
+```
+Schlafzimmer → Flur (kein PIR) → Wohnzimmer (PIR)
+```
+Hop-Distanz Schlafzimmer → Wohnzimmer = 2 (korrekt).
+Aber: Wenn wir nach "nächstem Sensor" suchen, gibt es keinen auf Hop=1 (Flur).
+
+**Auswirkungen heute:**
+- `_roomHopDistance()` funktioniert korrekt für Raum-Hops (BFS, unabhängig von Sensoren)
+- OC-31 Stage 1 filtert auf Hop ≤ 4 — Räume ohne Sensoren werden "übersprungen" (korrekt für Topology-BFS)
+- Problem tritt auf wenn man wissen will "welche Sensoren sind maximal N echte Schritte entfernt" (physisch, nicht topologisch)
+
+**Lösungsansatz:**
+- Sensor-aware BFS: Beim Durchsuchen der Topologie nicht nur Räume, sondern auch ob der Raum Sensoren enthält
+- Neues Konzept: `hopToNearestSensor(roomA, sensorType)` — gibt Distanz zum nächstgelegenen Sensor eines Typs zurück
+- Alternative: Sensor-Liste um `topologicalHopFromBedroom` pre-cachen beim Adapter-Start
+
+**Priorität:** MITTEL — betrifft OC-31 Stage 2, Person-Counting (OC-3/OC-11). Aktuell kein kritischer Bug.
+
+---
+
+### Architektur-Hinweis: Hop-Lücken in der Topologie-Matrix (21.04.2026)
+
+**Faustregel für alle Hop-basierten Algorithmen:**
+
+BFS in `_roomHopDistance()` arbeitet auf Raum-Adjacency, nicht auf Sensor-Adjacency. Das bedeutet:
+- Räume ohne Bewegungsmelder zählen trotzdem als Hop (sie "existieren" topologisch)
+- Beispiel: Schlafzimmer → Flur (kein PIR) → Bad (PIR): Bad hat Hop=2, korrekt
+- Konsequenz: Beim Filtern nach Hop ≤ N immer großzügig wählen (N=3-4), damit keine echten Sensoren ausgeschlossen werden, die durch "stille" Transiträume führen
+- Anti-Pattern: N=1 setzen wenn eine typische Hausstruktur Flure/Verbindungsräume hat
+
+**Für OC-31:** Hop-Limit = 4 gewählt — deckt Schlafzimmer + Flur + Bad + Übergangszimmer ab, ohne Keller/Garage einzubeziehen.

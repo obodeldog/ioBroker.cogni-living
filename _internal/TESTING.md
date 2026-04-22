@@ -1,4 +1,4 @@
-﻿# TESTING — ioBroker Cogni-Living (AURA)
+# TESTING — ioBroker Cogni-Living (AURA)
 
 **Zweck:** Manuelle Testliste nach Code-Änderungen. Dient als Grundlage für spätere QA-Dokumentation (Medizinprodukt-Konformität MDR Art. 14 / Annex II).
 
@@ -438,3 +438,19 @@
 | T-FRZ3 | **Abend-Sperre mit neuer Bett-Aktivitaet**: Vor 22 Uhr aber FP2/Vibration aktiv | `_hasFreshBedEvt = true` -> Sperre deaktiviert sich. Neue Analyse laeuft durch | - | - |
 | T-FRZ4 | **Vortag-Kachel**: AURA Monitor auf "Vortag" wechseln um 19:00 Uhr ohne Garmin | Vortag zeigt korrekte Schlaf-Daten (nicht "Bett war leer") - dank Abend-Sperre ist JSON unveraendert | - | - |
 | T-FRZ5 | **Normale Freeze-Logik bleibt**: Normalnacht MIT Garmin/Vibration | Normaler _sleepFrozen-Pfad greift unabhaengig von Abend-Sperre. Keine Regressionen | - | - |
+
+
+## Testbereich 21: NACHT-AUFSTEHEN-FILTER OC-31 Stage 1 (v0.33.191)
+
+| ID | Testfall | Erwartetes Ergebnis | Geprueft am | OK? |
+|---|---|---|---|---|
+| T-NA1 | **Klassischer Toilettengang**: Person schläft ab 22:00, steht 02:44 auf (Flur-PIR), kehrt 02:51 zurück (Schlafzimmer-PIR). Einschlaf-Kandidaten liegen bei 02:44 und 02:46. | OC-31 erkennt Abgang 02:44, Rückkehr 02:51. Fenster: 02:42-02:54. Kandidaten motion (02:44, 02:46) werden gefiltert. sleepStart bleibt bei vib_refined/haus_still 22:00. | - | - |
+| T-NA2 | **Einpersonenhaushalt ohne personTag**: Gleicher Ablauf wie T-NA1, aber keine personTag-Konfiguration. | Identisches Ergebnis — personTag hat keinen Einfluss auf Stage 1. | - | - |
+| T-NA3 | **Mehrpersonenhaushalt**: Beide Personen haben Schlafzimmer A und B. Person A steht auf, Flur-PIR auslöst (Shared). Rückkehr in Schlafzimmer A erkannt. | Abgang über Shared-Sensor (Flur) korrekt erkannt. Rückkehr via bedroomLocations[A]. Kandidaten von Person A gefiltert. Kandidaten von Person B unberührt. | - | - |
+| T-NA4 | **Hop-Gap: Raum ohne Bewegungsmelder dazwischen**: Schlafzimmer → Flur (kein PIR) → Bad (PIR). Hop-Distanz Bad = 2. | Bad-Event (Hop=2) liegt innerhalb Limit (4). Abgang wird korrekt erkannt. | - | - |
+| T-NA5 | **Zu weit weg (Hop > 4)**: Keller-Sensor löst nachts aus (Hop=5 vom Schlafzimmer). | Keller-Event wird ignoriert (Hop > 4). Kein Nacht-Aufstehen erkannt. Kein fälschliches Filtern. | - | - |
+| T-NA6 | **Kein Nacht-Aufstehen**: Person verlässt Schlafzimmer um 02:44 aber kommt NICHT zurück (z.B. schläft auf Sofa). | Kein Rückkehr-Event innerhalb 20 Min → kein Fenster. Kandidaten bleiben im Pool. | - | - |
+| T-NA7 | **Lange Abwesenheit > 20 Min**: Person steht 02:00 auf, kommt erst 02:35 zurück. | 20-Min-Fenster überschritten → kein Nacht-Aufstehen erkannt. Kandidaten bleiben. Neues "Einschlafen" möglicherweise korrekt. | - | - |
+| T-NA8 | **Garmin/FP2 vorhanden**: Garmin zeigt Einschlafzeit 22:15. Nacht-Aufstehen bei 02:44 erkannt. | Garmin als Trusted-Quelle (prio=0) wird NICHT gefiltert. sleepStart = Garmin 22:15. Filter bereinigt nur prio>=4-Kandidaten. | - | - |
+| T-NA9 | **Keine False Positives tagsüber**: Person verlässt 08:00 das Schlafzimmer nach dem Aufwachen. | Abgang liegt außerhalb searchBase-Fenster (searchBase = letzte Abend). Kein fälschliches Erkennen. | - | - |
+| T-NA10 | **Debug-Badge in HealthTab**: OC-31 hat 1 Nacht-Aufstehen erkannt. | Blaues 🚶-Badge erscheint unterhalb der Einschlafzeit-Kachel mit Uhrzeiten. | - | - |
