@@ -644,6 +644,40 @@ function computePersonSleep(p) {
         if (log) log.debug(logPfx + 'Score=' + sleepScore + ' dur=' + Math.round(durMin) + 'min adj=' + stageAdj);
     }
 
+    // OC-31 Stage 2: State Machine - Wake-Phasen nach sleepStart erfassen
+    var _smWakePhases = (function() {
+        if (!sleepStart || !bedroomLocations || bedroomLocations.length === 0) return [];
+        var _bedroomLocSet = new Set(bedroomLocations);
+        var _wakeCapMs = wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000);
+        var _phases = [];
+        var _inBed = true;
+        var _deptTs = null;
+        var _postEvts = allEvents.filter(function(e) {
+            return isMine(e) && e.type === 'motion' && isActiveValue(e.value) &&
+                   (e.timestamp || 0) > sleepStart && (e.timestamp || 0) < _wakeCapMs;
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        for (var _si = 0; _si < _postEvts.length; _si++) {
+            var _sEvt = _postEvts[_si];
+            var _sTs  = _sEvt.timestamp || 0;
+            var _isOutside = !_bedroomLocSet.has(_sEvt.location || '');
+            if (_inBed && _isOutside) {
+                _deptTs = _sTs; _inBed = false;
+            } else if (!_inBed && !_isOutside) {
+                if (_deptTs && (_sTs - _deptTs) > 5 * 60000) {
+                    _phases.push({
+                        type: 'wake',
+                        start: _deptTs,
+                        end: _sTs,
+                        durationMin: Math.round((_sTs - _deptTs) / 60000),
+                        source: 'sm_stage2'
+                    });
+                }
+                _inBed = true; _deptTs = null;
+            }
+        }
+        return _phases;
+    })();
+
     return {
         sleepWindowStart:     sleepStart,
         sleepWindowEnd:       wakeTs,
@@ -659,42 +693,6 @@ function computePersonSleep(p) {
         outsideBedEvents:     obe,
         sleepStages:          sleepStages,
         stagesWindowStart:    stagesWinStart,
-
-        // OC-31 Stage 2: State Machine - erkennt lange Abwesenheiten NACH sleepStart
-        // Jede Abwesenheit (egal wie lang) wird als Wake-Phase eingetragen
-        // sleepStart bleibt eingefroren — nur outsideBedEvents/smWakePhases wachsen
-        var _smWakePhases = (function() {
-            if (!sleepStart || !bedroomLocations || bedroomLocations.length === 0) return [];
-            var _bedroomLocSet = new Set(bedroomLocations);
-            var _wakeCapMs = wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000);
-            var _phases = [];
-            var _inBed = true;
-            var _deptTs = null;
-            var _postEvts = allEvents.filter(function(e) {
-                return isMine(e) && e.type === 'motion' && isActiveValue(e.value) &&
-                       (e.timestamp || 0) > sleepStart && (e.timestamp || 0) < _wakeCapMs;
-            }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
-            for (var _si = 0; _si < _postEvts.length; _si++) {
-                var _sEvt = _postEvts[_si];
-                var _sTs  = _sEvt.timestamp || 0;
-                var _isOutside = !_bedroomLocSet.has(_sEvt.location || '');
-                if (_inBed && _isOutside) {
-                    _deptTs = _sTs; _inBed = false;
-                } else if (!_inBed && !_isOutside) {
-                    if (_deptTs && (_sTs - _deptTs) > 5 * 60000) { // min 5 Min Abwesenheit
-                        _phases.push({
-                            type: 'wake',
-                            start: _deptTs,
-                            end: _sTs,
-                            durationMin: Math.round((_sTs - _deptTs) / 60000),
-                            source: 'sm_stage2'
-                        });
-                    }
-                    _inBed = true; _deptTs = null;
-                }
-            }
-            return _phases;
-        })();
         sleepScore:           sleepScore,
         sleepScoreRaw:        sleepScoreRaw,
         _motionAnchor:        motionAnchor,
