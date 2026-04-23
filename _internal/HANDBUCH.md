@@ -1107,3 +1107,71 @@ In den meisten Fällen ist nichts nötig — AURA korrigiert sich automatisch. W
 Haushalte ohne FP2/mmWave-Radar (z.B. nur Vibrationssensor oder Bewegungsmelder) zeigen in der Bett-Präsenz-Kachel trotzdem einen sinnvollen Wert:
 
 **Ab v0.33.198:** Wenn kein FP2-Sensor konfiguriert ist, schätzt AURA die Bett-Präsenzzeit aus der **erkannten Schlafdauer** (Einschlafzeit bis Aufwachzeit). Das Ergebnis ist konsistent mit den anderen Schlafkacheln und stimmt für normale Nächte gut überein.
+
+---
+
+### 🏠 Mehrpersonenhaushalte — Wie AURA Bewegungen zuordnet (ab v0.33.200)
+
+Wenn mehrere Personen im Haushalt leben, entsteht eine besondere Herausforderung: Bewegungssensoren im Flur, Bad, Küche oder Wohnzimmer können von beiden Personen ausgelöst werden. AURA kann bei solchen "geteilten" Sensoren nicht direkt wissen, wer gerade unterwegs war.
+
+#### Wie AURA das löst
+
+AURA verwendet einen mehrstufigen Ansatz:
+
+**Schritt 1 — Rückkehr ins Schlafzimmer (stärkstes Signal)**
+
+Wenn jemand nachts aufsteht, geht durch das Haus und dann **zurück in sein Schlafzimmer** geht, hinterlässt der Schlafzimmer-Sensor beim Zurückkehren einen eindeutigen Fingerabdruck. Da das Schlafzimmer eines jeden Bewohners mit seinem Namen verknüpft ist, weiß AURA: wessen Schlafzimmer aufgegangen ist, zu dem ist die Person zurückgekehrt.
+
+**Beispiel:** Robert steht um 01:00 auf, geht durch Flur und Küche (beide Sensoren ohne Personenzuweisung), und kehrt um 01:16 zurück — der Sensor "Bewegung Schlafzimmer Robert" meldet Bewegung. AURA wertet dies aus: *"Rückkehr zu Robert → das war Robert."* Die Bewegung wird aus Ingrids Statistik entfernt.
+
+**Schritt 2 — Vibrationssensor (Bestätigungssignal)**
+
+Bevor jemand aufsteht, bewegt er sich im Bett — das erzeugt ein Vibrationssignal. Liegt kurz vor einem Aufsteh-Ereignis **kein Vibrationssignal** auf der Matratze von Person A, aber sehr wohl auf der von Person B, ist das ein weiteres Indiz. *(Dieses Feature ist in Vorbereitung — die Zeitstempel der Vibrationsereignisse werden ab v0.33.200 bereits gespeichert.)*
+
+**Schritt 3 — Schlafphase (zusätzliches Indiz)**
+
+Wenn der Schlafbalken von Person A zum Zeitpunkt der Bewegung "Tiefschlaf" zeigt, ist es sehr unwahrscheinlich dass Person A die Ursache war.
+
+#### Was bedeutet "Andere Person" im Schlafbalken?
+
+Das blaue Dreieck ▲ bedeutet: AURA hat erkannt, dass eine Bewegung zu einem anderen Haushaltsmitglied gehört — nicht zu dieser Person. Diese Ereignisse zählen **nicht** zur Nykturie und beeinflussen **nicht** den Schlaf-Score dieser Person.
+
+#### Was tun, wenn die Zuordnung nicht stimmt?
+
+- Prüfe ob alle Schlafzimmer-Sensoren in der Sensor-Konfiguration einem PersonTag zugewiesen sind
+- Ein Sensor im Schlafzimmer ohne PersonTag funktioniert wie ein geteilter Sensor — AURA kann die Rückkehr dann nicht eindeutig zuordnen
+- Für optimale Ergebnisse: je ein Bewegungsmelder pro Schlafzimmer, je mit PersonTag der betreffenden Person
+
+---
+
+### ⚠️ Hinweis: "Vibrationssensor schwache Signale" (ab v0.33.200)
+
+Wenn AURA in der Schlafanalyse diesen orangefarbenen Hinweis anzeigt:
+
+> *"Vibrationssensor schwache Signale — Stärke max. N (erwartet ≥ 10). Sensor evtl. schlecht positioniert..."*
+
+...dann hat AURA festgestellt, dass dein Vibrationssensor zwar reagiert, aber mit sehr geringen Intensitätswerten. Das kann passieren wenn der Sensor:
+- zu weit am **Rand** der Matratze liegt (statt unter der Körpermitte)
+- zwischen Matratze und Lattenrost **verrutscht** ist
+- unter einer sehr **dicken** Matratze liegt (Signaldämpfung)
+
+**Was tun?**
+Den Sensor so unter der Matratze positionieren, dass er möglichst **nah unter der Körpermitte** liegt (ca. Schulter-/Brustbereich). Normalerweise sollten die Signalwerte in der nächsten Nacht deutlich höher sein.
+
+Dieser Hinweis erscheint nur wenn AURA gleichzeitig Nachtbewegungen erkannt hat (jemand war offensichtlich auf) — damit wird vermieden dass eine ruhige Nacht fälschlicherweise als Sensor-Problem eingestuft wird.
+
+---
+
+### 🛏️ Gemeinsames Schlafzimmer — Sensorkonfiguration
+
+Bei einem Doppelzimmer (beide Personen schlafen im selben Raum) empfiehlt sich folgende Sensorkonfiguration:
+
+| Sensor | Konfiguration | Wirkung |
+|---|---|---|
+| Bewegungsmelder im Zimmer | Kein PersonTag | Erkannt nur ob jemand im Zimmer aktiv ist — keine Personenzuordnung |
+| Vibrationssensor unter Matratze Person A | PersonTag = "Anna" | Matratzen-Aktivität von Anna |
+| Vibrationssensor unter Matratze Person B | PersonTag = "Marco" | Matratzen-Aktivität von Marco |
+| Shelly Presence Gen4 Zone 1 (linke Bettseite) | PersonTag = "Anna" | Radarbasierte Präsenzerkennung Anna |
+| Shelly Presence Gen4 Zone 2 (rechte Bettseite) | PersonTag = "Marco" | Radarbasierte Präsenzerkennung Marco |
+
+**Wichtig:** Der Shelly Presence Gen4 muss vor der ioBroker-Einbindung in der Shelly-App mit zwei Zonen konfiguriert werden. Jede Zone erscheint dann als eigenes Objekt in ioBroker und kann dort mit einem PersonTag versehen werden.

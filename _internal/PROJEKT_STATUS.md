@@ -1,5 +1,39 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 23.04.2026 | **Version:** 0.33.199
+**Letzte Aktualisierung:** 23.04.2026 | **Version:** 0.33.200
+
+---
+
+## 📍 Sitzung 23.04.2026 — Version 0.33.200
+
+### ✅ Abgeschlossen
+
+- **[OC-33 Teil A] returnSensor-Attribution** (`src/main.js`, `computePersonSleep`):
+  - **Problem**: Shared Sensoren (Flur, Küche, Bad) tragen keinen PersonTag → im Mehrpersonenhaushalt wurden Bewegungen der falschen Person zugeschrieben. Gondelsheim-Beispiel: Alle 7 nachtAufstehenEvents kehrten zurück via "Bewegung EG Schlafen Robert", wurden aber auch Ingrid als `outside`-Event zugewiesen.
+  - **Fix**: In `computePersonSleep`, nach dem Aufbau der `obe`-Liste: für jedes Event wird geprüft ob ein passendes `nachtAufstehenWindow` (Abstand Abgang ≤ 3 Min) existiert, dessen `returnSensor` einen personTag einer **anderen** Person trägt. Ist das der Fall → Event wird von `outside`/`bathroom` auf `other_person` umklassifiziert + neues Feld `returnAttribution: 'Robert'`.
+  - **Wirkung**: Ingrids `outsideBedEvents` hätten heute Nacht 4 von 5 Events als `other_person` gezeigt (statt fälschlicherweise als `outside`/`bathroom`). Schlafscore-Berechnungen korrekt.
+  - **Graceful Degradation**: Nur aktiv wenn `personTag` gesetzt UND nachtAufstehenWindows vorhanden UND returnSensor in allEvents mit fremdem personTag vorhanden. Einpersonenhaushalt: keine Änderung.
+
+- **[OC-33 Teil B] Schwacher Vibrationssensor — Warn-Hinweis** (`src/main.js`, `HealthTab.tsx`):
+  - **Problem**: Ein schlecht positionierter Vibrationssensor liefert sehr niedrige Stärkewerte (Gondelsheim Ingrid: max=6 statt erwarteter ≥10). Das System arbeitet still mit unzuverlässigen Daten.
+  - **Fix**: Nach `nightVibrationStrengthMax`-Berechnung: wenn `count > 0` UND `max < 10` UND `outsideBedEvents.length > 0` → `weakVibrationSensor = { detected, maxStrength, avgStrength, count }`.
+  - **Neuer ioBroker State**: `analysis.safety.weakVibrationSensor` (JSON).
+  - **HealthTab Badge**: Oranges ⚠-Banner im Schlafanalyse-Block: *"Vibrationssensor schwache Signale — Stärke max. N (erwartet ≥10). Sensor evtl. schlecht positioniert — näher zur Körpermitte der Matratze verschieben."*
+  - **Graceful Degradation**: Kein Sensor → `weakVibrationSensor = null` → kein Banner. Ruhige Nacht ohne Outside-Events → kein Banner (could be false positive).
+
+- **[OC-33 Teil C] Vibrations-Timestamps pro Person speichern** (`src/main.js`):
+  - **Problem**: `nightVibrationCount` speicherte nur eine Zahl. Für den Vibrations-Pre-Check (geplant) werden Timestamps der Einzelereignisse benötigt.
+  - **Fix**: Root-Level: `_nightVibTrigEvts`-Array gebildet, `nightVibrationTimestamps` daraus extrahiert → im JSON-Snapshot als `nightVibrationTimestamps: [ms, ms, ...]`.
+  - Per-Person: `personData[person].vibrationTimestamps: [ms, ...]` ergänzt.
+  - **Datenbasis** für den späteren Vibrations-Pre-Check: "Hat der Sensor kurz vor dem Aufstehen gefeuert?" wird damit in einer zukünftigen Version möglich.
+
+- **[Doku] BRAINSTORMING.md**: OC-34 (Vibrationssensor-Positionierungshinweis Ausbaustufen) und OC-35 (Shelly Presence Gen4 für gemeinsames Schlafzimmer) neu eingetragen.
+
+### 🎯 Nächster logischer Schritt
+
+1. Adapter v0.33.200 von GitHub laden, neu starten
+2. Prüfen ob `weakVibrationSensor` in Gondelsheim für Ingrid ausgelöst wird (max=6 < 10)
+3. Prüfen ob Ingrids `outsideBedEvents` die meisten Events als `other_person` zeigen (returnSensor-Attribution)
+4. Log prüfen: `[OC-33] Schwacher Vibrationssensor: max=6 avg=4 outsideEvents=5`
 
 ---
 

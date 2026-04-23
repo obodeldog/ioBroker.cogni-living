@@ -82,6 +82,55 @@ Das bedeutet bereits heute:
 
 ---
 
+### OC-35: Shelly Presence Gen4 als Zonen-Sensor für gemeinsames Schlafzimmer (23.04.2026)
+
+**Kontext:**
+Im Mehrpersonenhaushalt mit gemeinsamem Schlafzimmer (Doppelzimmer) kann kein normaler Bewegungsmelder die Personen unterscheiden — er erfasst immer beide. Der Shelly Presence Gen4 (mmWave Radar, 60-64 GHz) unterstützt bis zu 10 konfigurierbare Zonen und erkennt stille Präsenz (Atmung, minimale Bewegung). Damit kann die linke und rechte Bettseite als getrennte Zonen konfiguriert werden.
+
+**Gerät:** Shelly Presence Gen4 (S4SN-0U61X) — 69,98 € — WLAN/Zigbee/Bluetooth/Matter.
+
+**Anwendungsfall:**
+- Sensor wird oberhalb des Doppelbetts montiert (empfohlene Höhe 2m, Neigung 15°)
+- In der Shelly-App werden zwei Zonen definiert: Zone A = linke Bettseite (Person A), Zone B = rechte Bettseite (Person B)
+- Via Matter erscheint jede Zone als eigenständiges Sensor-Objekt in ioBroker
+- In der AURA-Sensorkonfiguration: Zone A bekommt PersonTag "Anna", Zone B bekommt PersonTag "Marco"
+
+**Was das ermöglicht:**
+- Bett-Präsenzerkennung pro Person (wie FP2, aber für zwei Personen im selben Zimmer)
+- `bedPresenceMinutes` pro Person → präzise Schlafzeit-Berechnung
+- Wenn Zone A = leer, aber Zone B = belegt → Anna ist aufgestanden → außerhalb-Attribution direkt möglich
+- Stille Präsenzerkennung (im Gegensatz zu Vibrationssensor der nur Bewegung erkennt)
+
+**Wichtiger Hinweis für Implementierung:**
+- FP2 kann dies NICHT leisten (erkennt Belegung aber keine Zonen)
+- Shelly Presence Gen4 muss VOR ioBroker-Einbindung in der Shelly-App konfiguriert werden
+- Sensor-Konfigurationsseite muss Zone-Sensoren mit PersonTag unterstützen (bereits möglich)
+- Kein FP2 notwendig wenn Presence Gen4 vorhanden: `isFP2Bed` kann durch Zone-Sensor ersetzt werden
+
+**Graceful Degradation:**
+- Ohne Presence Gen4: Fallback auf Vibrationssensor + returnSensor-Attribution (OC-33)
+- Mit Presence Gen4 (1 Zone): wie einzelner FP2 für das Zimmer
+- Mit Presence Gen4 (2 Zonen): volle Per-Person-Attribution ohne Vibrationssensor nötig
+
+---
+
+### OC-34: Vibrationssensor-Positionierungshinweis verbessern (23.04.2026)
+
+**Status:** Basis-Erkennung implementiert in v0.33.200 (OC-33 Teil B)
+
+**Erweiterungsideen für spätere Versionen:**
+
+**Ausbaustufe 2 — Schwellwert-Kalibrierung:**
+Der Schwellwert von `maxStrength < 10` ist ein sinnvoller Startwert, aber je nach Sensortyp und Matratzentyp können die Werte abweichen. Langfristig: Adaptive Kalibrierung — nach 7 Nächten vergleiche `nightVibrationStrengthMax` mit Referenzwerten anderer Haushalte (anonymisiert). Wenn Haushalt systematisch in der untersten 10%-Perzentile liegt → Sensor-Positionierungshinweis.
+
+**Ausbaustufe 3 — Sensor-Typ-spezifische Schwellwerte:**
+Homematic Erschütterungsmelder vs. Shelly Motion Sensor vs. SleepIQ-Sensor haben unterschiedliche Empfindlichkeitsbereiche. Wenn Sensortyp bekannt (aus ioBroker-Adapter-ID erkennbar) → typ-spezifische Schwellwerte anwenden.
+
+**Ausbaustufe 4 — False-Negative-Rate-Schätzung:**
+Wenn in einer Nacht `nachtAufstehenEvents` vorhanden sind (Person ist sicher aufgestanden) aber kein Vibrationsereignis kurz davor lag → False-Negative gezählt. Ab 3 False-Negatives in 7 Nächten → Positionierungshinweis eskalieren.
+
+---
+
 ### OC-30: Quellen-Feedback-Loop — Lernen aus manuellen Overrides (21.04.2026)
 
 **Kontext:**

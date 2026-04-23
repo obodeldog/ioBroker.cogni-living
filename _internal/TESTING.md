@@ -495,3 +495,36 @@
 | T-BPM1 | **Haushalt mit FP2**: FP2-Sensor vorhanden, bedPresenceMinutes = 420 Min (7h). | `bedPresenceMinutesFinal` = 420 (unverändert, FP2-Berechnung). Proxy nicht aktiv. | - | - |
 | T-BPM2 | **Kein FP2, nur Vibration**: bedPresenceMinutes = 0 (kein FP2). sleepWindowStart=22:30, sleepWindowEnd=06:30 (8h). | `bedPresenceMinutesFinal` = 480 Min (sleepWindow-Proxy). Bett-Präsenz-Kachel zeigt 8h. | - | - |
 | T-BPM3 | **Kein FP2, kein sleepWindowEnd**: Nacht noch nicht abgeschlossen. | `bedPresenceMinutesFinal` = 0 (kein Proxy möglich ohne End). Kein Absturz. | - | - |
+
+---
+
+## Testbereich 24: OC-33 — returnSensor-Attribution + Vibrationssensor-Hinweis (v0.33.200)
+
+### returnSensor-Attribution (OC-33 Teil A)
+
+| ID | Testfall | Erwartetes Ergebnis | Geprüft am | OK? |
+|---|---|---|---|---|
+| T-RSA1 | **Gondelsheim-Nacht**: Person Ingrid, nachtAufstehenEvent kehrt zurück zu "Bewegung EG Schlafen Robert" (personTag=Robert). | Ingrids outsideBedEvent wird von `outside` auf `type: 'other_person', returnAttribution: 'Robert'` geändert. | 23.04.2026 | - |
+| T-RSA2 | **Rückkehr ins eigene Zimmer**: Person Robert, nachtAufstehenEvent kehrt zurück zu "Bewegung EG Schlafen Robert" (personTag=Robert). | Roberts outsideBedEvent bleibt `outside` (returnSensor gehört dieser Person). Keine Änderung. | - | - |
+| T-RSA3 | **Kein personTag am returnSensor**: returnSensor hat keinen personTag in allEvents. | Kein Reklassifizierung. Event bleibt unverändert (graceful degradation). | - | - |
+| T-RSA4 | **Einpersonenhaushalt**: personTag = null (kein Multi-Person). | OC-33 Teil A wird nicht ausgeführt. Kein Absturz, bestehende Logik unverändert. | - | - |
+| T-RSA5 | **Zeitmatchfehler**: nachtAufstehenEvent departureTs ist > 3 Min vom Event.start entfernt. | Kein Match → keine Reklassifizierung. | - | - |
+| T-RSA6 | **Bereits other_person**: Event hat schon type='other_person' (OC-21 PersonTag-Filter). | Wird nicht nochmals verändert (früher Exit in .map). | - | - |
+
+### Schwacher Vibrationssensor (OC-33 Teil B)
+
+| ID | Testfall | Erwartetes Ergebnis | Geprüft am | OK? |
+|---|---|---|---|---|
+| T-WVS1 | **Gondelsheim Ingrid**: nightVibrationCount=2, nightVibrationStrengthMax=6, outsideBedEvents=5. | `weakVibrationSensor = { detected: true, maxStrength: 6, ... }`. Log: `[OC-33] Schwacher Vibrationssensor`. HealthTab zeigt orangen Warn-Banner. | 23.04.2026 | - |
+| T-WVS2 | **Normaler Sensor**: nightVibrationStrengthMax=27 (Robert). | `weakVibrationSensor = null`. Kein Banner. | - | - |
+| T-WVS3 | **Kein Vibrationssensor**: nightVibrationCount=0. | `weakVibrationSensor = null` (erste Bedingung nicht erfüllt). Kein Banner. | - | - |
+| T-WVS4 | **Schwacher Sensor, keine Outside-Events**: max=5, outsideBedEvents=[]. | `weakVibrationSensor = null` (könnte ruhige Nacht sein). Kein Banner. | - | - |
+| T-WVS5 | **State registriert**: Erster Adapter-Start nach v0.33.200. | `analysis.safety.weakVibrationSensor` State existiert in ioBroker. Kein Fehler. | - | - |
+
+### Vibrations-Timestamps (OC-33 Teil C)
+
+| ID | Testfall | Erwartetes Ergebnis | Geprüft am | OK? |
+|---|---|---|---|---|
+| T-VTS1 | **Normalnacht mit Vibrationssensor**: nightVibrationCount=15 (Robert). | `nightVibrationTimestamps` = Array mit 15 ms-Timestamps im JSON-Snapshot. | - | - |
+| T-VTS2 | **Per-Person**: personData.Robert.vibrationTimestamps vorhanden. | Array mit Timestamps. personData.Ingrid.vibrationTimestamps = [ts1, ts2] (count=2). | 23.04.2026 | - |
+| T-VTS3 | **Kein Vibrationssensor**: nightVibrationCount=0. | `nightVibrationTimestamps = []`. personData[person].vibrationTimestamps = null. Kein Absturz. | - | - |

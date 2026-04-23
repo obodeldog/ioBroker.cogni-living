@@ -177,6 +177,7 @@ export default function HealthTab(props: any) {
     const [sensorBatteryStatus, setSensorBatteryStatus] = useState<{sensors: {id:string, level:number|null, isLow:boolean, isCritical:boolean, source:string}[]} | null>(null);
     const [noisySensors, setNoisySensors] = useState<{id:string, name:string, location:string, count:number, threshold:number}[]>([]);
     const [gatewayOutage, setGatewayOutage] = useState<{gateway:string, count:number, sensors:string[]}[]>([]);
+    const [weakVibSensor, setWeakVibSensor] = useState<{detected:boolean, maxStrength:number, avgStrength:number|null, count:number}|null>(null);
     const [sleepCalMAE, setSleepCalMAE] = useState<{nNights:number, computedAt:number, sleepStart:Record<string,{mae:number,n:number}>, wake:Record<string,{mae:number,n:number}>} | null>(null);
     const [sourceOverrideHistory, setSourceOverrideHistory] = useState<Record<string,number>>({});
     const [nachtAufstehenEvents, setNachtAufstehenEvents] = useState<{departureTs:number,returnTs:number,departureSensor:string,returnSensor:string}[]>([]);
@@ -756,6 +757,11 @@ export default function HealthTab(props: any) {
                 if (s && s.val) { try { const v = JSON.parse(s.val); setNoisySensors(Array.isArray(v) ? v : []); } catch(e) {} }
             }).catch(() => {});
         };
+        const loadWeakVibSensor = () => {
+            socket.getState(`${adapterName}.${instance}.analysis.safety.weakVibrationSensor`).then((s: any) => {
+                if (s && s.val && s.val !== 'null') { try { setWeakVibSensor(JSON.parse(s.val)); } catch(e) {} }
+            }).catch(() => {});
+        };
         const loadGatewayOutage = () => {
             socket.getState(`${adapterName}.${instance}.analysis.safety.gatewayOutage`).then((s: any) => {
                 if (s && s.val) { try { const v = JSON.parse(s.val); setGatewayOutage(Array.isArray(v) ? v : []); } catch(e) {} }
@@ -778,6 +784,7 @@ export default function HealthTab(props: any) {
         };
         loadBattery();
         loadNoisySensors();
+        loadWeakVibSensor();
         loadGatewayOutage();
         loadSleepCalMAE();
         loadSourceOverrides();
@@ -2356,6 +2363,26 @@ export default function HealthTab(props: any) {
                                         </span>
                                     </div>
                                 ))}
+                            </div>
+                        )}
+
+                        {/* OC-33: Schwacher Vibrationssensor Badge */}
+                        {weakVibSensor && weakVibSensor.detected && (
+                            <div style={{
+                                borderTop: `1px dashed ${isDark?'#444':'#ddd'}`,
+                                paddingTop: '6px',
+                                marginTop: '6px',
+                                fontSize: '0.65rem',
+                                color: '#ff9800'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <span>&#x26A0;</span>
+                                    <span>
+                                        <b>Vibrationssensor schwache Signale</b>
+                                        {` — Stärke max. ${weakVibSensor.maxStrength} (erwartet ≥ 10). `}
+                                        Sensor evtl. schlecht positioniert — näher zur Körpermitte der Matratze verschieben.
+                                    </span>
+                                </div>
                             </div>
                         )}
 

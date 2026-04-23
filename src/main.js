@@ -600,6 +600,28 @@ function computePersonSleep(p) {
             }
         });
         if (obeCluster) obePush(obeCluster);
+
+        // OC-33 Teil A: returnSensor-Attribution
+        // Wenn nachtAufstehenWindow-Rueckkehr in ein fremdes Schlafzimmer zeigt -> other_person
+        if (personTag && _nachtAufstehenWindows.length > 0) {
+            obe = obe.map(function(evt) {
+                if (evt.type === 'other_person') return evt;
+                var matchWin = _nachtAufstehenWindows.find(function(w) {
+                    return Math.abs(w.departureTs - evt.start) <= 3 * 60 * 1000;
+                });
+                if (!matchWin) return evt;
+                var retSensLower = (matchWin.returnSensor || '').toLowerCase();
+                if (!retSensLower) return evt;
+                var retEvt = allEvents.find(function(e) {
+                    return ((e.name||'').toLowerCase() === retSensLower || (e.id||'').toLowerCase() === retSensLower);
+                });
+                if (!retEvt || !retEvt.personTag) return evt;
+                if (retEvt.personTag !== personTag) {
+                    return Object.assign({}, evt, { type: 'other_person', returnAttribution: retEvt.personTag });
+                }
+                return evt;
+            });
+        }
     }
 
     var sleepStages = []; var stagesWinStart = sleepStart || fp2RawStart || searchBase.getTime(); var stagesWinEnd = wakeTs || (wakeHardCap && wakeHardCap < Date.now() ? wakeHardCap : null);
@@ -2404,7 +2426,7 @@ class CogniLiving extends utils.Adapter {
             } catch(_de) { this.log.warn('[OC-7 Debug] Fehler beim Schreiben des Debug-States: ' + _de.message); }
 
             // Vibration Bett: Erschuetterungen im Schlaf-Fenster (Fallback: 22-06)
-            var nightVibrationCount = todayEvents.filter(function(e) {
+            var _nightVibTrigEvts = todayEvents.filter(function(e) {
                 if (!e.isVibrationBed) return false;
                 var v = isActiveValue(e.value) || toPersonCount(e.value) > 0;
                 if (!v) return false;
@@ -2414,7 +2436,9 @@ class CogniLiving extends utils.Adapter {
                 }
                 var hr = new Date(ts).getHours();
                 return hr >= 22 || hr < 6;
-            }).length;
+            });
+            var nightVibrationCount = _nightVibTrigEvts.length;
+            var nightVibrationTimestamps = _nightVibTrigEvts.map(function(e) { return e.timestamp||0; });
             // Vibration Staerke: Avg und Max im Schlaf-Fenster (fuer Parkinson/Epilepsie)
             var _vibStrSum = 0; var _vibStrCount = 0; var _vibStrMax = 0;
             todayEvents.forEach(function(e) {
@@ -2430,6 +2454,23 @@ class CogniLiving extends utils.Adapter {
             });
             const nightVibrationStrengthAvg = _vibStrCount > 0 ? Math.round(_vibStrSum / _vibStrCount) : null;
             const nightVibrationStrengthMax = _vibStrCount > 0 ? _vibStrMax : null;
+
+            // OC-33 Teil B: Schwacher Vibrationssensor — Hinweis fuer Nutzer
+            // Bedingung: Sensor hat gefeuert (count>0) + Staerke sehr niedrig (<10) + ausserhalb-Events vorhanden
+            var weakVibrationSensor = null;
+            var _WEAK_VIB_THRESHOLD = 10;
+            if (nightVibrationCount > 0 && nightVibrationStrengthMax !== null
+                    && nightVibrationStrengthMax < _WEAK_VIB_THRESHOLD
+                    && outsideBedEvents.length > 0) {
+                weakVibrationSensor = {
+                    detected: true,
+                    maxStrength: nightVibrationStrengthMax,
+                    avgStrength: nightVibrationStrengthAvg,
+                    count: nightVibrationCount
+                };
+                this.log.warn('[OC-33] Schwacher Vibrationssensor: max=' + nightVibrationStrengthMax
+                    + ' avg=' + nightVibrationStrengthAvg + ' outsideEvents=' + outsideBedEvents.length);
+            }
 
             // ============================================================
             // bedWasEmpty: Bett leer erkennen (Person auswaerts geschlafen)
@@ -2640,7 +2681,8 @@ class CogniLiving extends utils.Adapter {
                         bedPresenceMinutes:        _pBedPresenceMinutes,
                         nightVibrationCount:       _pVibCount > 0 ? _pVibCount : null,
                         nightVibrationStrengthAvg: _pVibStrCnt > 0 ? Math.round(_pVibStrSum / _pVibStrCnt) : null,
-                        nightVibrationStrengthMax: _pVibStrCnt > 0 ? _pVibStrMax : null
+                        nightVibrationStrengthMax: _pVibStrCnt > 0 ? _pVibStrMax : null,
+                        vibrationTimestamps:       _pVibCount > 0 ? _pVibTrigEvts.map(function(e) { return e.timestamp||0; }) : null
                     };
                 });
                 return result;
@@ -2660,6 +2702,10 @@ class CogniLiving extends utils.Adapter {
                 await this.setObjectNotExistsAsync('analysis.safety.gatewayOutage', {
                     type: 'state', common: { name: 'OC-12 Gateway-Ausfall-Erkennung (JSON)', type: 'string', role: 'json', read: true, write: false, def: '[]' }, native: {}
                 });
+                await this.setObjectNotExistsAsync('analysis.safety.weakVibrationSensor', {
+                    type: 'state', common: { name: 'OC-33 Schwacher Vibrationssensor (JSON)', type: 'string', role: 'json', read: true, write: false, def: 'null' }, native: {}
+                });
+                try { await this.setStateAsync('analysis.safety.weakVibrationSensor', { val: JSON.stringify(weakVibrationSensor || null), ack: true }); } catch(_wvErr) {}
                 var _scoreHistory = [];
                 var _histState = await this.getStateAsync('analysis.health.sleepScoreHistory');
                 if (_histState && _histState.val) { try { _scoreHistory = JSON.parse(_histState.val); if (!Array.isArray(_scoreHistory)) _scoreHistory = []; } catch(_) { _scoreHistory = []; } }
@@ -3136,6 +3182,8 @@ class CogniLiving extends utils.Adapter {
                 nightVibrationCount: nightVibrationCount,
                 nightVibrationStrengthAvg: nightVibrationStrengthAvg,
                 nightVibrationStrengthMax: nightVibrationStrengthMax,
+                nightVibrationTimestamps: nightVibrationTimestamps,
+                weakVibrationSensor: weakVibrationSensor,
                 personData: personData,
                 sleepScore: sleepScore,
                 sleepScoreRaw: sleepScoreRaw,
