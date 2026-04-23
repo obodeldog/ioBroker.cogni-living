@@ -1601,6 +1601,24 @@ export default function HealthTab(props: any) {
             };
         })();
 
+        // Pre-Sleep-Marker: nachtAufstehenEvents im Wachliegen-Segment (vor Einschlafzeit)
+        const _nachtEvts: {departureTs:number,returnTs:number,departureSensor:string,returnSensor:string}[] = (sd as any)?.nachtAufstehenEvents ?? [];
+        const preSleepMarkers = (bedEntryTsVal && swStart && newBarTotalMs)
+            ? _nachtEvts
+                .filter(e => e.departureTs >= bedEntryTsVal && e.departureTs < swStart)
+                .map((e, i) => {
+                    const isBath = /bad/i.test(e.departureSensor ?? '');
+                    const pct = Math.min(100, Math.max(0, (e.departureTs - bedEntryTsVal) / newBarTotalMs * 100));
+                    const durMin = Math.round((e.returnTs - e.departureTs) / 60000);
+                    return {
+                        key: `pre-${i}-${e.departureTs}`,
+                        pct,
+                        color: isBath ? '#ffb300' : '#e53935',
+                        title: `${isBath ? '🚽 Bad-Besuch' : '🚶 Aufgestanden'} (vor Einschlafen): ${fmtTime(e.departureTs)} – ${fmtTime(e.returnTs)} (${durMin} Min)${e.departureSensor ? '\n  · ' + e.departureSensor : ''}`,
+                    };
+                })
+            : [];
+
         return (
             <TerminalBox title={personLabel ? `SCHLAFANALYSE — ${personLabel}` : 'SCHLAFANALYSE (OC-7)'} themeType={themeType}
                 helpText={
@@ -2101,6 +2119,26 @@ export default function HealthTab(props: any) {
 
                         {/* Schlafphasen-Zeitbalken mit Dreiecks-Markern + Zeitachse */}
                         <div style={{marginBottom:'10px'}}>
+                            {/* Pre-Sleep-Reihe: 🛏-Label oben links + nachtAufstehen-Dreiecke im Wachliegen-Segment */}
+                            {bedEntryTsVal && newBarTotalMs && (
+                                <div style={{position:'relative', height:'16px'}}>
+                                    <span style={{
+                                        position:'absolute', left:0,
+                                        fontSize:'0.55rem', color:'#ffd54f', fontWeight:'bold',
+                                        whiteSpace:'nowrap', lineHeight:'16px'
+                                    }} title="Ins Bett gegangen">🛏 {fmtTime(bedEntryTsVal)}</span>
+                                    {preSleepMarkers.map(m => (
+                                        <span key={m.key} style={{
+                                            position:'absolute', left: m.pct + '%',
+                                            top: '2px',
+                                            color: m.color,
+                                            fontSize:'12px', fontWeight:'bold',
+                                            transform:'translateX(-50%)',
+                                            cursor:'default', lineHeight:'12px'
+                                        }} title={m.title}>▼</span>
+                                    ))}
+                                </div>
+                            )}
                             {/* Dreiecks-Marker ÜBER Balken: Bad-Besuch orange ▼ (zeigt zum Balken runter) */}
                             {swStart && swEnd && markerItems.above.length > 0 && (
                                 <div style={{position:'relative', height:'18px'}}>
@@ -2117,8 +2155,8 @@ export default function HealthTab(props: any) {
                                     ))}
                                 </div>
                             )}
-                            {/* Platzhalter damit Balken nicht springt wenn keine above-Marker */}
-                            {swStart && swEnd && markerItems.above.length === 0 && (markerItems.below.length > 0 || markerItems.dropout.length > 0) && (
+                            {/* Platzhalter damit Balken nicht springt wenn keine above-Marker und keine pre-sleep-Reihe */}
+                            {swStart && swEnd && !bedEntryTsVal && markerItems.above.length === 0 && (markerItems.below.length > 0 || markerItems.dropout.length > 0) && (
                                 <div style={{height:'18px'}} />
                             )}
 
@@ -2224,12 +2262,8 @@ export default function HealthTab(props: any) {
                             {/* Zeitachse: Start, volle Stunden, Ende */}
                             {swStart && swEnd && (
                                 <div style={{position:'relative', height:'14px', marginTop:'3px'}}>
-                                    {/* bedEntryTs-Label: Zeitstempel links vom Balken wenn Wachliegen vorhanden */}
-                                    {bedEntryTsVal ? (
-                                        <span style={{position:'absolute', left:0, fontSize:'0.55rem', color:'#ffd54f', fontWeight:'bold'}} title="Ins Bett gegangen">🛏 {fmtTime(bedEntryTsVal)}</span>
-                                    ) : (
-                                        <span style={{position:'absolute', left:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa'}}>{fmtTime(swStart)}</span>
-                                    )}
+                                    {/* Achse-Start: bedEntryTsVal wenn Wachliegen vorhanden, sonst swStart */}
+                                    <span style={{position:'absolute', left:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa'}}>{fmtTime(bedEntryTsVal ?? swStart)}</span>
                                     {(() => {
                                         const totalMs = swEnd - swStart;
                                         const marks: React.ReactNode[] = [];

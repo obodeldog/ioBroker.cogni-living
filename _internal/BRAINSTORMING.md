@@ -904,7 +904,7 @@ Implementierung in `computePersonSleep` als `_smWakePhases`-IIFE:
 - `sleepStart` bleibt unveränderlich eingefroren
 - Ergebnis: `smWakePhases`-Array im Snapshot + gelbe Overlay-Blöcke im Schlafbalken
 
-Zusatz: **`bedEntryTs`** (ebenfalls v0.33.194): erkennt den Zeitpunkt "Person geht ins Bett" vor dem eigentlichen Einschlafzeitpunkt. Priorität: FP2 > Vibration (sustained 5 Min) > PIR. Visualisiert als gelbes Vor-Segment und "🛏 HH:MM"-Label im Balken.
+Zusatz: **`bedEntryTs`** (v0.33.194, verbessert v0.33.198): erkennt den Zeitpunkt "Person geht ins Bett" vor dem eigentlichen Einschlafzeitpunkt. Ab v0.33.198 **Cluster-basiert** — frühstes Sensor-Event (fp2/fp2_vib/vib_refined/motion_vib) das maximal 90 Min vor der Einschlafzeit liegt. Verhindert Fehlauslösungen (z.B. FP2 kurz für 31s vor 3h, lange vor dem echten Einschlafen). Visualisiert als gelbes Vor-Segment und "🛏 HH:MM"-Label im Balken. ✅ Implementiert v0.33.198
 
 Vorteil gegenüber Stage 1: Erkennt auch komplexere Muster (mehrfaches Aufstehen, Person schläft in anderem Zimmer ein).
 

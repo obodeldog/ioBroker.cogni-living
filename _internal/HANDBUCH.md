@@ -1063,11 +1063,15 @@ Seit v0.33.194 erkennt AURA auch, **wann eine Person das Bett betreten hat** —
 
 **Wie wird die Ins-Bett-Zeit erkannt?**
 
+Ab v0.33.198 nutzt AURA einen **Cluster-Algorithmus** — derselbe, der auch die Einschlafzeit bestimmt. Dadurch werden kurze Fehlauslösungen (z.B. Radar meldet "Bett belegt" für 30 Sekunden beim Vorbeigehen) zuverlässig ignoriert.
+
 | Sensor | Erkennungs-Logik |
 |---|---|
-| Radar (FP2/mmWave) | Erstes "Bett belegt"-Signal ab 18:00 Uhr |
-| Vibrationssensor (Matratze) | Erste Aktivität, der innerhalb von 5 Min eine weitere folgt |
-| Bewegungsmelder (Schlafzimmer) | Erste Bewegung ohne anschließenden Abgang für 10 Min |
+| Radar (FP2/mmWave) | Frühstes Radar-Signal im Einschlaf-Cluster (max. 90 Min vor Einschlafzeit) |
+| Vibrationssensor (Matratze) | Frühstes Vibrationssignal im Cluster — auch ohne FP2 |
+| Bewegungsmelder (Schlafzimmer) | Frühstes PIR-Signal im Cluster — Fallback |
+
+**Warum Cluster statt "erstes Signal"?** Wenn der Radar um 19:22 kurz anspringt (z.B. beim Aufräumen), aber die eigentliche Schlafenszeit erst um 22:30 beginnt, filtert der Cluster-Algorithmus das Frühsignal automatisch heraus — weil es >90 Minuten von der Einschlafzeit entfernt liegt.
 
 Der Zeitstempel erscheint als **"🛏 HH:MM"** links unten am Schlafbalken (statt der Einschlafzeit).
 
@@ -1078,3 +1082,28 @@ Im System-Log erscheint bei erkanntem Nacht-Aufstehen:
 [cPS:global] OC-31: 1 Nacht-Aufstehen erkannt: 02:44-02:51 (flur_motion)
 [cPS:global] OC-31: 2 Kandidaten als Nacht-Aufstehen gefiltert.
 ```
+
+---
+
+### ⚡ Hinweis: "Sensor temporär zu sensibel" (gelbe Warnung)
+
+Wenn im Schlafbalken eine orange Warnung erscheint ("Zigbee EG Wohnen Bewegung: 12 Auslösungen nachts — evtl. zu sensibel"), hat AURA diesen Sensor für die Nacht-Analyse als **überdurchschnittlich aktiv** eingestuft und **vorübergehend** aus der Haus-wird-still-Berechnung herausgenommen.
+
+**Warum passiert das?**
+Wenn ein Bewegungsmelder deutlich häufiger auslöst als alle anderen Sensoren (≥3× Median UND ≥10 Events im Schlaffenster), schützt AURA die Einschlaf-Erkennung vor Fehlauslösungen durch diesen Sensor.
+
+**Wie lange dauert der Ausschluss?**
+Der Ausschluss gilt nur für **eine Nacht**. Beim nächsten Morgen wird automatisch neu bewertet. Wenn der Sensor wieder normal viele Auslösungen zeigt, ist er automatisch wieder dabei — ohne Eingriff.
+
+**Ab v0.33.198:** Das Zählzeitraum startet erst **60 Minuten vor der Einschlafzeit** (statt immer um 22:00 Uhr). Damit werden normale Abend-Bewegungen im Wohnzimmer (Fernsehen, Küche) nicht mehr fälschlicherweise als Rauschen gewertet.
+
+**Was kann ich tun?**
+In den meisten Fällen ist nichts nötig — AURA korrigiert sich automatisch. Wenn der Sensor dauerhaft zu viele Auslösungen zeigt (z.B. zu hohe PIR-Empfindlichkeit), kann die Empfindlichkeit am Sensor selbst angepasst werden.
+
+---
+
+### 📊 Bett-Präsenz ohne FP2-Radar
+
+Haushalte ohne FP2/mmWave-Radar (z.B. nur Vibrationssensor oder Bewegungsmelder) zeigen in der Bett-Präsenz-Kachel trotzdem einen sinnvollen Wert:
+
+**Ab v0.33.198:** Wenn kein FP2-Sensor konfiguriert ist, schätzt AURA die Bett-Präsenzzeit aus der **erkannten Schlafdauer** (Einschlafzeit bis Aufwachzeit). Das Ergebnis ist konsistent mit den anderen Schlafkacheln und stimmt für normale Nächte gut überein.

@@ -467,3 +467,31 @@
 | T-NA8 | **Garmin/FP2 vorhanden**: Garmin zeigt Einschlafzeit 22:15. Nacht-Aufstehen bei 02:44 erkannt. | Garmin als Trusted-Quelle (prio=0) wird NICHT gefiltert. sleepStart = Garmin 22:15. Filter bereinigt nur prio>=4-Kandidaten. | - | - |
 | T-NA9 | **Keine False Positives tagsüber**: Person verlässt 08:00 das Schlafzimmer nach dem Aufwachen. | Abgang liegt außerhalb searchBase-Fenster (searchBase = letzte Abend). Kein fälschliches Erkennen. | - | - |
 | T-NA10 | **Debug-Badge in HealthTab**: OC-31 hat 1 Nacht-Aufstehen erkannt. | Blaues 🚶-Badge erscheint unterhalb der Einschlafzeit-Kachel mit Uhrzeiten. | - | - |
+
+## Testbereich 23: bedEntryTs CLUSTER-FIX + NOISY-SENSOR-FENSTER + bedPresenceMinutes-PROXY (v0.33.198)
+
+### bedEntryTs — Cluster-basierter Bettgeh-Zeitpunkt
+
+| ID | Testfall | Erwartetes Ergebnis | Geprüft am | OK? |
+|---|---|---|---|---|
+| T-BEC1 | **FP2 Kurzauslösung**: FP2 um 19:22 (31 Sek. true), dann erneut um 22:38 (dauerhaft). Garmin: 23:34. | `bedEntryTs` = 22:38 (fp2-Quelle im Cluster). NICHT 19:22. Balken zeigt gelbes Vor-Segment ab 22:38. | - | - |
+| T-BEC2 | **Keine Kurzauslösungen**: FP2 um 22:30 (dauerhaft, kein Fehlauslöser). Garmin: 23:15. | `bedEntryTs` = 22:30 (einzige fp2-Quelle im Cluster ≤90 Min vor Garmin). Korrekt. | - | - |
+| T-BEC3 | **Kein FP2, nur vib_refined**: Vibration 21:30 (vib_refined), Garmin 22:05. | `bedEntryTs` = 21:30 (frühstes Cluster-Event aus vib_refined, innerhalb 90 Min). | - | - |
+| T-BEC4 | **Kein Cluster-Event vorhanden**: Nur haus_still + fixed im allSleepStartSources. | `bedEntryTs` = Fallback auf `_gR.bedEntryTs` (ursprünglicher Wert). Kein Absturz. | - | - |
+| T-BEC5 | **Zwei Tage hintereinander**: bedEntryTs Tag 1 war 19:22 (Bug). Tag 2 nach Fix. | Tag 2: `bedEntryTs` korrekt aus Cluster ≠ 19:22. Alter Wert taucht nicht im neuen JSON auf. | - | - |
+
+### Noisy-Sensor-Fenster — dynamischer Fensterbeginn
+
+| ID | Testfall | Erwartetes Ergebnis | Geprüft am | OK? |
+|---|---|---|---|---|
+| T-NSF1 | **Pre-Sleep-Aktivität**: EG Wohnen feuert 12× zwischen 22:06-22:38 (Marc vor dem Einschlafen). Garmin: 23:34. | Fensterbeginn = max(22:00, 23:34-60min) = 22:34. EG Wohnen hat ≤3 Events nach 22:34 → NICHT als noisy eingestuft. | - | - |
+| T-NSF2 | **Echter nächtlicher Rauscher**: Sensor feuert 15× zwischen 01:00-05:00 (innerhalb Schlaffenster). Garmin: 23:00. | Fensterbeginn = max(22:00, 22:00) = 22:00. 15 Events ≥ Threshold → noisy erkannt. Korrekt. | - | - |
+| T-NSF3 | **Kein Garmin, frühes sleepWindowStart**: Einschlafzeit 21:00 (nur Vibration). | Fensterbeginn = max(22:00, 21:00-60min=20:00) = 22:00 (22:00 als Untergrenze). Korrekt. | - | - |
+
+### bedPresenceMinutes — Proxy ohne FP2
+
+| ID | Testfall | Erwartetes Ergebnis | Geprüft am | OK? |
+|---|---|---|---|---|
+| T-BPM1 | **Haushalt mit FP2**: FP2-Sensor vorhanden, bedPresenceMinutes = 420 Min (7h). | `bedPresenceMinutesFinal` = 420 (unverändert, FP2-Berechnung). Proxy nicht aktiv. | - | - |
+| T-BPM2 | **Kein FP2, nur Vibration**: bedPresenceMinutes = 0 (kein FP2). sleepWindowStart=22:30, sleepWindowEnd=06:30 (8h). | `bedPresenceMinutesFinal` = 480 Min (sleepWindow-Proxy). Bett-Präsenz-Kachel zeigt 8h. | - | - |
+| T-BPM3 | **Kein FP2, kein sleepWindowEnd**: Nacht noch nicht abgeschlossen. | `bedPresenceMinutesFinal` = 0 (kein Proxy möglich ohne End). Kein Absturz. | - | - |

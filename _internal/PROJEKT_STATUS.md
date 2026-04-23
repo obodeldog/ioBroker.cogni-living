@@ -1,5 +1,85 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 22.04.2026 | **Version:** 0.33.197
+**Letzte Aktualisierung:** 23.04.2026 | **Version:** 0.33.199
+
+---
+
+## 📍 Sitzung 23.04.2026 — Version 0.33.199
+
+### ✅ Abgeschlossen
+
+- **[Frontend] 🛏-Label über den Balken verschoben** (`HealthTab.tsx`):
+  - **Problem**: Label "🛏 HH:MM" wurde in der Zeitachse (unter dem Balken, `left:0`) gerendert → überlagerte die 00:00-Stundenmarkierung.
+  - **Fix**: Neues dediziertes Label-Div (`height:16px`) über dem Balken; `🛏 HH:MM` in `color:#ffd54f bold` bei `left:0%`. Zeitachse zeigt nun neutral `fmtTime(bedEntryTsVal ?? swStart)` ohne Emoji.
+
+- **[Frontend] nachtAufstehenEvents — Dreiecke im Wachliegen-Segment** (`HealthTab.tsx`):
+  - **Problem**: Toilettengänge und Aufsteh-Events **vor** dem Einschlafen (`nachtAufstehenEvents`, alle vor `sleepWindowStart`) wurden nicht visuell angezeigt — der gelbe Wachliegen-Balken zeigte keine Marker.
+  - **Fix**: `preSleepMarkers` aus `sd.nachtAufstehenEvents` berechnet (nur Events innerhalb `bedEntryTsVal..swStart`). Position = `(departureTs - bedEntryTsVal) / newBarTotalMs * 100`. Dreiecke ▼ zeigen nach unten (gleiche Richtung wie Post-Sleep-Marker):
+    - `departureSensor` enthält "Bad" (regex `/bad/i`) → 🟠 orange (`#ffb300`)
+    - Anderer Raum → 🔴 rot (`#e53935`)
+  - Tooltip: `🚽 Bad-Besuch (vor Einschlafen): HH:MM – HH:MM (N Min) · SensorName`
+  - Beide Quellen (pre-sleep + post-sleep) optisch identisch (gleiche Dreiecksform ▼), Unterschied nur durch gelben Balkenbereich erkennbar.
+
+### 🎯 Nächster logischer Schritt
+
+1. Adapter v0.33.199 von GitHub laden, neu starten
+2. Nächste Nacht prüfen: 🛏-Label oben links ohne Überlagerung?
+3. Toilettengänge im Wachliegen-Segment als Dreiecke sichtbar?
+
+---
+
+## 📍 Sitzung 23.04.2026 — Version 0.33.198
+
+### ✅ Abgeschlossen
+
+- **[Fix A] bedEntryTs — Cluster-basierter Bettgeh-Zeitpunkt** (`src/main.js`):
+  - **Problem**: FP2-Radar hat am 22.04. um 19:22 für nur 31 Sek. `true` gemeldet → `bedEntryTs` wurde fälschlicherweise auf 19:22 gesetzt, obwohl der echte "Ins-Bett"-Zeitpunkt erst um 22:38 war. Zudem blieb der Wert aus dem Vortag im nächsten JSON erhalten.
+  - **Fix**: `bedEntryTs` wird jetzt aus dem **Gewinner-Cluster** von `computePersonSleep` abgeleitet. Frühstes Sensor-Event (fp2/fp2_vib/vib_refined/motion_vib) das ≤90 Min vor `sleepWindowOC7.start` liegt. Garmin/fixed/haus_still/gap60 werden ausgeschlossen. Kurzauslösungen (19:22 → >4h vor Einschlafzeit) liegen außerhalb des Cluster-Fensters und werden automatisch ignoriert.
+  - **Ergebnis**: bedEntryTs = 22:38 (fp2-Quelle im Cluster). Gilt für FP2-Haushalte (fp2/fp2_vib) und No-FP2-Haushalte (vib_refined/motion_vib) gleichermaßen.
+  - Snapshot: `bedEntryTs: _bedEntryTsFinal` (statt `_gR.bedEntryTs` direkt).
+
+- **[Fix B] bedPresenceMinutes — sleepWindow-Proxy ohne FP2** (`src/main.js`):
+  - **Problem**: Haushalte ohne FP2-Radar (z.B. nur Vibrationssensor + PIR, wie Gondelsheim) hatten `bedPresenceMinutes = 0` → Bett-Präsenz-Kachel blieb leer.
+  - **Fix**: Wenn `bedPresenceMinutes === 0` UND `_gR.sleepWindowStart/End` bekannt → `bedPresenceMinutesFinal = (sleepWindowEnd - sleepWindowStart) / 60000`. Konsistent mit Schlafzeit-Kachel (Single Source of Truth = `computePersonSleep`).
+  - Snapshot: `bedPresenceMinutes: bedPresenceMinutesFinal`.
+
+- **[Fix C] Noisy-Sensor-Fenster — dynamischer Fensterbeginn** (`src/main.js`):
+  - **Problem**: Noisy-Sensor-Erkennung (OC-24) startete hart um 22:00. Normale Pre-Sleep-Aktivität (Wohnzimmer, Küche vor dem Schlafengehen) wurde als "Rauschen" eingestuft. EG Wohnen hatte 12 Auslösungen 22:06-22:38 (Marc vor dem Ins-Bett-Gehen) → fälschlicherweise als noisy markiert.
+  - **Fix**: Fensterbeginn = `max(22:00, sleepWindowStart - 60 Min)`. Für Marc: max(22:00, 22:34) = 22:34. EG Wohnen hatte nur 3 Events nach 22:34 → unter Threshold 10 → kein noisy.
+  - Noisy-Sensor-Block aus der Position vor Garmin-Lesen herausgezogen und **nach `_gR`-Berechnung** platziert, damit `_gR.sleepWindowStart` als Referenz verfügbar ist.
+  - Log: `[OC-24] Rauschende Sensoren erkannt (ab HH:MM): ...`
+
+- **[Frontend] PERSONEN-NACHT-ANALYSE Block entfernt** (`LongtermTrendsView.tsx`):
+  - Der Block (Schlaf-Unruhe, Aufwachzeit, Nykturie pro Person) war redundant mit den bereits vollständig implementierten Multi-Person-Charts (AURA-SLEEPSCORE, SCHLAFPHASEN-ANTEILE, BETT-PRÄSENZ, SCHLAF-UNRUHE, VIBRATIONS-INTENSITÄT — alle per Person in v0.33.196/197).
+  - Die dort gezeigten Daten (nightActivityCount, wakeTimeMin, nocturiaAttr pro Person) sind in den vollwertigen Langzeit-Charts besser und vollständiger visualisiert.
+
+- **[Doku]** HANDBUCH.md: Abschnitte "Ins-Bett-Zeit" (Cluster-Logik erklärt), "Sensor temporär zu sensibel" (neues Fenster ab v0.33.198), "Bett-Präsenz ohne FP2" hinzugefügt.
+- **[Doku]** TESTING.md: Testbereich 23 hinzugefügt (T-BEC1-5, T-NSF1-3, T-BPM1-3).
+- **[Doku]** BRAINSTORMING.md: bedEntryTs-Eintrag als ✅ v0.33.198 markiert.
+
+### 🔍 Analyse-Ergebnisse letzte Nacht (22./23.04.2026)
+
+Aus JSON-Analyse der Nacht-Daten:
+- `nachtAufstehenEvents`: 4 erkannte Ereignisse, alle **vor** sleepStart (23:34):
+  - 22:06-22:25: EG Wohnen → zurück (Bewegung vor dem Bettgehen)
+  - 22:31-22:36: EG Bad → zurück (Toilette vor dem Einschlafen)
+  - 22:35-22:40: EG Wohnen → zurück (kurze Abwesenheit)
+  - **23:20-23:30**: EG Bad → zurück (letzter Toilettengang, 4 Min vor Garmin-Einschlafzeit 23:34)
+- `smWakePhases`: leer (keine Post-Sleep-Wachphasen erkannt) — korrekt
+- Garmin: Einschlafen 23:34, Aufwachen 06:48 = 7h14min
+
+### 🔧 Offene Baustellen
+
+| Problem | Priorität | Beschreibung |
+|---|---|---|
+| `freshAirLong` in `loadWeekData` | 🟡 MITTEL | Wochenansicht berechnet Stoßlüftung noch nicht |
+| Python Bridge Timeout | 🟡 MITTEL | 10s Timeout vs. 30s Frontend → Drift kann abbrechen |
+
+### 🎯 Nächster logischer Schritt
+
+1. Adapter v0.33.198 von GitHub laden, neu starten (Update-Button in ioBroker Admin)
+2. Nächste Nacht beobachten: `bedEntryTs` sollte ~22:38 zeigen (statt 19:22)
+3. Log prüfen: `[OC-24] ... ab 22:34` — Fenster-Start korrekt dynamisch?
+4. EG Wohnen sollte morgen früh NICHT mehr als noisy eingestuft sein
 
 ---
 
@@ -4809,6 +4889,8 @@ Neuer Python-Befehl: `ANALYZE_DISEASE_SCORES` in service.py dispatch-table.
 
 | Version | Datum | HauptÃ¤nderung |
 |---|---|---|
+| **0.33.199** | 23.04.2026 | **feat**: 🛏-Label über Schlafbalken (kein Overlap mit 00:00); nachtAufstehenEvents als ▼-Dreiecke im Wachliegen-Segment (orange=Bad, rot=anderer Raum) |
+| **0.33.198** | 23.04.2026 | **fix**: bedEntryTs Cluster-basiert (kein Frühsignal-Bug); Noisy-Sensor-Fenster dynamisch (haus_still+60min); bedPresenceMinutes sleepWindow-Proxy (kein FP2); PERSONEN-NACHT-ANALYSE entfernt |
 | **0.33.79** | 26.03.2026 | **fix(OC-7)**: PIR-only Schlafanalyse: Hard Cap 12:00, Sustained-Return-Filter, Consistency Guard, "Haus-wird-still"-Einschlafzeit |
 | **0.33.78** | 26.03.2026 | **feat(OC-17)**: Topologie-BFS-Hop-Filter für _motOutEvts (Backend) + Batterie-Warnung (Frontend); OC-21 dokumentiert |
 | **0.33.77** | 26.03.2026 | **fix(OC-7)**: FP2-Bathroom-Prewindow 2-Min (+orange Dreieck); Lane-Kollision Fix (3+ Marker) |
