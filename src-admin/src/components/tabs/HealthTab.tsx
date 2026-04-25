@@ -1216,6 +1216,7 @@ export default function HealthTab(props: any) {
         })() : null);
         const sleepStartOverridden: boolean = sd?.sleepStartOverridden ?? false;
         const bedWasEmpty: boolean = sd?.bedWasEmpty ?? false;
+        const nightExcluded: boolean = (sd as any)?.excluded ?? false;
 
         const handleSetOverride = async (source: string, ts: number) => {
             if (!sleepDateStr) return;
@@ -1313,6 +1314,15 @@ export default function HealthTab(props: any) {
             ? (v: boolean) => setPersonOverrideWakePanelOpen(v ? personLabel : null)
             : (v: boolean) => setOverrideWakePanelOpen(v);
         const wakeOverridden: boolean = sd?.wakeOverridden ?? false;
+
+        const handleToggleExcludeNight = async () => {
+            if (!sleepDateStr) return;
+            const cmd = nightExcluded ? 'unexcludeNight' : 'excludeNight';
+            try {
+                const result: any = await socket.sendTo(adapterName + '.' + instance, cmd, { date: sleepDateStr });
+                if (result?.data) setAuraSleepData({ ...result.data });
+            } catch(_) {}
+        };
 
         const isOverrideLoading = personLabel ? personOverrideLoading : overrideLoading;
         const isOverridePanelOpen = personLabel ? (personOverridePanelOpen === personLabel) : overridePanelOpen;
@@ -1516,7 +1526,7 @@ export default function HealthTab(props: any) {
         const slotColor = (slot: {t:number,s:string}, absMs: number|null) => {
             if (absMs && confirmedEvts.length > 0) {
                 const evt = confirmedEvts.find(e => absMs >= e.start && absMs < e.end);
-                if (evt) return stageColor[evt.type] ?? stageColor.outside;
+                if (evt && evt.type !== 'other_person') return stageColor[evt.type] ?? stageColor.outside;
             }
             return stageColor[slot.s] ?? '#555';
         };
@@ -2272,19 +2282,24 @@ export default function HealthTab(props: any) {
                                     {/* Achse-Start: bedEntryTsVal wenn Wachliegen vorhanden, sonst swStart */}
                                     <span style={{position:'absolute', left:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa'}}>{fmtTime(bedEntryTsVal ?? swStart)}</span>
                                     {(() => {
-                                        const totalMs = swEnd - swStart;
+                                        // Basis für Stunden-Ticks: gesamter Balken (inkl. Pre-Sleep-Segment)
+                                        const barBase = bedEntryTsVal ?? swStart;
+                                        const barTotal = newBarTotalMs ?? (swEnd - swStart);
                                         const marks: React.ReactNode[] = [];
-                                        const first = new Date(swStart);
+                                        const first = new Date(barBase);
                                         first.setMinutes(0, 0, 0);
                                         first.setHours(first.getHours() + 1);
                                         let t = first.getTime();
                                         while (t < swEnd - 900000) {
-                                            const pct = ((t - swStart) / totalMs) * 100;
-                                            marks.push(
-                                                <span key={t} style={{position:'absolute', left: pct + '%', fontSize:'0.55rem', color: isDark?'#555':'#bbb', transform:'translateX(-50%)'}}>
-                                                    {fmtTime(t)}
-                                                </span>
-                                            );
+                                            const pct = ((t - barBase) / barTotal) * 100;
+                                            // Nur rendern wenn nicht mit Rand-Labels überlappend
+                                            if (pct > 3 && pct < 97) {
+                                                marks.push(
+                                                    <span key={t} style={{position:'absolute', left: pct + '%', fontSize:'0.55rem', color: isDark?'#555':'#bbb', transform:'translateX(-50%)'}}>
+                                                        {fmtTime(t)}
+                                                    </span>
+                                                );
+                                            }
                                             t += 3600000;
                                         }
                                         return marks;
@@ -2333,11 +2348,11 @@ export default function HealthTab(props: any) {
                         {/* Garmin-Vergleich wenn vorhanden */}
                         {(garminDeepMin !== null || garminLightMin !== null || garminRemMin !== null) && (
                             <div style={{borderTop:`1px dashed ${isDark?'#333':'#ddd'}`, paddingTop:'8px', fontSize:'0.7rem'}}>
-                                <div style={{color:'#888', marginBottom:'4px'}}>📡 Garmin-Referenz:</div>
+                                <div style={{color:'#888', marginBottom:'4px'}}>⌚ Smartwatch-Referenz:</div>
                                 <div style={{display:'flex', gap:'16px'}}>
-                                    {garminDeepMin  !== null && <span><span style={{color:'#1565c0'}}>■</span> Tief: {garminDeepMin}min</span>}
-                                    {garminLightMin !== null && <span><span style={{color:'#42a5f5'}}>■</span> Leicht: {garminLightMin}min</span>}
-                                    {garminRemMin   !== null && <span><span style={{color:'#ab47bc'}}>■</span> REM: {garminRemMin}min</span>}
+                                    {garminDeepMin  !== null && <span><span style={{color:'#1565c0'}}>■</span> Tief: {fmtDuration(garminDeepMin)}</span>}
+                                    {garminLightMin !== null && <span><span style={{color:'#42a5f5'}}>■</span> Leicht: {fmtDuration(garminLightMin)}</span>}
+                                    {garminRemMin   !== null && <span><span style={{color:'#ab47bc'}}>■</span> REM: {fmtDuration(garminRemMin)}</span>}
                                 </div>
                             </div>
                         )}
@@ -2404,6 +2419,42 @@ export default function HealthTab(props: any) {
                                         </span>
                                     </div>
                                 ))}
+                            </div>
+                        )}
+
+                        {/* Nacht aus Statistik ausschließen */}
+                        {sleepDateStr && !personLabel && (
+                            <div style={{
+                                borderTop: `1px dashed ${isDark?'#333':'#ddd'}`,
+                                paddingTop: '6px',
+                                marginTop: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '8px'
+                            }}>
+                                {nightExcluded ? (
+                                    <span style={{fontSize:'0.6rem', color:'#ff9800', display:'flex', alignItems:'center', gap:'4px'}}>
+                                        <span>⚠</span>
+                                        <span>Diese Nacht ist <b>nicht</b> in der Statistik</span>
+                                    </span>
+                                ) : (
+                                    <span style={{fontSize:'0.6rem', color: isDark?'#555':'#aaa'}}>
+                                        Sondernacht? Aus Statistik ausschließen
+                                    </span>
+                                )}
+                                <button
+                                    onClick={handleToggleExcludeNight}
+                                    title={nightExcluded ? 'Nacht wieder in die Statistik aufnehmen' : 'Nacht aus Schlafstatistik und Kalibrierung ausschließen (z.B. Gast im Bett, Krankheit)'}
+                                    style={{
+                                        fontSize: '0.5rem', padding: '2px 7px', cursor: 'pointer', flexShrink: 0,
+                                        background: nightExcluded ? '#1b5e20' : (isDark ? '#2a1a00' : '#fff3e0'),
+                                        color: nightExcluded ? '#a5d6a7' : '#ff9800',
+                                        border: `1px solid ${nightExcluded ? '#388e3c' : '#ff9800'}`,
+                                        borderRadius: '3px'
+                                    }}>
+                                    {nightExcluded ? '✓ Wieder einschließen' : '🚫 Ausschließen'}
+                                </button>
                             </div>
                         )}
 

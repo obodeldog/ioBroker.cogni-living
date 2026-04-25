@@ -855,6 +855,7 @@ class CogniLiving extends utils.Adapter {
         await this.setObjectNotExistsAsync('analysis.sleep.personStartOverrides', { type: 'state', common: { name: 'Per-Person Sleep Start Overrides (JSON)', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
         await this.setObjectNotExistsAsync('analysis.sleep.wakeOverride', { type: 'state', common: { name: 'Wake Override (JSON)', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
         await this.setObjectNotExistsAsync('analysis.sleep.personWakeOverrides', { type: 'state', common: { name: 'Per-Person Wake Overrides (JSON)', type: 'string', role: 'json', read: true, write: true, def: 'null' }, native: {} });
+        await this.setObjectNotExistsAsync('analysis.sleep.excludedNights', { type: 'state', common: { name: 'Ausgeschlossene Naechte aus Statistik (JSON-Array von Datums-Strings)', type: 'string', role: 'json', read: true, write: true, def: '[]' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorBatteryStatus', { type: 'state', common: { name: 'Sensor Battery Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorStatus', { type: 'state', common: { name: 'Sensor Health Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.currentPersonCount', { type: 'state', common: { name: 'Aktuelle Personenanzahl im Haus', type: 'number', role: 'value', unit: 'Personen', read: true, write: false, def: 1, desc: 'Geschaetzte Personenanzahl (Config-Baseline + raeumliche Heuristik + FP2)' }, native: {} });
@@ -1559,6 +1560,9 @@ class CogniLiving extends utils.Adapter {
             _sleepSearchBase.setHours(18, 0, 0, 0);
             if (new Date().getHours() < 18) { _sleepSearchBase.setDate(_sleepSearchBase.getDate() - 1); }
             const sleepDate = _sleepSearchBase.getFullYear() + '-' + String(_sleepSearchBase.getMonth()+1).padStart(2,'0') + '-' + String(_sleepSearchBase.getDate()).padStart(2,'0');
+            var _excludedNightsRaw = (await this.getStateAsync('analysis.sleep.excludedNights'))?.val;
+            var _excludedNightsList = (_excludedNightsRaw && _excludedNightsRaw !== 'null') ? JSON.parse(_excludedNightsRaw) : [];
+            var _nightExcluded = Array.isArray(_excludedNightsList) && _excludedNightsList.includes(sleepDate);
             const sleepSearchEvents = this.eventHistory.filter(e => (e.timestamp||0) >= _sleepSearchBase.getTime());
             // Buffer-Supplement: falls In-Memory-Buffer nach Adapter-Neustart Abend-Events fehlen,
             // aus gespeichertem JSON des Vortages nachladen (18:00-Fenster schliessen).
@@ -2193,11 +2197,22 @@ class CogniLiving extends utils.Adapter {
                         _fp2SoloDropoutsIgnored++;
                         return;
                     }
+                    // Sensoren sammeln die waehrend des FP2-Leer-Fensters ausserhalb des Betts aktiv waren
+                    var _fp2Sensors = sleepSearchEvents.filter(function(e) {
+                        var _ts2 = e.timestamp || 0;
+                        if (_ts2 < fp2.start - 2*60*1000 || _ts2 > fp2.end + 2*60*1000) return false;
+                        if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion) return false;
+                        return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+                    }).map(function(e) {
+                        return { name: e.name||e.id, location: e.location||'', isBathroomSensor: !!(e.isBathroomSensor || _bathDevIds.has(e.id)), timestamp: e.timestamp||0 };
+                    }).filter(function(s, idx, arr) {
+                        return arr.findIndex(function(x) { return x.name === s.name; }) === idx;
+                    });
                     // confirmed=true: anderer Raumsensor bestaetigt Abwesenheit; confirmed=false: nur FP2 (Radar-Aussetzer moeglich)
-                    _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: _hasBath ? "bathroom" : "outside", confirmed: _hasBath || _hasAnySensorOutside });
+                    _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: _hasBath ? "bathroom" : "outside", confirmed: _hasBath || _hasAnySensorOutside, sensors: _fp2Sensors });
                     if (_hasBath && _hasOtherInFp2) {
                         // FP2-Cluster hat Bad UND andere Aussenraeume -> zweiter Marker (rot) analog Phase-2-Fix v0.33.88
-                        _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: "outside", confirmed: true });
+                        _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: "outside", confirmed: true, sensors: _fp2Sensors });
                     }
                 });
                 if (_fp2SoloDropoutsIgnored > 0) {
@@ -3209,6 +3224,7 @@ class CogniLiving extends utils.Adapter {
                 allSleepStartSources: allSleepStartSources,
                 wakeConfirmed: !!(sleepWindowOC7.end && new Date().getHours() >= 10 && (Date.now() - (sleepWindowOC7.end || 0)) >= 3600000),
                 sleepDate: sleepDate,
+                excluded: _nightExcluded,
                 sleepStartOverridden: _overrideApplied,
                 sleepStartOverrideSource: _overrideApplied ? sleepStartSource : null,
                 wakeOverridden: _wakeOverrideApplied,
@@ -3269,7 +3285,9 @@ class CogniLiving extends utils.Adapter {
                 if (calState && calState.val) {
                     try { calibrationLog = JSON.parse(calState.val); if (!Array.isArray(calibrationLog)) calibrationLog = []; } catch(_) { calibrationLog = []; }
                 }
-                calibrationLog.push(calibrationEntry);
+                // Naechte die vom Nutzer aus der Statistik ausgeschlossen wurden ueberspringen
+                calibrationEntry.excluded = _nightExcluded;
+                if (!_nightExcluded) calibrationLog.push(calibrationEntry);
                 if (calibrationLog.length > 120) calibrationLog = calibrationLog.slice(calibrationLog.length - 120);
                 await this.setStateAsync('analysis.health.sleepCalibrationLog', { val: JSON.stringify(calibrationLog), ack: true });
 
@@ -3820,6 +3838,29 @@ class CogniLiving extends utils.Adapter {
                 if (fs.existsSync(_cpwovPath)) { var _cpwovSnap = JSON.parse(fs.readFileSync(_cpwovPath, 'utf8')); this.sendTo(obj.from, obj.command, { success: true, data: _cpwovSnap }, obj.callback); }
                 else { this.sendTo(obj.from, obj.command, { success: true, data: null }, obj.callback); }
             } catch(_cpwovE) { this.sendTo(obj.from, obj.command, { success: false, error: _cpwovE.message }, obj.callback); }
+        }
+        else if (obj.command === 'excludeNight' || obj.command === 'unexcludeNight') {
+            try {
+                var _exDate = (obj.message && obj.message.date) ? obj.message.date : null;
+                if (!_exDate || !/^\d{4}-\d{2}-\d{2}$/.test(_exDate)) {
+                    this.sendTo(obj.from, obj.command, { success: false, error: 'Kein gueltiges Datum (YYYY-MM-DD erwartet)' }, obj.callback); return;
+                }
+                var _exRaw = (await this.getStateAsync('analysis.sleep.excludedNights'))?.val;
+                var _exList = (_exRaw && _exRaw !== 'null') ? JSON.parse(_exRaw) : [];
+                if (!Array.isArray(_exList)) _exList = [];
+                if (obj.command === 'excludeNight') {
+                    if (!_exList.includes(_exDate)) _exList.push(_exDate);
+                } else {
+                    _exList = _exList.filter(function(d) { return d !== _exDate; });
+                }
+                await this.setStateAsync('analysis.sleep.excludedNights', { val: JSON.stringify(_exList), ack: true });
+                await this.saveDailyHistory();
+                var _exHistDir = utils.getAbsoluteDefaultDataDir();
+                var _exNow = new Date();
+                var _exPath = require('path').join(_exHistDir, 'cogni-living', 'history', _exNow.getFullYear() + '-' + String(_exNow.getMonth()+1).padStart(2,'0') + '-' + String(_exNow.getDate()).padStart(2,'0') + '.json');
+                if (fs.existsSync(_exPath)) { var _exSnap = JSON.parse(fs.readFileSync(_exPath, 'utf8')); this.sendTo(obj.from, obj.command, { success: true, data: _exSnap, excludedNights: _exList }, obj.callback); }
+                else { this.sendTo(obj.from, obj.command, { success: true, data: null, excludedNights: _exList }, obj.callback); }
+            } catch(_exE) { this.sendTo(obj.from, obj.command, { success: false, error: _exE.message }, obj.callback); }
         }
         else if (obj.command === 'reanalyzeSexDay') {
             try {
