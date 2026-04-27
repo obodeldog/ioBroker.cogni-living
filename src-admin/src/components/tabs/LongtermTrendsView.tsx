@@ -1209,10 +1209,18 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                     const lbs: Record<string, string> = { deep: 'Tiefschlaf', light: 'Leichtschlaf', rem: 'REM', wake: 'Wachliegen', score: 'AURA-Score' };
                                                     return [name === 'score' ? String(v) : `${v}%`, lbs[name] || name];
                                                 }} contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}`, fontSize: '0.7rem' }} />
-                                                <Bar yAxisId="pct" dataKey="deep"  name="deep"  stackId="ph" fill="#1565c0" opacity={0.85} />
-                                                <Bar yAxisId="pct" dataKey="light" name="light" stackId="ph" fill="#42a5f5" opacity={0.85} />
-                                                <Bar yAxisId="pct" dataKey="rem"   name="rem"   stackId="ph" fill="#ab47bc" opacity={0.85} />
-                                                <Bar yAxisId="pct" dataKey="wake"  name="wake"  stackId="ph" fill="#ffd54f" opacity={0.85} radius={[3,3,0,0]} />
+                                                <Bar yAxisId="pct" dataKey="deep"  name="deep"  stackId="ph" fill="#1565c0" opacity={0.85}>
+                                                    {data.map((e: any, i: number) => <Cell key={i} fill={e.excluded ? '#666' : '#1565c0'} opacity={e.excluded ? 0.25 : 0.85} />)}
+                                                </Bar>
+                                                <Bar yAxisId="pct" dataKey="light" name="light" stackId="ph" fill="#42a5f5" opacity={0.85}>
+                                                    {data.map((e: any, i: number) => <Cell key={i} fill={e.excluded ? '#888' : '#42a5f5'} opacity={e.excluded ? 0.25 : 0.85} />)}
+                                                </Bar>
+                                                <Bar yAxisId="pct" dataKey="rem"   name="rem"   stackId="ph" fill="#ab47bc" opacity={0.85}>
+                                                    {data.map((e: any, i: number) => <Cell key={i} fill={e.excluded ? '#999' : '#ab47bc'} opacity={e.excluded ? 0.25 : 0.85} />)}
+                                                </Bar>
+                                                <Bar yAxisId="pct" dataKey="wake"  name="wake"  stackId="ph" fill="#ffd54f" opacity={0.85} radius={[3,3,0,0]}>
+                                                    {data.map((e: any, i: number) => <Cell key={i} fill={e.excluded ? '#aaa' : '#ffd54f'} opacity={e.excluded ? 0.25 : 0.85} />)}
+                                                </Bar>
                                                 <Line yAxisId="score" type="monotone" dataKey="score" stroke="#1565c0" strokeWidth={2} dot={{ r: 2 }} name="score" connectNulls strokeDasharray="5 3" />
                                             </ComposedChart>
                                         </ResponsiveContainer>

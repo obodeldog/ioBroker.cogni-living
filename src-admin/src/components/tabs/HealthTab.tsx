@@ -3029,6 +3029,7 @@ export default function HealthTab(props: any) {
                                         hasData: day.hasData,
                                         score: (day.data?.sleepScore != null) ? Number(day.data.sleepScore) : null,
                                         garminScore: (day.data?.garminScore != null) ? Number(day.data.garminScore) : null,
+                                        excluded: day.data?.excluded ?? false,
                                         deep, light, rem, wake,
                                         hasStages: total > 0,
                                     };
@@ -3051,9 +3052,9 @@ export default function HealthTab(props: any) {
                                 const barW = slotW - 0.8;
                                 const chartH = 90;
 
-                                const avgScores = sleepChartData.filter((d: any) => d.score != null).map((d: any) => d.score as number);
+                                const avgScores = sleepChartData.filter((d: any) => d.score != null && !d.excluded).map((d: any) => d.score as number);
                                 const avgScore = avgScores.length > 0 ? Math.round(avgScores.reduce((a: number, b: number) => a + b, 0) / avgScores.length) : null;
-                                const stageNights = sleepChartData.filter((d: any) => d.hasStages);
+                                const stageNights = sleepChartData.filter((d: any) => d.hasStages && !d.excluded);
                                 const avgDeep = stageNights.length > 0 ? Math.round(stageNights.reduce((s: number, d: any) => s + (d.deep||0), 0) / stageNights.length) : null;
                                 const avgRem  = stageNights.length > 0 ? Math.round(stageNights.reduce((s: number, d: any) => s + (d.rem||0),  0) / stageNights.length) : null;
 
@@ -3089,7 +3090,7 @@ export default function HealthTab(props: any) {
                                                 {/* X-Labels */}
                                                 <div style={{display:'flex', fontSize:'0.55rem', color:isDark?'#666':'#aaa', marginTop:'3px'}}>
                                                     {sleepChartData.map((d: any, i: number) => (
-                                                        <span key={i} style={{flex:1, textAlign:'center'}}>{d.dayName}</span>
+                                                        <span key={i} style={{flex:1, textAlign:'center', color: d.excluded ? '#666' : undefined}} title={d.excluded ? 'Ausgeschlossen' : ''}>{d.dayName}{d.excluded ? ' ✗' : ''}</span>
                                                     ))}
                                                 </div>
                                                 {/* Score-Werte */}
@@ -3126,12 +3127,15 @@ export default function HealthTab(props: any) {
                                                         const lH = ((d.light || 0) / 100) * chartH;
                                                         const rH = ((d.rem   || 0) / 100) * chartH;
                                                         const wH = ((d.wake  || 0) / 100) * chartH;
+                                                        const exOp = d.excluded ? 0.2 : 0.85;
                                                         return (
                                                             <g key={i}>
-                                                                <rect x={x} y={0}              width={barW} height={dH} fill="#1565c0" opacity={0.85} />
-                                                                <rect x={x} y={dH}             width={barW} height={lH} fill="#42a5f5" opacity={0.85} />
-                                                                <rect x={x} y={dH+lH}          width={barW} height={rH} fill="#ab47bc" opacity={0.85} />
-                                                                <rect x={x} y={dH+lH+rH}       width={barW} height={wH} fill="#ffd54f" opacity={0.85} />
+                                                                <rect x={x} y={0}              width={barW} height={dH} fill={d.excluded ? '#555' : '#1565c0'} opacity={exOp} />
+                                                                <rect x={x} y={dH}             width={barW} height={lH} fill={d.excluded ? '#777' : '#42a5f5'} opacity={exOp} />
+                                                                <rect x={x} y={dH+lH}          width={barW} height={rH} fill={d.excluded ? '#888' : '#ab47bc'} opacity={exOp} />
+                                                                <rect x={x} y={dH+lH+rH}       width={barW} height={wH} fill={d.excluded ? '#999' : '#ffd54f'} opacity={exOp} />
+                                                                {d.excluded && <line x1={x} y1={chartH} x2={x+barW} y2={0} stroke='#aaa' strokeWidth='0.4' opacity='0.5' vectorEffect='non-scaling-stroke'/>}
+                                                                {d.excluded && <line x1={x} y1={0} x2={x+barW} y2={chartH} stroke='#aaa' strokeWidth='0.4' opacity='0.5' vectorEffect='non-scaling-stroke'/>}
                                                             </g>
                                                         );
                                                     })}
@@ -3148,7 +3152,7 @@ export default function HealthTab(props: any) {
                                                 {/* X-Labels */}
                                                 <div style={{display:'flex', fontSize:'0.55rem', color:isDark?'#666':'#aaa', marginTop:'3px'}}>
                                                     {sleepChartData.map((d: any, i: number) => (
-                                                        <span key={i} style={{flex:1, textAlign:'center'}}>{d.dayName}</span>
+                                                        <span key={i} style={{flex:1, textAlign:'center', color: d.excluded ? '#666' : undefined}} title={d.excluded ? 'Ausgeschlossen' : ''}>{d.dayName}{d.excluded ? ' ✗' : ''}</span>
                                                     ))}
                                                 </div>
                                                 <div style={{fontSize:'0.55rem', color:'#888', marginTop:'6px', display:'flex', gap:'8px', flexWrap:'wrap'}}>

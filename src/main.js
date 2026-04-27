@@ -2735,12 +2735,13 @@ class CogniLiving extends utils.Adapter {
                 if (_histState && _histState.val) { try { _scoreHistory = JSON.parse(_histState.val); if (!Array.isArray(_scoreHistory)) _scoreHistory = []; } catch(_) { _scoreHistory = []; } }
                 if (sleepScore !== null) {
                     var _existingHIdx = _scoreHistory.findIndex(function(e) { return e.date === dateStr; });
-                    var _histEntry = { date: dateStr, aura: sleepScore, garmin: garminScore || null };
+                    var _histEntry = { date: dateStr, aura: sleepScore, garmin: garminScore || null, excluded: !!_nightExcluded };
                     if (_existingHIdx >= 0) _scoreHistory[_existingHIdx] = _histEntry; else _scoreHistory.push(_histEntry);
                 }
                 if (_scoreHistory.length > 60) _scoreHistory = _scoreHistory.slice(_scoreHistory.length - 60);
                 await this.setStateAsync('analysis.health.sleepScoreHistory', { val: JSON.stringify(_scoreHistory), ack: true });
-                var _calNights = _scoreHistory.filter(function(e) { return e.aura !== null && e.garmin !== null; });
+                // Kalibrierung: ausgeschlossene Naechte nicht mitrechnen
+                var _calNights = _scoreHistory.filter(function(e) { return e.aura !== null && e.garmin !== null && !e.excluded; });
                 sleepScoreCalNights = _calNights.length;
                 if (_calNights.length >= 7) {
                     sleepScoreCalStatus = _calNights.length >= 14 ? 'calibrated' : 'calibrating';
