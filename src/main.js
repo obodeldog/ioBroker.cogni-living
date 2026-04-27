@@ -3863,12 +3863,19 @@ class CogniLiving extends utils.Adapter {
                     _exList = _exList.filter(function(d) { return d !== _exDate; });
                 }
                 await this.setStateAsync('analysis.sleep.excludedNights', { val: JSON.stringify(_exList), ack: true });
-                await this.saveDailyHistory();
+                // Historische JSON-Datei fuer _exDate direkt updaten (excluded-Flag)
                 var _exHistDir = utils.getAbsoluteDefaultDataDir();
-                var _exNow = new Date();
-                var _exPath = require('path').join(_exHistDir, 'cogni-living', 'history', _exNow.getFullYear() + '-' + String(_exNow.getMonth()+1).padStart(2,'0') + '-' + String(_exNow.getDate()).padStart(2,'0') + '.json');
-                if (fs.existsSync(_exPath)) { var _exSnap = JSON.parse(fs.readFileSync(_exPath, 'utf8')); this.sendTo(obj.from, obj.command, { success: true, data: _exSnap, excludedNights: _exList }, obj.callback); }
-                else { this.sendTo(obj.from, obj.command, { success: true, data: null, excludedNights: _exList }, obj.callback); }
+                var _exPath = require('path').join(_exHistDir, 'cogni-living', 'history', _exDate + '.json');
+                if (fs.existsSync(_exPath)) {
+                    try {
+                        var _exSnap = JSON.parse(fs.readFileSync(_exPath, 'utf8'));
+                        _exSnap.excluded = (obj.command === 'excludeNight');
+                        fs.writeFileSync(_exPath, JSON.stringify(_exSnap));
+                        this.sendTo(obj.from, obj.command, { success: true, data: _exSnap, excludedNights: _exList }, obj.callback);
+                    } catch(_exReadE) {
+                        this.sendTo(obj.from, obj.command, { success: false, error: 'Datei nicht lesbar: ' + _exReadE.message }, obj.callback);
+                    }
+                } else { this.sendTo(obj.from, obj.command, { success: true, data: null, excludedNights: _exList }, obj.callback); }
             } catch(_exE) { this.sendTo(obj.from, obj.command, { success: false, error: _exE.message }, obj.callback); }
         }
         else if (obj.command === 'reanalyzeSexDay') {
