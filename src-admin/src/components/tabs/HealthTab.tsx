@@ -1557,7 +1557,10 @@ export default function HealthTab(props: any) {
         const bedEntrySegMs = (bedEntryTsVal && swStart) ? swStart - bedEntryTsVal : 0;
         const newBarTotalMs = (bedEntrySegMs > 0 && totalWindowMs) ? bedEntrySegMs + totalWindowMs : totalWindowMs;
         // smWakePhases: Wake-Phasen aus State Machine (OC-31 Stage 2) - als Overlay auf dem Balken
-        const _smPhases: {type:string,start:number,end:number,durationMin:number}[] = (sd as any)?.smWakePhases ?? [];
+        const _smPhases: {type:string,start:number,end:number,durationMin:number}[] =
+            ((sd as any)?.smWakePhases ?? []).filter((ph: {start:number,end:number}) =>
+                swEnd ? ph.start < swEnd && ph.end > (swStart ?? 0) : true
+            );
         // Kein-Daten-Bereich NACH dem letzten Stage-Slot (Stages decken oft nur Anfang der Nacht ab)
         const lastSlotEndMs = (stagesWindowStart && renderedStages.length > 0)
             ? stagesWindowStart + (renderedStages[renderedStages.length - 1].t + 5) * 60000
@@ -2137,29 +2140,19 @@ export default function HealthTab(props: any) {
 
                         {/* Schlafphasen-Zeitbalken mit Dreiecks-Markern + Zeitachse */}
                         <div style={{marginBottom:'10px'}}>
-                            {/* Pre-Sleep-Reihe: 🛏-Label oben links + nachtAufstehen-Dreiecke im Wachliegen-Segment */}
-                            {bedEntryTsVal && newBarTotalMs && (
-                                <div style={{position:'relative', height:'16px'}}>
-                                    <span style={{
-                                        position:'absolute', left:0,
-                                        fontSize:'0.55rem', color:'#ffd54f', fontWeight:'bold',
-                                        whiteSpace:'nowrap', lineHeight:'16px'
-                                    }} title="Ins Bett gegangen">🛏 {fmtTime(bedEntryTsVal)}</span>
+                            {/* Dreiecks-Marker ÜBER Balken: Bad-Besuch + Pre-Sleep-Dreiecke in einer Zeile */}
+                            {swStart && swEnd && (markerItems.above.length > 0 || preSleepMarkers.length > 0) && (
+                                <div style={{position:'relative', height:'18px'}}>
                                     {preSleepMarkers.map(m => (
                                         <span key={m.key} style={{
                                             position:'absolute', left: m.pct + '%',
-                                            top: '2px',
+                                            top: '3px',
                                             color: m.color,
-                                            fontSize:'12px', fontWeight:'bold',
+                                            fontSize:'14px', fontWeight:'bold',
                                             transform:'translateX(-50%)',
-                                            cursor:'default', lineHeight:'12px'
+                                            cursor:'default', lineHeight:'13px'
                                         }} title={m.title}>▼</span>
                                     ))}
-                                </div>
-                            )}
-                            {/* Dreiecks-Marker ÜBER Balken: Bad-Besuch orange ▼ (zeigt zum Balken runter) */}
-                            {swStart && swEnd && markerItems.above.length > 0 && (
-                                <div style={{position:'relative', height:'18px'}}>
                                     {markerItems.above.map(marker => (
                                         <span key={marker.key} style={{
                                             position:'absolute',
@@ -2173,8 +2166,8 @@ export default function HealthTab(props: any) {
                                     ))}
                                 </div>
                             )}
-                            {/* Platzhalter damit Balken nicht springt wenn keine above-Marker und keine pre-sleep-Reihe */}
-                            {swStart && swEnd && !bedEntryTsVal && markerItems.above.length === 0 && (markerItems.below.length > 0 || markerItems.dropout.length > 0) && (
+                            {/* Platzhalter damit Balken nicht springt wenn keine above/pre-sleep-Marker */}
+                            {swStart && swEnd && markerItems.above.length === 0 && preSleepMarkers.length === 0 && (markerItems.below.length > 0 || markerItems.dropout.length > 0) && (
                                 <div style={{height:'18px'}} />
                             )}
 

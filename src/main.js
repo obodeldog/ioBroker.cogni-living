@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 'use strict';
 
 /*
@@ -683,6 +683,15 @@ function computePersonSleep(p) {
             var _sTs  = _sEvt.timestamp || 0;
             var _isOutside = !_bedroomLocSet.has(_sEvt.location || '');
             if (_inBed && _isOutside) {
+                // Hop-Distanz pruefen (analog nachtAufstehenEvents: max. 3 Hops)
+                if (hopDistFn && (_sEvt.location || '')) {
+                    var _smMinHop = 999;
+                    for (var _sbli = 0; _sbli < bedroomLocations.length; _sbli++) {
+                        var _smH = hopDistFn(bedroomLocations[_sbli], _sEvt.location || '');
+                        if (_smH !== null && _smH !== undefined && _smH < _smMinHop) _smMinHop = _smH;
+                    }
+                    if (_smMinHop > 3) continue; // Zu weit weg -> Abgang ignorieren (z.B. OG Flur)
+                }
                 _deptTs = _sTs; _inBed = false;
             } else if (!_inBed && !_isOutside) {
                 if (_deptTs && (_sTs - _deptTs) > 5 * 60000) {
