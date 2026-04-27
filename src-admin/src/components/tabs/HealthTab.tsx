@@ -1567,7 +1567,8 @@ export default function HealthTab(props: any) {
         // Marker-Logik: Bad → über Balken (▼), Außerhalb/andere → unter Balken (▲), Radar-Aussetzer → grau klein (▲)
         const markerItems = (() => {
             if (!swStart || !swEnd || clippedOutsideBedEvts.length === 0) return { above: [], below: [], dropout: [] };
-            const totalMs = swEnd - swStart;
+            const _markerBarBase = bedEntryTsVal ?? swStart;
+            const _markerBarTotal = newBarTotalMs ?? (swEnd - swStart);
             const minPctGap = 2.2;
             const titleMap: Record<string, string> = {
                 bathroom:     'Bad-Besuch',
@@ -1577,7 +1578,7 @@ export default function HealthTab(props: any) {
             const assignLanes = (evts: typeof clippedOutsideBedEvts, idxOffset: number, isDropout = false) => {
                 const lastPctInLane = [-100, -100];
                 return evts.map((evt, i) => {
-                    const pct = ((evt.start - swStart!) / totalMs) * 100;
+                    const pct = ((evt.start - _markerBarBase) / _markerBarTotal) * 100;
                     const lane = Math.abs(pct - lastPctInLane[0]) >= minPctGap ? 0
                                : Math.abs(pct - lastPctInLane[1]) >= minPctGap ? 1
                                : 0;
@@ -2191,9 +2192,9 @@ export default function HealthTab(props: any) {
                                         minWidth: 0
                                     }} title={'🛏 Ins Bett gegangen: ' + fmtTime(bedEntryTsVal) + ' · Wachliegen ' + Math.round(bedEntrySegMs/60000) + ' Min bis Einschlafen (' + (swStart ? fmtTime(swStart) : '?') + ')'} />
                                 )}
-                                {preStageMs > 0 && totalWindowMs && (
+                                {preStageMs > 0 && newBarTotalMs && (
                                     <div style={{
-                                        width: (preStageMs / totalWindowMs * 100) + '%',
+                                        width: (preStageMs / newBarTotalMs * 100) + '%',
                                         flexShrink: 0,
                                         backgroundColor: isDark ? '#1a1a1a' : '#eeeeee',
                                         backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 8px)',
@@ -2203,7 +2204,7 @@ export default function HealthTab(props: any) {
                                 )}
                                 {renderedStages.map((slot, i) => {
                                     const absMs = stagesWindowStart ? stagesWindowStart + slot.t * 60000 : (swStart ? swStart + slot.t * 60000 : null);
-                                    const slotW = totalWindowMs ? (5 * 60000 / totalWindowMs * 100) + '%' : undefined;
+                                    const slotW = newBarTotalMs ? (5 * 60000 / newBarTotalMs * 100) + '%' : undefined;
                                     return (
                                         <div key={i} style={{
                                             width: slotW,
@@ -2215,9 +2216,9 @@ export default function HealthTab(props: any) {
                                     );
                                 })}
                                 {/* Kein-Daten-Bereich nach letztem Stage-Slot (Stages decken oft nur Anfang der Nacht ab) */}
-                                {postStageMs > 0 && totalWindowMs && (
+                                {postStageMs > 0 && newBarTotalMs && (
                                     <div style={{
-                                        width: (postStageMs / totalWindowMs * 100) + '%',
+                                        width: (postStageMs / newBarTotalMs * 100) + '%',
                                         flexShrink: 0,
                                         backgroundColor: isDark ? '#1a1a1a' : '#eeeeee',
                                         backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 8px)',
@@ -2227,10 +2228,10 @@ export default function HealthTab(props: any) {
                                 )}
                             </div>
                             {/* OC-31 Stage 2: Wake-Phasen-Overlay (lange Abwesenheiten nach Einschlafzeit) */}
-                            {swStart && swEnd && _smPhases.length > 0 && _smPhases.map((ph, i) => {
-                                const _totalMs = swEnd - swStart;
-                                const _left = Math.max(0, Math.min(100, ((ph.start - swStart) / _totalMs) * 100));
-                                const _width = Math.max(0.5, Math.min(100 - _left, ((ph.end - ph.start) / _totalMs) * 100));
+                            {swStart && swEnd && newBarTotalMs && _smPhases.length > 0 && _smPhases.map((ph, i) => {
+                                const _barBase = bedEntryTsVal ?? swStart;
+                                const _left = Math.max(0, Math.min(100, ((ph.start - _barBase) / newBarTotalMs!) * 100));
+                                const _width = Math.max(0.5, Math.min(100 - _left, ((ph.end - ph.start) / newBarTotalMs!) * 100));
                                 return (
                                     <div key={i} style={{
                                         position: 'absolute',

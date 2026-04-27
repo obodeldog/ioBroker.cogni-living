@@ -258,7 +258,7 @@ function computePersonSleep(p) {
             // Nur Motion-Events im Nacht-Fenster (21:00-09:00) betrachten
             // Verhindert dass Tagesbewegungen (z.B. 13:13 Uhr) als Nacht-Aufstehen fehlinterpretiert werden
             // Ausserdem: obere Grenze = wakeHardCap (kein Scannen nach dem Aufwachen)
-            var _wakeCapMs = wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : Infinity;
+            var _wakeCapMs = wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (garminWakeTs ? garminWakeTs : Infinity);
             var _motAll = allEvents.filter(function(e) {
                 if (e.type !== 'motion') return false;
                 if (!(e.value === true || e.value === 'true' || e.value === 1)) return false;
@@ -282,7 +282,7 @@ function computePersonSleep(p) {
                         var _h = hopDistFn(bedroomLocations[_bli], _wLoc);
                         if (_h !== null && _h !== undefined && _h < _minHop) _minHop = _h;
                     }
-                    if (_minHop > 4) continue; // Zu weit weg â†’ ignorieren
+                    if (_minHop > 3) continue; // Zu weit weg -> ignorieren (max. 3 Hops = Bad/Kueche/Diele, nicht OG/DG)
                 }
                 // Abgang bereits in einem bestehenden Fenster? â†’ Ã¼berspringen
                 if (_windows.some(function(w) { return _wTs >= w.start && _wTs <= w.end; })) continue;
@@ -670,7 +670,7 @@ function computePersonSleep(p) {
     var _smWakePhases = (function() {
         if (!sleepStart || !bedroomLocations || bedroomLocations.length === 0) return [];
         var _bedroomLocSet = new Set(bedroomLocations);
-        var _wakeCapMs = wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000);
+        var _wakeCapMs = wakeTs ? wakeTs : (wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000));
         var _phases = [];
         var _inBed = true;
         var _deptTs = null;
