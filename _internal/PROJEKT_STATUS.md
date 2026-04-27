@@ -1,5 +1,151 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 23.04.2026 | **Version:** 0.33.200
+**Letzte Aktualisierung:** 27.04.2026 | **Version:** 0.33.209
+
+---
+
+## 📍 Sitzung 27.04.2026 — Version 0.33.209 — Phase 4: bedAbsenceEvents (OC-36)
+
+### ✅ Abgeschlossen — Architektur-Konsolidierung "weg vom Bett"
+
+- **[OC-36 Phase 4] Konsolidierte Bed-Absence-Engine** (`src/main.js`, `HealthTab.tsx`):
+  - **Problem**: Drei parallele Algorithmen (`smWakePhases`, `nachtAufstehenEvents`, `outsideBedEvents`) berechneten Abwesenheit vom Bett, ohne sich zu kennen → Überlagerungen im Balken, mehrfache Marker für dieselbe Abwesenheit
+  - **Backend Merger** (`computePersonSleep`, neue IIFE `_bedAbsenceEvents` direkt nach `_smWakePhases`):
+    - Sammelt Kandidaten-Fenster aus allen drei Quellen (sm/nacht/outside)
+    - Sortiert + mergt überlappende Fenster (1-Min-Toleranz)
+    - **Konfidenz-Score** pro Fenster:
+      - Quellen-Indizien: outside +3, sm +2, nacht +1 (max +6)
+      - Cross-Check Vibration (Aufstehen-Stoss 0–3 Min vor Fensterstart): +2
+      - Cross-Check FP2: leer im Fenster +2 / teilweise leer +1 / durchgehend belegt ≥5 Min −2
+    - **Schwellen**: Score ≥5 = high, ≥3 = medium, ≥1 = low, ≤0 = verworfen
+    - Output: `bedAbsenceEvents: [{start, end, durationMin, sources, confidence, confidenceScore, evidence}]`
+    - Im JSON-Snapshot persistiert (root-Level + per-Person)
+  - **Frontend Renderer** (`HealthTab.tsx`):
+    - Wenn `bedAbsenceEvents` vorhanden: hellgrau schraffiertes Segment im Balken (Vorrang vor altem gelbem `smWakePhases`-Overlay)
+    - Opazität abhängig von Konfidenz (high 0.85 / medium 0.65 / low 0.45 mit gestricheltem Rand)
+    - Tooltip: Zeitraum + Konfidenz-Label (hoch/mittel/niedrig) + Indizien-Liste + Quellen
+    - Legende erweitert um schraffiertes "Weg vom Bett"-Symbol
+    - **Legacy-Fallback**: Alte JSONs ohne `bedAbsenceEvents` zeigen weiterhin gelbes Overlay (kein Daten-Verlust)
+  - **Graceful Degradation**:
+    - FP2 + Vibration vorhanden → Voll-Modus mit Cross-Checks
+    - Nur Vibration → Vibration als Pre-Trigger (+2)
+    - Nur PIR → Quellen-Indizien (sm/nacht/outside) ohne Cross-Check
+    - Kein Sensor → leeres Array, Frontend zeigt nichts
+  - **Migration**: keine — natürliche Übergangsphase. Aktuelle Nacht hat das neue Segment, alte Nächte das alte gelbe Overlay
+  - **Bestehende Felder bleiben unangetastet**: `smWakePhases`, `nachtAufstehenEvents`, `outsideBedEvents`, `nightVibrationTimestamps` werden weiterhin im JSON gespeichert (Backwards-Compat + Debug)
+
+### 🎯 Nächster logischer Schritt
+- v0.33.209 testen: Schlafanalyse-Balken sollte jetzt **ein** hellgrau schraffiertes Segment zeigen statt mehrerer überlagernder Marker
+- Tooltip-Konfidenz prüfen: bei FP2+Vibration sollte mindestens "mittel", oft "hoch" stehen
+- Beobachten ob die alte Farbverwirrung (dunkelgelb durch Overlay) jetzt weg ist
+
+---
+
+## 📍 Sitzung 27.04.2026 — Version 0.33.208 — Ausschließen-Feature ausgeweitet
+
+### ✅ Abgeschlossen
+
+- **[v0.33.208] excluded-Nächte aus allen Ø-Berechnungen** (`src/main.js`, `LongtermTrendsView.tsx`, `HealthTab.tsx`):
+  - **Backend**: `sleepScoreHistory`-Einträge erhalten `excluded: true/false`-Flag. Die Kalibrierung (`_calNights`) filtert jetzt ausgeschlossene Nächte aus → `Ø 79 – 28 Nächte` enthält keine ausgeschlossenen Nächte mehr.
+  - **LongtermTrendsView (30/90-Tage-Charts)**:
+    - `dailyData.push()` speichert `excluded`-Flag aus JSON
+    - `buildSleepChartData()` gibt `excluded`-Feld weiter
+    - **AURA-Sleepscore**: Ø berechnet ohne excluded + Balken werden grau (Opacity 0.3)
+    - **Schlafphasen-Anteile**: Ø Tief/REM ohne excluded + Stacked Bars grau (Opacity 0.2) + Kreuzschraffur
+  - **HealthTab (7/30-Tage Wochenansicht)**:
+    - `sleepChartData` enthält `excluded`-Flag
+    - Score-Ø und Phasen-Ø filtern excluded-Nächte heraus
+    - Ausgeschlossene Nächte: grau + Kreuzschraffur + "✗" im X-Label und Score-Wert
+
+### 🎯 Nächster logischer Schritt
+- Phase 4 — Architektur-Konsolidierung (OC-36): SM mit FP2+Vibration-Input, outsideBedEvents-Integration
+
+---
+
+## 📍 Sitzung 27.04.2026 — Version 0.33.207 (Hotfixes)
+
+### ✅ Abgeschlossen
+
+- **[v0.33.206] bedEntryTs Fallback-Kette** (`src/main.js`): `saveDailyHistory()` überschrieb nach Adapter-Neustart den gespeicherten `bedEntryTs`-Wert mit `null`, weil `allSleepStartSources` direkt nach Neustart noch leer ist. Fix: Dreistufige Fallback-Kette `_bedEntryTsFinal || _existingSnap.bedEntryTs || _gR.bedEntryTs || null`. Verhindert zukünftige Überschreibung guter Werte.
+
+- **[v0.33.207] excludeNight Bug** (`src/main.js`): Zwei Bugs in `excludeNight`/`unexcludeNight` Handler: (1) `saveDailyHistory()` wurde aufgerufen und überschrieb HEUTE statt des historischen Datums; (2) Response enthielt `new Date()` (heute) statt `_exDate` — UI sprang deshalb zum aktuellen Datum. Fix: historische JSON-Datei für `_exDate` direkt updaten (`excluded`-Flag setzen/löschen), korrekte Datei zurückgeben.
+
+### 🔧 Offene Baustellen
+
+- **bedEntryTs für Apr 26→27** fehlt noch im gespeicherten JSON (wurde durch Neustart-Bug überschrieben). Wird beim nächsten regulären Save (nächste Nacht) oder nach 90s beim zweiten `saveDailyHistory`-Aufruf mit wiederhergestelltem Sensor-Cache korrekt geschrieben.
+- **Phase 4 — Architektur-Konsolidierung** (nächste große Milestone): SM als Single Source of Truth, FP2-Cross-Check, `bedAbsenceEvents`-Merger, "weg vom Bett" als Balkensegment.
+
+### 🎯 Nächster logischer Schritt
+
+- Phase 4 starten: `bedAbsenceEvents`-Merger-Funktion im Backend.
+
+---
+
+## 📍 Sitzung 27.04.2026 — Version 0.33.205 (Phase 1 Quick-Wins)
+
+### ✅ Abgeschlossen
+
+- **[B4] Hop-Filter in smWakePhases** (`src/main.js`): Abgangserkennung prüft jetzt Hop-Distanz (max. 3 Hops vom Schlafzimmer) — verhindert dass OG Flur / DG Sensoren als Abgang gewertet werden. Analoges Verhalten zu nachtAufstehenEvents.
+
+- **[Splitter-Fix] smWakePhases Clip** (`HealthTab.tsx`): smWakePhases-Phasen mit `start >= sleepWindowEnd` oder `end <= sleepWindowStart` werden gefiltert → kein abgebrochener Balken nach dem Schlafende mehr.
+
+- **[UI] 🛏-Label entfernt** (`HealthTab.tsx`): Das "🛏 22:21"-Label über dem Balken wurde entfernt. Die Bettgehzeit steht bereits als grauer Zeitstempel in der X-Achse.
+
+- **[UI] Dreiecke in einer Zeile** (`HealthTab.tsx`): Pre-Sleep-Dreiecke (nachtAufstehenEvents vor Einschlafen) und Post-Sleep-Dreiecke (Bad/Außerhalb nach Einschlafen) werden jetzt in derselben Zeile über dem Balken angezeigt — kein separates Label mehr.
+
+- **[OC-36] BRAINSTORMING.md erweitert**: Phase-1-Status dokumentiert und Phase-4-Fahrplan (Architektur-Konsolidierung: SM als Single Source of Truth, bedAbsenceEvents-Merger, "weg vom Bett" als eigenes Balkensegment) ausformuliert.
+
+### 🔧 Offene Baustellen
+
+- **Phase 4 — Architektur-Konsolidierung** (nächste große Milestone): SM-Cross-Check gegen FP2/Vibration, bedAbsenceEvents-Merger, "weg vom Bett" als Balkensegment statt Overlay, Visualisierungs-Redesign (kein gelbes Overlay mehr).
+
+### 🎯 Nächster logischer Schritt
+
+- Phase 4 starten: `bedAbsenceEvents`-Merger-Funktion im Backend als erster Schritt.
+
+---
+
+
+## 📍 Sitzung 27.04.2026 — Version 0.33.204
+
+### ✅ Abgeschlossen
+
+- **[Fix Frontend F1-F3] Schlafbalken-Segment-Breiten** (`HealthTab.tsx`):
+  - **Problem**: `slotW`, `preStageMs`- und `postStageMs`-Breite nutzten `totalWindowMs` (Schlaffenster) statt `newBarTotalMs` (Gesamt-Balken inkl. Pre-Sleep). Die Stage-Segmente summierten sich auf ~109% → letzten ~49 Min der Nacht wurden durch `overflow:hidden` abgeschnitten → X-Achse und visuelle Balkenposition stimmten nicht überein.
+  - **Fix**: Alle drei auf `newBarTotalMs` umgestellt.
+
+- **[Fix Frontend F4] smWakePhases-Overlay korrekte Position** (`HealthTab.tsx`):
+  - **Problem**: Das gelbe Wachliegen-Overlay nutzte `swStart` und `swEnd - swStart` als Referenz, aber der Balken startet visuell bei `bedEntryTsVal` (~50 Min früher). Alle Wachliegen-Overlays erschienen ~10% zu weit links → über falschen Stage-Segmenten → dunkelgold-Artefakt.
+  - **Fix**: Overlay-Position jetzt mit `bedEntryTsVal ?? swStart` und `newBarTotalMs`.
+
+- **[Fix Frontend F5] markerItems (▲▼-Dreiecke) korrekte Position** (`HealthTab.tsx`):
+  - **Problem**: Bad-Besuch- und Außerhalb-Dreiecke nutzten `swStart` + `totalMs` als Referenz → ebenfalls ~10% zu weit links.
+  - **Fix**: `_markerBarBase = bedEntryTsVal ?? swStart`, `_markerBarTotal = newBarTotalMs ?? totalMs`.
+
+- **[Fix Backend B1] nachtAufstehenEvents Hop-Schwellenwert** (`src/main.js`):
+  - **Problem**: Schwellenwert `> 4` ließ OG Flur (genau 4 Hops von EG Schlafen) durch → Kinder-Bewegung OG Flur wurde als Abgang des Bewohners interpretiert → rotes Dreieck bei 22:53 und 01:22.
+  - **Fix**: `> 4` → `> 3`. Maximale Sensor-Distanz jetzt 3 Hops = Bad, Küche, Diele, Wohnzimmer (nicht OG/DG).
+
+- **[Fix Backend B2] smWakePhases Clip auf wakeTs** (`src/main.js`):
+  - **Problem**: `_wakeCapMs` für smWakePhases nutzte `wakeHardCap` oder `sleepStart + 12h` → Wake-Phasen nach dem Aufwachen (bis 11:22 Uhr!) im Array, darunter eine 89-Minuten-Phase → falsche Wachliegen-Statistik, Splitter am Balkenrand.
+  - **Fix**: Primär `wakeTs` (echte Aufwachzeit) verwenden, dann `wakeHardCap`, dann `sleepStart + 12h`.
+
+- **[Fix Backend B3] nachtAufstehenEvents Clip auf garminWakeTs** (`src/main.js`):
+  - **Problem**: `_wakeCapMs` für nachtAufstehenWindows war `wakeHardCap` oder `Infinity` → Events bei 09:23 und 09:27 (Morgenaktivität) wurden als Nacht-Aufsteh-Events erfasst.
+  - **Fix**: `garminWakeTs` als Fallback statt `Infinity`.
+
+- **[Doku] BRAINSTORMING.md**: OC-36 (State Machine Bed-Presence Cross-Check — Verfeinerungsstufe 2 für nachtAufstehenEvents) eingetragen.
+
+### 🔍 Analyse-Ergebnisse letzte Nacht (26./27.04.2026)
+- Nacht 22:21–06:32, 7h 21min, Garmin 62 / AURA kalibriert 66
+- Identifizierte Bugs aus JSON-Analyse: 5 Frontend-Bugs (Balken-Offset durch bedEntryTs-Segment), 3 Backend-Bugs (Hop-Filter, smWakePhases-Clip, nachtAufstehen-Clip)
+- Root-Cause des Balken-Bugs: Einführung von `bedEntryTs` in v0.33.198/199 wurde nicht konsistent auf alle Rendering-Komponenten (Slot-Breiten, Overlays, Dreiecke) angewendet
+
+### 🎯 Nächster logischer Schritt
+1. Adapter v0.33.204 in ioBroker updaten
+2. Nächste Nacht prüfen: Stimmt Tooltip-Zeit mit X-Achsenposition überein?
+3. Prüfen: Kein rotes Dreieck für OG Flur mehr sichtbar
+4. Prüfen: smWakePhases enden bei ~06:32 (kein 89-Minuten-Block mehr)
+5. OC-36 (State Machine Cross-Check) bei Bedarf für weitere Verfeinerung angehen
 
 ---
 

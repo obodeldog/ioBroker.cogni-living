@@ -1556,11 +1556,17 @@ export default function HealthTab(props: any) {
         const bedEntryTsVal: number | null = (_bedEntryRaw && swStart && _bedEntryRaw < swStart - 5*60000) ? _bedEntryRaw : null;
         const bedEntrySegMs = (bedEntryTsVal && swStart) ? swStart - bedEntryTsVal : 0;
         const newBarTotalMs = (bedEntrySegMs > 0 && totalWindowMs) ? bedEntrySegMs + totalWindowMs : totalWindowMs;
-        // smWakePhases: Wake-Phasen aus State Machine (OC-31 Stage 2) - als Overlay auf dem Balken
+        // smWakePhases: Wake-Phasen aus State Machine (OC-31 Stage 2) - als Overlay auf dem Balken (LEGACY)
         const _smPhases: {type:string,start:number,end:number,durationMin:number}[] =
             ((sd as any)?.smWakePhases ?? []).filter((ph: {start:number,end:number}) =>
                 swEnd ? ph.start < swEnd && ph.end > (swStart ?? 0) : true
             );
+        // OC-36 Phase 4: Konsolidierte Bed-Absence-Events (Merger aus 3 Quellen + Cross-Checks)
+        const _bedAbsenceEvts: {start:number,end:number,durationMin:number,sources:string[],confidence:string,confidenceScore?:number,evidence?:string[]}[] =
+            ((sd as any)?.bedAbsenceEvents ?? []).filter((ev: {start:number,end:number}) =>
+                swEnd ? ev.start < swEnd && ev.end > (swStart ?? 0) : true
+            );
+        const _hasBedAbsenceEngine = _bedAbsenceEvts.length > 0;
         // Kein-Daten-Bereich NACH dem letzten Stage-Slot (Stages decken oft nur Anfang der Nacht ab)
         const lastSlotEndMs = (stagesWindowStart && renderedStages.length > 0)
             ? stagesWindowStart + (renderedStages[renderedStages.length - 1].t + 5) * 60000
@@ -2220,8 +2226,39 @@ export default function HealthTab(props: any) {
                                     }} title={'Keine Sensordaten (' + (lastSlotEndMs ? fmtTime(lastSlotEndMs) : '?') + '–' + (swEnd ? fmtTime(swEnd) : '?') + ')'} />
                                 )}
                             </div>
-                            {/* OC-31 Stage 2: Wake-Phasen-Overlay (lange Abwesenheiten nach Einschlafzeit) */}
-                            {swStart && swEnd && newBarTotalMs && _smPhases.length > 0 && _smPhases.map((ph, i) => {
+                            {/* OC-36 Phase 4: bedAbsenceEvents = hellgrau schraffiertes Segment 'weg vom Bett' (Vorrang) */}
+                            {swStart && swEnd && newBarTotalMs && _hasBedAbsenceEngine && _bedAbsenceEvts.map((ev, i) => {
+                                const _barBase = bedEntryTsVal ?? swStart;
+                                const _left = Math.max(0, Math.min(100, ((ev.start - _barBase) / newBarTotalMs!) * 100));
+                                const _width = Math.max(0.5, Math.min(100 - _left, ((ev.end - ev.start) / newBarTotalMs!) * 100));
+                                const _confLabel = ev.confidence === 'high' ? 'hoch' : ev.confidence === 'medium' ? 'mittel' : 'niedrig';
+                                const _opacity = ev.confidence === 'high' ? 0.85 : ev.confidence === 'medium' ? 0.65 : 0.45;
+                                const _bgColor = isDark ? '#3a3a3a' : '#cfcfcf';
+                                const _stripeColor = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)';
+                                const _stripe = 'repeating-linear-gradient(135deg, transparent 0px, transparent 5px, ' + _stripeColor + ' 5px, ' + _stripeColor + ' 10px)';
+                                const _evList = (ev.evidence || []).join(', ');
+                                const _srcList = (ev.sources || []).join('+');
+                                const _title = '🚶 Weg vom Bett: ' + fmtTime(ev.start) + ' – ' + fmtTime(ev.end) + ' (' + ev.durationMin + ' Min) · Konfidenz: ' + _confLabel + (_evList ? ' · ' + _evList : '') + ' [Quellen: ' + _srcList + ']';
+                                return (
+                                    <div key={'ba'+i} style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: _left + '%',
+                                        width: _width + '%',
+                                        height: '28px',
+                                        backgroundColor: _bgColor,
+                                        backgroundImage: _stripe,
+                                        opacity: _opacity,
+                                        pointerEvents: 'auto',
+                                        zIndex: 2,
+                                        cursor: 'help',
+                                        borderLeft: ev.confidence === 'low' ? '1px dashed ' + (isDark?'#888':'#666') : 'none',
+                                        borderRight: ev.confidence === 'low' ? '1px dashed ' + (isDark?'#888':'#666') : 'none'
+                                    }} title={_title} />
+                                );
+                            })}
+                            {/* OC-31 Stage 2 (LEGACY-Fallback): Gelbes Wake-Phasen-Overlay nur wenn keine bedAbsenceEvents vorhanden (alte JSON-Daten) */}
+                            {swStart && swEnd && newBarTotalMs && !_hasBedAbsenceEngine && _smPhases.length > 0 && _smPhases.map((ph, i) => {
                                 const _barBase = bedEntryTsVal ?? swStart;
                                 const _left = Math.max(0, Math.min(100, ((ph.start - _barBase) / newBarTotalMs!) * 100));
                                 const _width = Math.max(0.5, Math.min(100 - _left, ((ph.end - ph.start) / newBarTotalMs!) * 100));
@@ -2236,7 +2273,7 @@ export default function HealthTab(props: any) {
                                         opacity: 0.82,
                                         pointerEvents: 'none',
                                         zIndex: 2
-                                    }} title={'⏱ Wachphase: ' + fmtTime(ph.start) + ' – ' + fmtTime(ph.end) + ' (' + ph.durationMin + ' Min)'} />
+                                    }} title={'⏱ Wachphase (Legacy): ' + fmtTime(ph.start) + ' – ' + fmtTime(ph.end) + ' (' + ph.durationMin + ' Min)'} />
                                 );
                             })}
                             </div>{/* Ende Wrapper */}
@@ -2311,6 +2348,14 @@ export default function HealthTab(props: any) {
                             {([['deep','Tief'],['light','Leicht'],['rem','REM (est.)'],['wake','Wachliegen']] as [string,string][]).map(([k,l]) => (
                                 <span key={k}><span style={{color: stageColor[k]}}>■</span> {l}</span>
                             ))}
+                            {_hasBedAbsenceEngine && (
+                                <span title="Konsens aus State Machine, Pattern-Match und Bad-Sensor — mit Vibration/FP2-Cross-Check (OC-36)"><span style={{
+                                    display:'inline-block', width:'10px', height:'10px',
+                                    backgroundColor: isDark?'#3a3a3a':'#cfcfcf',
+                                    backgroundImage: 'repeating-linear-gradient(135deg, transparent 0px, transparent 2px, ' + (isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.25)') + ' 2px, ' + (isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.25)') + ' 4px)',
+                                    verticalAlign:'middle', marginRight:'3px'
+                                }}/> Weg vom Bett</span>
+                            )}
                             {clippedOutsideBedEvts.some(e => e.type === 'bathroom') && (
                                 <span><span style={{color: stageColor.bathroom}}>■</span> Bad</span>
                             )}

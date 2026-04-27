@@ -82,6 +82,127 @@ Das bedeutet bereits heute:
 
 ---
 
+### OC-36: State Machine Bed-Presence Cross-Check + Architektur-Konsolidierung (27.04.2026)
+
+**Kontext:**
+Die `nachtAufstehenEvents`-Erkennung ist aktuell ein simpler Pattern-Matcher: "Sensor X (außerhalb Schlafzimmer) feuert → kurz danach feuert EG Schlafen → als Abgang+Rückkehr interpretiert." Ein Hop-Distanz-Filter (max. 3 Hops, implementiert ab v0.33.201) reduziert Falsch-Positive aus weit entfernten Räumen (z. B. OG Flur). Gleiches gilt für `smWakePhases` (Hop-Filter ab v0.33.205).
+
+**Problem:**
+Aktuell existieren **drei parallele Algorithmen** die alle "Abwesenheit vom Bett" berechnen, ohne sich gegenseitig zu kennen:
+1. `nachtAufstehenEvents` — PIR-basierter Pattern-Matcher (Abgang + Rückkehr ins Schlafzimmer)
+2. `smWakePhases` — State Machine (PIR-Events, trackt "in Bett / außerhalb" kontinuierlich)
+3. `outsideBedEvents` — FP2/Radar-bestätigte Abwesenheiten (zuverlässigste Quelle)
+
+Die Frontend-Visualisierung zeigt dies als **Overlays auf dem Balken** (smWakePhases = gelbes Overlay) was konzeptionell falsch ist: "weg vom Bett" ist kein Schlaf-Substadium, sondern ein eigener Zustand.
+
+---
+
+#### Phase 1 — Stabilisierung (✅ erledigt in v0.33.205)
+
+Quick-Wins ohne Architektur-Umbau:
+- ✅ **B4**: Hop-Filter in `smWakePhases` (max. 3 Hops, analog nachtAufstehenEvents)
+- ✅ **Splitter-Fix**: `smWakePhases`-Phasen mit `start >= sleepWindowEnd` werden gefiltert (kein abgebrochener Balken)
+- ✅ **UI**: 🛏-Label über dem Balken entfernt (Uhrzeit ist jetzt nur in X-Achse sichtbar)
+- ✅ **UI**: Pre-Sleep-Dreiecke (nachtAufstehen vor Einschlafen) und Post-Sleep-Dreiecke (Bad/Außerhalb) in einer gemeinsamen Zeile über dem Balken
+
+---
+
+#### Phase 4 — Architektur-Konsolidierung (🟢 in Umsetzung v0.33.209)
+
+**Ziel:** SM als Single Source of Truth für "weg vom Bett" — alle drei Algorithmen sprechen miteinander.
+
+**WICHTIG — Klare Abgrenzung:** Wir werfen NICHTS um. Alle bestehenden Algorithmen (`smWakePhases`, `nachtAufstehenEvents`, `outsideBedEvents`, `nightVibrationTimestamps`) bleiben. Wir bauen NUR einen **Merger** der die drei zu einem konsolidierten Output verbindet, mit Konfidenz-Bewertung anhand vorhandener Sensoren.
+
+#### Finale Implementierungs-Spec (v0.33.209)
+
+**Backend: neue Funktion `_buildBedAbsenceEvents()` in `computePersonSleep()`**
+
+Inputs (alles existiert bereits):
+- `_smWakePhases` — State Machine Output
+- `_nachtAufstehenWindows` — Pattern-Matcher Output
+- `obe` — outsideBedEvents (Bad-PIR confirmed)
+- `allEvents` — gefiltert nach `isVibrationBed` (Vibrations-Pre-Trigger) und `isFP2Bed` (FP2-Cross-Check)
+
+Algorithmus:
+1. **Sammeln**: Kandidaten-Fenster aus allen drei Quellen
+2. **Mergen**: Überlappende Fenster (1-Min-Toleranz) zu einem Fenster zusammenfassen, `sources`-Array merken
+3. **Konfidenz** pro Fenster:
+   - **Quellen-Indizien** (max +6): outside +3, sm +2, nacht +1
+   - **Cross-Check Vibration** (+2): wenn Vibration im Bett 0-3 Min vor Fenster-Start
+   - **Cross-Check FP2** (+2 / -2): wenn FP2 vorhanden — leer im Fenster: +2; durchgehend belegt während ≥5 Min: -2
+4. **Schwelle**:
+   - Score ≥ 5 → `confidence: 'high'`
+   - Score ≥ 3 → `confidence: 'medium'`
+   - Score ≥ 1 → `confidence: 'low'`
+   - Score ≤ 0 → Event verworfen
+
+Output-Format:
+```json
+{
+  "start": 1777258143907,
+  "end": 1777258323907,
+  "durationMin": 3,
+  "sources": ["outside", "sm"],
+  "confidence": "high",
+  "confidenceScore": 7,
+  "evidence": ["Bad bestätigt", "SM-Phase", "Vibration vor Aufstehen"]
+}
+```
+
+**Frontend: HealthTab.tsx Schlafphasen-Balken**
+
+- Wenn `bedAbsenceEvents` vorhanden: hellgraues, schraffiertes Segment im Balken (statt Farbe der Schlafphase)
+- Tooltip: Zeitraum + Konfidenz + Indizien-Liste
+- Wenn `bedAbsenceEvents` NICHT vorhanden (alte JSONs): Fallback auf altes gelbes `smWakePhases`-Overlay
+
+**Migration:**
+- Backend produziert `bedAbsenceEvents` ab v0.33.209 IMMER für aktuelle Nacht
+- Alte JSON-Dateien haben das Feld nicht → Frontend fällt automatisch auf alte Visualisierung zurück
+- Kein Cutover nötig — natürliche Migration über Tage hinweg
+- Felder `smWakePhases`, `nachtAufstehenEvents`, `outsideBedEvents` bleiben weiterhin im JSON für Backwards-Compat und Debug
+
+**Kern-Ideen:**
+
+**A) SM bekommt FP2 + Vibration als Input (Cross-Check)**
+- Wenn `smWakePhases` einen Abgang erkennt (PIR außerhalb): zusätzlich prüfen ob FP2-Radar `false` meldet
+- Wenn FP2 noch Präsenz zeigt → kein echter Abgang → Event verwerfen (Falsch-Positiv-Filter)
+- Wenn kein FP2 vorhanden: Vibrationssensor-Pause als Proxy (kein Vibrations-Event in den letzten 3 Min → Bett möglicherweise leer)
+- Kein FP2, kein Vibration → Hop-Filter als einzige Schutzschicht (Graceful Degradation)
+
+**B) nachtAufstehenEvents wird durch SM-Ergebnis validiert**
+- Nach Pattern-Match: Abgleich ob `smWakePhases` den gleichen Zeitraum auch als "außerhalb" sieht
+- Falls beide übereinstimmen → starke Bestätigung → Event bleibt
+- Falls nur einer es sieht → `confidence`-Flag reduzieren, Event bleibt aber mit niedrigerer Gewichtung
+
+**C) `outsideBedEvents` als Master-Quelle in SM integrieren**
+- FP2-bestätigte Abwesenheiten sind die zuverlässigste Quelle → SM-Ergebnis wird durch outsideBedEvents überschrieben/bestätigt wo verfügbar
+- Zusammengeführtes Array: `bedAbsenceEvents` mit Quelle-Flag (sm / fp2 / nachtAufstehen / combined)
+
+**D) Frontend: "weg vom Bett" als eigene Balkenfarbe**
+- Statt gelbem Overlay auf dem Schlafphasen-Balken → eigenes Segment (z. B. hellgrau schraffiert oder bordeauxrot)
+- Visualisierung im Balken: [Tiefschlaf][Leichtschlaf][🚶 Weg vom Bett (15 Min)][REM][Tiefschlaf]
+- Dreiecke (Bad/Außerhalb) bleiben als Marker erhalten
+- kein Overlay mehr → keine Überlagerungen, keine Farbkonfusion
+
+**Graceful Degradation (Tausende Kunden, unterschiedliche Sensoren):**
+
+| Sensor-Setup | SM-Verhalten | Balken-Visualisierung |
+|---|---|---|
+| FP2 + Vibration + PIR | Vollmodus: alle drei Quellen kombiniert | Eigenes Segment im Balken |
+| FP2 + PIR (kein Vibration) | SM nutzt FP2 als Cross-Check | Eigenes Segment, leicht reduzierte Konfidenz |
+| Nur PIR (kein FP2/Vibration) | Hop-Filter als einzige Schutzschicht | Gelbes Overlay (Legacy-Modus) |
+| Kein Sensor | SM disabled | Kein "weg vom Bett" angezeigt |
+
+**Implementierungsreihenfolge:**
+1. Backend: `bedAbsenceEvents` Merger-Funktion (SM + FP2 + nachtAufstehen → kombiniertes Array)
+2. Backend: SM-Cross-Check gegen FP2 / Vibration
+3. Frontend: `bedAbsenceEvents` als eigenes Balken-Segment rendern
+4. Frontend: Gelbes Overlay entfernen (nur noch für Legacy ohne FP2/PIR)
+
+**Priorität:** 🔴 HOCH — wird als separates Projekt nach v0.33.x angegangen.
+
+---
+
 ### OC-35: Shelly Presence Gen4 als Zonen-Sensor für gemeinsames Schlafzimmer (23.04.2026)
 
 **Kontext:**

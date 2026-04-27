@@ -709,6 +709,118 @@ function computePersonSleep(p) {
         return _phases;
     })();
 
+    // OC-36 Phase 4: Konsolidierter Bed-Absence-Output aus 3 Quellen + Cross-Checks (FP2/Vibration)
+    var _bedAbsenceEvents = (function() {
+        if (!sleepStart) return [];
+        var _wakeCap = wakeTs ? wakeTs : (wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000));
+        var _candidates = [];
+        // Quelle 1: SM-Phasen
+        for (var _baI = 0; _baI < (_smWakePhases||[]).length; _baI++) {
+            var _baP = _smWakePhases[_baI];
+            if (_baP.start >= sleepStart && _baP.end <= _wakeCap)
+                _candidates.push({ start: _baP.start, end: _baP.end, src: 'sm' });
+        }
+        // Quelle 2: Pattern-Matcher (nachtAufstehen)
+        for (var _baJ = 0; _baJ < (_nachtAufstehenWindows||[]).length; _baJ++) {
+            var _baN = _nachtAufstehenWindows[_baJ];
+            var _nStart = _baN.departureTs || _baN.start || 0;
+            var _nEnd   = _baN.returnTs    || _baN.end   || (_nStart + 5*60000);
+            if (_nStart >= sleepStart && _nEnd <= _wakeCap)
+                _candidates.push({ start: _nStart, end: _nEnd, src: 'nacht' });
+        }
+        // Quelle 3: outsideBedEvents (Bad-confirmed)
+        for (var _baK = 0; _baK < (obe||[]).length; _baK++) {
+            var _baO = obe[_baK];
+            if (_baO.start >= sleepStart && _baO.end <= _wakeCap)
+                _candidates.push({ start: _baO.start, end: _baO.end, src: 'outside' });
+        }
+        if (_candidates.length === 0) return [];
+        // Sortieren nach Start
+        _candidates.sort(function(a,b) { return a.start - b.start; });
+        // Mergen ueberlappender Fenster (1-Min-Toleranz)
+        var _merged = [];
+        var _cur = null;
+        for (var _baM = 0; _baM < _candidates.length; _baM++) {
+            var _baC = _candidates[_baM];
+            if (!_cur) {
+                _cur = { start: _baC.start, end: _baC.end, sources: [_baC.src] };
+            } else if (_baC.start <= _cur.end + 60000) {
+                if (_baC.end > _cur.end) _cur.end = _baC.end;
+                if (_cur.sources.indexOf(_baC.src) === -1) _cur.sources.push(_baC.src);
+            } else {
+                _merged.push(_cur);
+                _cur = { start: _baC.start, end: _baC.end, sources: [_baC.src] };
+            }
+        }
+        if (_cur) _merged.push(_cur);
+        // Cross-Check-Daten vorbereiten
+        var _vibEvts = (allEvents||[]).filter(function(e) {
+            return isMine(e) && e.isVibrationBed && !e.isVibrationStrength && isActiveValue(e.value);
+        });
+        var _fp2Evts = (allEvents||[]).filter(function(e) { return isMine(e) && e.isFP2Bed; })
+                                       .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+        var _hasVib = _vibEvts.length > 0;
+        var _hasFP2 = _fp2Evts.length > 0;
+        // Konfidenz pro Fenster
+        var _result = [];
+        for (var _baX = 0; _baX < _merged.length; _baX++) {
+            var _m = _merged[_baX];
+            var _score = 0;
+            var _evidence = [];
+            // Quellen-Indizien
+            if (_m.sources.indexOf('outside') !== -1) { _score += 3; _evidence.push('Bad bestaetigt'); }
+            if (_m.sources.indexOf('sm') !== -1)      { _score += 2; _evidence.push('SM-Phase'); }
+            if (_m.sources.indexOf('nacht') !== -1)   { _score += 1; _evidence.push('Pattern-Match'); }
+            // Cross-Check Vibration (Aufstehen-Stoss 0-3 Min vor Fensterbeginn)
+            if (_hasVib) {
+                var _vibBefore = false;
+                for (var _baV = 0; _baV < _vibEvts.length; _baV++) {
+                    var _vt = _vibEvts[_baV].timestamp || 0;
+                    if (_vt >= _m.start - 3*60000 && _vt < _m.start) { _vibBefore = true; break; }
+                }
+                if (_vibBefore) { _score += 2; _evidence.push('Vibration vor Aufstehen'); }
+            }
+            // Cross-Check FP2 (nur wenn vorhanden)
+            if (_hasFP2) {
+                var _fp2InWin = _fp2Evts.filter(function(e) {
+                    var _t = e.timestamp || 0;
+                    return _t >= _m.start - 60000 && _t <= _m.end + 60000;
+                });
+                if (_fp2InWin.length > 0) {
+                    var _hasEmpty = _fp2InWin.some(function(e) { return !isActiveValue(e.value); });
+                    var _hasOcc   = _fp2InWin.some(function(e) { return  isActiveValue(e.value); });
+                    var _winDurMin = (_m.end - _m.start) / 60000;
+                    if (_hasEmpty && !_hasOcc) { _score += 2; _evidence.push('FP2 zeigt leer'); }
+                    else if (_hasEmpty)        { _score += 1; _evidence.push('FP2 zeigt teilweise leer'); }
+                    else if (_hasOcc && !_hasEmpty && _winDurMin >= 5) {
+                        _score -= 2; _evidence.push('FP2 noch belegt');
+                    }
+                }
+            }
+            // Schwelle
+            var _conf = null;
+            if (_score >= 5)      _conf = 'high';
+            else if (_score >= 3) _conf = 'medium';
+            else if (_score >= 1) _conf = 'low';
+            else continue;
+            _result.push({
+                start: _m.start,
+                end: _m.end,
+                durationMin: Math.round((_m.end - _m.start) / 60000),
+                sources: _m.sources,
+                confidence: _conf,
+                confidenceScore: _score,
+                evidence: _evidence
+            });
+        }
+        if (_result.length > 0 && log) {
+            log.info(logPfx + 'OC-36: ' + _result.length + ' bedAbsenceEvents gemerged ' +
+                '(hasFP2=' + _hasFP2 + ', hasVib=' + _hasVib + '): ' +
+                _result.map(function(r) { return new Date(r.start).toLocaleTimeString() + '-' + new Date(r.end).toLocaleTimeString() + ' [' + r.confidence + '/' + r.sources.join(',') + ']'; }).join(', '));
+        }
+        return _result;
+    })();
+
     return {
         sleepWindowStart:     sleepStart,
         sleepWindowEnd:       wakeTs,
@@ -730,7 +842,8 @@ function computePersonSleep(p) {
         _hausStillTs:         hausStillTs,
         nachtAufstehenEvents: _nachtAufstehenWindows,
         bedEntryTs:          bedEntryTs,
-        smWakePhases:        _smWakePhases
+        smWakePhases:        _smWakePhases,
+        bedAbsenceEvents:    _bedAbsenceEvents
     };
 }
 
@@ -2697,6 +2810,7 @@ class CogniLiving extends utils.Adapter {
                         wakeOverridden:            _pResult.wakeOverridden,
                         bedWasEmpty:               _pResult.bedWasEmpty,
                         outsideBedEvents:          _pResult.outsideBedEvents,
+                bedAbsenceEvents:          _pResult.bedAbsenceEvents || [],
                         sleepStages:               _pResult.sleepStages,
                         stagesWindowStart:         _pResult.stagesWindowStart,
                         sleepScore:                _pResult.sleepScore,
@@ -3241,6 +3355,7 @@ class CogniLiving extends utils.Adapter {
                 bedWasEmpty: bedWasEmpty,
                 noisySensors: noisySensors,
                 nachtAufstehenEvents: (_gR && _gR.nachtAufstehenEvents) ? _gR.nachtAufstehenEvents : [],
+                bedAbsenceEvents:     (_gR && _gR.bedAbsenceEvents)     ? _gR.bedAbsenceEvents     : [],
                 bedEntryTs:   _bedEntryTsFinal || (_existingSnap && _existingSnap.bedEntryTs) || (_gR && _gR.bedEntryTs) || null,
                 smWakePhases: (_gR && _gR.smWakePhases) ? _gR.smWakePhases : []
             };

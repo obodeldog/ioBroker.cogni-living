@@ -791,6 +791,41 @@ Werden aus FP2-Events während des Schlaffensters berechnet:
 - Gelbes Dreieck = Bad-Besuch
 - Rotes Dreieck = Abwesenheit = 20 Minuten
 
+### Bed-Absence-Konsens-Engine (OC-36, ab v0.33.209)
+
+Drei parallele Algorithmen erkennen "weg vom Bett"-Phasen:
+
+1. **State Machine (`smWakePhases`)** — folgt PIR-Bewegungen über die Topologie-Matrix (Hop-Distanz ≤ 3) und detektiert "Bewohner verlässt Schlafzimmer-Cluster"
+2. **Pattern-Matcher (`nachtAufstehenEvents`)** — sucht das Muster "Schlafzimmer-PIR → Bad/Flur-PIR (außerhalb) → Schlafzimmer-PIR" mit min. 5 Min Pause
+3. **outsideBedEvents** — FP2-Bett leer + Bad-PIR-Bestätigung
+
+Die **Konsens-Engine** mergt diese drei Outputs zu einem konsolidierten Array `bedAbsenceEvents`:
+
+| Schritt | Logik |
+|---|---|
+| 1. Sammeln | Kandidaten-Fenster aus allen drei Quellen |
+| 2. Mergen | Überlappende Fenster (1-Min-Toleranz) zusammenfassen, `sources`-Array merken |
+| 3. Konfidenz | Score-Punkte vergeben: outside +3 / sm +2 / nacht +1 + Cross-Checks |
+| 4. Cross-Check Vibration | Vibrations-Stoss 0–3 Min vor Fenster-Start → +2 Punkte |
+| 5. Cross-Check FP2 | FP2 leer im Fenster → +2; FP2 belegt während ≥5 Min → −2 |
+| 6. Schwelle | ≥5 = high, ≥3 = medium, ≥1 = low, ≤0 = verworfen |
+
+**Frontend-Visualisierung:**
+- Hellgrau schraffiertes Segment im Schlafphasen-Balken (statt vorher gelbes wake-Overlay)
+- Opazität nach Konfidenz: high 0.85 / medium 0.65 / low 0.45 (mit gestricheltem Rand)
+- Tooltip: Zeitraum + Konfidenz-Label + Indizien (z.B. "SM-Phase, Bad bestätigt, Vibration vor Aufstehen")
+- Legende: schraffierter Block + Text "Weg vom Bett"
+
+**Graceful Degradation:**
+| Sensor-Setup | Verhalten |
+|---|---|
+| FP2 + Vibration + PIR | Voll-Modus, Konfidenz oft "hoch" |
+| Vibration + PIR (kein FP2) | Vibration als Pre-Trigger, Konfidenz "mittel"–"hoch" |
+| Nur PIR (kein FP2/Vib) | Reine Quellen-Konsens, meist "niedrig"–"mittel" |
+| Kein Schlafzimmer-Sensor | Leeres Array, keine Visualisierung |
+
+**Backwards-Compat:** Alte JSON-Dateien (vor v0.33.209) ohne `bedAbsenceEvents` zeigen weiterhin das alte gelbe `smWakePhases`-Overlay. Natürliche Migration über Tage.
+
 ### Farbkonzept (Best ? Schlimmste, Usability-Prinzip)
 
 | Farbe | Phase | Hex | Bedeutung |
