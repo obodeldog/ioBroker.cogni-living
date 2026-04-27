@@ -3240,7 +3240,7 @@ class CogniLiving extends utils.Adapter {
                 bedWasEmpty: bedWasEmpty,
                 noisySensors: noisySensors,
                 nachtAufstehenEvents: (_gR && _gR.nachtAufstehenEvents) ? _gR.nachtAufstehenEvents : [],
-                bedEntryTs:   _bedEntryTsFinal,
+                bedEntryTs:   _bedEntryTsFinal || (_existingSnap && _existingSnap.bedEntryTs) || (_gR && _gR.bedEntryTs) || null,
                 smWakePhases: (_gR && _gR.smWakePhases) ? _gR.smWakePhases : []
             };
 
