@@ -1,17 +1,17 @@
-{
+﻿{
   "common": {
     "name": "cogni-living",
-    "version": "0.33.210",
+    "version": "0.33.211",
     "news": {
       "0": {
-        "version": "0.33.105",
+        "version": "0.33.211",
         "date": "2026-04-08",
         "changes": [
           "[Feature OC-SEX] SEX-Kachel: Vibrations-basierte Erkennung intimer Aktivitaeten (Datenschutz-Flag, Fun-Mode, optionale Garmin-HR-Integration)"
         ]
       },
       "1": {
-        "version": "0.33.104",
+        "version": "0.33.211",
         "date": "2026-04-08",
         "changes": [
           "[Fix OC-7] Multi-Person-Motion-Only: sleepWindowEnd aus per-Person-Wakezeiten ableiten (Balken + Dreiecke fuer Haushalte ohne FP2/Garmin)",
@@ -20,11 +20,11 @@
       },
       "0.33.115": {
         "en": "Vibration chart: removed Aura variant, renamed to VIBRATIONSVERLAUF, LIVE indicator green, trigger markers (cyan), fixed misleading legend + explanatory hint text, detailed hover tooltip with session context",
-        "de": "Vibrations-Chart: Aura-Variante entfernt, umbenannt zu VIBRATIONSVERLAUF, LIVE-Indikator grÃƒÂ¼n, Trigger-Markierungen (cyan), irrefÃƒÂ¼hrende Legende korrigiert + Hinweistext, detaillierter Hover-Tooltip mit Session-Kontext"
+        "de": "Vibrations-Chart: Aura-Variante entfernt, umbenannt zu VIBRATIONSVERLAUF, LIVE-Indikator grÃƒÆ’Ã‚Â¼n, Trigger-Markierungen (cyan), irrefÃƒÆ’Ã‚Â¼hrende Legende korrigiert + Hinweistext, detaillierter Hover-Tooltip mit Session-Kontext"
       },
       "0.33.114": {
         "en": "Vibration charts improved: auto-scaled Y-axis, 12h default zoom, 260px height, larger fonts, Aura chart dark-navy background, separate zoom controls per chart",
-        "de": "Vibrations-Charts verbessert: Auto-Y-Achse, 12h Standard-Zoom, 260px HÃƒÂ¶he, grÃƒÂ¶ÃƒÅ¸ere Schriften, Aura-Chart Dunkelblau-Hintergrund, separater Zoom pro Chart"
+        "de": "Vibrations-Charts verbessert: Auto-Y-Achse, 12h Standard-Zoom, 260px HÃƒÆ’Ã‚Â¶he, grÃƒÆ’Ã‚Â¶ÃƒÆ’Ã…Â¸ere Schriften, Aura-Chart Dunkelblau-Hintergrund, separater Zoom pro Chart"
       },
       "0.33.113": {
         "en": "Vibration chart panel in Sex tab: Garmin-style (bars+trend) and Aura-style (neon glow), live sensor subscription, 6h/12h/24h zoom, calibration reference lines",
@@ -68,7 +68,7 @@
     },
     "desc": {
       "en": "Neuro-Symbolic AI for Home Automation & Health",
-      "de": "Neuro-Symbolische KI fÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼r Hausautomation & Gesundheit"
+      "de": "Neuro-Symbolische KI fÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼r Hausautomation & Gesundheit"
     },
     "authors": [
       "Marc Jaeger <mj112@gmx.de>"

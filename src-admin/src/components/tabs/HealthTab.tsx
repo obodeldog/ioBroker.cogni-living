@@ -2226,16 +2226,19 @@ export default function HealthTab(props: any) {
                                     }} title={'Keine Sensordaten (' + (lastSlotEndMs ? fmtTime(lastSlotEndMs) : '?') + '–' + (swEnd ? fmtTime(swEnd) : '?') + ')'} />
                                 )}
                             </div>
-                            {/* OC-36 Phase 4: bedAbsenceEvents = hellgrau schraffiertes Segment 'weg vom Bett' (Vorrang) */}
+                            {/* OC-36 Phase 4: bedAbsenceEvents = hellgrau schraffiertes Segment 'weg vom Bett' (Vorrang, OPAK — ersetzt Schlafphase) */}
                             {swStart && swEnd && newBarTotalMs && _hasBedAbsenceEngine && _bedAbsenceEvts.map((ev, i) => {
                                 const _barBase = bedEntryTsVal ?? swStart;
                                 const _left = Math.max(0, Math.min(100, ((ev.start - _barBase) / newBarTotalMs!) * 100));
                                 const _width = Math.max(0.5, Math.min(100 - _left, ((ev.end - ev.start) / newBarTotalMs!) * 100));
                                 const _confLabel = ev.confidence === 'high' ? 'hoch' : ev.confidence === 'medium' ? 'mittel' : 'niedrig';
-                                const _opacity = ev.confidence === 'high' ? 0.85 : ev.confidence === 'medium' ? 0.65 : 0.45;
-                                const _bgColor = isDark ? '#3a3a3a' : '#cfcfcf';
-                                const _stripeColor = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)';
-                                const _stripe = 'repeating-linear-gradient(135deg, transparent 0px, transparent 5px, ' + _stripeColor + ' 5px, ' + _stripeColor + ' 10px)';
+                                // Opak (opacity=1) damit Schlafphase darunter komplett verdeckt wird (kein Farbüberlagerungseffekt).
+                                // Konfidenz-Unterscheidung nur über Streifendichte: high=dicht, medium=mittel, low=weitständig+gestrichelt.
+                                const _bgColor = isDark ? '#4a4a4a' : '#d4d4d4';
+                                const _stripeColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.22)';
+                                const _stripeGap = ev.confidence === 'high' ? 4 : ev.confidence === 'medium' ? 6 : 9;
+                                const _stripeWidth = ev.confidence === 'high' ? 3 : ev.confidence === 'medium' ? 3 : 2;
+                                const _stripe = 'repeating-linear-gradient(135deg, transparent 0px, transparent ' + _stripeGap + 'px, ' + _stripeColor + ' ' + _stripeGap + 'px, ' + _stripeColor + ' ' + (_stripeGap + _stripeWidth) + 'px)';
                                 const _evList = (ev.evidence || []).join(', ');
                                 const _srcList = (ev.sources || []).join('+');
                                 const _title = '🚶 Weg vom Bett: ' + fmtTime(ev.start) + ' – ' + fmtTime(ev.end) + ' (' + ev.durationMin + ' Min) · Konfidenz: ' + _confLabel + (_evList ? ' · ' + _evList : '') + ' [Quellen: ' + _srcList + ']';
@@ -2248,12 +2251,12 @@ export default function HealthTab(props: any) {
                                         height: '28px',
                                         backgroundColor: _bgColor,
                                         backgroundImage: _stripe,
-                                        opacity: _opacity,
+                                        opacity: 1,
                                         pointerEvents: 'auto',
                                         zIndex: 2,
                                         cursor: 'help',
-                                        borderLeft: ev.confidence === 'low' ? '1px dashed ' + (isDark?'#888':'#666') : 'none',
-                                        borderRight: ev.confidence === 'low' ? '1px dashed ' + (isDark?'#888':'#666') : 'none'
+                                        borderLeft: ev.confidence === 'low' ? '1px dashed ' + (isDark?'#888':'#666') : '1px solid ' + (isDark?'#666':'#aaa'),
+                                        borderRight: ev.confidence === 'low' ? '1px dashed ' + (isDark?'#888':'#666') : '1px solid ' + (isDark?'#666':'#aaa')
                                     }} title={_title} />
                                 );
                             })}

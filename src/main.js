@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 'use strict';
 
 /*
@@ -671,8 +671,8 @@ function computePersonSleep(p) {
         if (!sleepStart || !bedroomLocations || bedroomLocations.length === 0) return [];
         var _bedroomLocSet = new Set(bedroomLocations);
         var _wakeCapMs = wakeTs ? wakeTs : (wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000));
-        // Untergrenze: bedEntryTs (Person ist im Bett) wenn vorhanden, sonst sleepStart als Fallback
-        var _smLowerTs = (typeof bedEntryTs !== 'undefined' && bedEntryTs && bedEntryTs > 0) ? bedEntryTs : sleepStart;
+        // Untergrenze: sleepStart (Garmin/Vib-basiert) - bedEntryTs ist nur fuer bedAbsenceEvents relevant
+        var _smLowerTs = sleepStart;
         var _phases = [];
         var _inBed = true;
         var _deptTs = null;
@@ -740,19 +740,28 @@ function computePersonSleep(p) {
         var _hasFP2Primary = _fp2EvtsBA.length > 0;
         if (_hasFP2Primary) {
             var _emptyTs = null;
+            var _fp2LastTrueTs = null; // Zeitpunkt letzter FP2-true-Uebergang
             for (var _fpi = 0; _fpi < _fp2EvtsBA.length; _fpi++) {
                 var _fpE = _fp2EvtsBA[_fpi];
                 var _fpTs = _fpE.timestamp || 0;
-                if (_fpTs < _baLowerTs || _fpTs > _wakeCap) continue;
                 var _fpVal = isActiveValue(_fpE.value);
-                if (!_fpVal && _emptyTs === null) {
-                    _emptyTs = _fpTs; // Bett wird leer
-                } else if (_fpVal && _emptyTs !== null) {
-                    // Bett wieder belegt -> Intervall abschliessen (mind. 2 Min)
-                    if (_fpTs - _emptyTs >= 2 * 60000) {
-                        _candidates.push({ start: _emptyTs, end: _fpTs, src: 'fp2_bed' });
+                if (_fpVal) {
+                    // FP2 true -> Bett belegt: letzten true-Zeitpunkt merken
+                    _fp2LastTrueTs = _fpTs;
+                    // Offenes leer-Intervall abschliessen
+                    if (_emptyTs !== null && _fpTs >= _baLowerTs && _fpTs <= _wakeCap) {
+                        if (_fpTs - _emptyTs >= 2 * 60000) {
+                            _candidates.push({ start: _emptyTs, end: _fpTs, src: 'fp2_bed' });
+                        }
+                        _emptyTs = null;
                     }
-                    _emptyTs = null;
+                } else {
+                    // FP2 false -> Bett leer: nur oeffnen wenn vorher >= 20 Min ununterbrochen true
+                    // (filtert kurze Abend-Besuche raus, z.B. Lesen auf Bettkante fuer 5 Min)
+                    var _sustainedTrue = _fp2LastTrueTs !== null && (_fpTs - _fp2LastTrueTs) >= 20 * 60000;
+                    if (_sustainedTrue && _fpTs >= _baLowerTs && _fpTs <= _wakeCap && _emptyTs === null) {
+                        _emptyTs = _fpTs;
+                    }
                 }
             }
             // Offen gebliebenes Intervall (Bett wurde nicht wieder belegt vor wakeTs)
@@ -781,7 +790,7 @@ function computePersonSleep(p) {
             if (_baO.start < _baLowerTs || _baO.end > _wakeCap) continue;
             // Hop-Filter: bath-Events MUESSEN nahe am Schlafzimmer sein (Hop <= 2),
             // sonst ist es das Kinderbad im OG
-            if (_baO.type === 'bathroom' && !_isNearBedroom(_baO.sensors, 2)) {
+            if (!_isNearBedroom(_baO.sensors, 2)) { // Hop-Filter fuer alle obe-Typen (nicht nur bathroom)
                 _droppedFarBath++;
                 continue;
             }
@@ -835,6 +844,8 @@ function computePersonSleep(p) {
                 }
                 if (_vibBefore) { _score += 2; _evidence.push('Vibration vor Aufstehen'); }
             }
+            // Mindestdauer: < 5 Min nicht zeigen (kurzer Toilettenbesuch < 5 Min wird ignoriert)
+            if ((_m.end - _m.start) < 5 * 60000) continue;
             // Schwelle (angepasst an neue Punkteskala)
             var _conf = null;
             if (_score >= 6)      _conf = 'high';
