@@ -666,17 +666,19 @@ function computePersonSleep(p) {
         if (log) log.debug(logPfx + 'Score=' + sleepScore + ' dur=' + Math.round(durMin) + 'min adj=' + stageAdj);
     }
 
-    // OC-31 Stage 2: State Machine - Wake-Phasen nach sleepStart erfassen
+    // OC-31 Stage 2: State Machine - Wake-Phasen ab bedEntryTs erfassen (v0.33.210)
     var _smWakePhases = (function() {
         if (!sleepStart || !bedroomLocations || bedroomLocations.length === 0) return [];
         var _bedroomLocSet = new Set(bedroomLocations);
         var _wakeCapMs = wakeTs ? wakeTs : (wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000));
+        // Untergrenze: bedEntryTs (Person ist im Bett) wenn vorhanden, sonst sleepStart als Fallback
+        var _smLowerTs = (typeof bedEntryTs !== 'undefined' && bedEntryTs && bedEntryTs > 0) ? bedEntryTs : sleepStart;
         var _phases = [];
         var _inBed = true;
         var _deptTs = null;
         var _postEvts = allEvents.filter(function(e) {
             return isMine(e) && e.type === 'motion' && isActiveValue(e.value) &&
-                   (e.timestamp || 0) > sleepStart && (e.timestamp || 0) < _wakeCapMs;
+                   (e.timestamp || 0) > _smLowerTs && (e.timestamp || 0) < _wakeCapMs;
         }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
         for (var _si = 0; _si < _postEvts.length; _si++) {
             var _sEvt = _postEvts[_si];
@@ -709,30 +711,84 @@ function computePersonSleep(p) {
         return _phases;
     })();
 
-    // OC-36 Phase 4: Konsolidierter Bed-Absence-Output aus 3 Quellen + Cross-Checks (FP2/Vibration)
+    // OC-36 Phase 4 (v0.33.210): Konsolidierter Bed-Absence-Output - FP2-Bett als Primaerquelle
     var _bedAbsenceEvents = (function() {
         if (!sleepStart) return [];
         var _wakeCap = wakeTs ? wakeTs : (wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000));
+        // Untergrenze: bedEntryTs wenn vorhanden, sonst sleepStart - so werden Aufstehphasen VOR Garmin-sleepStart erfasst
+        var _baLowerTs = (typeof bedEntryTs !== 'undefined' && bedEntryTs && bedEntryTs > 0) ? bedEntryTs : sleepStart;
+        var _bedroomLocSetBA = new Set(bedroomLocations || []);
+        // Hop-Distanz-Helfer fuer outside/bath-Events: ist mind. ein Sensor nahe genug am Schlafzimmer?
+        var _isNearBedroom = function(sensors, maxHop) {
+            if (!sensors || sensors.length === 0) return true; // Keine Info -> akzeptieren
+            if (!hopDistFn || !bedroomLocations || bedroomLocations.length === 0) return true;
+            for (var _hi = 0; _hi < sensors.length; _hi++) {
+                var _sLoc = sensors[_hi].location || '';
+                if (!_sLoc) continue;
+                if (_bedroomLocSetBA.has(_sLoc)) return true;
+                for (var _bi = 0; _bi < bedroomLocations.length; _bi++) {
+                    var _h = hopDistFn(bedroomLocations[_bi], _sLoc);
+                    if (_h !== null && _h !== undefined && _h <= maxHop) return true;
+                }
+            }
+            return false;
+        };
         var _candidates = [];
-        // Quelle 1: SM-Phasen
+        // ─── Quelle 1 (NEU, hoechste Prio): FP2-Bett false->true Intervalle ───
+        var _fp2EvtsBA = (allEvents||[]).filter(function(e) { return isMine(e) && e.isFP2Bed; })
+                                         .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+        var _hasFP2Primary = _fp2EvtsBA.length > 0;
+        if (_hasFP2Primary) {
+            var _emptyTs = null;
+            for (var _fpi = 0; _fpi < _fp2EvtsBA.length; _fpi++) {
+                var _fpE = _fp2EvtsBA[_fpi];
+                var _fpTs = _fpE.timestamp || 0;
+                if (_fpTs < _baLowerTs || _fpTs > _wakeCap) continue;
+                var _fpVal = isActiveValue(_fpE.value);
+                if (!_fpVal && _emptyTs === null) {
+                    _emptyTs = _fpTs; // Bett wird leer
+                } else if (_fpVal && _emptyTs !== null) {
+                    // Bett wieder belegt -> Intervall abschliessen (mind. 2 Min)
+                    if (_fpTs - _emptyTs >= 2 * 60000) {
+                        _candidates.push({ start: _emptyTs, end: _fpTs, src: 'fp2_bed' });
+                    }
+                    _emptyTs = null;
+                }
+            }
+            // Offen gebliebenes Intervall (Bett wurde nicht wieder belegt vor wakeTs)
+            if (_emptyTs !== null && _wakeCap - _emptyTs >= 2 * 60000) {
+                _candidates.push({ start: _emptyTs, end: _wakeCap, src: 'fp2_bed' });
+            }
+        }
+        // ─── Quelle 2: SM-Phasen ───
         for (var _baI = 0; _baI < (_smWakePhases||[]).length; _baI++) {
             var _baP = _smWakePhases[_baI];
-            if (_baP.start >= sleepStart && _baP.end <= _wakeCap)
+            if (_baP.start >= _baLowerTs && _baP.end <= _wakeCap)
                 _candidates.push({ start: _baP.start, end: _baP.end, src: 'sm' });
         }
-        // Quelle 2: Pattern-Matcher (nachtAufstehen)
+        // ─── Quelle 3: Pattern-Matcher (nachtAufstehen) ───
         for (var _baJ = 0; _baJ < (_nachtAufstehenWindows||[]).length; _baJ++) {
             var _baN = _nachtAufstehenWindows[_baJ];
             var _nStart = _baN.departureTs || _baN.start || 0;
             var _nEnd   = _baN.returnTs    || _baN.end   || (_nStart + 5*60000);
-            if (_nStart >= sleepStart && _nEnd <= _wakeCap)
+            if (_nStart >= _baLowerTs && _nEnd <= _wakeCap)
                 _candidates.push({ start: _nStart, end: _nEnd, src: 'nacht' });
         }
-        // Quelle 3: outsideBedEvents (Bad-confirmed)
+        // ─── Quelle 4: outsideBedEvents (Bad-confirmed) ─ MIT Hop-Distanz-Filter ───
+        var _droppedFarBath = 0;
         for (var _baK = 0; _baK < (obe||[]).length; _baK++) {
             var _baO = obe[_baK];
-            if (_baO.start >= sleepStart && _baO.end <= _wakeCap)
-                _candidates.push({ start: _baO.start, end: _baO.end, src: 'outside' });
+            if (_baO.start < _baLowerTs || _baO.end > _wakeCap) continue;
+            // Hop-Filter: bath-Events MUESSEN nahe am Schlafzimmer sein (Hop <= 2),
+            // sonst ist es das Kinderbad im OG
+            if (_baO.type === 'bathroom' && !_isNearBedroom(_baO.sensors, 2)) {
+                _droppedFarBath++;
+                continue;
+            }
+            _candidates.push({ start: _baO.start, end: _baO.end, src: 'outside' });
+        }
+        if (_droppedFarBath > 0 && log) {
+            log.debug(logPfx + 'OC-36: ' + _droppedFarBath + ' fern-Bath-Events verworfen (Hop > 2 vom Schlafzimmer)');
         }
         if (_candidates.length === 0) return [];
         // Sortieren nach Start
@@ -745,6 +801,7 @@ function computePersonSleep(p) {
             if (!_cur) {
                 _cur = { start: _baC.start, end: _baC.end, sources: [_baC.src] };
             } else if (_baC.start <= _cur.end + 60000) {
+                // Bei FP2 als Primaer-Quelle: FP2-Grenzen sind autoritativ -> nicht ueberschreiben
                 if (_baC.end > _cur.end) _cur.end = _baC.end;
                 if (_cur.sources.indexOf(_baC.src) === -1) _cur.sources.push(_baC.src);
             } else {
@@ -753,22 +810,20 @@ function computePersonSleep(p) {
             }
         }
         if (_cur) _merged.push(_cur);
-        // Cross-Check-Daten vorbereiten
+        // Vibration-Cross-Check (FP2-Cross-Check entfernt - FP2 ist jetzt Primaerquelle)
         var _vibEvts = (allEvents||[]).filter(function(e) {
             return isMine(e) && e.isVibrationBed && !e.isVibrationStrength && isActiveValue(e.value);
         });
-        var _fp2Evts = (allEvents||[]).filter(function(e) { return isMine(e) && e.isFP2Bed; })
-                                       .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
         var _hasVib = _vibEvts.length > 0;
-        var _hasFP2 = _fp2Evts.length > 0;
         // Konfidenz pro Fenster
         var _result = [];
         for (var _baX = 0; _baX < _merged.length; _baX++) {
             var _m = _merged[_baX];
             var _score = 0;
             var _evidence = [];
-            // Quellen-Indizien
-            if (_m.sources.indexOf('outside') !== -1) { _score += 3; _evidence.push('Bad bestaetigt'); }
+            // Quellen-Indizien (FP2 hoechste Prio - direkter Sensor)
+            if (_m.sources.indexOf('fp2_bed') !== -1) { _score += 4; _evidence.push('FP2 Bett leer'); }
+            if (_m.sources.indexOf('outside') !== -1) { _score += 3; _evidence.push('Bad/Raum bestaetigt'); }
             if (_m.sources.indexOf('sm') !== -1)      { _score += 2; _evidence.push('SM-Phase'); }
             if (_m.sources.indexOf('nacht') !== -1)   { _score += 1; _evidence.push('Pattern-Match'); }
             // Cross-Check Vibration (Aufstehen-Stoss 0-3 Min vor Fensterbeginn)
@@ -780,26 +835,9 @@ function computePersonSleep(p) {
                 }
                 if (_vibBefore) { _score += 2; _evidence.push('Vibration vor Aufstehen'); }
             }
-            // Cross-Check FP2 (nur wenn vorhanden)
-            if (_hasFP2) {
-                var _fp2InWin = _fp2Evts.filter(function(e) {
-                    var _t = e.timestamp || 0;
-                    return _t >= _m.start - 60000 && _t <= _m.end + 60000;
-                });
-                if (_fp2InWin.length > 0) {
-                    var _hasEmpty = _fp2InWin.some(function(e) { return !isActiveValue(e.value); });
-                    var _hasOcc   = _fp2InWin.some(function(e) { return  isActiveValue(e.value); });
-                    var _winDurMin = (_m.end - _m.start) / 60000;
-                    if (_hasEmpty && !_hasOcc) { _score += 2; _evidence.push('FP2 zeigt leer'); }
-                    else if (_hasEmpty)        { _score += 1; _evidence.push('FP2 zeigt teilweise leer'); }
-                    else if (_hasOcc && !_hasEmpty && _winDurMin >= 5) {
-                        _score -= 2; _evidence.push('FP2 noch belegt');
-                    }
-                }
-            }
-            // Schwelle
+            // Schwelle (angepasst an neue Punkteskala)
             var _conf = null;
-            if (_score >= 5)      _conf = 'high';
+            if (_score >= 6)      _conf = 'high';
             else if (_score >= 3) _conf = 'medium';
             else if (_score >= 1) _conf = 'low';
             else continue;
@@ -815,7 +853,7 @@ function computePersonSleep(p) {
         }
         if (_result.length > 0 && log) {
             log.info(logPfx + 'OC-36: ' + _result.length + ' bedAbsenceEvents gemerged ' +
-                '(hasFP2=' + _hasFP2 + ', hasVib=' + _hasVib + '): ' +
+                '(hasFP2Primary=' + _hasFP2Primary + ', hasVib=' + _hasVib + ', lower=' + new Date(_baLowerTs).toLocaleTimeString() + '): ' +
                 _result.map(function(r) { return new Date(r.start).toLocaleTimeString() + '-' + new Date(r.end).toLocaleTimeString() + ' [' + r.confidence + '/' + r.sources.join(',') + ']'; }).join(', '));
         }
         return _result;

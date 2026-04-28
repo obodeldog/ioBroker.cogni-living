@@ -1,5 +1,61 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 27.04.2026 | **Version:** 0.33.209
+**Letzte Aktualisierung:** 28.04.2026 | **Version:** 0.33.210
+
+---
+
+## 📍 Sitzung 28.04.2026 — Version 0.33.210 — OC-36 Phase 4 Bugfixes (5 Punkte)
+
+### ✅ Abgeschlossen — bedAbsenceEvents-Engine grundlegend überarbeitet
+
+Nach erster Live-Nacht (28.04.2026) wurden 5 Bugs aufgedeckt durch Sensor-Rohdaten-Abgleich (PIR Wohnzimmer, FP2 Schlafzimmer, FP2 Wohnzimmer, EG Bad, OG Bad CSVs):
+
+- **[Bug 1] Frontend zeigte keine graue Schraffur** (`HealthTab.tsx`):
+  - **Ursache**: `bedAbsenceEvents` fehlte in beiden `setAuraSleepData()`-Aufrufen (Zeile 244 + 730)
+  - **Fix**: `bedAbsenceEvents: d.bedAbsenceEvents ?? []` in beide Aufrufe ergänzt
+  - **Effekt**: Phase-4-Visualisierung wird jetzt überhaupt erst angezeigt
+
+- **[Bug 2] OG-Bad (Kinderbad) wurde fälschlich als "Bad bestätigt" gewertet** (`src/main.js`):
+  - **Ursache**: `_buildBedAbsenceEvents` nahm alle `obe.type='bathroom'`-Events ohne Hop-Distanz-Filter
+  - **Fix**: Neuer `_isNearBedroom(sensors, maxHop)`-Helfer prüft Hop-Distanz ≤ 2 vom Schlafzimmer für bath-Events
+  - **Effekt**: Aufstehen der Kinder im OG-Bad wird nicht mehr als Marc's Bad-Besuch gewertet
+
+- **[Bug 3] FP2 als Cross-Check statt Primärquelle** (`src/main.js`):
+  - **Ursache**: FP2-Bett verteilte nur Punkte (+/−2) im Cross-Check, war aber nie Auslöser eines Events
+  - **Fix**: FP2-Bett-Intervalle (`false → true`-Sequenzen) werden jetzt direkt als 4. Quelle (`fp2_bed`, +4 Punkte) eingespeist
+  - **Effekt**: Bei FP2-Kunden ist die Bett-leer-Phase präzise erfasst (z.B. 00:11:55 statt 00:23:41 — 12 Min früher)
+  - Alter FP2-Cross-Check (Zeilen 783–798 v0.33.209) entfernt
+  - Konfidenz-Schwellen angepasst: ≥6=high, ≥3=medium, ≥1=low (vorher 5/3/1)
+
+- **[Bug 4] Untergrenze `sleepStart` filterte echte Aufstehphasen aus** (`src/main.js`):
+  - **Ursache**: PIR-/FP2-Events vor Garmin-`sleepStart` wurden ignoriert, obwohl Person schon im Bett war
+  - **Fix**: Untergrenze in `_buildBedAbsenceEvents` und State Machine auf `bedEntryTs || sleepStart`
+  - **Effekt**: Nacht 28.4. wurde 00:11 statt 00:23 als Aufstehen erkannt (PIR Wohnzimmer feuerte sofort, sleepStart erst 00:17)
+
+- **[Bug 5] State Machine selbst startete bei `sleepStart`** (`src/main.js`):
+  - **Ursache**: `_postEvts`-Filter `(e.timestamp || 0) > sleepStart`
+  - **Fix**: Filter auf `_smLowerTs = bedEntryTs || sleepStart` umgestellt
+  - **Effekt**: SM erfasst jetzt auch frühe Aufstehphasen (vor offizieller Einschlafzeit)
+
+### 🔧 Architektur-Klarstellung (OC-36 v2)
+
+**Konfidenz-Score-Skala neu:**
+| Quelle | Punkte | Bedeutung |
+|---|---|---|
+| `fp2_bed` (NEU) | +4 | FP2-Bett `false→true` = direkte Bett-Belegungs-Erkennung |
+| `outside` | +3 | PIR-Cluster außerhalb Schlafzimmer (mit Hop ≤ 2 für bath-Events) |
+| `sm` | +2 | State Machine erkannte Abgang über Topologie |
+| `nacht` | +1 | Pattern-Match Abgang+Rückkehr |
+| Vibration vor Aufstehen | +2 (Cross-Check) | Aufsteh-Stoss 0–3 Min vor Fensterstart |
+
+**Schwellen:**
+- `high` ≥ 6 (typisch: FP2 + ein PIR-Indiz oder FP2 + Vibration)
+- `medium` ≥ 3 (typisch: nur FP2 oder nur outside oder sm+nacht)
+- `low` ≥ 1
+
+### 🎯 Nächster logischer Schritt
+- v0.33.210 testen mit der nächsten Nacht: graue Schraffur sollte sichtbar werden, FP2-getriebene Fenster präziser
+- Beobachten ob OG-Bad-Events korrekt herausgefiltert werden
+- Plausibilitäts-Ranking der Einschlaf-/Aufwachzeit-Quellen (Bug 6 / Feature) — separates Thema
 
 ---
 
