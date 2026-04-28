@@ -716,7 +716,8 @@ function computePersonSleep(p) {
         if (!sleepStart) return [];
         var _wakeCap = wakeTs ? wakeTs : (wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000));
         // Untergrenze: bedEntryTs wenn vorhanden, sonst sleepStart - so werden Aufstehphasen VOR Garmin-sleepStart erfasst
-        var _baLowerTs = (typeof bedEntryTs !== 'undefined' && bedEntryTs && bedEntryTs > 0) ? bedEntryTs : sleepStart;
+        // Safety-valve: bedEntryTs nur verwenden wenn es VOR sleepStart liegt (sonst Live-Wert vom heutigen Abend, der alles filtert)
+        var _baLowerTs = (typeof bedEntryTs !== 'undefined' && bedEntryTs && bedEntryTs > 0 && bedEntryTs < sleepStart) ? bedEntryTs : sleepStart;
         var _bedroomLocSetBA = new Set(bedroomLocations || []);
         // Hop-Distanz-Helfer fuer outside/bath-Events: ist mind. ein Sensor nahe genug am Schlafzimmer?
         var _isNearBedroom = function(sensors, maxHop) {

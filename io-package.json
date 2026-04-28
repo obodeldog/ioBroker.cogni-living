@@ -1,17 +1,17 @@
 ﻿{
   "common": {
     "name": "cogni-living",
-    "version": "0.33.211",
+    "version": "0.33.212",
     "news": {
       "0": {
-        "version": "0.33.211",
+        "version": "0.33.212",
         "date": "2026-04-08",
         "changes": [
           "[Feature OC-SEX] SEX-Kachel: Vibrations-basierte Erkennung intimer Aktivitaeten (Datenschutz-Flag, Fun-Mode, optionale Garmin-HR-Integration)"
         ]
       },
       "1": {
-        "version": "0.33.211",
+        "version": "0.33.212",
         "date": "2026-04-08",
         "changes": [
           "[Fix OC-7] Multi-Person-Motion-Only: sleepWindowEnd aus per-Person-Wakezeiten ableiten (Balken + Dreiecke fuer Haushalte ohne FP2/Garmin)",
