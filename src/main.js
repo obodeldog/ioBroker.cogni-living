@@ -1030,6 +1030,7 @@ class CogniLiving extends utils.Adapter {
         await this.setObjectNotExistsAsync('analysis.sleep.excludedNights', { type: 'state', common: { name: 'Ausgeschlossene Naechte aus Statistik (JSON-Array von Datums-Strings)', type: 'string', role: 'json', read: true, write: true, def: '[]' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorBatteryStatus', { type: 'state', common: { name: 'Sensor Battery Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.sensorStatus', { type: 'state', common: { name: 'Sensor Health Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
+        await this.setObjectNotExistsAsync('system.adapterStatus', { type: 'state', common: { name: 'Adapter Health Status (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} });
         await this.setObjectNotExistsAsync('system.currentPersonCount', { type: 'state', common: { name: 'Aktuelle Personenanzahl im Haus', type: 'number', role: 'value', unit: 'Personen', read: true, write: false, def: 1, desc: 'Geschaetzte Personenanzahl (Config-Baseline + raeumliche Heuristik + FP2)' }, native: {} });
         await this.setObjectNotExistsAsync('system.personCount.heuristicDetection', { type: 'state', common: { name: 'Personenerkennung: Heuristik-Ereignis (SQL) - mind. 2 Personen erkannt', type: 'string', role: 'json', read: true, write: false, def: '{}', desc: 'Wird bei jeder rauemlichen Unmoglichkeitserkennung (>= 2 Hops, <= 5s) geschrieben. Enthaelt: Sensor-IDs, Raeume, Hop-Abstand, Zeitdelta, Personenzahl vorher/nachher.' }, native: {} });
         await this.setObjectNotExistsAsync('system.personCount.sensorActivity', { type: 'state', common: { name: 'Personenerkennung: Sensor-Aktivitaet (SQL) - Bewegung/Praesenz/Tuer-Fenster', type: 'string', role: 'json', read: true, write: false, def: '{}', desc: 'Jede steigende Flanke eines person-relevanten Sensors (isPersonPresenceActivity). Kein Licht, kein Temperatur.' }, native: {} });
@@ -1132,11 +1133,12 @@ class CogniLiving extends utils.Adapter {
         // St?ndlicher Sensor-Ausfall-Check
         if (this.sensorCheckInterval) clearInterval(this.sensorCheckInterval);
             if (this.batteryDiscoveryInterval) clearInterval(this.batteryDiscoveryInterval);
-        this.sensorCheckInterval = setInterval(() => { this.checkSensorHealth(); }, 60 * 60 * 1000);
+        this.sensorCheckInterval = setInterval(() => { this.checkSensorHealth(); this.checkAdapterHealth(); }, 60 * 60 * 1000);
         // St?ndlicher History-Save: heute-Datei aktuell halten damit Chart heute-Balken zeigt
         if (this.hourlySaveInterval) clearInterval(this.hourlySaveInterval);
         this.hourlySaveInterval = setInterval(() => { this.saveDailyHistory().catch(e => {}); }, 60 * 60 * 1000);
         setTimeout(() => this.checkSensorHealth(), 5 * 60 * 1000); // auch 5 min nach Start
+        setTimeout(() => this.checkAdapterHealth(), 5 * 60 * 1000); // Adapter-Check ebenfalls 5 min nach Start
 
         // OC-15: Batterie-Discovery beim Start und alle 12 Stunden
         if (this.batteryDiscoveryInterval) clearInterval(this.batteryDiscoveryInterval);
@@ -1310,6 +1312,124 @@ class CogniLiving extends utils.Adapter {
         }
         // OC-15: Batteriestand stuendlich pruefen (Pushover taeglich um 09:00)
         try { await this.checkBatteryLevels(); } catch(e) {}
+    }
+
+
+    async checkAdapterHealth() {
+        var _self = this;
+        var now = Date.now();
+        // Alle konfigurierten State-IDs aus Config zusammensammeln
+        var allIds = [];
+        (this.config.devices || []).forEach(function(d) { if (d.id) allIds.push(d.id); });
+        (this.config.presenceDevices || []).forEach(function(id) { if (id) allIds.push(id); });
+        if (this.config.infrasoundSensorId) allIds.push(this.config.infrasoundSensorId);
+
+        var WIRED_PREFIXES = ['knx.', 'loxone.', 'bacnet.', 'modbus.'];
+        var SKIP_ADAPTERS = ['alias', '0_userdata', 'javascript', 'script', 'admin', 'system'];
+
+        // Adapter-Praefix ableiten; alias.* aufloesen
+        var prefixSet = {};
+        for (var _ai = 0; _ai < allIds.length; _ai++) {
+            var rawId = allIds[_ai];
+            var resolvedId = rawId;
+            if (rawId.startsWith('alias.')) {
+                try {
+                    var aObj = await _self.getForeignObjectAsync(rawId);
+                    if (aObj && aObj.common && aObj.common.alias && aObj.common.alias.id) {
+                        resolvedId = aObj.common.alias.id;
+                    }
+                } catch(e) {}
+            }
+            var isWired = WIRED_PREFIXES.some(function(p) { return resolvedId.toLowerCase().startsWith(p); });
+            if (isWired) continue;
+            var _parts = resolvedId.split('.');
+            if (_parts.length < 2) continue;
+            var adName = _parts[0];
+            if (SKIP_ADAPTERS.indexOf(adName) !== -1) continue;
+            var pfx = adName + '.' + _parts[1];
+            if (!prefixSet[pfx]) prefixSet[pfx] = adName;
+        }
+
+        // Bekannte Adapter-Familien mit standardisiertem info.connection-State
+        var CONN_STATE = {
+            'zigbee': 'info.connection', 'hm-rpc': 'info.connection', 'hm-rega': 'info.connection',
+            'yahka': 'info.connection', 'deconz': 'info.connection', 'sonoff': 'info.connection',
+            'mqtt': 'info.connection', 'zwave2': 'info.connection', 'shelly': 'info.connection',
+            'tuya': 'info.connection', 'homekit-controller': 'info.connection', 'wled': 'info.connection',
+        };
+
+        var adapterResults = [];
+        var pfxKeys = Object.keys(prefixSet);
+        for (var _pi = 0; _pi < pfxKeys.length; _pi++) {
+            var pfxKey = pfxKeys[_pi];
+            var familyName = prefixSet[pfxKey];
+            var res = { id: pfxKey, ok: true, detail: 'ok', checkedAt: now };
+
+            // Check 1: Instanz im System-Objekt deaktiviert?
+            try {
+                var instObj = await _self.getForeignObjectAsync('system.adapter.' + pfxKey);
+                if (instObj && instObj.common && instObj.common.enabled === false) {
+                    res.ok = false;
+                    res.detail = 'deaktiviert';
+                }
+            } catch(e) {}
+
+            // Check 2: Adapter-spezifischer Connection-State
+            if (res.ok) {
+                var connSuffix = CONN_STATE[familyName];
+                if (connSuffix) {
+                    try {
+                        var connSt = await _self.getForeignStateAsync(pfxKey + '.' + connSuffix);
+                        if (connSt !== null && connSt !== undefined) {
+                            var connVal = connSt.val;
+                            if (connVal === false || connVal === 'false' || connVal === 0 || connVal === null) {
+                                res.ok = false;
+                                res.detail = 'nicht verbunden';
+                            } else {
+                                res.ok = true;
+                                res.detail = 'verbunden';
+                                // Veralteter Zeitstempel: schwaches Warnsignal, kein Alarm
+                                if (connSt.ts && (now - connSt.ts) > 4 * 3600000) {
+                                    res.detail = 'verbunden (' + Math.round((now - connSt.ts) / 3600000) + 'h kein Update)';
+                                }
+                            }
+                        }
+                        // State nicht vorhanden -> kein verbindlicher Check, res.ok bleibt true
+                    } catch(e) {}
+                }
+            }
+
+            adapterResults.push(res);
+        }
+
+        // State persistieren
+        var _adOffline = adapterResults.filter(function(a) { return !a.ok; }).length;
+        try {
+            await _self.setStateAsync('system.adapterStatus', {
+                val: JSON.stringify({ timestamp: now, adapters: adapterResults, offlineCount: _adOffline }),
+                ack: true
+            });
+        } catch(e) {}
+
+        // Push-Alarm (Nachtschutz 22-08 Uhr, 24h-Cooldown pro Adapter)
+        var _aH = new Date(now).getHours();
+        if (_adOffline > 0 && !(_aH >= 22 || _aH < 8)) {
+            if (!_self.adapterAlertSent) _self.adapterAlertSent = {};
+            var _aCooldown = 24 * 3600000;
+            var _aAlerts = [];
+            adapterResults.filter(function(a) { return !a.ok; }).forEach(function(a) {
+                var _last = _self.adapterAlertSent[a.id] || 0;
+                if ((now - _last) > _aCooldown) {
+                    _self.adapterAlertSent[a.id] = now;
+                    _aAlerts.push(a.id + ': ' + a.detail);
+                }
+            });
+            if (_aAlerts.length > 0) {
+                var _aMsg = '[WARNUNG] Adapter-Ausfall:\n' + _aAlerts.join('\n');
+                _self.log.warn('[ADAPTER-CHECK] ' + _aAlerts.join(', '));
+                try { setup.sendNotification(_self, _aMsg, true, false, '[WARNUNG] AURA: Adapter-Ausfall'); } catch(e) {}
+            }
+        }
     }
 
     async discoverBatteryStates() {

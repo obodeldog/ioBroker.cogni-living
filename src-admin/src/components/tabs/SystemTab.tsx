@@ -68,6 +68,19 @@ export default function SystemTab(props: any) {
         return () => clearInterval(ssTimer);
     }, [socket, namespace]);
 
+    // --- STATE ADAPTER-GESUNDHEIT ---
+    const [adapterStatus, setAdapterStatus] = useState<{ timestamp: number; offlineCount: number; adapters: { id: string; ok: boolean; detail: string }[] } | null>(null);
+    useEffect(() => {
+        const loadAS = () => {
+            socket.getState(namespace + '.system.adapterStatus').then((state: any) => {
+                if (state && state.val) { try { setAdapterStatus(JSON.parse(state.val)); } catch(e) {} }
+            }).catch(() => {});
+        };
+        loadAS();
+        const asTimer = setInterval(loadAS, 5 * 60 * 1000);
+        return () => clearInterval(asTimer);
+    }, [socket, namespace]);
+
         // --- STATE FÜR DEAD MAN CONFIG ---
     const [dmConfig, setDmConfig] = useState<{room: string, timeout: number}[]>([]);
     const [newRoom, setNewRoom] = useState<string | null>(null);
@@ -228,6 +241,54 @@ export default function SystemTab(props: any) {
                     </Paper>
                 </Stack>
             </Paper>
+
+            {/* --- ADAPTER-GESUNDHEIT --- */}
+            {(() => {
+                if (!adapterStatus || !adapterStatus.adapters || adapterStatus.adapters.length === 0) return null;
+                const offlineAdapters = adapterStatus.adapters.filter((a: any) => !a.ok);
+                const allOk = offlineAdapters.length === 0;
+                return (
+                    <Paper elevation={2} sx={{
+                        mb: 2, p: 2, borderRadius: 2,
+                        border: '2px solid',
+                        borderColor: allOk ? (isDark ? '#2e7d32' : '#4caf50') : (isDark ? '#c62828' : '#ef5350'),
+                        backgroundColor: allOk ? (isDark ? '#1b2e1b' : '#f1f8e9') : (isDark ? '#2c1b1b' : '#ffebee'),
+                    }}>
+                        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: allOk ? 0 : 1 }}>
+                            {allOk
+                                ? <CheckCircleOutlineIcon sx={{ color: '#4caf50', fontSize: 26 }} />
+                                : <ErrorOutlineIcon sx={{ color: '#ef5350', fontSize: 26 }} />
+                            }
+                            <Box sx={{ flex: 1 }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: allOk ? '#4caf50' : '#ef5350' }}>
+                                    {allOk
+                                        ? ('✅ Alle ' + adapterStatus.adapters.length + ' Adapter verbunden')
+                                        : ('🔴 ' + offlineAdapters.length + ' Adapter nicht verbunden')
+                                    }
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {'Letzter Check: ' + new Date(adapterStatus.timestamp).toLocaleString('de-DE')}
+                                    {' · ' + adapterStatus.adapters.length + ' Adapter erkannt'}
+                                </Typography>
+                            </Box>
+                        </Stack>
+                        {offlineAdapters.length > 0 && (
+                            <Stack spacing={0.5} sx={{ mt: 1 }}>
+                                {(offlineAdapters as any[]).map((a) => (
+                                    <Stack key={a.id} direction="row" alignItems="center" spacing={1}>
+                                        <WarningAmberIcon sx={{ color: '#ef5350', fontSize: 16 }} />
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{a.id}</Typography>
+                                        <Chip size="small" label={a.detail} color="error" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                    </Stack>
+                                ))}
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                    ⚠️ Alle Sensoren dieser Adapter liefern solange keine neuen Werte.
+                                </Typography>
+                            </Stack>
+                        )}
+                    </Paper>
+                );
+            })()}
 
             {/* --- SENSOR-GESUNDHEIT SAMMELMELDUNG --- */}
             {(() => {

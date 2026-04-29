@@ -555,7 +555,8 @@ Das System überwacht die Gesundheit auf drei zeitlichen Ebenen. Jede Ebene adre
 
 > - **Sensoren fehlen?** ? Prüfen Sie ioBroker Räume/Funktionen oder nutzen Sie die Whitelist im Wizard.
 > - **Status 'N/A'?** ? Drift-Analyse benötigt mind. 30 Tage Daten.
-> - **Zu viele Sensor-Offline-Pushover?** ? Ab v0.33.66 gilt eine Schwelle von **7 Tagen** (statt 1 Tag) für Bewegungsmelder und Präsenzsensoren. Türsensoren und Temperatursensoren haben eigene Schwellen. KNX/Loxone/BACnet-Sensoren werden grundsätzlich nicht überwacht (kabelgebunden, kein Heartbeat erwartet). Pushover während der Nacht (22–08 Uhr) wird automatisch unterdrückt.
+> - **Adapter offline, aber alle Sensoren grün?** → Ab v0.33.213 gibt es eine **zusätzliche Adapter-Prüfung**: AURA erkennt automatisch, welche Smart-Home-Adapter (Zigbee, Homematic, …) für eure konfigurierten Sensoren zuständig sind, und prüft ob diese Adapter noch verbunden sind — unabhängig davon, wann zuletzt ein einzelner Sensor Werte gesendet hat. Fällt z. B. der Zigbee-Coordinator aus, erscheint im System-Tab ein **roter Banner** ("🔴 Adapter nicht verbunden: zigbee.0") — lange bevor die 7-Tage-Einzel-Sensor-Schwelle anschlägt. Außerdem wird automatisch eine Push-Nachricht gesendet (Nachtschutz 22–08 Uhr, max. 1× pro Adapter pro Tag).
+> - **Zu viele Sensor-Offline-Pushover?** → Ab v0.33.66 gilt eine Schwelle von **7 Tagen** (statt 1 Tag) für Bewegungsmelder und Präsenzsensoren. Türsensoren und Temperatursensoren haben eigene Schwellen. KNX/Loxone/BACnet-Sensoren werden grundsätzlich nicht überwacht (kabelgebunden, kein Heartbeat erwartet). Pushover während der Nacht (22–08 Uhr) wird automatisch unterdrückt.
 > - **Hue / Lampen als "Sensor-Ausfall" gemeldet?** Ab v0.33.133 werden Sensoren vom Typ `light` und `dimmer` komplett aus der Sensor-Gesundheitspruefung ausgeschlossen. Lampen senden nur bei aktivem Schaltvorgang - wer tagelang kein Licht benutzt, wuerde sonst faelschlicherweise eine Ausfall-Meldung bekommen.
 > - **Batterie-Warnung nicht sichtbar?** ? Batterie-Discovery läuft alle 12 Stunden. Nach dem ersten Adapter-Start dauert es bis zu 12 Stunden bis die Discovery alle Sensoren gefunden hat. Den aktuellen Status kann man im ioBroker-Objekt `cogni-living.X.system.sensorBatteryStatus` einsehen.
 > - **Batterie-State nicht automatisch gefunden?** ? Im Reiter "Einstellungen ? Sensoren ? Batterie-Konfiguration" kann pro Sensor manuell ein Batterie-Objekt-Pfad hinterlegt werden. Der Button "." öffnet den ioBroker-Objektbrowser.
@@ -793,44 +794,41 @@ Werden aus FP2-Events während des Schlaffensters berechnet:
 
 ### Bed-Absence-Konsens-Engine (OC-36, ab v0.33.210)
 
-**Vier Quellen** erkennen "weg vom Bett"-Phasen, alle ab `bedEntryTs` (statt `sleepStart`):
+Einfach erklärt: Diese Logik entscheidet, **wann du wirklich aus dem Bett warst**.
 
-1. **FP2-Bett (`fp2_bed`)** — Direkte Bett-Belegungs-Erkennung. `false → true`-Intervalle (≥ 2 Min) sind die zuverlässigste Quelle (höchste Punktzahl)
-2. **State Machine (`smWakePhases`)** — folgt PIR-Bewegungen über die Topologie-Matrix (Hop-Distanz ≤ 3) und detektiert "Bewohner verlässt Schlafzimmer-Cluster"
-3. **Pattern-Matcher (`nachtAufstehenEvents`)** — sucht das Muster "Schlafzimmer-PIR → Bad/Flur-PIR → Schlafzimmer-PIR" mit min. 5 Min Pause
-4. **outsideBedEvents (`outside`)** — PIR-Cluster außerhalb Schlafzimmer + Bad-PIR-Bestätigung. **bath-Events werden mit Hop ≤ 2 vom Schlafzimmer gefiltert** (verhindert dass z.B. OG-Kinderbad fälschlich als Marc's Bad gewertet wird)
+Sie kombiniert vier Hinweise:
+1. **FP2 am Bett** (zuverlässigster Hinweis)
+2. **State Machine** (Bewegungslogik über Raum-Nachbarschaft)
+3. **Pattern-Matcher** (typische "raus und wieder zurück"-Muster)
+4. **Außenraum-Events** (`outsideBedEvents`)
 
-Die **Konsens-Engine** mergt diese vier Outputs zu einem konsolidierten Array `bedAbsenceEvents`:
+Danach werden alle Treffer zu einer Liste `bedAbsenceEvents` zusammengeführt.
 
-| Schritt | Logik |
-|---|---|
-| 1. Sammeln | Kandidaten-Fenster aus allen vier Quellen ab `bedEntryTs` |
-| 2. Hop-Filter | bath-Events ohne Sensor mit Hop ≤ 2 zum Schlafzimmer verworfen |
-| 3. Mergen | Überlappende Fenster (1-Min-Toleranz) zusammenfassen, `sources`-Array merken |
-| 4. Konfidenz | Score-Punkte vergeben: fp2_bed +4 / outside +3 / sm +2 / nacht +1 |
-| 5. Cross-Check Vibration | Vibrations-Stoss 0–3 Min vor Fenster-Start → +2 Punkte |
-| 6. Schwelle | ≥6 = high, ≥3 = medium, ≥1 = low, ≤0 = verworfen |
+**Wichtige Schutzregeln (für stabile, alltagstaugliche Anzeige):**
+- **Hop-Filter auf alle Außenraum-Typen:** Nur Räume in Schlafzimmer-Nähe werden akzeptiert (OG-Kinderbad wird verworfen).
+- **Mindestdauer 5 Minuten:** Sehr kurze Ereignisse erzeugen keinen grauen Block.
+- **FP2-Abwesenheit nur nach stabiler Bett-Präsenz:** FP2 muss vorher mindestens 20 Minuten durchgehend "Bett belegt" gesehen haben.
+- **Safety-Valve für `bedEntryTs` (ab v0.33.212):** `bedEntryTs` wird nur verwendet, wenn er **vor** `sleepStart` liegt. So kann ein heutiger Live-Wert (z. B. abends nach Neustart) nicht mehr die alte Nacht kaputtfiltern.
 
-**Frontend-Visualisierung:**
-- Hellgrau schraffiertes Segment im Schlafphasen-Balken (statt vorher gelbes wake-Overlay)
-- Opazität nach Konfidenz: high 0.85 / medium 0.65 / low 0.45 (mit gestricheltem Rand)
-- Tooltip: Zeitraum + Konfidenz-Label + Indizien (z.B. "FP2 Bett leer, SM-Phase, Vibration vor Aufstehen")
-- Legende: schraffierter Block + Text "Weg vom Bett"
+**So sieht es in der UI aus (verständlich für Anwender):**
+- **Grauer schraffierter Balken:** "Weg vom Bett" (eigener Zustand, kein Schlafstadium)
+- **Wichtig:** Der graue Block ist **opak** und ersetzt die darunterliegende Schlafphase (keine Farbmischung mehr)
+- **Rotes Dreieck:** außerhalb des Schlafzimmers
+- **Oranges Dreieck:** Bad-Besuch
 
-**Graceful Degradation:**
+**Warum gibt es manchmal kein Dreieck?**
+- Wenn die Sensorlage keinen sicheren Beleg liefert, wird bewusst nichts gezeichnet (Lieber nichts als falsch).
+- Ohne passende Sensoren funktioniert das System im Fallback-Modus (Graceful Degradation).
+
+**Graceful Degradation (bei unterschiedlichen Kunden-Setups):**
 | Sensor-Setup | Verhalten |
 |---|---|
-| FP2 Bett + Vibration + PIR | Voll-Modus, FP2 ist Primärquelle, Konfidenz typisch "hoch" |
-| Vibration + PIR (kein FP2) | PIR-Konsens (sm + nacht + outside) + Vibration-Pre-Trigger, Konfidenz "mittel"–"hoch" |
-| Nur PIR (kein FP2/Vib) | Reine PIR-Konsens, meist "niedrig"–"mittel" |
-| Kein Schlafzimmer-Sensor | Leeres Array, keine Visualisierung |
+| FP2 + Vibration + PIR | Beste Qualität, präzise "Weg vom Bett"-Fenster |
+| Vibration + PIR (kein FP2) | Gute Schätzung über Bewegungslogik + Vibration |
+| Nur PIR | Grundfunktion, aber vorsichtiger und mit weniger Sicherheit |
+| Kein Schlafzimmer-Sensor | Keine "Weg vom Bett"-Blöcke |
 
-**Wichtige Designentscheidungen:**
-- **Untergrenze `bedEntryTs`** statt `sleepStart`: erfasst auch Aufstehphasen vor der offiziellen Einschlafzeit (typisch: PIR feuert sofort, Garmin's sleepStart liegt 5–15 Min später)
-- **Hop-Distanz-Filter für bath-Events**: ohne diesen wurde fälschlich das Kinderbad im OG als Marc's Bad gewertet
-- **FP2 als Primärquelle**: löst eigene Fenster aus statt nur Punkte zu verteilen — die ehrlichste Sensor-Information die wir haben
-
-**Backwards-Compat:** Alte JSON-Dateien ohne `bedAbsenceEvents` zeigen weiterhin das alte gelbe `smWakePhases`-Overlay. Natürliche Migration über Tage.
+**Kompatibilität:** Alte JSON-Dateien ohne `bedAbsenceEvents` bleiben lauffähig; dann greift automatisch das ältere Verhalten.
 
 ### Farbkonzept (Best ? Schlimmste, Usability-Prinzip)
 
