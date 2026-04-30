@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.215",
+    "version": "0.33.216",
     "news": {
       "0": {
         "version": "0.33.212",
@@ -227,5 +227,5 @@
   },
   "objects": [],
   "instanceObjects": [],
-  "version": "0.33.215"
+  "version": "0.33.216"
 }

@@ -3579,7 +3579,19 @@ class CogniLiving extends utils.Adapter {
                 noisySensors: noisySensors,
                 nachtAufstehenEvents: (_gR && _gR.nachtAufstehenEvents) ? _gR.nachtAufstehenEvents : [],
                 bedAbsenceEvents:     (_gR && _gR.bedAbsenceEvents)     ? _gR.bedAbsenceEvents     : [],
-                bedEntryTs:   _bedEntryTsFinal || (_existingSnap && _existingSnap.bedEntryTs) || (_gR && _gR.bedEntryTs) || null,
+                bedEntryTs: (function() {
+                    var _bet = _bedEntryTsFinal || (_gR && _gR.bedEntryTs) || null;
+                    // OC-39b: Abend-Save-Valve fuer bedEntryTs (analog OC-39 fuer personData)
+                    // Wenn berechnetes bedEntryTs NACH sleepWindowOC7.start liegt (= heutiger Abend-Event,
+                    // z.B. FP2 erkennt Person um 19:38 nach dem Aufstehen), diesen Wert verwerfen.
+                    // Korrekte Bettgeh-Zeit aus existingSnap nutzen wenn valide (liegt vor Einschlafzeit).
+                    if (_bet && sleepWindowOC7.start && _bet > sleepWindowOC7.start) {
+                        var _snapBet = _existingSnap && _existingSnap.bedEntryTs;
+                        _self.log.debug('[OC-39b] bedEntryTs-Valve: ' + new Date(_bet).toLocaleTimeString() + ' nach sleepStart -> ' + (_snapBet && _snapBet < sleepWindowOC7.start ? 'existingSnap ' + new Date(_snapBet).toLocaleTimeString() : 'null'));
+                        return (_snapBet && _snapBet < sleepWindowOC7.start) ? _snapBet : null;
+                    }
+                    return _bet;
+                })(),
                 smWakePhases: (_gR && _gR.smWakePhases) ? _gR.smWakePhases : []
             };
 
