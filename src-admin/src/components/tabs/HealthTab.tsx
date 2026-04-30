@@ -1658,7 +1658,15 @@ export default function HealthTab(props: any) {
                     'Balkenfarben: Dunkelblau=Tief, Hellblau=Leicht, Lila=REM, Gelb=Wach-im-Bett, Bernstein=Bad-Besuch, Orange=Außerhalb.\n' +
                     'Kein Medizinprodukt — für klinische Diagnose Arzt hinzuziehen.'
                 }>
-                {bedWasEmpty ? (
+                {(bedWasEmpty && swStart != null && swEnd != null && swStart > swEnd) ? (
+                    // OC-39: Abend-Fall — invertiertes Fenster = neue Nacht noch nicht begonnen.
+                    // Zeigt neutrale Karte statt "Bett war leer" (welches nur für echte Abwesenheit gilt).
+                    <div style={{textAlign:'center', padding:'16px 8px', color: isDark?'#555':'#aaa', fontSize:'0.8rem'}}>
+                        <div style={{fontSize:'1.3rem', marginBottom:'6px'}}>🌙</div>
+                        <div style={{fontWeight:'bold', marginBottom:'4px', color: isDark?'#888':'#666'}}>Gute Nacht</div>
+                        <div style={{fontSize:'0.72rem'}}>Nacht noch nicht begonnen — Analyse erscheint morgen früh</div>
+                    </div>
+                ) : bedWasEmpty ? (
                     <div style={{fontSize:'0.8rem'}}>
                         {swStart && (
                             <div style={{fontSize:'0.65rem', color: isDark?'#666':'#aaa', marginBottom:'8px', textAlign:'center'}}>
@@ -1674,7 +1682,7 @@ export default function HealthTab(props: any) {
                             <div style={{fontSize:'0.72rem', color:'#888', marginBottom:'8px'}}>
                                 Kein Sensor hat eine Anwesenheit bestätigt — möglicherweise auswärts geschlafen.
                             </div>
-                            {(swStart && swEnd) && (
+                            {(swStart && swEnd && garminScore !== null) && (
                                 <div style={{fontSize:'0.7rem', color: isDark?'#666':'#aaa', borderTop: isDark?'1px solid #333':'1px solid #ddd', paddingTop:'6px', marginTop:'4px'}}>
                                     <span style={{color:isDark?'#555':'#bbb'}}>⌚ Garmin-Referenz:</span>{' '}
                                     {fmtTime(swStart)} – {fmtTime(swEnd)}

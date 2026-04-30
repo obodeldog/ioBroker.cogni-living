@@ -2903,6 +2903,26 @@ class CogniLiving extends utils.Adapter {
                     var _pGarminInfo = _personGarminData[person] || {};
                     var _pGarminTs = _pGarminInfo.sleepStartTs || null;
                     var _pGarminWakeTs = _pGarminInfo.wakeTs || null;
+                    // OC-39: personData Abend-Save-Freeze (sensor-agnostisch)
+                    // Beim Abend-Save (sleepDate === dateStr, d.h. _sleepSearchBase = heute 18:00) darf
+                    // personData einer Person NICHT neu berechnet werden, wenn der Morgen-Snapshot bereits
+                    // valide Schlafdaten enthaelt. Die Morgen-Berechnung hat den vollstaendigen Kontext
+                    // (alle Nacht-Events). Die Abend-Berechnung wuerde nur heutige Abend-Events finden und
+                    // diese faelschlicherweise als Einschlaf-Kandidaten werten (invertiertes Fenster).
+                    // Kriterien: bedWasEmpty===false + nicht-invertiertes Fenster + Aufwachzeit vor 14 Uhr.
+                    // Sensor-agnostisch: funktioniert fuer PIR, KNX, FP2, Vibration, Garmin, jede Kombination.
+                    if (sleepDate === dateStr) {
+                        var _epdFreeze = _existingSnap && _existingSnap.personData && _existingSnap.personData[person];
+                        if (_epdFreeze
+                            && _epdFreeze.bedWasEmpty === false
+                            && _epdFreeze.sleepWindowStart && _epdFreeze.sleepWindowEnd
+                            && _epdFreeze.sleepWindowEnd > _epdFreeze.sleepWindowStart
+                            && new Date(_epdFreeze.sleepWindowEnd).getHours() < 14) {
+                            result[person] = _epdFreeze;
+                            _self.log.debug('[OC-39] ' + person + ': personData eingefroren (Abend-Save, Aufwachzeit ' + new Date(_epdFreeze.sleepWindowEnd).toLocaleTimeString() + ')');
+                            return;
+                        }
+                    }
                     // computePersonSleep: einheitlicher Algorithmus (Single-Source-of-Truth)
                     var _pResult = computePersonSleep({
                         allEvents:     sleepSearchEvents,
@@ -2923,6 +2943,39 @@ class CogniLiving extends utils.Adapter {
                        noisySensorIds: (_self && _self._noisySensorIds) ? _self._noisySensorIds : new Set(),
                         log:           _self.log
                     });
+                    // OC-38 Safety-valve: wenn per-Person alle echten Einschlafquellen null sind,
+                    // sleepDate-Snapshot als Fallback laden (z.B. nach Adapter-Neustart, kein Garmin).
+                    // Greift nur morgens (sleepDate != dateStr) und nur wenn sleepDate-Datei existiert.
+                    (function() {
+                        var _hasReal = (_pResult.allSleepStartSources||[]).some(function(s){
+                            return s.source!=='haus_still' && s.source!=='fixed' && !!s.ts;
+                        });
+                        if (_hasReal) return;
+                        if (sleepDate === dateStr) return; // Abend-Save: Freeze-Mechanismus zustaendig
+                        try {
+                            var _sdPath = path.join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history', sleepDate + '.json');
+                            if (!fs.existsSync(_sdPath)) return;
+                            var _sdSnap = JSON.parse(fs.readFileSync(_sdPath, 'utf8'));
+                            var _sdPD = _sdSnap && _sdSnap.personData && _sdSnap.personData[person];
+                            if (!_sdPD || !Array.isArray(_sdPD.allSleepStartSources)) return;
+                            var _winMin = _sleepSearchBase.getTime();
+                            var _winMax = _winMin + 18 * 3600000;
+                            var _validSrc = _sdPD.allSleepStartSources.filter(function(s){
+                                return s.source!=='haus_still' && s.source!=='fixed' && !!s.ts && s.ts>=_winMin && s.ts<=_winMax;
+                            });
+                            if (_validSrc.length === 0) return;
+                            _pResult.allSleepStartSources = _sdPD.allSleepStartSources;
+                            if (_sdPD.sleepStartSource && _sdPD.sleepStartSource!=='haus_still' && _sdPD.sleepStartSource!=='fixed') {
+                                _pResult.sleepStartSource = _sdPD.sleepStartSource;
+                            }
+                            if (_sdPD.sleepWindowStart && _sdPD.sleepWindowStart>=_winMin && _sdPD.sleepWindowStart<=_winMax) {
+                                _pResult.sleepWindowStart = _sdPD.sleepWindowStart;
+                            }
+                            _self.log.info('[OC-38] ' + person + ': Einschlaf-Quellen aus ' + sleepDate + '.json wiederhergestellt (' + _sdPD.sleepStartSource + ' @ ' + new Date(_sdPD.sleepWindowStart||0).toLocaleTimeString() + ')');
+                        } catch(_sdE) {
+                            _self.log.debug('[OC-38] Fallback-Fehler fuer ' + person + ': ' + _sdE.message);
+                        }
+                    })();
                     var sleepOnsetMin = null;
                     if (_pResult.sleepWindowStart) {
                         sleepOnsetMin = Math.round((_pResult.sleepWindowStart - new Date(_pResult.sleepWindowStart).setHours(0,0,0,0)) / 60000);
