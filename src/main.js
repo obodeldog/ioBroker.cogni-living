@@ -480,18 +480,22 @@ function computePersonSleep(p) {
     }
 
     // motionVibWakeTs: Schlafzimmer-BM + Vibrations-Bestaetigung (Pendant zu fp2_vib fuer Haeuser ohne Radar)
-    // Findet: Ersten Schlafzimmer-BM-Abgang nach 04:00 bei dem in den vorangehenden 30 Min Vibration war
+    // [OC-42] LETZTES qualifizierendes Event (nicht erstes) - verhindert Toilettengang als finales Aufwachen:
+    //   1. Vibration in 30 Min davor  -> Person lag wirklich im Bett
+    //   2. Keine Schlafvib 45 Min danach -> kein Wiedereinschlafen (deckt auch PC-Arbeit-in-der-Nacht ab)
+    //   3. Nicht in nachtAufstehen-Fenster -> Zusatzschutz fuer kurze Nacht-Abwesenheiten
     var _motionVibWakeTs = null;
     var _bedroomMotEvts = allEvents.filter(function(e) {
         return e.isBedroomMotion && isMine(e) && !isOtherPerson(e)
             && (e.timestamp||0) >= p4amTs && (e.timestamp||0) >= minSlTs && (e.timestamp||0) <= wakeHardCap;
     }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-    if (_bedroomMotEvts.length > 0) {
-        var _bmFirst = _bedroomMotEvts[0].timestamp || 0;
-        var _bmVibBefore = _vibEvtsWk.some(function(e) {
-            return (e.timestamp||0) >= _bmFirst - 30*60*1000 && (e.timestamp||0) <= _bmFirst;
-        });
-        if (_bmVibBefore) _motionVibWakeTs = _bmFirst;
+    for (var _bmi = _bedroomMotEvts.length - 1; _bmi >= 0; _bmi--) {
+        var _bmTs = _bedroomMotEvts[_bmi].timestamp || 0;
+        if (!_vibEvtsWk.some(function(e) { return (e.timestamp||0) >= _bmTs - 30*60*1000 && (e.timestamp||0) <= _bmTs; })) continue;
+        if (_vibEvtsWk.some(function(e) { return (e.timestamp||0) > _bmTs && (e.timestamp||0) <= _bmTs + 45*60*1000; })) continue;
+        if ((_nachtAufstehenWindows||[]).some(function(w) { return _bmTs >= (w.start||0) - 2*60*1000 && _bmTs <= (w.end||0) + 2*60*1000; })) continue;
+        _motionVibWakeTs = _bmTs;
+        break;
     }
 
     // otherRoomWakeTs explizit (fuer allWakeSources)
@@ -670,7 +674,8 @@ function computePersonSleep(p) {
     var _smWakePhases = (function() {
         if (!sleepStart || !bedroomLocations || bedroomLocations.length === 0) return [];
         var _bedroomLocSet = new Set(bedroomLocations);
-        var _wakeCapMs = wakeTs ? wakeTs : (wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000));
+        // [OC-42] Immer bis wakeHardCap (nicht wakeTs) - SM sieht echte Aufwach-Events auch wenn wakeTs zuvor falsch war
+        var _wakeCapMs = wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000);
         // Untergrenze: sleepStart (Garmin/Vib-basiert) - bedEntryTs ist nur fuer bedAbsenceEvents relevant
         var _smLowerTs = sleepStart;
         var _phases = [];
@@ -697,8 +702,12 @@ function computePersonSleep(p) {
                 _deptTs = _sTs; _inBed = false;
             } else if (!_inBed && !_isOutside) {
                 if (_deptTs && (_sTs - _deptTs) > 5 * 60000) {
+                    // [OC-42] Phase als nocturia markieren wenn sie in bekanntem Nacht-Aufsteh-Fenster liegt
+                    var _smIsNocturia = (_nachtAufstehenWindows||[]).some(function(w) {
+                        return _deptTs >= (w.start||0) - 2*60*1000 && _deptTs <= (w.end||0) + 2*60*1000;
+                    });
                     _phases.push({
-                        type: 'wake',
+                        type: _smIsNocturia ? 'nocturia' : 'wake',
                         start: _deptTs,
                         end: _sTs,
                         durationMin: Math.round((_sTs - _deptTs) / 60000),
@@ -2578,6 +2587,32 @@ class CogniLiving extends utils.Adapter {
                 sleepWindowOC7.end = _gR.sleepWindowEnd;
             }
 
+            // [OC-42] bedExitTs: physisches Aufstehen (kann nach garminWakeTs liegen)
+            // Quellen (Prio): FP2-Radar > vibration_alone > SM-Wake-Phase (max. 45 Min Puffer)
+            var bedExitTs = null; var _bedExitSrc = null;
+            if (garminWakeTs && sleepWindowOC7.end === garminWakeTs) {
+                var _beMax = garminWakeTs + 45 * 60 * 1000;
+                // Quelle 1: FP2/Radar firstEmpty nach garminWakeTs
+                if (_fp2RawWakeTs && _fp2RawWakeTs > garminWakeTs && _fp2RawWakeTs <= _beMax) {
+                    bedExitTs = _fp2RawWakeTs; _bedExitSrc = 'fp2';
+                }
+                // Quelle 2: vibration_alone nach garminWakeTs (letztes Vib-Event mit 45-Min-Stille)
+                if (!bedExitTs) {
+                    var _beVa = (_gR.allWakeSources||[]).find(function(s) {
+                        return s.source === 'vibration_alone' && s.ts && s.ts > garminWakeTs && s.ts <= _beMax;
+                    });
+                    if (_beVa) { bedExitTs = _beVa.ts; _bedExitSrc = 'vibration_alone'; }
+                }
+                // Quelle 3: SM wake-Phase nach garminWakeTs (nicht nocturia)
+                if (!bedExitTs) {
+                    var _beSmPhases = (_gR.smWakePhases||[]).filter(function(ph) {
+                        return ph.type === 'wake' && (ph.start||0) >= garminWakeTs && (ph.start||0) <= _beMax;
+                    });
+                    if (_beSmPhases.length > 0) { bedExitTs = _beSmPhases[0].start; _bedExitSrc = 'sm'; }
+                }
+                if (bedExitTs) this.log.info('[OC-42] bedExitTs: ' + new Date(bedExitTs).toLocaleTimeString() + ' (' + _bedExitSrc + ')');
+            }
+
 
             // OC-WakeOv: Manueller Override der Aufwachzeit (global)
             var _wakeOverrideApplied = false;
@@ -2603,6 +2638,12 @@ class CogniLiving extends utils.Adapter {
                 var SLOT_MS = 5 * 60 * 1000;
                 var swStart = sleepWindowOC7.start;
                 var swEnd   = sleepWindowOC7.end;
+                // [OC-42] Stages-Fenster bis bedExitTs erweitern -> Wachliegen nach Garmin-Wake sichtbar
+                var _swEndScore = swEnd; // Original-Ende fuer Score-Dauer (sleepWindowOC7.end = garminWakeTs)
+                if (bedExitTs && bedExitTs > swEnd && bedExitTs <= swEnd + 45*60*1000) {
+                    swEnd = bedExitTs;
+                    this.log.info('[OC-42] Stages-Fenster erweitert bis bedExitTs: ' + new Date(swEnd).toLocaleTimeString());
+                }
                 var slotCount = Math.ceil((swEnd - swStart) / SLOT_MS);
                 var vibDetInWindow = sleepSearchEvents.filter(function(e) {
                     return e.isVibrationBed && (e.timestamp||0) >= swStart && (e.timestamp||0) <= swEnd
@@ -2642,7 +2683,7 @@ class CogniLiving extends utils.Adapter {
                     else                         wakeSec  += 300;
                 }
                 var totalSecSleep = deepSec + lightSec + remSec + wakeSec;
-                var durMin = (swEnd - swStart) / 60000;
+                var durMin = ((_swEndScore || swEnd) - swStart) / 60000; // [OC-42] Score-Dauer endet bei garminWakeTs
                 var durScore = Math.max(20, Math.min(95, 25 + 0.12 * durMin));
                 var stageAdjustment = 0;
                 if (totalSecSleep > 0) {
@@ -3538,7 +3579,8 @@ class CogniLiving extends utils.Adapter {
                 nocturiaCount: nocturiaCount,
                 kitchenVisits: kitchenVisits,
                 sleepWindowStart: sleepWindowOC7.start,   // ms-Timestamp Schlafbeginn (OC7-Fenster inkl. Vib-Fallback)
-                sleepWindowEnd:   sleepWindowOC7.end,     // ms-Timestamp Aufwachen
+                sleepWindowEnd:   sleepWindowOC7.end,     // ms-Timestamp Aufwachen (Garmin/Sensor-basiert)
+                bedExitTs:        (typeof bedExitTs !== 'undefined' ? bedExitTs : null) || null, // [OC-42] Physisches Aufstehen
                 maxPersonsDetected: maxPersonsDetected,
                 bedPresenceMinutes: bedPresenceMinutesFinal,
                 nightVibrationCount: nightVibrationCount,

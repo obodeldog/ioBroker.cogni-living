@@ -241,7 +241,7 @@ export default function HealthTab(props: any) {
                     if (d.roomHistory && d.roomHistory.history) setRoomHistory(d.roomHistory.history);
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
-                   setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, smWakePhases: d.smWakePhases ?? [], bedAbsenceEvents: d.bedAbsenceEvents ?? [], excluded: d.excluded ?? false });
+                   setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, bedExitTs: d.bedExitTs ?? null, smWakePhases: d.smWakePhases ?? [], bedAbsenceEvents: d.bedAbsenceEvents ?? [], excluded: d.excluded ?? false });
                    setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                    setGeminiNight(d.geminiNight || "Keine Daten");
                     setGeminiNightTs(d.geminiNightTs || null);
@@ -727,7 +727,7 @@ export default function HealthTab(props: any) {
             .then((histRes: any) => {
                 if (histRes && histRes.success && histRes.data) {
                     const d = histRes.data;
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, smWakePhases: d.smWakePhases ?? [], bedAbsenceEvents: d.bedAbsenceEvents ?? [], excluded: d.excluded ?? false });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, bedExitTs: d.bedExitTs ?? null, smWakePhases: d.smWakePhases ?? [], bedAbsenceEvents: d.bedAbsenceEvents ?? [], excluded: d.excluded ?? false });
                     setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                 }
             });
@@ -1198,6 +1198,10 @@ export default function HealthTab(props: any) {
         const garminRemMin: number | null = sd?.garminRemMin ?? null;
         const swStart: number | null = sd?.sleepWindowStart ?? null;
         const swEnd: number | null = sd?.sleepWindowEnd ?? null;
+        // [OC-42] bedExitTs: physisches Aufstehen (kann nach garminWakeTs/swEnd liegen)
+        const bedExitTs: number | null = (sd as any)?.bedExitTs ?? null;
+        // wakeDisplayTs: was in der Aufstehen-Uhr angezeigt wird (bedExitTs wenn vorhanden, sonst swEnd)
+        const wakeDisplayTs: number | null = bedExitTs ?? swEnd;
         // stagesWindowStart: ursprünglicher Startpunkt des Stage-Analyse-Fensters (kann bei Override von swStart abweichen)
         const stagesWindowStart: number | null = (sd as any)?.stagesWindowStart ?? swStart;
         const sleepWindowSource: string = sd?.sleepWindowSource ?? 'fixed';
@@ -1653,7 +1657,7 @@ export default function HealthTab(props: any) {
                     'Quellen: Diekelmann & Born 2010 (Tiefschlaf), Walker 2017 / Stickgold 2005 (REM), AASM Guidelines (Leichtschlaf), Buysse et al. 1989 PSQI (WASO-Abzug).\n' +
                     'Einschlafzeit (' + srcDisplay.icon + '): Quelle — ' + srcDisplay.label + '. Beste Genauigkeit mit Vibrationssensor am Bett (📳 Letzte Bettbewegung: letztes Vib-Event + 20 Min Stille) oder FP2-Radar.\n' +
                     'Schlafphasen (Balken): Nur mit Vibrationssensor am Bett (sensorFunction=bed). Ohne Vibrationssensor: kein Balken, nur Zeiten.\n' +
-                    'Aufwachzeit (' + srcDisplay.icon + '): Erste Bettleere ≥15 Min nach 04 Uhr (⟳ vorläufig bis 10:00 Uhr + 1h Bett leer).\n' +
+                    'Aufstehzeit (' + srcDisplay.icon + '): Physisches Verlassen des Bettes (bedExitTs). Aufgewacht = Garmin/Sensor Schlafende; vorläufig bis Bestätigung.\n' +
                     'Außerhalb-Dreiecke (▼): Nur mit FP2-Radar am Bett (Bett-Leer-Erkennung erforderlich).\n' +
                     'Balkenfarben: Dunkelblau=Tief, Hellblau=Leicht, Lila=REM, Gelb=Wach-im-Bett, Bernstein=Bad-Besuch, Orange=Außerhalb.\n' +
                     'Kein Medizinprodukt — für klinische Diagnose Arzt hinzuziehen.'
@@ -1775,18 +1779,21 @@ export default function HealthTab(props: any) {
                                         )}
                                     </div>
                                     <div style={{textAlign:'right'}}>
-                                        <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Aufwachen</div>
-                                        <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>{fmtTime(swEnd)}</div>
+                                        <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Aufstehen</div>
+                                        <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>{fmtTime(wakeDisplayTs)}</div>
                                         <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
                                             {wakeDisplay.icon} {wakeDisplay.label}
                                         </div>
+                                        {bedExitTs && swEnd && bedExitTs > swEnd && (
+                                            <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>Aufgewacht: {fmtTime(swEnd)}</div>
+                                        )}
                                         {wakeOverridden && (
                                             <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
                                         )}
                                         {allWakeSourcesArr.length > 0 && (
                                             <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: isOverrideWakeLoading ? 'wait' : 'pointer', opacity:0.8,
                                                          display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
-                                                title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufwachzeit-Quelle manuell wählen'}
+                                                title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufstehzeit-Quelle manuell wählen'}
                                                 onClick={() => { if (!isOverrideWakeLoading) setIsOverrideWakePanelOpen(!isOverrideWakePanelOpen); }}>
                                                 {isOverrideWakeLoading ? '⏳' : '⚙'} Quellen {isOverrideWakePanelOpen ? '▲' : '▼'}
                                             </div>
@@ -1797,7 +1804,7 @@ export default function HealthTab(props: any) {
                                                          borderRadius:'6px', padding:'6px 8px', minWidth:'200px',
                                                          boxShadow:'0 4px 12px rgba(0,0,0,0.3)', textAlign:'left'}}>
                                                 <div style={{fontSize:'0.55rem', color: isDark?'#aaa':'#555', marginBottom:'4px', fontWeight:'bold'}}>
-                                                    Aufwachzeit-Quelle wählen:
+                                                    Aufstehzeit-Quelle wählen:
                                                 </div>
                                                 {allWakeSourcesArr.map(ws => {
                                                     const wInfo = srcInfo[ws.source] ?? { icon: '?', label: ws.source };
@@ -2078,26 +2085,45 @@ export default function HealthTab(props: any) {
                                 )}
                             </div>
                             <div style={{textAlign:'right'}}>
-                                <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Aufwachen</div>
+                                <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Aufstehen</div>
                                 <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>
-                                    {wakeConfirmed ? '✓' : '⟳'} {fmtTime(swEnd)}
+                                    {wakeConfirmed ? '✓' : '⟳'} {fmtTime(wakeDisplayTs)}
                                 </div>
                                 <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
                                     {wakeDisplay.icon} {wakeDisplay.label}
                                 </div>
-                                <div style={{fontSize:'0.6rem', color: wakeConfirmed ? (isDark?'#555':'#bbb') : '#ffab40', marginTop:'1px'}}
-                                    title={wakeConfirmed
-                                        ? `Bestätigt via ${wakeDisplay.label}: Bett ≥1h leer nach 10:00 Uhr`
-                                        : `Vorläufig via ${wakeDisplay.label}: Wird bestätigt wenn nach 10:00 Uhr ≥1h kein Bett belegt`}>
-                                    {wakeConfirmed ? 'bestätigt' : 'vorläufig'}
-                                </div>
+                                {/* [OC-42] Sekundär-Label: Aufgewacht (Garmin) wenn bedExitTs bekannt und > swEnd */}
+                                {bedExitTs && swEnd && bedExitTs > swEnd && (
+                                    <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
+                                        Aufgewacht: {fmtTime(swEnd)}
+                                    </div>
+                                )}
+                                {/* [OC-42] vorläufig prominenter wenn noch nicht bestätigt */}
+                                {!wakeConfirmed ? (
+                                    <div style={{
+                                        display:'inline-flex', alignItems:'center', gap:'3px',
+                                        fontSize:'0.62rem', fontWeight:'bold',
+                                        color:'#ff6d00',
+                                        background: isDark?'rgba(255,109,0,0.15)':'rgba(255,109,0,0.1)',
+                                        border:'1px solid rgba(255,109,0,0.4)',
+                                        borderRadius:'4px', padding:'1px 5px', marginTop:'2px',
+                                    }}
+                                        title={`Vorläufig via ${wakeDisplay.label}: Wird bestätigt wenn nach 10:00 Uhr ≥1h kein Bett belegt`}>
+                                        ⟳ vorläufig
+                                    </div>
+                                ) : (
+                                    <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}
+                                        title={`Bestätigt via ${wakeDisplay.label}: Bett ≥1h leer nach 10:00 Uhr`}>
+                                        bestätigt
+                                    </div>
+                                )}
                                 {wakeOverridden && (
                                     <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
                                 )}
                                 {allWakeSourcesArr.length > 0 && (
                                     <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: isOverrideWakeLoading ? 'wait' : 'pointer', opacity:0.8,
                                                  display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
-                                        title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufwachzeit-Quelle manuell wählen'}
+                                        title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufstehzeit-Quelle manuell wählen'}
                                         onClick={() => { if (!isOverrideWakeLoading) setIsOverrideWakePanelOpen(!isOverrideWakePanelOpen); }}>
                                         {isOverrideWakeLoading ? '⏳' : '⚙'} Quellen {isOverrideWakePanelOpen ? '▲' : '▼'}
                                     </div>
