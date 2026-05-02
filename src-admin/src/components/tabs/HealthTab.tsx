@@ -1545,16 +1545,18 @@ export default function HealthTab(props: any) {
             }
             return timeStr + (stageLabel[slot.s] || slot.s);
         };
-        const renderedStages = (stagesWindowStart && swEnd)
+        const renderedStages = (stagesWindowStart && (swEnd || _barRightTs))
             ? stages.filter(slot => {
                 const absMs = stagesWindowStart + slot.t * 60000;
-                return absMs >= (swStart ?? stagesWindowStart) && absMs < swEnd;
+                return absMs >= (swStart ?? stagesWindowStart) && absMs < (_barRightTs ?? swEnd ?? Infinity);
             })
             : stages;
         // Kein-Daten-Bereich VOR Stage-Fenster (wenn Override den Start nach vorne verschiebt)
         const preStageMs = (swStart && stagesWindowStart && stagesWindowStart > swStart && swEnd)
             ? stagesWindowStart - swStart : 0;
-        const totalWindowMs = (swStart && swEnd) ? swEnd - swStart : null;
+        // [OC-42b] Balken-Rechte-Kante: bis wakeDisplayTs (bedExitTs wenn bekannt, sonst swEnd)
+        const _barRightTs = wakeDisplayTs ?? swEnd;
+        const totalWindowMs = (swStart && _barRightTs) ? _barRightTs - swStart : null;
         // bedEntryTs: Ins-Bett-Zeit (vor Einschlafzeit) aus Snapshot
         const _bedEntryRaw: number | null = (sd as any)?.bedEntryTs ?? null;
         const bedEntryTsVal: number | null = (_bedEntryRaw && swStart && _bedEntryRaw < swStart - 5*60000) ? _bedEntryRaw : null;
@@ -1575,8 +1577,8 @@ export default function HealthTab(props: any) {
         const lastSlotEndMs = (stagesWindowStart && renderedStages.length > 0)
             ? stagesWindowStart + (renderedStages[renderedStages.length - 1].t + 5) * 60000
             : (stagesWindowStart ?? swStart ?? null);
-        const postStageMs = (lastSlotEndMs && swEnd && lastSlotEndMs < swEnd)
-            ? swEnd - lastSlotEndMs : 0;
+        const postStageMs = (lastSlotEndMs && _barRightTs && lastSlotEndMs < _barRightTs)
+            ? _barRightTs - lastSlotEndMs : 0;
         // Marker-Logik: Bad → über Balken (▼), Außerhalb/andere → unter Balken (▲), Radar-Aussetzer → grau klein (▲)
         const markerItems = (() => {
             if (!swStart || !swEnd || clippedOutsideBedEvts.length === 0) return { above: [], below: [], dropout: [] };
@@ -1702,8 +1704,17 @@ export default function HealthTab(props: any) {
                                 {/* Degradierter View: Zeiten bekannt, aber keine Vibrationsdaten */}
                                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px'}}>
                                     <div>
-                                        <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Einschlafen</div>
-                                        <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>{fmtTime(swStart)}</div>
+                                        <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>
+                                            {bedEntryTs ? 'Ins Bett gegangen' : 'Eingeschlafen'}
+                                        </div>
+                                        <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>
+                                            {fmtTime(bedEntryTs ?? swStart)}
+                                        </div>
+                                        {bedEntryTs && swStart && bedEntryTs < swStart - 5*60000 && (
+                                            <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
+                                                Eingeschlafen: {fmtTime(swStart)}
+                                            </div>
+                                        )}
                                         <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
                                             {srcDisplay.icon} {srcDisplay.label}
                                         </div>
@@ -1972,8 +1983,19 @@ export default function HealthTab(props: any) {
                         {/* Header: Zeiten + Score-Badge */}
                         <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'10px'}}>
                             <div>
-                                <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Einschlafen</div>
-                                <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>{fmtTime(swStart)}</div>
+                                {/* [OC-42b] Primär: Ins Bett gegangen (bedEntryTs), sekundär Eingeschlafen (swStart) */}
+                                <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>
+                                    {bedEntryTs ? 'Ins Bett gegangen' : 'Eingeschlafen'}
+                                </div>
+                                <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>
+                                    {fmtTime(bedEntryTs ?? swStart)}
+                                </div>
+                                {/* Sekundärlabel: Eingeschlafen HH:MM nur wenn bedEntryTs bekannt und verschieden */}
+                                {bedEntryTs && swStart && bedEntryTs < swStart - 5*60000 && (
+                                    <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
+                                        Eingeschlafen: {fmtTime(swStart)}
+                                    </div>
+                                )}
                                 <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}} title={'Erkennungsmethode: ' + srcDisplay.label}>
                                     {srcDisplay.icon} {srcDisplay.label}
                                 </div>
@@ -2248,17 +2270,32 @@ export default function HealthTab(props: any) {
                                         }} title={slotTip(slot, absMs)} />
                                     );
                                 })}
-                                {/* Kein-Daten-Bereich nach letztem Stage-Slot (Stages decken oft nur Anfang der Nacht ab) */}
-                                {postStageMs > 0 && newBarTotalMs && (
-                                    <div style={{
-                                        width: (postStageMs / newBarTotalMs * 100) + '%',
-                                        flexShrink: 0,
-                                        backgroundColor: isDark ? '#1a1a1a' : '#eeeeee',
-                                        backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 8px)',
-                                        borderLeft: '1px dashed ' + (isDark ? '#444' : '#ccc'),
-                                        minWidth: 0
-                                    }} title={'Keine Sensordaten (' + (lastSlotEndMs ? fmtTime(lastSlotEndMs) : '?') + '–' + (swEnd ? fmtTime(swEnd) : '?') + ')'} />
-                                )}
+                                {/* [OC-42b] Post-Stage: Wachliegen wenn Garmin/bedExitTs bekannt, sonst Keine-Daten-grau */}
+                                {postStageMs > 0 && newBarTotalMs && (() => {
+                                    const _isConfirmedAwake = wakeSource === 'garmin' || (bedExitTs != null && swEnd != null && bedExitTs > swEnd);
+                                    if (_isConfirmedAwake) {
+                                        return (
+                                            <div style={{
+                                                width: (postStageMs / newBarTotalMs * 100) + '%',
+                                                flexShrink: 0,
+                                                backgroundColor: stageColor.wake,
+                                                opacity: 0.75,
+                                                borderLeft: '1px dashed ' + (isDark ? '#888' : '#e0c000'),
+                                                minWidth: 0
+                                            }} title={'Wachliegen (Garmin/Sensor bestätigt): ' + (lastSlotEndMs ? fmtTime(lastSlotEndMs) : '?') + '–' + (_barRightTs ? fmtTime(_barRightTs) : '?')} />
+                                        );
+                                    }
+                                    return (
+                                        <div style={{
+                                            width: (postStageMs / newBarTotalMs * 100) + '%',
+                                            flexShrink: 0,
+                                            backgroundColor: isDark ? '#1a1a1a' : '#eeeeee',
+                                            backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 4px, ' + (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)') + ' 8px)',
+                                            borderLeft: '1px dashed ' + (isDark ? '#444' : '#ccc'),
+                                            minWidth: 0
+                                        }} title={'Keine Sensordaten (' + (lastSlotEndMs ? fmtTime(lastSlotEndMs) : '?') + '–' + (swEnd ? fmtTime(swEnd) : '?') + ')'} />
+                                    );
+                                })()}
                             </div>
                             {/* OC-36 Phase 4: bedAbsenceEvents = hellgrau schraffiertes Segment 'weg vom Bett' (Vorrang, OPAK — ersetzt Schlafphase) */}
                             {swStart && swEnd && newBarTotalMs && _hasBedAbsenceEngine && _bedAbsenceEvts.map((ev, i) => {
