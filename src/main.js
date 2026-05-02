@@ -895,6 +895,7 @@ function computePersonSleep(p) {
         outsideBedEvents:     obe,
         sleepStages:          sleepStages,
         stagesWindowStart:    stagesWinStart,
+        stagesWindowEnd:      stagesWinEnd || null,
         sleepScore:           sleepScore,
         sleepScoreRaw:        sleepScoreRaw,
         _motionAnchor:        motionAnchor,
@@ -2310,6 +2311,8 @@ class CogniLiving extends utils.Adapter {
                         this.log.info('[FROZEN-Vib] MotionOnly-Freeze aufgehoben \u2014 ' + nightVibrationCount + ' Vibrations-Events vorhanden -> Stages neu berechnen');
                         _shouldRecalcStages = true;
                     } else {
+                        // [OC-43] Merken bis wohin Stages bisher berechnet wurden (fuer spaetere Pruefung nach Wake-Override)
+                        var _existingStagesEnd = _existingSnap.stagesWindowEnd || _existingSnap.sleepWindowEnd || 0;
                         sleepStages    = _existingSnap.sleepStages    || [];
                         sleepScore     = _existingSnap.sleepScore     !== undefined ? _existingSnap.sleepScore     : null;
                         sleepScoreRaw  = _existingSnap.sleepScoreRaw  !== undefined ? _existingSnap.sleepScoreRaw  : null;
@@ -2633,6 +2636,18 @@ class CogniLiving extends utils.Adapter {
             // Non-frozen: End-Zeit jetzt bekannt (von Garmin/FP2/motion/other-room/override)
             if (!_sleepFrozen && sleepWindowOC7.start && sleepWindowOC7.end) {
                 _shouldRecalcStages = true;
+            }
+            // [OC-43] Stages-Neuberechnung bei Frozen: Schlafende nach hinten verschoben (quellenagnostisch).
+            // Greift wenn: irgendeine Wake-Quelle (Garmin, FP2, vibration_alone, Override ...) ein spaeteres
+            // Ende liefert als der bisherige Stage-Berechnungsstand. Fallback fuer alte Snapshots ohne
+            // stagesWindowEnd: sleepWindowEnd wird als Vergleichsreferenz benutzt (rueckwaertskompatibel).
+            if (_sleepFrozen && !_shouldRecalcStages && sleepWindowOC7.end
+                && (typeof _existingStagesEnd !== 'undefined') && _existingStagesEnd > 0
+                && sleepWindowOC7.end > _existingStagesEnd + 5 * 60 * 1000) {
+                _shouldRecalcStages = true;
+                this.log.info('[OC-43] Stages-Neuberechnung: neues Schlafende ' + new Date(sleepWindowOC7.end).toLocaleTimeString() +
+                    ' > bisheriges StagesEnde ' + new Date(_existingStagesEnd).toLocaleTimeString() +
+                    ' (Quelle: ' + (wakeSource || '?') + ')');
             }
             if (_shouldRecalcStages && sleepWindowOC7.start && sleepWindowOC7.end) {
                 var SLOT_MS = 5 * 60 * 1000;
@@ -3077,6 +3092,7 @@ class CogniLiving extends utils.Adapter {
                 bedAbsenceEvents:          _pResult.bedAbsenceEvents || [],
                         sleepStages:               _pResult.sleepStages,
                         stagesWindowStart:         _pResult.stagesWindowStart,
+                        stagesWindowEnd:           _pResult.stagesWindowEnd || null,
                         sleepScore:                _pResult.sleepScore,
                         sleepScoreRaw:             _pResult.sleepScoreRaw,
                         sleepScoreCalStatus:       'uncalibrated',
@@ -3595,9 +3611,12 @@ class CogniLiving extends utils.Adapter {
                 sleepScoreCalNights: sleepScoreCalNights,
                 sleepScoreCalStatus: sleepScoreCalStatus,
                 sleepStages: sleepStages,
-                stagesWindowStart: _sleepFrozen
+                stagesWindowStart: (_sleepFrozen && !_shouldRecalcStages)
                     ? (_existingSnap.stagesWindowStart ?? _existingSnap.sleepWindowStart ?? null)
                     : (sleepWindowOC7.start ?? null),
+                stagesWindowEnd: _shouldRecalcStages
+                    ? (sleepWindowOC7.end || null)
+                    : (_existingSnap ? (_existingSnap.stagesWindowEnd || _existingSnap.sleepWindowEnd || null) : null),
                 garminScore: garminScore,
                 garminDeepMin: garminDeepSec ? Math.round(garminDeepSec/60) : null,
                 garminLightMin: garminLightSec ? Math.round(garminLightSec/60) : null,
