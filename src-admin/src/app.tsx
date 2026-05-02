@@ -23,6 +23,7 @@ import SmartToyIcon from '@mui/icons-material/SmartToy';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import BoltIcon from '@mui/icons-material/Bolt';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import BedtimeIcon from '@mui/icons-material/Bedtime';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 
 import enLang from './i18n/en.json';
@@ -107,6 +108,7 @@ class App extends GenericApp<any, AppState> {
                                 sx={{ flexGrow: 1, maxWidth: 1600 }}
                             >
                                 <Tab value="overview"  label="Dashboard"   icon={<DashboardIcon />}        iconPosition="start" />
+                                {showHealth   && <Tab value="sleep"     label="Schlaf"      icon={<BedtimeIcon />}          iconPosition="start" sx={pillarStyle('#7b1fa2')} />}
                                 {showComfort  && <Tab value="comfort"   label="Komfort"     icon={<SmartToyIcon />}         iconPosition="start" sx={pillarStyle('#2196f3')} />}
                                 {showSecurity && <Tab value="security"  label="Sicherheit"  icon={<HealthAndSafetyIcon />}  iconPosition="start" sx={pillarStyle('#4caf50')} />}
                                 {showEnergy   && <Tab value="energy"    label="Energie"     icon={<BoltIcon />}             iconPosition="start" sx={pillarStyle('#ff9800')} />}
@@ -134,6 +136,7 @@ class App extends GenericApp<any, AppState> {
                         {showEnergy   && this.state.selectedTab === 'energy'    && (
                             <EnergyTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} devices={native.devices || []} native={native} />
                         )}
+                        {showHealth   && this.state.selectedTab === 'sleep'     && <HealthTab   socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} variant="sleepQuick" />}
                         {showHealth   && this.state.selectedTab === 'health'    && <HealthTab   socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} />}
                         {this.state.selectedTab === 'medical' && (
                             <MedicalTab socket={this.socket} adapterName={this.adapterName} instance={this.instance} theme={this.state.theme} themeType={themeType} native={native} onChange={(attr: string, val: any) => this.updateNativeValue(attr, val)} />
