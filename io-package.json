@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.33.225",
+        "version": "0.33.226",
         "news": {
+            "0.33.226": {
+                "en": "PWA sleep tile: bed absence overlays + legacy wake overlays; tap bar for tooltip",
+                "de": "PWA Schlafkachel: Weg-vom-Bett-Overlay + Legacy-Wachzonen; Tipp auf Balken zeigt Tooltip"
+            },
             "0": {
                 "version": "0.33.212",
                 "date": "2026-04-08",

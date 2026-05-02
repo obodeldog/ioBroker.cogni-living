@@ -1,5 +1,368 @@
 # PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 28.04.2026 | **Version:** 0.33.210
+**Letzte Aktualisierung:** 02.05.2026 | **Version:** 0.33.226
+
+---
+
+## 📍 Sitzung 02.05.2026 — Version 0.33.226 — PWA: Weg-vom-Bett-Overlay + Tipp-Tooltip am Balken
+
+### ✅ Abgeschlossen
+- **bedAbsenceEvents:** `pwa_sleep_tile_build` liefert `bedAbsenceOverlays` (left/width %, `confidence`, `title` wie Admin inkl. Konfidenz, Quellen, Evidence); `hasBedAbsenceEngine` für Legende.
+- **Legacy smWakePhases:** nur wenn keine Bed-Absence-Engine aktiv (`smWakeOverlays`, gelb halbtransparent wie HealthTab).
+- **PWA-Client:** Overlays absolut über dem Flex-Balken (z-index 2), transparenter **Hit-Layer** (z-index 4) — `pointerup` → `pickTip` (Reihenfolge Absence → smWake → Segmente) → **fixed Tooltip** (`~4,5s` Auto-Hide).
+- Version **0.33.226**; `npm run build:backend:prod`, `node --check main.js`.
+
+### 🎯 Nächster logischer Schritt
+- Deploy/Adapter-Update; auf dem Handy Tipp am Balken testen (kein natives `title` auf Touch — absichtlich Tooltip-Schicht).
+
+---
+
+## 📍 Sitzung 02.05.2026 — Version 0.33.225 — PWA: Dreiecke + Zeitachse wie Admin
+
+### ✅ Abgeschlossen
+- **Warum vorher nicht:** erste PWA-Version sparte bewusst **Marker-Logik** (Außerhalb/FP2) und **Stunden-Ticks** – weniger Portieraufwand.
+- **Jetzt:** `pwa_sleep_tile_build` berechnet dieselben **markerItems** (Bad oben, Außerhalb unten, Radar-Aussetzer), **preSleepMarkers** (Nacht-Besuch vor Einschlaf) und **timeAxis** (linkes Label `bedEntryTs`/`swStart`, rechter Rand `swEnd`, Stunden dazwischen mit 45-Min / 30-Min Abstandsklemmen wie im React-Code).
+- `pwa_sleep_tile_client` rendert **Reihenfolge wie HealthTab:** Markerzeile oben → Balken → Markerzeile unten → **Zeitachse** → farbige Legende → Garmin-Zeile.
+- **Git:** `b05fed9` auf `main`.
+
+### 🎯 Nächster logischer Schritt
+- Optional: `bedAbsenceEvents`-Overlay (grau schraffiert) im PWA-Balken nachziehen.
+
+---
+
+## 📍 Sitzung 02.05.2026 — Version 0.33.224 — PWA Schlaf-Kachel ≈ Admin (Phasen-Balken)
+
+### ✅ Abgeschlossen
+- **Ziel:** NUUKANNI zeigt dieselbe **inhaltliche** Schlaf-Kachel wie der Admin (HealthTab): Kopfzeile (Bett/Einschlaf · AURA-Score · Aufstehen), Schlafdauer, Garmin inkl. Delta, Kalibrierungszeile, **Phasen-Balken** (5-Min-Slots, Vor-Schlaf gelb, pre/post grau bzw. Wachliegen), Legende Tief/Leicht/REM/Wach, Smartwatch-Referenz, Disclaimer.
+- **Backend:** `pwa_sleep_tile_build.js` portiert die Kernlogik aus `renderSleepScoreCard` (read-only, keine Override-Buttons). `pwa_sleep_data.js` nutzt `localDateStr()` statt `toISOString()` für den History-Dateinamen (Zeitzonen-Fix).
+- **Frontend PWA:** `pwa_sleep_tile_client.js` wird in `pwa_server` eingebettet; `renderSleepCard` ruft `renderSleepTileFromPayload`.
+- Version **0.33.224**; **Git:** Commit `222bbc7` auf `origin/main`.
+
+### 🔧 Offene Baustellen
+- Keine UI für Quellen-Overrides / Dreiecks-Marker / Batterie-Hinweise wie im Admin (nur Anzeige).
+- Mehrpersonenhaushalt: PWA nutzt weiter die **eine** Tages-History-Datei (wie bisher).
+
+### 🎯 Nächster logischer Schritt
+- ioBroker-Update auf 0.33.224; PWA mit Admin visuell vergleichen.
+
+---
+
+## 📍 Sitzung 02.05.2026 — Version 0.33.223 — PWA Schlaf-Kachel; Admin-Tab „Schlaf“ zurückgenommen
+
+### ✅ Abgeschlossen
+- Admin-Registerkarte **Schlaf** entfernt (kein eigener Tab mehr in der Adapter-Web-UI) — Schlafanalyse bleibt im Tab **Gesundheit**.
+- NUUKANNI-PWA: `GET /api/status?token=…` ergänzt JSON-Feld **`sleepCard`** (heutige `cogni-living/history/{YYYY-MM-DD}.json` via `src/lib/pwa_sleep_data.js`). **`pwa_http_shim`** hängt in `http.createServer` und patcht die Antwort; in `src/main.js` → `_startFamilyApp`: `install()` + `setAdapter(this)` vor `pwaServer.start`.
+- PWA-HTML/JS in `src/lib/pwa_server.js`: Karte `#sleepAuraCard` oberhalb der KI-Zusammenfassung, Funktion `renderSleepCard` (AURA-Score, Schlaffenster, Dauer, optional Garmin).
+- `npm run build:backend:prod` + `npm run build:react`; Version **0.33.223** (`package.json`, `io-package.json`).
+- **Git push:** Commit `5292583` auf `origin/main` (02.05.2026).
+
+### 🔧 Offene Baustellen
+- Optional: `sleepCard` um Phasen/„Ins Bett“-Zeiten erweitern, wenn dieselben Daten wie im HealthTab in der History liegen.
+
+### 🎯 Nächster logischer Schritt
+- Familien-PWA im Browser testen (Port 8095): Kachel ohne Wechsel zur Admin-URL.
+
+---
+
+## 📍 Sitzung 02.05.2026 (abend) — Version 0.33.222 — Tab „Schlaf“ (Web-UI) — durch v0.33.223 ersetzt/überholt
+
+### ✅ Abgeschlossen
+- Neue Registerkarte **Schlaf** in `src-admin/src/app.tsx` (nur wenn Modul Gesundheit aktiv): direkt nach **Dashboard**, violette Akzentlinie, Icon Bettzeit (`BedtimeIcon`).
+- `HealthTab` unterstützt `variant="sleepQuick"`: kompakte Ansicht mit Verlauf-Zeile (`getSleepNarrative`), optional Gateway-Ausfall-Banner, dieselbe Schlafanalyse-Kachel-Logik wie in Gesundheit (Ein- und Mehrpersonen).
+- Kein Langzeit-Trends-Block, kein AURA-Monitor — weniger Scrollen auf dem Smartphone.
+- Version 0.33.222 (`package.json`, `io-package.json`); `npm run build:react` ausgeführt.
+
+### 🔧 Offene Baustellen
+- Direktlink mit festem Tab (z. B. `?tab=sleep`) bei Bedarf nachziehen.
+
+### 🎯 Nächster logischer Schritt
+- Auf dem Handy testen: Tab Schlaf antippen — Daten/Quellen wie unter Gesundheit?
+
+---
+
+## 📍 Sitzung 02.05.2026 — Versionen 0.33.218–0.33.221 — OC-42b + OC-43 Bugfixes
+
+### ✅ Abgeschlossen
+
+**v0.33.218 – OC-42b Frontend-Verbesserungen (HealthTab.tsx):**
+- Label "Einschlafen" → "Ins Bett gegangen" wenn `bedEntryTs` deutlich vor `swStart` liegt; sekundär "Eingeschlafen: HH:MM"
+- Label "Aufwachen" → "Aufstehen" (primär `bedExitTs ?? swEnd`); sekundär "Aufgewacht: HH:MM" wenn Garmin + bedExitTs vorhanden
+- "vorläufig" als prominentes oranges Badge (statt schwachem Text)
+- `_barRightTs` als visuelles rechtes Balkenende (= bedExitTs ?? swEnd)
+
+**v0.33.219 – Hotfix Temporal Dead Zone:**
+- `_barRightTs` wurde als `const` nach erstem Verwendungsort deklariert → ReferenceError im Minified-Bundle
+- Fix: `_barRightTs`-Deklaration nach vorne verschoben (vor den `renderedStages`-Filter)
+
+**v0.33.220 – Hotfix bedEntryTs Namenskollision:**
+- JSX nutzte `bedEntryTs` (useState-Variable, immer null) statt Snapshot-Variable `_bedEntryRaw`
+- Fix: alle JSX-Referenzen auf `_bedEntryRaw` umgestellt
+
+**v0.33.221 – OC-43 Backend: Stages-Neuberechnung bei verspaetetem Wake-Timestamp:**
+- Problem: Snapshot war eingefroren (`_sleepFrozen`), aber Garmin/FP2/vibration_alone lieferte einen SPÄTEREN Wake-Timestamp als den bisherigen Stage-Berechnungsstand → Stages deckten nur bis 08:00, obwohl Garmin 08:26 meldete
+- Ursache: Freeze-Block übernahm alte Stages komplett, OC-43-Check fehlte
+- Fix: Neues Snapshot-Feld `stagesWindowEnd` als Vergleichsreferenz. Nach allen Wake-Overrides: wenn `sleepWindowOC7.end > _existingStagesEnd + 5 Min` → `_shouldRecalcStages = true`
+- Quellenagnostisch: greift für Garmin, FP2, vibration_alone, manuellen Override
+- Rückwärtskompatibel: Fallback auf `sleepWindowEnd` bei alten Snapshots ohne `stagesWindowEnd`
+- `computePersonSleep` gibt ebenfalls `stagesWindowEnd` zurück (für Mehrpersonenhaushalt)
+- `stagesWindowStart`-Condition im Snapshot angepasst: bei OC-43-Trigger (frozen + recalc) wird auch `stagesWindowStart` neu gesetzt
+
+### 🔧 Offene Baustellen
+- HealthTab.tsx-Änderungen (OC-42b, v0.33.218–220) noch nicht committed — Frontend ist lokal korrekt, muss noch separat committed werden
+- OC-43 Wirkung morgen früh testen: Stages sollten bis garminWakeTs (z.B. 08:26) reichen und Wachliegen korrekt ab dann zeigen
+
+### 🎯 Nächster logischer Schritt
+- Morgen früh Kachel-Screenshot prüfen: Post-Stage ab 08:26 (gelb), kein grauer Gap 08:00–08:26 mehr
+
+---
+
+## 📍 Sitzung 01.05.2026 (nachmittags) — Version 0.33.217 — OC-42: Wake-Detection Bugfixes + bedExitTs
+
+### ✅ Abgeschlossen
+
+**Analyse:** Einpersonenhaushalt-Nacht mit 4 Fragen untersucht:
+- Warum fehlt orangenes Dreieck (04:10-04:16 Toilettengang)?
+- Warum zeigte Kachel 04:11 als Aufwachzeit statt ~08:59?
+- Warum erschien richtige Smartwatch-Zeit erst nach "System prüfen"?
+- Warum lieferte Radar keine Aufwachzeit-Quellen?
+
+**Diagnose:** motion_vib-Algorithmus nahm ERSTES Schlafzimmer-BM-Event nach 04:00 (also den Toilettengang um 04:11) als Aufwachzeit. Das setzte sleepWindowEnd auf 04:11, was alle Folgefragen erklärt (SM sah keine Events mehr, FP2 prüfte nicht mehr).
+
+**Backend-Fixes (src/main.js):**
+- `motion_vib`: Jetzt LETZTES qualifizierendes Event (rückwärts iteriert):
+  - Vibration in 30 Min davor (Person lag im Bett)
+  - Keine Schlafvib 45 Min danach (kein Wiedereinschlafen) — deckt Toilettengang UND PC-Arbeit-nachts ab
+  - Nicht in nachtAufstehen-Fenster (expliziter Zusatzschutz)
+- SM-Fenster (`_wakeCapMs`): Immer bis `wakeHardCap` (12:00), nicht bis `wakeTs` — SM sieht echte Events
+- SM-Nocturia-Tagging: Phasen in nachtAufstehen-Fenstern → `type:'nocturia'` statt `type:'wake'`
+- `bedExitTs` neu: physisches Aufstehen nach garminWakeTs. Quellen: FP2 > vibration_alone > SM
+- Stages-Fenster bis `bedExitTs` verlängert (Wachliegen nach Garmin sichtbar), Score-Dauer auf Original-Fenster
+
+**Frontend-Fixes (HealthTab.tsx):**
+- Label "Aufwachen" → "Aufstehen" (primäre Zeit = `bedExitTs ?? swEnd`)
+- Sekundär-Label "Aufgewacht: HH:MM" erscheint wenn `bedExitTs > swEnd` (zeigt garminWakeTs)
+- "vorläufig" jetzt als prominentes orange Badge mit Rahmen statt schwachem Text
+- "bestätigt" bleibt dezent (kleiner Text)
+- Tooltip-Texte und Quellen-Panel angepasst ("Aufstehzeit-Quelle wählen")
+- `bedExitTs` in beide `setAuraSleepData` Calls aufgenommen
+
+**BRAINSTORMING:** OC-44 (SM mit Gedächtnis: Wake-Prior 7-Tage, Nocturia-Muster, MAE-Ranking) dokumentiert, nicht implementiert.
+
+### 🔧 Offene Baustellen
+- Nach nächster Nacht: "[OC-42] bedExitTs" im Log prüfen — erscheint es und ist der Zeitpunkt korrekt?
+- Beobachten ob "Aufstehen vs. Aufgewacht" semantisch für Nutzer klar ist
+- OC-44 (Wake-Prior mit History) bei Bedarf umsetzen
+
+### 🎯 Nächster logischer Schritt
+- Morgen früh: Kachel-Screenshot + Log-Auszug vergleichen mit heutiger Analyse
+
+---
+
+## 📍 Sitzung 01.05.2026 — Version 0.33.216 — Status-Workflow auf Kurzstatus umgestellt
+
+### ✅ Abgeschlossen
+- Neue Datei `_internal/PROJEKT_KURZSTATUS.md` angelegt (kompakter operativer Kontext fuer neue Sessions).
+- Regel angepasst: Sitzungsstart jetzt mit Kurzstatus statt vollem Langzeitprotokoll.
+- `PROJEKT_STATUS.md` bleibt append-only Langzeitarchiv fuer Historie und forensische Rueckverfolgung.
+
+### 🔧 Offene Baustellen
+- Kurzstatus nach naechsten Live-Tests (OC-39/39b) inhaltlich aktualisieren.
+- Darauf achten, dass beide Dateien nach relevanten Sessions gepflegt werden (Kurzstatus kompakt, Status append-only).
+
+### 🎯 Nächster logischer Schritt
+- Beim naechsten echten Code-/Testzyklus den Kurzstatus als einzige Pflicht-Lesebasis nutzen und nur bei Detailbedarf ins Langzeitarchiv wechseln.
+
+---
+
+## 📍 Sitzung 30.04.2026 — Version 0.33.216 — OC-39b bedEntryTs Abend-Save-Valve
+
+### ✅ Abgeschlossen — Gelber Wachliegen-Balken verschwindet mittags
+
+**Symptom (Einpersonenhaushalt mit FP2 + Garmin):** Morgens war der gelbe "Wachliegen"-Balken vor der Einschlafzeit sichtbar (z.B. 22:48 → 23:09). Mittags war er verschwunden, Balken begann direkt bei Garmin-Einschlafzeit 23:09.
+
+**Root Cause:**
+- `bedEntryTs` = FP2-Live-State (Zeitpunkt Bett-Betreten). Morgens korrekt: ~22:48 (gestern Abend)
+- User betritt Schlafzimmer um 19:38 heute → FP2 aktualisiert Live-State → `bedEntryTs = 19:38`
+- Abend-Save: `_gR.bedEntryTs = 19:38` (Abend-Event) → Cluster-Algorithmus: 19:38 liegt nicht in 90-Min-Fenster vor Garmin-23:09 → `_bedEntryTsFinal = _gR.bedEntryTs = 19:38` → überschreibt korrekten Morgen-Wert im JSON
+- OC-36 Safety-Valve schützte nur `_baLowerTs` (bedAbsenceEvents), NICHT `bedEntryTs` selbst
+- Frontend: `bedEntryTs (19:38) > sleepWindowStart (23:09)` → OC-36 greift → kein gelber Vor-Schlaf-Balken mehr
+
+**Fix — OC-39b (src/main.js, Z. ~3582):**
+- `bedEntryTs`-Berechnung ersetzt durch IIFE mit Valve-Logik
+- Wenn `_bet > sleepWindowOC7.start` (= heutiger Abend-Event, liegt nach Einschlafzeit) → verwerfen
+- Fallback: `existingSnap.bedEntryTs` falls dieser `< sleepWindowOC7.start` (valide Morgen-Bettzeit)
+- Debug-Log: `[OC-39b] bedEntryTs-Valve: HH:MM nach sleepStart -> existingSnap HH:MM`
+- Sensor-agnostisch, gleiche Logik wie OC-39 für personData
+
+### 🎯 Nächster logischer Schritt
+- Morgen früh prüfen: `[OC-39b] bedEntryTs-Valve` im Log wenn jemand abends Schlafzimmer betritt
+- Gelber Wachliegen-Balken sollte dauerhaft stabil bleiben (nicht mittags verschwinden)
+
+---
+
+## 📍 Sitzung 30.04.2026 — Version 0.33.215 — OC-39 personData Abend-Save-Freeze
+
+### ✅ Abgeschlossen — "Bett war leer" abends bei Mehrpersonenhaushalt behoben
+
+**Symptom:** Schlafanalyse-Kachel von Ingrid und Robert (Gondelsheim, kein Garmin) zeigt abends und bei allen vergangenen Tagen "Bett war leer", obwohl die Personen tatsächlich geschlafen haben. Außerdem erscheint ein falsches "Garmin-Referenz: 19:22 – 07:10" Label.
+
+**Root Cause (forensisch via JSON-Analyse ermittelt):**
+1. `saveDailyHistory` läuft abends ab 18:00 mit `_sleepSearchBase = heute 18:00`
+2. Der Freeze-Mechanismus prüft ob "neue Bett-Events seit 18:00 vorhanden" → `isBedroomMotion` feuert wenn Person abends ins Schlafzimmer geht (19:22/19:23 Uhr) → Freeze wird deaktiviert
+3. `computePersonSleep` läuft mit dem Abend-Zeitfenster, findet heutige Abend-Events als Einschlaf-Kandidaten
+4. `personData[person].sleepWindowStart = heute 19:22` (FALSCH), `sleepWindowEnd = heute 07:10` (korrekt) → invertiertes Fenster → `bedWasEmpty: true`
+5. Top-Level-JSON hat eine eigene Inversion-Korrektur (Z. 2341), `personData` hatte diese NICHT
+6. Das Frontend zeigte `swStart` und `swEnd` immer als "Garmin-Referenz" unabhängig ob Garmin vorhanden
+
+**Architektonische Analyse:** Das Problem ist sensor-agnostisch — jede Konfiguration mit Schlafzimmer-Sensor (PIR, KNX, FP2, Radar) triggert das gleiche Verhalten. Die fundamentale Lösung muss sensor-unabhängig sein.
+
+**Fix — OC-39 Backend (src/main.js, Z. ~2906):**
+- In der `personData`-IIFE, **vor** `computePersonSleep` pro Person: wenn `sleepDate === dateStr` (= Abend-Save)...
+- ...und `_existingSnap.personData[person]` enthält valide Morgendaten: `bedWasEmpty===false` + `sleepWindowEnd > sleepWindowStart` + `sleepWindowEnd.Stunde < 14`
+- → `result[person] = _existingSnap.personData[person]` (Freeze) + `return` (forEach-Skip)
+- Sensor-agnostisch: funktioniert für PIR, KNX, FP2, Vibration, Garmin, jede Kombination
+- Debug-Log: `[OC-39] {Person}: personData eingefroren (Abend-Save, Aufwachzeit HH:MM)`
+
+**Fix — Frontend A (HealthTab.tsx, Z. ~1677):**
+- Garmin-Referenz-Label (`⌚ Garmin-Referenz: HH:MM – HH:MM`) im `bedWasEmpty`-Block
+- Bedingung: `(swStart && swEnd)` → `(swStart && swEnd && garminScore !== null)`
+- Nur noch angezeigt wenn echte Garmin-Daten vorhanden sind
+
+**Fix — Frontend B (HealthTab.tsx, Z. ~1661):**
+- Neuer erster Branch: `bedWasEmpty && swStart != null && swEnd != null && swStart > swEnd`
+- Zeigt `🌙 Gute Nacht — Nacht noch nicht begonnen` statt `🏠 Bett war leer`
+- Safety-Net falls OC-39 in einem Edge-Case (kein existingSnap) nicht greift
+
+### 🎯 Nächster logischer Schritt
+- Gondelsheim Update einspielen (Adapter-Neustart in ioBroker)
+- Morgen früh prüfen: `[OC-39] Ingrid/Robert: personData eingefroren` im Log sehen
+- Abends prüfen: Schlafkacheln zeigen korrekte gestrige Nacht statt "Bett war leer"
+
+---
+
+## 📍 Sitzung 29.04.2026 — Version 0.33.214 — OC-38 Per-Person Einschlafquellen Safety-Valve
+
+### ✅ Abgeschlossen — Einschlafzeit-Fallback für Mehrpersonenhaushalt ohne Garmin
+
+**Analysiert:** Gondelsheim-Haushalt (Ingrid + Robert, kein Garmin) zeigte morgens „–" und „Schätzwert (Fallback)" für Einschlafzeit Ingrid.
+
+**Ursache (forensisch aus JSON-Dateien ermittelt):**
+- Schlafanalyse für Nacht 28.→29.4. wird in `dateStr.json` (= `2026-04-29.json`) gespeichert
+- `sleepDate` = `2026-04-28` (Suchbasis 18:00 Vortag) — andere Datei als `dateStr`
+- Nach Adapter-Neustart fehlen die Vorabend-Events (21:24 Ingrid, 22:03 Robert) im Live-Buffer
+- Buffer-Supplement lädt aus `sleepDate.json` (`2026-04-28.json`) — aber nur wenn `_bufMin > searchBase` (Bedingung kann scheitern wenn Buffer aus altem Save-State restauriert wurde)
+- Resultat: `computePersonSleep` für Ingrid findet keine `vib_refined`/`motion`-Events → alle Quellen null → Fallback `haus_still` → Kachel zeigt „–" und „Schätzwert"
+- Roberts `sleepStartSource=motion` (18:40 Uhr) = zufällig heutiger Abend-Event, auch falsch
+
+**Fix — OC-38 Safety-Valve** (`src/main.js`, Z. ~2926):
+- Nach `computePersonSleep` pro Person: wenn alle echten Quellen null →
+- Lade `sleepDate.json` (= Vortags-Datei, z.B. `2026-04-28.json`) direkt
+- Prüfe ob `personData[person].allSleepStartSources` valide Quellen im korrekten Zeitfenster enthält
+- Zeitfenster-Validierung: `ts >= sleepSearchBase` UND `ts <= sleepSearchBase + 18h`
+- Wenn ja: übernehme `allSleepStartSources`, `sleepStartSource`, `sleepWindowStart`
+- Greift nur morgens (`sleepDate !== dateStr`), nicht bei Abend-Saves (dort Freeze-Mechanismus)
+- Try-catch: kein Fehler wenn Datei fehlt oder leer
+
+**Warum funktioniert bei Garmin-Haushalt (eigener):**
+- Garmin-Cloud-API liefert Einschlafzeit unabhängig vom lokalen Sensor-Buffer
+- Safety-Valve wird nie benötigt (echte Quelle vorhanden)
+
+### 🎯 Nächster logischer Schritt
+- Nächste Nacht in Gondelsheim testen: Ingrid sollte `vib_refined` als Quelle zeigen
+- In ioBroker-Log prüfen ob `[OC-38] Ingrid: Einschlaf-Quellen aus 2026-xx-xx.json wiederhergestellt` erscheint
+
+---
+
+## 📍 Sitzung 29.04.2026 — Version 0.33.213 — Adapter-Gesundheitscheck
+
+### ✅ Abgeschlossen — Infrastruktur-Monitoring zweistufig
+
+**Ausgangslage:** Zigbee-Coordinator gestern Abend ausgefallen. System-Tab zeigte trotzdem „Alle 70 Sensoren erreichbar" (grün), weil der Einzel-Sensor-Check erst nach 7 Tagen „offline" meldet. Ursache war auch ein hängender PIR-Küche-Sensor (stuck true), der die Raum-Nutzung verfälschte.
+
+- **[Feature] `checkAdapterHealth()` in `src/main.js`**:
+  - Leitet aus allen konfigurierten State-IDs automatisch die Adapter-Präfixe ab (`zigbee.0`, `hm-rpc.0`, …).
+  - Löst `alias.*`-Pfade auf den nativen Adapter auf.
+  - Überspringt kabelgebundene Adapter (KNX, Loxone, BACnet) und virtuelle Namespaces (`javascript`, `admin`, …).
+  - Prüft zwei Ebenen: (1) Instanz deaktiviert? via `system.adapter.<prefix>`, (2) `info.connection`-State des Adapters — bekannte Familien: zigbee, hm-rpc, hm-rega, yahka, deconz, sonoff, mqtt, zwave2, shelly, tuya, wled, homekit-controller.
+  - Schreibt Ergebnis in neuen ioBroker-State **`system.adapterStatus`** (JSON: `{timestamp, adapters[], offlineCount}`).
+  - Push-Alarm bei Ausfall (24h-Cooldown pro Adapter, Nachtschutz 22–08 Uhr).
+  - Läuft **stündlich** + **5 Min. nach Adapter-Start** (gleicher Rhythmus wie `checkSensorHealth`).
+
+- **[Feature] System-Tab — Adapter-Banner** (`SystemTab.tsx`):
+  - Oberhalb der bestehenden „Sensor-Gesundheit"-Karte ein **neues Banner** das `system.adapterStatus` liest.
+  - **Grün**: „✅ Alle N Adapter verbunden" — kein weiterer Text, unauffällig.
+  - **Rot**: „🔴 N Adapter nicht verbunden" mit Liste je ausgefallener Adapter + Detail (z. B. „nicht verbunden") und Hinweis „Alle Sensoren dieser Adapter liefern solange keine neuen Werte".
+  - Beide Sektionen (Adapter + Sensor) bleiben parallel — Adapter zeigt das **große Bild**, Sensoren zeigen die **Einzel-Geräte** nach langem Ausfall.
+
+- **[Doku] HANDBUCH.md** — laientauglicher Eintrag im FAQ-Bereich:
+  - Erklärt warum Sensoren grün sein können obwohl der Adapter tot ist (7-Tage-Schwelle).
+  - Beschreibt den neuen roten Banner und die Push-Nachricht.
+
+### 🔧 Bekannte Einschränkung
+- Adapter ohne bekannten `info.connection`-State werden nur auf „Instanz deaktiviert" geprüft, nicht auf Verbindungsqualität.
+- Für neue Adapter-Familien: `CONN_STATE`-Mapping in `checkAdapterHealth()` erweitern (nur 1 Zeile).
+
+### 🎯 Nächster logischer Schritt
+- Adapter in ioBroker updaten (Adapter-Neustart), 5 Min. warten → System-Tab prüfen ob Zigbee/HM korrekt erkannt werden.
+- Stuck-true-Problem PIR EG Küche: manuell Wert auf `false` setzen (ioBroker Objekte → direkter Klick).
+- Optional: Sensor-Einzel-Schwellen von 7 Tagen auf 24–48h anpassen (separates Ticket).
+
+---
+
+## 📍 Sitzung 28.04.2026 — Version 0.33.212 — OC-36 bedEntryTs Safety-Valve
+
+### ✅ Abgeschlossen — kritischer Datenfehler behoben
+
+- **[Bug] bedEntryTs zeigt heutigen Abend statt gestrige Nacht** (`src/main.js`):
+  - **Ursache**: `bedEntryTs` ist ein Live-Wert (aktualisiert wenn FP2 Bett belegt erkennt). Beim Adapter-Neustart nach v0.33.211-Installation war Marc bereits wieder im Schlafzimmer (18:38 Uhr) → `bedEntryTs = 18:38`. `saveDailyHistory` lief erneut und speicherte diesen falschen Wert ins JSON der gestrigen Nacht.
+  - **Folge**: `_baLowerTs = 18:38` → alle Schlaf-Events (00:00–06:29) lagen VOR der Untergrenze → `bedAbsenceEvents = []`, kein gelber Balken, keine Schraffur
+  - **Fix**: Safety-valve: `_baLowerTs = bedEntryTs NUR wenn bedEntryTs < sleepStart`, sonst `sleepStart`
+  - **Code**: `(bedEntryTs && bedEntryTs > 0 && bedEntryTs < sleepStart) ? bedEntryTs : sleepStart`
+  - **Effekt**: Falsch-aktualisiertes bedEntryTs (z.B. heutiger Abend) wird ignoriert; Schlaf-Events werden korrekt einbezogen
+
+### 🎯 Nächster logischer Schritt
+- Nächste Nacht testen: bedAbsenceEvents sollte jetzt korrekt gefüllt sein
+- `smWakePhases = []` ist ein bekanntes Problem: SM schließt offene Phase nicht wenn kein Schlafzimmer-PIR beim Zurückgehen feuert → FP2 ist primäre Quelle, SM ist Fallback
+
+---
+
+## 📍 Sitzung 28.04.2026 — Version 0.33.211 — OC-36 bedAbsenceEvents weitere 5 Bugfixes
+
+### ✅ Abgeschlossen — bedAbsenceEvents-Overlay korrekt + Quellen-Filterung verfeinert
+
+Nach zweiter Live-Nacht (28.04.2026) und Screenshot-Analyse wurden 5 weitere Bugs behoben:
+
+- **[Fix A] Frontend: Overlay semi-transparent → opak** (`HealthTab.tsx`):
+  - **Ursache**: `opacity: 0.45–0.85` ließ Schlafphase-Farben durch → optische Überlagerung
+  - **Fix**: `opacity: 1`, Konfidenz-Unterschied nur noch über Streifendichte (high=4px, medium=6px, low=9px)
+  - **Effekt**: Grau ersetzt die Schlafphase komplett — kein Farbmix mehr (entspricht BRAINSTORMING.md Z.185)
+
+- **[Fix B] Backend: FP2 braucht ≥20 Min sustained-true** (`src/main.js`):
+  - **Ursache**: Kurze Abend-Besuche im Schlafzimmer (FP2 true für 3 Min) öffneten bereits ein Abwesenheits-Intervall
+  - **Fix**: `_fp2LastTrueTs` tracking; FP2-false-Übergang öffnet Intervall nur wenn FP2 vorher ≥20 Min ununterbrochen true war
+  - **Effekt**: Abend-Besuche (19:00, 20:07) erzeugen keine falschen bedAbsenceEvents mehr
+
+- **[Fix C] Backend: SM-Untergrenze zurück auf sleepStart** (`src/main.js`):
+  - **Ursache**: v0.33.210 hatte SM auf `bedEntryTs` umgestellt → SM verarbeitete Events ab 19:00 Uhr
+  - **Fix**: `_smLowerTs = sleepStart` (wie vor v0.33.210)
+  - **Effekt**: SM arbeitet nur innerhalb des echten Schlaffensters
+
+- **[Fix D] Backend: Hop-Filter auf ALLE obe-Typen** (`src/main.js`):
+  - **Ursache**: Hop-Filter griff nur bei `type='bathroom'`, aber OG-Bad liefert auch `type='outside'`-Events
+  - **Fix**: `if (!_isNearBedroom(_baO.sensors, 2))` ohne type-Check
+  - **Effekt**: OG-Bad (Kinderbad, 3+ Hops) wird komplett aus bedAbsenceEvents gefiltert
+
+- **[Fix E] Backend: Mindest-5-Min-Filter** (`src/main.js`):
+  - **Fix**: `if ((_m.end - _m.start) < 5 * 60000) continue;` vor Konfidenz-Scoring
+  - **Effekt**: Kurze Aufstehphasen (<5 Min) erzeugen keine Schraffur-Segmente
+
+### 🔧 Architektur-Klarstellung (Ergebnis Debugging-Session)
+- **Widerspruch Hop-Filter erklärt**: Äußere `outsideBedEvents` (Dreiecke) und innere `obe`-Quellen in `_buildBedAbsenceEvents` hatten unterschiedliche Filter → jetzt angeglichen
+- **Semi-transparent war Implementierungsfehler**: BRAINSTORMING.md Z.185 "kein Overlay mehr" war nie eingehalten worden — jetzt opak
+- **SM läuft NICHT ab 19:00**: War ein Regressfehler aus v0.33.210; SM bleibt bei sleepStart
+
+### 🎯 Nächster logischer Schritt
+- Nächste Nacht testen: kein Grau außerhalb Schlaf-Fenster, kein Grau für OG-Bad, Segment opak ohne Farbmix
+- Plausibilitäts-Ranking Einschlaf-/Aufwachzeit-Quellen (lang geplantes Feature)
 
 ---
 
@@ -5125,6 +5488,10 @@ Neuer Python-Befehl: `ANALYZE_DISEASE_SCORES` in service.py dispatch-table.
 
 | Version | Datum | HauptÃ¤nderung |
 |---|---|---|
+| **0.33.226** | 02.05.2026 | **feat**: PWA — **bedAbsence** schraffiert + Legacy smWake; **Tipp-Tooltip** auf Balken (floating, Priorität Absence→Legacy→Phase) |
+| **0.33.225** | 02.05.2026 | **feat**: PWA — Dreiecks-Marker (Bad/Außerhalb/Radar) + preSleep; **Zeitachse** unter Balken (Admin-Logik, Sensoren in Tooltips) |
+| **0.33.224** | 02.05.2026 | **feat**: PWA Schlaf-Kachel an Admin angeglichen — `pwa_sleep_tile_build` + eingebetteter Client-Renderer, Phasen-Balken, lokales History-Datum |
+| **0.33.223** | 02.05.2026 | **change**: Admin-Tab Schlaf entfernt; **feat**: NUUKANNI-PWA Schlaf-Kachel (`sleepCard` in `/api/status`, `renderSleepCard` in `pwa_server.js`, Shim + `pwa_sleep_data`) |
 | **0.33.199** | 23.04.2026 | **feat**: 🛏-Label über Schlafbalken (kein Overlap mit 00:00); nachtAufstehenEvents als ▼-Dreiecke im Wachliegen-Segment (orange=Bad, rot=anderer Raum) |
 | **0.33.198** | 23.04.2026 | **fix**: bedEntryTs Cluster-basiert (kein Frühsignal-Bug); Noisy-Sensor-Fenster dynamisch (haus_still+60min); bedPresenceMinutes sleepWindow-Proxy (kein FP2); PERSONEN-NACHT-ANALYSE entfernt |
 | **0.33.79** | 26.03.2026 | **fix(OC-7)**: PIR-only Schlafanalyse: Hard Cap 12:00, Sustained-Return-Filter, Consistency Guard, "Haus-wird-still"-Einschlafzeit |

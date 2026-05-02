@@ -179,9 +179,8 @@ function renderSleepTileFromPayload(body, pl) {
     }
 
     if (pl.segments && pl.segments.length) {
-      html += '<div style="position:relative;width:100%">';
-      html +=
-        '<div style="display:flex;width:100%;height:28px;border-radius:4px;overflow:hidden;margin:4px 0">';
+      html += '<div style="position:relative;width:100%;margin:4px 0">';
+      html += '<div style="display:flex;width:100%;height:28px;border-radius:4px;overflow:hidden">';
       for (var si = 0; si < pl.segments.length; si++) {
         var seg = pl.segments[si];
         var w = Math.min(100, Math.max(0, seg.wPct));
@@ -203,6 +202,58 @@ function renderSleepTileFromPayload(body, pl) {
           '"></div>';
       }
       html += '</div>';
+
+      var bao = pl.bedAbsenceOverlays || [];
+      for (var ox = 0; ox < bao.length; ox++) {
+        var ba = bao[ox];
+        var gapB = ba.confidence === 'high' ? 4 : ba.confidence === 'medium' ? 6 : 9;
+        var swB = ba.confidence === 'high' ? 3 : ba.confidence === 'medium' ? 3 : 2;
+        var stCol = 'rgba(255,255,255,0.28)';
+        var stripeB =
+          'repeating-linear-gradient(135deg, transparent 0px, transparent ' +
+          gapB +
+          'px, ' +
+          stCol +
+          ' ' +
+          gapB +
+          'px, ' +
+          stCol +
+          ' ' +
+          (gapB + swB) +
+          'px)';
+        var brd =
+          ba.confidence === 'low'
+            ? '1px dashed rgba(136,136,136,0.9)'
+            : '1px solid rgba(100,100,100,0.5)';
+        html +=
+          '<div style="position:absolute;top:0;left:' +
+          ba.leftPct +
+          '%;width:' +
+          ba.widthPct +
+          '%;height:28px;background-color:#6e6e6e;background-image:' +
+          stripeB +
+          ';opacity:1;pointer-events:none;z-index:2;box-sizing:border-box;border-left:' +
+          brd +
+          ';border-right:' +
+          brd +
+          '" title="' +
+          esc(ba.title) +
+          '"></div>';
+      }
+      var swo = pl.smWakeOverlays || [];
+      for (var wx = 0; wx < swo.length; wx++) {
+        var sw = swo[wx];
+        html +=
+          '<div style="position:absolute;top:0;left:' +
+          sw.leftPct +
+          '%;width:' +
+          sw.widthPct +
+          '%;height:28px;background-color:#ffd54f;opacity:0.82;pointer-events:none;z-index:2" title="' +
+          esc(sw.title) +
+          '"></div>';
+      }
+      html +=
+        '<div class="pwa-sleep-bar-hit" style="position:absolute;top:0;left:0;width:100%;height:28px;z-index:4;cursor:pointer;touch-action:manipulation;background:transparent" aria-hidden="true"></div>';
 
       if (hasBelow) {
         html += '<div style="position:relative;height:18px;margin-top:2px;margin-bottom:2px">';
@@ -269,6 +320,10 @@ function renderSleepTileFromPayload(body, pl) {
       html += '<span><span style="color:#42a5f5">\u25cf</span> Leicht ' + esc(L.lightMin) + ' min</span>';
       html += '<span><span style="color:#ab47bc">\u25cf</span> REM ' + esc(L.remMin) + ' min</span>';
       html += '<span><span style="color:#ffd54f">\u25cf</span> Wach ' + esc(L.wakeMin) + ' min</span>';
+      if (pl.hasBedAbsenceEngine) {
+        html +=
+          '<span title="Konsens aus State Machine, Pattern-Match und Bad-Sensor (OC-36)"><span style="display:inline-block;width:10px;height:10px;background-color:#6e6e6e;background-image:repeating-linear-gradient(135deg, transparent 0px, transparent 2px, rgba(255,255,255,0.28) 2px, rgba(255,255,255,0.28) 4px);vertical-align:middle;margin-right:3px"></span> Weg vom Bett</span>';
+      }
       html += '</div>';
     }
   }
@@ -288,4 +343,84 @@ function renderSleepTileFromPayload(body, pl) {
       '<div style="font-size:0.65rem;color:var(--muted);margin-top:10px;line-height:1.4">Gesch\u00e4tzte Schlafstadien (Vibrationssensor) \u00b7 Kein Medizinprodukt</div>';
   }
   body.innerHTML = html;
+  attachPwaSleepBarPointerTip(body, pl);
+}
+
+function attachPwaSleepBarPointerTip(body, pl) {
+  if (!body || pl.view !== 'full' || !pl.segments || !pl.segments.length) return;
+  var hit = body.querySelector('.pwa-sleep-bar-hit');
+  if (!hit) return;
+
+  var olds = document.querySelectorAll('.pwa-sleep-bar-tooltip-el');
+  for (var oi = 0; oi < olds.length; oi++) olds[oi].remove();
+
+  var tip = document.createElement('div');
+  tip.className = 'pwa-sleep-bar-tooltip-el';
+  tip.setAttribute('role', 'tooltip');
+  tip.style.cssText =
+    'position:fixed;z-index:99999;max-width:min(92vw,340px);padding:9px 11px;background:var(--card,#1e1e1e);color:var(--text,#eee);border:1px solid var(--border,#444);border-radius:8px;font-size:0.74rem;line-height:1.35;box-shadow:0 6px 20px rgba(0,0,0,0.35);pointer-events:none;opacity:0;visibility:hidden;white-space:pre-wrap;word-break:break-word';
+  document.body.appendChild(tip);
+
+  var hideTimer = null;
+  function hideTip() {
+    tip.style.opacity = '0';
+    tip.style.visibility = 'hidden';
+  }
+  function showTip(text, clientX, clientY) {
+    if (!text) return;
+    tip.textContent = text;
+    tip.style.visibility = 'visible';
+    tip.style.opacity = '1';
+    requestAnimationFrame(function () {
+      var tw = tip.offsetWidth;
+      var th = tip.offsetHeight;
+      var lx = clientX - tw / 2;
+      lx = Math.max(6, Math.min(lx, window.innerWidth - tw - 6));
+      var ly = clientY - th - 12;
+      if (ly < 6) ly = clientY + 24;
+      tip.style.left = lx + 'px';
+      tip.style.top = ly + 'px';
+    });
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(hideTip, 4500);
+  }
+
+  function pickTip(pct) {
+    var absList = pl.bedAbsenceOverlays || [];
+    var i;
+    for (i = 0; i < absList.length; i++) {
+      var a = absList[i];
+      if (pct >= a.leftPct && pct < a.leftPct + a.widthPct) return a.title;
+    }
+    var swList = pl.smWakeOverlays || [];
+    for (i = 0; i < swList.length; i++) {
+      var s = swList[i];
+      if (pct >= s.leftPct && pct < s.leftPct + s.widthPct) return s.title;
+    }
+    var cum = 0;
+    for (i = 0; i < pl.segments.length; i++) {
+      var seg = pl.segments[i];
+      var w = Math.min(100, Math.max(0, seg.wPct));
+      var hi = i === pl.segments.length - 1 ? 100.001 : cum + w;
+      if (pct >= cum && pct < hi) return seg.tip || '';
+      cum += w;
+    }
+    return '';
+  }
+
+  hit.addEventListener(
+    'pointerup',
+    function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      var rect = hit.getBoundingClientRect();
+      if (rect.width <= 0) return;
+      var pct = ((e.clientX - rect.left) / rect.width) * 100;
+      var txt = pickTip(pct);
+      if (txt) {
+        e.preventDefault();
+        showTip(txt, e.clientX, e.clientY);
+      }
+    },
+    { passive: false }
+  );
 }
