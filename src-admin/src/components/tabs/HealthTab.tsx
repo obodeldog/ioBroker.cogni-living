@@ -105,7 +105,7 @@ const TerminalBox = ({ title, children, themeType, height = 'auto', helpText, st
 };
 
 export default function HealthTab(props: any) {
-    const { socket, adapterName, instance, themeType, variant = 'full' } = props;
+    const { socket, adapterName, instance, themeType } = props;
     const namespace = `${adapterName}.${instance}`;
     const isDark = themeType === 'dark';
 
@@ -2670,93 +2670,6 @@ export default function HealthTab(props: any) {
 
     return (
         <Box sx={{ p: 3, bgcolor: isDark ? '#000' : '#f5f5f5', color: isDark ? '#eee' : '#222', minHeight: '100vh', fontFamily: "'Roboto Mono', 'Courier New', monospace" }}>
-            {variant === 'sleepQuick' ? (
-                <Box sx={{ maxWidth: '80ch', margin: '0 auto', px: 1 }}>
-                    <div style={{
-                        backgroundColor: isDark ? '#1a1a1a' : '#ffffff',
-                        border: `1px solid ${isDark ? '#444' : '#bbb'}`,
-                        borderRadius: '4px',
-                        padding: '10px 12px',
-                        marginBottom: '16px',
-                        fontSize: '0.8rem',
-                        color: isDark ? '#ccc' : '#333'
-                    }}>
-                        {getSleepNarrative()}
-                    </div>
-                    {gatewayOutage && gatewayOutage.length > 0 && (
-                        <div style={{
-                            background: isDark ? '#3a1a00' : '#fff3e0',
-                            border: '2px solid #ff9800',
-                            borderRadius: '8px',
-                            padding: '12px 16px',
-                            marginBottom: '8px',
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: '10px'
-                        }}>
-                            <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>🔌</span>
-                            <div>
-                                <div style={{ fontWeight: 'bold', color: '#ff9800', fontSize: '0.85rem', marginBottom: '4px' }}>
-                                    Gateway-Ausfall erkannt — Schlafanalyse evtl. unvollständig
-                                </div>
-                                {gatewayOutage.map((g, i) => (
-                                    <div key={i} style={{ fontSize: '0.75rem', color: isDark ? '#ffcc80' : '#e65100', marginTop: i > 0 ? '3px' : 0 }}>
-                                        <b>{g.gateway}</b>: {g.count} Sensoren gleichzeitig offline
-                                        {g.sensors && g.sensors.length > 0 && (
-                                            <span style={{ color: isDark ? '#aaa' : '#888' }}> ({g.sensors.slice(0, 3).join(', ')}{g.sensors.length > 3 ? '…' : ''})</span>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    {(() => {
-                        const personsWithSleep = Object.entries(personHistoryData)
-                            .filter(([, pd]: [string, any]) => pd && (pd.sleepWindowEnd != null || pd.sleepWindowStart != null))
-                            .map(([name]) => name)
-                            .sort();
-                        if (personsWithSleep.length >= 2) {
-                            return (
-                                <>
-                                    {personsWithSleep.map(pName => {
-                                        const pd = personHistoryData[pName];
-                                        const overrideData = {
-                                            sleepScore: pd.sleepScore ?? null,
-                                            sleepScoreRaw: pd.sleepScoreRaw ?? null,
-                                            sleepScoreCal: pd.sleepScoreCal ?? null,
-                                            sleepScoreCalNights: pd.sleepScoreCalNights ?? 0,
-                                            sleepScoreCalStatus: pd.sleepScoreCalStatus || 'uncalibrated',
-                                            sleepStages: pd.sleepStages ?? [],
-                                            garminScore: null, garminDeepMin: null, garminLightMin: null, garminRemMin: null,
-                                            sleepWindowStart: pd.sleepWindowStart ?? null,
-                                            stagesWindowStart: pd.stagesWindowStart ?? pd.sleepWindowStart ?? null,
-                                            sleepWindowEnd: pd.sleepWindowEnd ?? null,
-                                            sleepWindowSource: pd.sleepStartSource || 'motion',
-                                            wakeSource: pd.wakeSource ?? null,
-                                            wakeConf: pd.wakeConf ?? 'niedrig',
-                                            isNap: false, unusuallyLongSleep: false,
-                                            garminDataFresh: null, garminLastSyncAgeH: null,
-                                            outsideBedEvents: pd.outsideBedEvents ?? [],
-                                            wakeConfirmed: pd.wakeConfirmed ?? false,
-                                            allWakeSources: pd.allWakeSources ?? [],
-                                            sleepStartSource: pd.sleepStartSource ?? 'motion',
-                                            allSleepStartSources: pd.allSleepStartSources ?? [],
-                                            sleepDate: auraSleepData?.sleepDate ?? null,
-                                            sleepStartOverridden: pd.sleepStartOverridden ?? false,
-                                            sleepStartOverrideSource: pd.sleepStartOverridden ? pd.sleepStartSource : null,
-                                            wakeOverridden: pd.wakeOverridden ?? false,
-                                            bedWasEmpty: pd.bedWasEmpty ?? false,
-                                        };
-                                        return <React.Fragment key={pName}>{renderSleepScoreCard(overrideData, pName)}</React.Fragment>;
-                                    })}
-                                </>
-                            );
-                        }
-                        return renderSleepScoreCard();
-                    })()}
-                </Box>
-            ) : (
-            <>
             {/* ======= NEUER BEREICH: LANGZEIT-TRENDS (GARMIN-STYLE) ======= */}
             <LongtermTrendsView
                 socket={socket}
@@ -3827,8 +3740,6 @@ export default function HealthTab(props: any) {
                 </DialogContent>
                 <DialogActions><Button onClick={()=>setOpenDeepDive(false)}>Schließen</Button></DialogActions>
             </Dialog>
-            </>
-            )}
         </Box>
     );
 }
