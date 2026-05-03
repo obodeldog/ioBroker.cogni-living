@@ -1,12 +1,8 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.33.226",
+        "version": "0.33.227",
         "news": {
-            "0.33.226": {
-                "en": "PWA sleep tile: bed absence overlays + legacy wake overlays; tap bar for tooltip",
-                "de": "PWA Schlafkachel: Weg-vom-Bett-Overlay + Legacy-Wachzonen; Tipp auf Balken zeigt Tooltip"
-            },
             "0": {
                 "version": "0.33.212",
                 "date": "2026-04-08",
@@ -21,6 +17,10 @@
                     "[Fix OC-7] Multi-Person-Motion-Only: sleepWindowEnd aus per-Person-Wakezeiten ableiten (Balken + Dreiecke fuer Haushalte ohne FP2/Garmin)",
                     "[Fix OC-7] Invertiertes sleepWindowStart korrigieren wenn Abendberechnung heutigen Start schreibt"
                 ]
+            },
+            "0.33.226": {
+                "en": "PWA sleep tile: bed absence overlays + legacy wake overlays; tap bar for tooltip",
+                "de": "PWA Schlafkachel: Weg-vom-Bett-Overlay + Legacy-Wachzonen; Tipp auf Balken zeigt Tooltip"
             },
             "0.33.115": {
                 "en": "Vibration chart: removed Aura variant, renamed to VIBRATIONSVERLAUF, LIVE indicator green, trigger markers (cyan), fixed misleading legend + explanatory hint text, detailed hover tooltip with session context",

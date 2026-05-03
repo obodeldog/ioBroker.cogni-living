@@ -1319,7 +1319,9 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                     {(hasBedData || hasPersonBedData) && (() => {
                                         // Render-Helfer: Baut Bett-Präsenz-Chart fuer eine Person oder Aggregat
                                         const renderBedPresence = (person?: string) => {
-                                            const raw = person != null
+                                            // '_household' = Aggregat im Mehrpersonenhaushalt (kein personTag am Sensor)
+                                            const isHousehold = person === '_household';
+                                            const raw = (person != null && !isHousehold)
                                                 ? buildPersonSeriesData('bedPresenceMinutes' as any, 'bedPresenceMinutes', person)
                                                 : makeRawMiniData('bedPresenceMinutes');
                                             if (!raw.some((d: any) => d.value != null)) return null;
@@ -1330,7 +1332,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                             }));
                                             const avgH = data.filter((d: any) => d.hours != null).map((d: any) => d.hours as number);
                                             const meanH = avgH.length > 0 ? Math.round(avgH.reduce((a: number, b: number) => a + b, 0) / avgH.length * 10) / 10 : 0;
-                                            const lbl = person ? ` · ${person}` : '';
+                                            const lbl = isHousehold ? ' · Haushalt' : (person ? ` · ${person}` : '');
                                             return (
                                                 <Grid item xs={12} md={6} lg={4} key={'bed-' + (person || 'agg')}>
                                                     <Paper sx={{ p: 2, bgcolor: isDark ? '#0a0a0a' : '#ffffff', height: '100%' }}>
@@ -1376,9 +1378,12 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                 </Grid>
                                             );
                                         };
-                                        // Einpersonenhaushalt / keine personenspezifischen FP2-Daten: Aggregat
-                                        // Mehrpersonenhaushalt mit personenspezifischen Daten: pro Person
-                                        const bedPersons: Array<string | undefined> = (isMultiPerson && hasPersonBedData) ? personNames : [undefined];
+                                        // Einpersonenhaushalt: keine Bezeichnung (nur eine Person)
+                                        // Mehrpersonenhaushalt + personenspezifische FP2-Daten: pro Person
+                                        // Mehrpersonenhaushalt + kein personTag am Sensor: Aggregat mit Label "Haushalt"
+                                        const bedPersons: Array<string | undefined> = isMultiPerson
+                                            ? (hasPersonBedData ? personNames : ['_household'])
+                                            : [undefined];
                                         return <>{bedPersons.map(p => renderBedPresence(p))}</>;
                                     })()}
 
@@ -1727,6 +1732,9 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                 date: d.date ? d.date.substring(5) : '',
                                                 sleepStart: toMinsFrom18(d.sleepWindowStart),
                                                 wakeTime: toMinsFrom18(d.sleepWindowEnd),
+                                                sleepDurationH: (d.sleepWindowStart && d.sleepWindowEnd)
+                                                    ? Math.round((d.sleepWindowEnd - d.sleepWindowStart) / 360000) / 10
+                                                    : null,
                                             }));
                                         const yMin = 1080;
                                         const yMax = 2040;
@@ -1749,6 +1757,9 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                                 date: d.date ? d.date.substring(5) : '',
                                                                 sleepStart: toMinsFrom18(d.personData?.[person]?.sleepWindowStart),
                                                                 wakeTime:   toMinsFrom18(d.personData?.[person]?.sleepWindowEnd),
+                                                                sleepDurationH: (d.personData?.[person]?.sleepWindowStart && d.personData?.[person]?.sleepWindowEnd)
+                                                                    ? Math.round((d.personData[person].sleepWindowEnd - d.personData[person].sleepWindowStart) / 360000) / 10
+                                                                    : null,
                                                             }));
                                                         return (
                                                             <Grid item xs={12} md={6} lg={4} key={'sleeptime-' + person}>
@@ -1757,7 +1768,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                                         <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#5c6bc0' }}>
                                                                             SCHLAFZEIT · {person}
                                                                         </Typography>
-                                                                        <ChartHelp text={"Zeigt Einschlaf- und Aufwachzeit dieser Person pro Nacht (aus Personenanalyse). Konsistente Schlafzeiten fördern Gesundheit."} />
+                                                                        <ChartHelp text={"Zeigt Einschlaf- und Aufwachzeit dieser Person pro Nacht (aus Personenanalyse). Konsistente Schlafzeiten fördern Gesundheit. Balken = Schlafdauer (rechte Achse, Stunden)."} />
                                                                     </Box>
                                                                     <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
                                                                         Einschlaf- & Aufwachzeit (Personenanalyse)
@@ -1765,26 +1776,34 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                                     {pData.length >= 1 ? (
                                                                         <>
                                                                             <ResponsiveContainer width="100%" height={150}>
-                                                                                <LineChart data={pData} margin={{ top: 5, right: 5, left: 10, bottom: 5 }}>
+                                                                                <ComposedChart data={pData} margin={{ top: 5, right: 28, left: 10, bottom: 5 }}>
                                                                                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                                                                                     <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
                                                                                         interval={Math.floor(pData.length / 6)} />
-                                                                                    <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                                    <YAxis yAxisId="left" stroke={lineColor} style={{ fontSize: '0.6rem' }}
                                                                                         domain={[yMin, yMax]} ticks={ticks}
                                                                                         tickFormatter={(v: number) => fmtMins(v)} />
+                                                                                    <YAxis yAxisId="right" orientation="right" stroke="#888" style={{ fontSize: '0.6rem' }}
+                                                                                        domain={[0, 12]} tickCount={5}
+                                                                                        tickFormatter={(v: number) => `${v}h`} />
                                                                                     <Tooltip
-                                                                                        formatter={(v: any, name: string) => [fmtMins(v), name === 'sleepStart' ? 'Einschlafen' : 'Aufwachen']}
+                                                                                        formatter={(v: any, name: string) => {
+                                                                                            if (name === 'sleepDurationH') return [`${v}h`, 'Schlafdauer'];
+                                                                                            return [fmtMins(v as number), name === 'sleepStart' ? 'Einschlafen' : 'Aufwachen'];
+                                                                                        }}
                                                                                         contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}` }}
                                                                                     />
-                                                                                    <Line type="monotone" dataKey="sleepStart" stroke="#5c6bc0" strokeWidth={2}
+                                                                                    <Bar yAxisId="right" dataKey="sleepDurationH" fill="#5c6bc0" opacity={0.18} name="sleepDurationH" />
+                                                                                    <Line yAxisId="left" type="monotone" dataKey="sleepStart" stroke="#5c6bc0" strokeWidth={2}
                                                                                         dot={{ r: 3, fill: '#5c6bc0' }} name="sleepStart" connectNulls />
-                                                                                    <Line type="monotone" dataKey="wakeTime" stroke="#80cbc4" strokeWidth={2}
+                                                                                    <Line yAxisId="left" type="monotone" dataKey="wakeTime" stroke="#80cbc4" strokeWidth={2}
                                                                                         dot={{ r: 3, fill: '#80cbc4' }} name="wakeTime" connectNulls />
-                                                                                </LineChart>
+                                                                                </ComposedChart>
                                                                             </ResponsiveContainer>
                                                                             <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1.5 }}>
                                                                                 <span style={{color:'#5c6bc0'}}>■ Einschlafen</span>
                                                                                 <span style={{color:'#80cbc4'}}>■ Aufwachen</span>
+                                                                                <span style={{color:'#5c6bc0', opacity: 0.5}}>▬ Dauer (h)</span>
                                                                             </Box>
                                                                         </>
                                                                     ) : (
@@ -1810,7 +1829,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                         <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#5c6bc0' }}>
                                                             SCHLAFZEIT
                                                         </Typography>
-                                                        <ChartHelp text={"Zeigt Einschlaf- und Aufwachzeit pro Nacht (FP2-Bett). Konsistente Schlafzeiten fördern Gesundheit. Verschobene Zeiten können auf Depression, Demenz oder Schlafstörungen hinweisen."} />
+                                                        <ChartHelp text={"Zeigt Einschlaf- und Aufwachzeit pro Nacht (FP2-Bett). Konsistente Schlafzeiten fördern Gesundheit. Balken = Schlafdauer (rechte Achse, Stunden). Verschobene Zeiten können auf Depression, Demenz oder Schlafstörungen hinweisen."} />
                                                     </Box>
                                                     <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
                                                         Einschlaf- & Aufwachzeit · FP2-Bett
@@ -1818,29 +1837,34 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                     {data.length >= 1 ? (
                                                         <>
                                                             <ResponsiveContainer width="100%" height={150}>
-                                                                <LineChart data={data} margin={{ top: 5, right: 5, left: 10, bottom: 5 }}>
+                                                                <ComposedChart data={data} margin={{ top: 5, right: 28, left: 10, bottom: 5 }}>
                                                                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                                                                     <XAxis dataKey="date" stroke={lineColor} style={{ fontSize: '0.6rem' }}
                                                                         interval={Math.floor(data.length / 6)} />
-                                                                    <YAxis stroke={lineColor} style={{ fontSize: '0.6rem' }}
+                                                                    <YAxis yAxisId="left" stroke={lineColor} style={{ fontSize: '0.6rem' }}
                                                                         domain={[yMin, yMax]} ticks={ticks}
                                                                         tickFormatter={(v: number) => fmtMins(v)} />
+                                                                    <YAxis yAxisId="right" orientation="right" stroke="#888" style={{ fontSize: '0.6rem' }}
+                                                                        domain={[0, 12]} tickCount={5}
+                                                                        tickFormatter={(v: number) => `${v}h`} />
                                                                     <Tooltip
-                                                                        formatter={(v: any, name: string) => [
-                                                                            fmtMins(v),
-                                                                            name === 'sleepStart' ? 'Einschlafen' : 'Aufwachen'
-                                                                        ]}
+                                                                        formatter={(v: any, name: string) => {
+                                                                            if (name === 'sleepDurationH') return [`${v}h`, 'Schlafdauer'];
+                                                                            return [fmtMins(v as number), name === 'sleepStart' ? 'Einschlafen' : 'Aufwachen'];
+                                                                        }}
                                                                         contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}` }}
                                                                     />
-                                                                    <Line type="monotone" dataKey="sleepStart" stroke="#5c6bc0" strokeWidth={2}
+                                                                    <Bar yAxisId="right" dataKey="sleepDurationH" fill="#5c6bc0" opacity={0.18} name="sleepDurationH" />
+                                                                    <Line yAxisId="left" type="monotone" dataKey="sleepStart" stroke="#5c6bc0" strokeWidth={2}
                                                                         dot={{ r: 3, fill: '#5c6bc0' }} name="sleepStart" connectNulls />
-                                                                    <Line type="monotone" dataKey="wakeTime" stroke="#80cbc4" strokeWidth={2}
+                                                                    <Line yAxisId="left" type="monotone" dataKey="wakeTime" stroke="#80cbc4" strokeWidth={2}
                                                                         dot={{ r: 3, fill: '#80cbc4' }} name="wakeTime" connectNulls />
-                                                                </LineChart>
+                                                                </ComposedChart>
                                                             </ResponsiveContainer>
                                                             <Box sx={{ fontSize: '0.58rem', color: 'text.secondary', mt: 0.5, display: 'flex', gap: 1.5 }}>
                                                                 <span style={{color:'#5c6bc0'}}>■ Einschlafen</span>
                                                                 <span style={{color:'#80cbc4'}}>■ Aufwachen</span>
+                                                                <span style={{color:'#5c6bc0', opacity: 0.5}}>▬ Dauer (h)</span>
                                                             </Box>
                                                         </>
                                                     ) : (
