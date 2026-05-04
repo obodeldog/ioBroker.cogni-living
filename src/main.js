@@ -2653,6 +2653,8 @@ class CogniLiving extends utils.Adapter {
                     ' (Quelle: ' + (wakeSource || '?') + ')');
             }
             if (_shouldRecalcStages && sleepWindowOC7.start && sleepWindowOC7.end) {
+                // [BUG-FIX] Stages immer neu aufbauen — nie auf bestehende appenden (OC-43 Neuberechnung erzeugte Duplikate).
+                sleepStages = [];
                 var SLOT_MS = 5 * 60 * 1000;
                 var swStart = sleepWindowOC7.start;
                 var swEnd   = sleepWindowOC7.end;

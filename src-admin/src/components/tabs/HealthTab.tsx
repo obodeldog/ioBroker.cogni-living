@@ -1191,7 +1191,14 @@ export default function HealthTab(props: any) {
         const scoreCal: number | null = (sd as any)?.sleepScoreCal ?? null;
         const scoreCalNights: number = (sd as any)?.sleepScoreCalNights ?? 0;
         const scoreCalStatus: string = (sd as any)?.sleepScoreCalStatus ?? 'uncalibrated';
-        const stages: {t: number, s: string}[] = sd?.sleepStages ?? [];
+        // [BUG-FIX] sleepStages kann Duplikate enthalten (Backend append statt replace bei OC-43 Neuberechnung).
+        // Pro t-Wert nur den letzten Eintrag behalten (letzter Block = vollständigste Berechnung).
+        const _stagesRaw: {t: number, s: string}[] = sd?.sleepStages ?? [];
+        const _stagesByT = new Map<number, string>();
+        _stagesRaw.forEach(s => _stagesByT.set(s.t, s.s));
+        const stages: {t: number, s: string}[] = Array.from(_stagesByT.entries())
+            .map(([t, s]) => ({ t, s }))
+            .sort((a, b) => a.t - b.t);
         const garminScore: number | null = sd?.garminScore ?? null;
         const garminDeepMin: number | null = sd?.garminDeepMin ?? null;
         const garminLightMin: number | null = sd?.garminLightMin ?? null;
@@ -2298,6 +2305,26 @@ export default function HealthTab(props: any) {
                                     );
                                 })()}
                             </div>
+                            {/* [OC-42b] Wachliegen-Overlay: swEnd → bedExitTs als gelbes Band (position:absolute über dem Balken).
+                                Greift wenn bedExitTs > swEnd — unabhängig von Slot-Enden, daher robust gegen 14-Sek-Overshoot. */}
+                            {swStart && swEnd && bedExitTs && bedExitTs > swEnd && newBarTotalMs && (() => {
+                                const _barBase = bedEntryTsVal ?? swStart;
+                                const _left = Math.max(0, Math.min(99, ((swEnd - _barBase) / newBarTotalMs) * 100));
+                                const _width = Math.max(0.5, Math.min(100 - _left, ((bedExitTs - swEnd) / newBarTotalMs) * 100));
+                                return (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0, bottom: 0,
+                                        left: _left + '%',
+                                        width: _width + '%',
+                                        backgroundColor: stageColor.wake,
+                                        opacity: 0.82,
+                                        borderLeft: '2px dashed ' + (isDark ? '#b8a000' : '#e0c000'),
+                                        pointerEvents: 'none',
+                                        zIndex: 2,
+                                    }} title={'Wachliegen: ' + fmtTime(swEnd) + '–' + fmtTime(bedExitTs) + ' (' + Math.round((bedExitTs - swEnd) / 60000) + ' min)'} />
+                                );
+                            })()}
                             {/* OC-36 Phase 4: bedAbsenceEvents = hellgrau schraffiertes Segment 'weg vom Bett' (Vorrang, OPAK — ersetzt Schlafphase) */}
                             {swStart && swEnd && newBarTotalMs && _hasBedAbsenceEngine && _bedAbsenceEvts.map((ev, i) => {
                                 const _barBase = bedEntryTsVal ?? swStart;
