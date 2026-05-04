@@ -2596,7 +2596,8 @@ class CogniLiving extends utils.Adapter {
             // [OC-42] bedExitTs: physisches Aufstehen (kann nach garminWakeTs liegen)
             // Quellen (Prio): FP2-Radar > vibration_alone > SM-Wake-Phase (max. 45 Min Puffer)
             var bedExitTs = null; var _bedExitSrc = null;
-            if (garminWakeTs && sleepWindowOC7.end === garminWakeTs) {
+            // NOTE: sleepWindowOC7.end===garminWakeTs war fragil nach Obfuskierung -> vereinfacht.
+            if (garminWakeTs) {
                 var _beMax = garminWakeTs + 45 * 60 * 1000;
                 // Quelle 1: FP2/Radar firstEmpty nach garminWakeTs
                 if (_fp2RawWakeTs && _fp2RawWakeTs > garminWakeTs && _fp2RawWakeTs <= _beMax) {
