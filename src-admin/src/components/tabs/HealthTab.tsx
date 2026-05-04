@@ -2415,20 +2415,23 @@ export default function HealthTab(props: any) {
                                     {/* Achse-Start: bedEntryTsVal wenn Wachliegen vorhanden, sonst swStart */}
                                     <span style={{position:'absolute', left:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa'}}>{fmtTime(bedEntryTsVal ?? swStart)}</span>
                                     {(() => {
-                                        // Basis für Stunden-Ticks: gesamter Balken (inkl. Pre-Sleep-Segment)
+                                        // Basis für Stunden-Ticks: gesamter Balken (inkl. Pre-Sleep-Segment und Wachliegen nach swEnd)
                                         const barBase = bedEntryTsVal ?? swStart;
-                                        const barTotal = newBarTotalMs ?? (swEnd - swStart);
+                                        // [OC-42b] barRight: rechte Kante des Balkens — bedExitTs wenn vorhanden, sonst swEnd
+                                        const barRight = (bedExitTs && bedExitTs > swEnd) ? bedExitTs : swEnd;
+                                        const barTotal = newBarTotalMs ?? (barRight - barBase);
                                         const marks: React.ReactNode[] = [];
                                         const first = new Date(barBase);
                                         first.setMinutes(0, 0, 0);
                                         first.setHours(first.getHours() + 1);
                                         let t = first.getTime();
-                                        while (t < swEnd - 900000) {
+                                        // [OC-42b] Stunden-Ticks bis barRight (nicht nur bis swEnd)
+                                        while (t < barRight - 900000) {
                                             const pct = ((t - barBase) / barTotal) * 100;
-                                            // Zeitbasierter Guard: Tick überspringen wenn < 45 Min vom linken Rand
-                                            // oder < 30 Min vom rechten Rand (vermeidet Überlappung mit Rand-Labels)
                                             const tooCloseLeft  = (t - barBase) < 45 * 60 * 1000;
-                                            const tooCloseRight = (swEnd - t)   < 30 * 60 * 1000;
+                                            // Wenn bedExitTs vorhanden: Abstand zum swEnd-Label prüfen (nicht zum barRight-Label)
+                                            const rightGuard = (bedExitTs && bedExitTs > swEnd) ? swEnd : barRight;
+                                            const tooCloseRight = (rightGuard - t) < 30 * 60 * 1000;
                                             if (!tooCloseLeft && !tooCloseRight && pct > 0 && pct < 100) {
                                                 marks.push(
                                                     <span key={t} style={{position:'absolute', left: pct + '%', fontSize:'0.55rem', color: isDark?'#555':'#bbb', transform:'translateX(-50%)'}}>
@@ -2438,9 +2441,21 @@ export default function HealthTab(props: any) {
                                             }
                                             t += 3600000;
                                         }
+                                        // [OC-42b] swEnd-Label: wenn bedExitTs > swEnd, bei korrekter Balkenposition platzieren
+                                        if (bedExitTs && bedExitTs > swEnd && barTotal > 0) {
+                                            const swEndPct = ((swEnd - barBase) / barTotal) * 100;
+                                            marks.push(
+                                                <span key='swEnd' style={{position:'absolute', left: swEndPct + '%', fontSize:'0.55rem', color: isDark?'#666':'#aaa', transform:'translateX(-50%)'}}>
+                                                    {fmtTime(swEnd)}
+                                                </span>
+                                            );
+                                        }
                                         return marks;
                                     })()}
-                                    <span style={{position:'absolute', right:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa'}}>{fmtTime(swEnd)}</span>
+                                    {/* Rechtes End-Label: bedExitTs wenn vorhanden (= physisches Aufstehen), sonst swEnd */}
+                                    <span style={{position:'absolute', right:0, fontSize:'0.55rem', color: isDark?'#666':'#aaa'}}>
+                                        {(bedExitTs && bedExitTs > swEnd) ? fmtTime(bedExitTs) : fmtTime(swEnd)}
+                                    </span>
                                 </div>
                             )}
                         </div>
