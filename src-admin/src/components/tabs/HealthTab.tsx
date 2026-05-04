@@ -1541,6 +1541,8 @@ export default function HealthTab(props: any) {
                 const evt = confirmedEvts.find(e => absMs >= e.start && absMs < e.end);
                 if (evt && evt.type !== 'other_person') return stageColor[evt.type] ?? stageColor.outside;
             }
+            // [OC-42b] Stages nach swEnd (Aufgewacht-Zeit) → immer als Wachliegen (gelb) färben
+            if (absMs && swEnd && bedExitTs && bedExitTs > swEnd && absMs >= swEnd) return stageColor.wake;
             return stageColor[slot.s] ?? '#555';
         };
         const slotTip = (slot: {t:number,s:string}, absMs: number|null) => {
@@ -2318,8 +2320,8 @@ export default function HealthTab(props: any) {
                                         left: _left + '%',
                                         width: _width + '%',
                                         backgroundColor: stageColor.wake,
-                                        opacity: 0.82,
-                                        borderLeft: '2px dashed ' + (isDark ? '#b8a000' : '#e0c000'),
+                                        opacity: 1,
+                                        borderLeft: '2px solid ' + (isDark ? '#b8a000' : '#c8a800'),
                                         pointerEvents: 'none',
                                         zIndex: 2,
                                     }} title={'Wachliegen: ' + fmtTime(swEnd) + '–' + fmtTime(bedExitTs) + ' (' + Math.round((bedExitTs - swEnd) / 60000) + ' min)'} />
@@ -2441,8 +2443,9 @@ export default function HealthTab(props: any) {
                                             }
                                             t += 3600000;
                                         }
-                                        // [OC-42b] swEnd-Label: wenn bedExitTs > swEnd, bei korrekter Balkenposition platzieren
-                                        if (bedExitTs && bedExitTs > swEnd && barTotal > 0) {
+                                        // [OC-42b] swEnd-Label: nur anzeigen wenn genug Abstand zu bedExitTs (mind. 45 Min)
+                                        // Bei kleinem Abstand (z.B. 24 Min) würden sich die Labels überlappen → weglassen
+                                        if (bedExitTs && bedExitTs > swEnd && barTotal > 0 && (bedExitTs - swEnd) >= 45 * 60 * 1000) {
                                             const swEndPct = ((swEnd - barBase) / barTotal) * 100;
                                             marks.push(
                                                 <span key='swEnd' style={{position:'absolute', left: swEndPct + '%', fontSize:'0.55rem', color: isDark?'#666':'#aaa', transform:'translateX(-50%)'}}>
