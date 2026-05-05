@@ -1538,7 +1538,9 @@ export default function HealthTab(props: any) {
         // Helper: Farbe für Stage-Slot (mit Außerhalb-Overlay; Radar-Aussetzer = kein Overlay)
         const slotColor = (slot: {t:number,s:string}, absMs: number|null) => {
             if (absMs && confirmedEvts.length > 0) {
-                const evt = confirmedEvts.find(e => absMs >= e.start && absMs < e.end);
+                // [OC-42] Overlap-Check: Slot (5 Min) überlappt mit Event → auch kurze Events (< 5 Min) färben
+                const SLOT_MS = 5 * 60 * 1000;
+                const evt = confirmedEvts.find(e => e.start < absMs + SLOT_MS && e.end > absMs);
                 if (evt && evt.type !== 'other_person') return stageColor[evt.type] ?? stageColor.outside;
             }
             // [OC-42b] Stages nach swEnd (Aufgewacht-Zeit) → immer als Wachliegen (gelb) färben
@@ -1548,7 +1550,8 @@ export default function HealthTab(props: any) {
         const slotTip = (slot: {t:number,s:string}, absMs: number|null) => {
             const timeStr = absMs ? fmtTime(absMs) + ' — ' : '';
             if (absMs && clippedOutsideBedEvts.length > 0) {
-                const evt = clippedOutsideBedEvts.find(e => absMs >= e.start && absMs < e.end);
+                const _slotMs5 = 5 * 60 * 1000;
+                const evt = clippedOutsideBedEvts.find(e => e.start < absMs + _slotMs5 && e.end > absMs);
                 if (evt) {
                     const label = evt.confirmed === false ? 'Radar-Aussetzer' : (stageLabel[evt.type] ?? 'Abwesenheit');
                     return timeStr + label + ' (' + evt.duration + ' min)';
@@ -2333,8 +2336,23 @@ export default function HealthTab(props: any) {
                                 const _left = Math.max(0, Math.min(100, ((ev.start - _barBase) / newBarTotalMs!) * 100));
                                 const _width = Math.max(0.5, Math.min(100 - _left, ((ev.end - ev.start) / newBarTotalMs!) * 100));
                                 const _confLabel = ev.confidence === 'high' ? 'hoch' : ev.confidence === 'medium' ? 'mittel' : 'niedrig';
-                                // Opak (opacity=1) damit Schlafphase darunter komplett verdeckt wird (kein Farbüberlagerungseffekt).
-                                // Konfidenz-Unterscheidung nur über Streifendichte: high=dicht, medium=mittel, low=weitständig+gestrichelt.
+                                // [OC-42] Bad-Priorisierung: wenn outsideBedEvent type='bathroom' überlappt → orange statt gestreift
+                                const _overlapBad = confirmedEvts.find(e => e.type === 'bathroom' && e.start < ev.end && e.end > ev.start);
+                                if (_overlapBad) {
+                                    const _title = '🚴 Bad-Besuch (FP2 + Bad-Sensor bestätigt): ' + fmtTime(ev.start) + ' - ' + fmtTime(ev.end) + ' (' + ev.durationMin + ' Min)';
+                                    return (
+                                        <div key={'ba'+i} style={{
+                                            position: 'absolute', top: 0,
+                                            left: _left + '%', width: _width + '%', height: '28px',
+                                            backgroundColor: stageColor.bathroom,
+                                            opacity: 1, pointerEvents: 'auto', zIndex: 2, cursor: 'help',
+                                            borderLeft: '1px solid rgba(0,0,0,0.2)',
+                                            borderRight: '1px solid rgba(0,0,0,0.2)'
+                                        }} title={_title} />
+                                    );
+                                }
+                                // Standard: gestreift (Ort unbekannt oder außerhalb)
+                                // Konfidenz-Unterscheidung über Streifendichte: high=dicht, medium=mittel, low=weitständig+gestrichelt.
                                 const _bgColor = isDark ? '#4a4a4a' : '#d4d4d4';
                                 const _stripeColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.22)';
                                 const _stripeGap = ev.confidence === 'high' ? 4 : ev.confidence === 'medium' ? 6 : 9;
@@ -3589,6 +3607,8 @@ export default function HealthTab(props: any) {
                                         sleepStartOverrideSource: pd.sleepStartOverridden ? pd.sleepStartSource : null,
                                         wakeOverridden:         pd.wakeOverridden         ?? false,
                                         bedWasEmpty:            pd.bedWasEmpty            ?? false,
+                                        bedEntryTs:             (pd as any).bedEntryTs    ?? null,
+                                        bedExitTs:              (pd as any).bedExitTs     ?? null,
                                     };
                                     return <React.Fragment key={pName}>{renderSleepScoreCard(overrideData, pName)}</React.Fragment>;
                                 })}

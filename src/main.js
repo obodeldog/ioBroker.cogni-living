@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 'use strict';
 
 /*
@@ -30,7 +30,7 @@ const cloudflareTunnel = require('./lib/cloudflare_tunnel');
 // --- CONSTANTS ---
 const GEMINI_MODEL = 'models/gemini-flash-latest';
 // =============================================================================
-// computePersonSleep â€” Einheitlicher Schlafanalyse-Algorithmus
+// computePersonSleep — Einheitlicher Schlafanalyse-Algorithmus
 // Wird sowohl fuer den globalen Haushalt als auch fuer Einzelpersonen verwendet.
 // Single-Source-of-Truth: Keine doppelte Implementierung.
 // Parameter (p): allEvents, personTag, fp2RawStart, garminTs, garminWakeTs, fp2WakeTs,
@@ -245,11 +245,11 @@ function computePersonSleep(p) {
         if (!overrideApplied) {
         // Cluster-basierte Einschlafzeit-Auswahl
         // OC-31 Stage 1: Nacht-Aufstehen-Erkennung
-        // Erkennt kurze Abwesenheiten (Aufstehen+RÃ¼ckkehr) im Schlaffenster
+        // Erkennt kurze Abwesenheiten (Aufstehen+Rückkehr) im Schlaffenster
         // und entfernt dadurch verursachte Falsch-Kandidaten aus dem Pool.
         // Funktioniert fuer Ein- und Mehrpersonenhaushalt identisch:
-        //   - Abgang: Sensor ausserhalb Schlafzimmer â‰¤4 Hops, personTag egal (Shared-Sensoren eingeschlossen)
-        //   - RÃ¼ckkehr: Sensor IN Schlafzimmer-Location innerhalb 20 Min
+        //   - Abgang: Sensor ausserhalb Schlafzimmer ≤4 Hops, personTag egal (Shared-Sensoren eingeschlossen)
+        //   - Rückkehr: Sensor IN Schlafzimmer-Location innerhalb 20 Min
         var _nachtAufstehenWindows = (function() {
             if (!bedroomLocations || bedroomLocations.length === 0) return [];
             var _bedroomLocSet = new Set(bedroomLocations);
@@ -268,14 +268,14 @@ function computePersonSleep(p) {
                 var _eHour = new Date(_eTs).getHours();
                 return (_eHour >= 21 || _eHour <= 9);
             }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
-            // Fuer jeden externen Motion-Event: prÃ¼fe ob RÃ¼ckkehr folgt
+            // Fuer jeden externen Motion-Event: prüfe ob Rückkehr folgt
             for (var _wi = 0; _wi < _motAll.length; _wi++) {
                 var _wEvt = _motAll[_wi];
                 var _wTs  = _wEvt.timestamp || 0;
                 var _wLoc = _wEvt.location || '';
                 // Sensor muss ausserhalb Schlafzimmer sein
                 if (_bedroomLocSet.has(_wLoc)) continue;
-                // Hop-Distanz prÃ¼fen (â‰¤4 vom Schlafzimmer): verhindert Keller/Spinnen-Artefakte
+                // Hop-Distanz prüfen (≤4 vom Schlafzimmer): verhindert Keller/Spinnen-Artefakte
                 if (hopDistFn && _wLoc) {
                     var _minHop = 999;
                     for (var _bli = 0; _bli < bedroomLocations.length; _bli++) {
@@ -284,17 +284,17 @@ function computePersonSleep(p) {
                     }
                     if (_minHop > 3) continue; // Zu weit weg -> ignorieren (max. 3 Hops = Bad/Kueche/Diele, nicht OG/DG)
                 }
-                // Abgang bereits in einem bestehenden Fenster? â†’ Ã¼berspringen
+                // Abgang bereits in einem bestehenden Fenster? → überspringen
                 if (_windows.some(function(w) { return _wTs >= w.start && _wTs <= w.end; })) continue;
-                // RÃ¼ckkehr ins Schlafzimmer innerhalb 20 Min suchen
+                // Rückkehr ins Schlafzimmer innerhalb 20 Min suchen
                 var _retEvt = null;
                 for (var _ri = _wi + 1; _ri < _motAll.length; _ri++) {
                     var _rEvt = _motAll[_ri];
                     var _rTs  = _rEvt.timestamp || 0;
-                    if (_rTs > _wTs + 20 * 60000) break; // 20-Min-Fenster Ã¼berschritten
+                    if (_rTs > _wTs + 20 * 60000) break; // 20-Min-Fenster überschritten
                     if (_bedroomLocSet.has(_rEvt.location || '')) { _retEvt = _rEvt; break; }
                 }
-                if (!_retEvt) continue; // Keine RÃ¼ckkehr â†’ kein Nacht-Aufstehen
+                if (!_retEvt) continue; // Keine Rückkehr → kein Nacht-Aufstehen
                 _windows.push({
                     start: _wTs - 2 * 60000,
                     end:   (_retEvt.timestamp || 0) + 3 * 60000,
@@ -330,7 +330,7 @@ function computePersonSleep(p) {
 
         // OC-31: Kandidaten die in einem Nacht-Aufstehen-Fenster liegen herausfiltern
         // (betrifft prio >= 3: vib_refined, motion_vib, gap60, motion, last_outside, haus_still)
-        // Option A: vib_refined (prio 3) ebenfalls filtern, da 'letzte Matratzen-Stille' nach RÃ¼ckkehr
+        // Option A: vib_refined (prio 3) ebenfalls filtern, da 'letzte Matratzen-Stille' nach Rückkehr
         // neu gesetzt wird und damit einen falschen Einschlaf-Timestamp ergeben kann.
         // Nur Garmin (prio 0), fp2_vib (prio 1), fp2 (prio 2) bleiben absolut unangetastet.
         if (_nachtAufstehenWindows.length > 0) {
@@ -744,7 +744,7 @@ function computePersonSleep(p) {
             return false;
         };
         var _candidates = [];
-        // ─── Quelle 1 (NEU, hoechste Prio): FP2-Bett false->true Intervalle ───
+        // --- Quelle 1 (NEU, hoechste Prio): FP2-Bett false->true Intervalle ---
         var _fp2EvtsBA = (allEvents||[]).filter(function(e) { return isMine(e) && e.isFP2Bed; })
                                          .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
         var _hasFP2Primary = _fp2EvtsBA.length > 0;
@@ -779,13 +779,13 @@ function computePersonSleep(p) {
                 _candidates.push({ start: _emptyTs, end: _wakeCap, src: 'fp2_bed' });
             }
         }
-        // ─── Quelle 2: SM-Phasen ───
+        // --- Quelle 2: SM-Phasen ---
         for (var _baI = 0; _baI < (_smWakePhases||[]).length; _baI++) {
             var _baP = _smWakePhases[_baI];
             if (_baP.start >= _baLowerTs && _baP.end <= _wakeCap)
                 _candidates.push({ start: _baP.start, end: _baP.end, src: 'sm' });
         }
-        // ─── Quelle 3: Pattern-Matcher (nachtAufstehen) ───
+        // --- Quelle 3: Pattern-Matcher (nachtAufstehen) ---
         for (var _baJ = 0; _baJ < (_nachtAufstehenWindows||[]).length; _baJ++) {
             var _baN = _nachtAufstehenWindows[_baJ];
             var _nStart = _baN.departureTs || _baN.start || 0;
@@ -793,7 +793,7 @@ function computePersonSleep(p) {
             if (_nStart >= _baLowerTs && _nEnd <= _wakeCap)
                 _candidates.push({ start: _nStart, end: _nEnd, src: 'nacht' });
         }
-        // ─── Quelle 4: outsideBedEvents (Bad-confirmed) ─ MIT Hop-Distanz-Filter ───
+        // --- Quelle 4: outsideBedEvents (Bad-confirmed) - MIT Hop-Distanz-Filter ---
         var _droppedFarBath = 0;
         for (var _baK = 0; _baK < (obe||[]).length; _baK++) {
             var _baO = obe[_baK];
@@ -1274,8 +1274,8 @@ class CogniLiving extends utils.Adapter {
             await this.setStateAsync('system.sensorStatus', { val: JSON.stringify({ timestamp: now, sensors: statusList, offlineCount: offlineCount }), ack: true });
         } catch(e) {}
 
-        // OC-12: Gateway-Cluster-Erkennung â€” wenn >= 2 Sensoren desselben Gateways gleichzeitig offline
-        // -> einzelne Sensor-Alerts unterdrÃ¼cken, stattdessen einen Gateway-Alarm senden
+        // OC-12: Gateway-Cluster-Erkennung — wenn >= 2 Sensoren desselben Gateways gleichzeitig offline
+        // -> einzelne Sensor-Alerts unterdrücken, stattdessen einen Gateway-Alarm senden
         var offlineSensors = statusList.filter(function(s) { return s.status === 'offline'; });
         var gatewayGroups = {};
         offlineSensors.forEach(function(s) {
@@ -1305,7 +1305,7 @@ class CogniLiving extends utils.Adapter {
         var _isSleepTime = _nowH >= 22 || _nowH < 8;
         if (_isSleepTime) alerts = [];
 
-        // Einzelne Sensor-Alerts fuer Gateway-Cluster-Mitglieder unterdrÃ¼cken -> ein gebÃ¼ndelter Alert stattdessen
+        // Einzelne Sensor-Alerts fuer Gateway-Cluster-Mitglieder unterdrücken -> ein gebündelter Alert stattdessen
         if (gatewayOutages.length > 0 && !_isSleepTime) {
             alerts = alerts.filter(function(a) {
                 return !offlineSensors.some(function(s) { return gatewayOutageIds.has(s.id) && a.startsWith((s.name || s.id)); });
@@ -1319,9 +1319,9 @@ class CogniLiving extends utils.Adapter {
         }
 
         if (alerts.length > 0) {
-            var msg = 'âš ï¸ Sensor-Ausfall:\n' + alerts.join('\n');
+            var msg = '⚠️ Sensor-Ausfall:\n' + alerts.join('\n');
             this.log.warn('[SENSOR-CHECK] ' + alerts.join(', '));
-            try { setup.sendNotification(this, msg, true, false, 'âš ï¸ AURA: Sensor-Ausfall'); } catch(e) {}
+            try { setup.sendNotification(this, msg, true, false, '⚠️ AURA: Sensor-Ausfall'); } catch(e) {}
         }
         // OC-15: Batteriestand stuendlich pruefen (Pushover taeglich um 09:00)
         try { await this.checkBatteryLevels(); } catch(e) {}
@@ -1838,7 +1838,7 @@ class CogniLiving extends utils.Adapter {
                 (
                     (_existingSnap.sleepStages && _existingSnap.sleepStages.length > 0) ||
                     _sleepFrozenMotionOnly ||
-                    // OC-12/Freeze-Fix: Abend-Sperre (18-22 Uhr) â€” vollstaendige Nacht vorhanden, noch keine neue Einschlafquelle
+                    // OC-12/Freeze-Fix: Abend-Sperre (18-22 Uhr) — vollstaendige Nacht vorhanden, noch keine neue Einschlafquelle
                     // Verhindert dass die korrekte Nacht-JSON um 18:00 durch eine leere Abend-Analyse ueberschrieben wird
                     // (trifft v.a. Multi-Person-Haushalte ohne Garmin/Vibration wo sleepStages+wakeConfirmed fehlen)
                     (() => {
@@ -2223,7 +2223,7 @@ class CogniLiving extends utils.Adapter {
 
             // [bedEntryTs-Fix] Cluster-basierter Bettgeh-Zeitpunkt
             // Verhindert dass kurze FP2-Fehldetektionen (z.B. 31 Sek. um 19:22) als Bettgeh-Zeit gelten.
-            // Logik: frühstes Sensor-Event im Gewinner-Cluster (max. 90 Min vor sleepWindowOC7.start)
+            // Logik: fr�hstes Sensor-Event im Gewinner-Cluster (max. 90 Min vor sleepWindowOC7.start)
             // Works for FP2 (fp2/fp2_vib) and No-FP2 (vib_refined/motion_vib) households alike.
             var _bedEntryTsFinal = (function() {
                 var _sleepStart = sleepWindowOC7.start;
@@ -2593,29 +2593,35 @@ class CogniLiving extends utils.Adapter {
                 sleepWindowOC7.end = _gR.sleepWindowEnd;
             }
 
-            // [OC-42] bedExitTs: physisches Aufstehen (kann nach garminWakeTs liegen)
-            // Quellen (Prio): FP2-Radar > vibration_alone > SM-Wake-Phase (max. 45 Min Puffer)
+            // [OC-42] bedExitTs: physisches Aufstehen (sensor-neutral, max. 45 Min nach sleepWindowOC7.end)
+            // Anker: sleepWindowOC7.end (egal ob Garmin/vibration/other als Wake-Quelle -> immer gesetzt)
+            // Quellen (Prio): FP2-Radar > vibration_alone > SM-Wake-Phase > Snapshot-Fallback
             var bedExitTs = null; var _bedExitSrc = null;
-            // NOTE: sleepWindowOC7.end===garminWakeTs war fragil nach Obfuskierung -> vereinfacht.
-            if (garminWakeTs) {
-                var _beMax = garminWakeTs + 45 * 60 * 1000;
-                // Quelle 1: FP2/Radar firstEmpty nach garminWakeTs
-                if (_fp2RawWakeTs && _fp2RawWakeTs > garminWakeTs && _fp2RawWakeTs <= _beMax) {
+            var _beAnchor = sleepWindowOC7.end;
+            if (_beAnchor) {
+                var _beMax = _beAnchor + 45 * 60 * 1000;
+                // Quelle 1: FP2/Radar firstEmpty nach _beAnchor
+                if (_fp2RawWakeTs && _fp2RawWakeTs > _beAnchor && _fp2RawWakeTs <= _beMax) {
                     bedExitTs = _fp2RawWakeTs; _bedExitSrc = 'fp2';
                 }
-                // Quelle 2: vibration_alone nach garminWakeTs (letztes Vib-Event mit 45-Min-Stille)
+                // Quelle 2: vibration_alone nach _beAnchor (letztes Vib-Event mit 45-Min-Stille)
                 if (!bedExitTs) {
                     var _beVa = (_gR.allWakeSources||[]).find(function(s) {
-                        return s.source === 'vibration_alone' && s.ts && s.ts > garminWakeTs && s.ts <= _beMax;
+                        return s.source === 'vibration_alone' && s.ts && s.ts > _beAnchor && s.ts <= _beMax;
                     });
                     if (_beVa) { bedExitTs = _beVa.ts; _bedExitSrc = 'vibration_alone'; }
                 }
-                // Quelle 3: SM wake-Phase nach garminWakeTs (nicht nocturia)
+                // Quelle 3: SM wake-Phase nach _beAnchor (nicht nocturia)
                 if (!bedExitTs) {
                     var _beSmPhases = (_gR.smWakePhases||[]).filter(function(ph) {
-                        return ph.type === 'wake' && (ph.start||0) >= garminWakeTs && (ph.start||0) <= _beMax;
+                        return ph.type === 'wake' && (ph.start||0) >= _beAnchor && (ph.start||0) <= _beMax;
                     });
                     if (_beSmPhases.length > 0) { bedExitTs = _beSmPhases[0].start; _bedExitSrc = 'sm'; }
+                }
+                // [OC-42 Frozen-Fallback] Events-Fenster erschoepft nach spaeter Neustart -> aus Snapshot
+                if (!bedExitTs && _existingSnap && _existingSnap.bedExitTs &&
+                    _existingSnap.bedExitTs > _beAnchor && _existingSnap.bedExitTs <= _beMax) {
+                    bedExitTs = _existingSnap.bedExitTs; _bedExitSrc = 'snapshot';
                 }
                 if (bedExitTs) this.log.info('[OC-42] bedExitTs: ' + new Date(bedExitTs).toLocaleTimeString() + ' (' + _bedExitSrc + ')');
             }
@@ -2636,7 +2642,7 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_wovE) { this.log.warn('[WakeOv] Fehler: ' + _wovE.message); }
 
-            // === STAGES + SCORE: Jetzt berechnen ï¿½ sleepWindowOC7.end ist nach Wake-Detection gesetzt ===
+            // === STAGES + SCORE: Jetzt berechnen � sleepWindowOC7.end ist nach Wake-Detection gesetzt ===
             // Non-frozen: End-Zeit jetzt bekannt (von Garmin/FP2/motion/other-room/override)
             if (!_sleepFrozen && sleepWindowOC7.start && sleepWindowOC7.end) {
                 _shouldRecalcStages = true;
@@ -2654,7 +2660,7 @@ class CogniLiving extends utils.Adapter {
                     ' (Quelle: ' + (wakeSource || '?') + ')');
             }
             if (_shouldRecalcStages && sleepWindowOC7.start && sleepWindowOC7.end) {
-                // [BUG-FIX] Stages immer neu aufbauen — nie auf bestehende appenden (OC-43 Neuberechnung erzeugte Duplikate).
+                // [BUG-FIX] Stages immer neu aufbauen � nie auf bestehende appenden (OC-43 Neuberechnung erzeugte Duplikate).
                 sleepStages = [];
                 var SLOT_MS = 5 * 60 * 1000;
                 var swStart = sleepWindowOC7.start;
@@ -2824,7 +2830,7 @@ class CogniLiving extends utils.Adapter {
             const nightVibrationStrengthAvg = _vibStrCount > 0 ? Math.round(_vibStrSum / _vibStrCount) : null;
             const nightVibrationStrengthMax = _vibStrCount > 0 ? _vibStrMax : null;
 
-            // OC-33 Teil B: Schwacher Vibrationssensor — Hinweis fuer Nutzer
+            // OC-33 Teil B: Schwacher Vibrationssensor � Hinweis fuer Nutzer
             // Bedingung: Sensor hat gefeuert (count>0) + Staerke sehr niedrig (<10) + ausserhalb-Events vorhanden
             var weakVibrationSensor = null;
             var _WEAK_VIB_THRESHOLD = 10;
@@ -3039,9 +3045,9 @@ class CogniLiving extends utils.Adapter {
                         }
                     })();
                     // [OC-44] Fallback: Wenn per-Person kein gueltiges Schlaffenster (bedWasEmpty=true),
-                    // aber globales Fenster (sleepWindowOC7) existiert → Stages aus globalem Fenster
+                    // aber globales Fenster (sleepWindowOC7) existiert ? Stages aus globalem Fenster
                     // + Person-Vibrationsdaten neu berechnen. Gleicher Algorithmus wie computePersonSleep.
-                    // Grund: personTag-Events fehlen fuer Vorabend → sleepStart landet auf falscher Nacht.
+                    // Grund: personTag-Events fehlen fuer Vorabend ? sleepStart landet auf falscher Nacht.
                     if (_pResult.bedWasEmpty && sleepWindowOC7 && sleepWindowOC7.start && sleepWindowOC7.end
                             && sleepWindowOC7.end > sleepWindowOC7.start) {
                         var _fbStart = sleepWindowOC7.start;
@@ -3096,12 +3102,29 @@ class CogniLiving extends utils.Adapter {
                         _pResult.sleepWindowEnd    = _fbEnd;
                         _pResult.bedWasEmpty       = false;
                         _pResult.wakeSource        = _pResult.wakeSource || 'global_fallback';
-                        _self.log.info('[OC-44] ' + person + ': Stages-Fallback → globales Fenster '
+                        _self.log.info('[OC-44] ' + person + ': Stages-Fallback ? globales Fenster '
                             + new Date(_fbStart).toLocaleTimeString() + '-' + new Date(_fbEnd).toLocaleTimeString()
                             + ', ' + _fbStages.length + ' Slots, Score=' + _pResult.sleepScore
                             + ((_pFbVibDet.length > 0) ? ', VibDet=' + _pFbVibDet.length : ' (kein Vibsensor)'));
                     }
 
+                    // [OC-42p] Per-Person bedExitTs: physisches Aufstehen nach sleepWindowEnd
+                    var _pBedExitTs = null, _pBedExitSrc = null;
+                    var _pBeAnchor = _pGarminWakeTs || _pResult.sleepWindowEnd;
+                    if (_pBeAnchor) {
+                        var _pBeMax = _pBeAnchor + 45 * 60 * 1000;
+                        var _pBeVa = (_pResult.allWakeSources||[]).find(function(s) {
+                            return s.source === 'vibration_alone' && s.ts && s.ts > _pBeAnchor && s.ts <= _pBeMax;
+                        });
+                        if (_pBeVa) { _pBedExitTs = _pBeVa.ts; _pBedExitSrc = 'vibration_alone'; }
+                        if (!_pBedExitTs) {
+                            var _pSnapBedExit = (_existingSnap&&_existingSnap.personData&&_existingSnap.personData[person]) ? _existingSnap.personData[person].bedExitTs : null;
+                            if (_pSnapBedExit && _pSnapBedExit > _pBeAnchor && _pSnapBedExit <= _pBeMax) {
+                                _pBedExitTs = _pSnapBedExit; _pBedExitSrc = 'snapshot';
+                            }
+                        }
+                        if (_pBedExitTs) _self.log.info('[OC-42p] ' + person + ' bedExitTs: ' + new Date(_pBedExitTs).toLocaleTimeString() + ' (' + _pBedExitSrc + ')');
+                    }
                     var sleepOnsetMin = null;
                     if (_pResult.sleepWindowStart) {
                         sleepOnsetMin = Math.round((_pResult.sleepWindowStart - new Date(_pResult.sleepWindowStart).setHours(0,0,0,0)) / 60000);
@@ -3170,7 +3193,9 @@ class CogniLiving extends utils.Adapter {
                         nightVibrationCount:       _pVibCount > 0 ? _pVibCount : null,
                         nightVibrationStrengthAvg: _pVibStrCnt > 0 ? Math.round(_pVibStrSum / _pVibStrCnt) : null,
                         nightVibrationStrengthMax: _pVibStrCnt > 0 ? _pVibStrMax : null,
-                        vibrationTimestamps:       _pVibCount > 0 ? _pVibTrigEvts.map(function(e) { return e.timestamp||0; }) : null
+                        vibrationTimestamps:       _pVibCount > 0 ? _pVibTrigEvts.map(function(e) { return e.timestamp||0; }) : null,
+                        bedEntryTs:                _pResult.bedEntryTs || null,
+                        bedExitTs:                 _pBedExitTs || null
                     };
                 });
                 return result;
@@ -3532,7 +3557,7 @@ class CogniLiving extends utils.Adapter {
                                     _pyClassInfo.results.forEach(function(r, i) {
                                         if (!intimacyEvents[i]) return;
                                         if (r.type === 'nullnummer' && r.confidence >= 0.60) {
-                                            this.log.info('[OC-SEX-PY] Session '+i+' als Nullnummer klassifiziert ï¿½ wird entfernt');
+                                            this.log.info('[OC-SEX-PY] Session '+i+' als Nullnummer klassifiziert � wird entfernt');
                                             intimacyEvents[i] = null;
                                         } else if (r.type && r.type !== 'nullnummer' && r.confidence >= 0.55) {
                                             intimacyEvents[i].type = r.type;
@@ -3709,7 +3734,23 @@ class CogniLiving extends utils.Adapter {
                 bedWasEmpty: bedWasEmpty,
                 noisySensors: noisySensors,
                 nachtAufstehenEvents: (_gR && _gR.nachtAufstehenEvents) ? _gR.nachtAufstehenEvents : [],
-                bedAbsenceEvents:     (_gR && _gR.bedAbsenceEvents)     ? _gR.bedAbsenceEvents     : [],
+                bedAbsenceEvents: (function() {
+                    var _bae = (_gR && _gR.bedAbsenceEvents && _gR.bedAbsenceEvents.length > 0) ? _gR.bedAbsenceEvents : [];
+                    // [OC-42 Frozen-Fallback] FP2-Events nach Neustart aus Puffer gefallen -> aus Snapshot laden
+                    if (_bae.length === 0 && _existingSnap && Array.isArray(_existingSnap.bedAbsenceEvents)
+                        && _existingSnap.bedAbsenceEvents.length > 0 && sleepWindowOC7.start) {
+                        var _snapWinStart = sleepWindowOC7.start - 3600000;
+                        var _snapWinEnd = (sleepWindowOC7.end || sleepWindowOC7.start + 18 * 3600000) + 3600000;
+                        var _validSnapAbs = _existingSnap.bedAbsenceEvents.filter(function(ev) {
+                            return ev.start >= _snapWinStart && ev.end <= _snapWinEnd;
+                        });
+                        if (_validSnapAbs.length > 0) {
+                            _self.log.info('[OC-42] bedAbsenceEvents Frozen-Fallback: ' + _validSnapAbs.length + ' Events aus Snapshot');
+                            return _validSnapAbs;
+                        }
+                    }
+                    return _bae;
+                })(),
                 bedEntryTs: (function() {
                     var _bet = _bedEntryTsFinal || (_gR && _gR.bedEntryTs) || null;
                     // OC-39b: Abend-Save-Valve fuer bedEntryTs (analog OC-39 fuer personData)
@@ -4431,7 +4472,7 @@ class CogniLiving extends utils.Adapter {
                                     var _raLPkMax=_raLSPeaks[_raLSPeaks.length-1];
                                     var _raLAvgP=Math.round(_raLSPeaks.reduce(function(a,b){return a+b;},0)/_raLSPeaks.length);
                                     var _raLVarP=Math.round(_raLSPeaks.reduce(function(a,b){return a+(b-_raLAvgP)*(b-_raLAvgP);},0)/_raLSPeaks.length);
-                                    // Features einmalig im Label speichern (Migration â€” kein erneutes JSON-Lesen)
+                                    // Features einmalig im Label speichern (Migration — kein erneutes JSON-Lesen)
                                      
                                     // Kontext-Features aus eventHistory extrahieren (identisch zu saveDailyHistory)
                                     var _raLCtxE = _raLSnap.eventHistory || [];
@@ -4447,7 +4488,7 @@ class CogniLiving extends utils.Adapter {
                                     var _raLRoomT = _raLTempE.length>0?(Number(_raLTempE[_raLTempE.length-1].value)||null):null;
                                     var _raLBathB = _raLCtxE.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||e.type==='bathroom_motion')&&t>=(_raLSessP.start-3600000)&&t<_raLSessP.start;});
                                     var _raLBathA = _raLCtxE.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||e.type==='bathroom_motion')&&t>_raLSessP.end&&t<=(_raLSessP.end+3600000);});
-                                    // Features vollstÃ¤ndig speichern (incl. Kontext) â€” immer Ã¼berschreiben fÃ¼r Re-Migration
+                                    // Features vollständig speichern (incl. Kontext) — immer überschreiben für Re-Migration
                                     _raLbl._features = {peakMax:_raLPkMax,medianPeak:_raLMed,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP,hourSin:_raLHSin,hourCos:_raLHCos,lightOn:_raLLightOn,presenceOn:_raLPresOn,roomTemp:_raLRoomT,bathBefore:_raLBathB?1:0,bathAfter:_raLBathA?1:0,nearbyRoomMotion:0}; _raLabelsUpdated = true;
                                      _raSexTrainData.push({peak:_raLPkMax,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP,tierB:0,label:_raLTyp,date:_raLbl.date||'',hourSin:_raLHSin,hourCos:_raLHCos,lightOn:_raLLightOn,presenceOn:_raLPresOn,roomTemp:_raLRoomT,bathBefore:_raLBathB?1:0,bathAfter:_raLBathA?1:0,nearbyRoomMotion:0});
                                 }
@@ -4570,7 +4611,7 @@ class CogniLiving extends utils.Adapter {
                                 _raPyInfo.results.forEach(function(r,i){
                                     if (!_raIntimacyEvents[i]) return;
                                     if (r.type==='nullnummer'&&r.confidence>=0.60){
-                                        this.log.info('[OC-SEX-RA-PY] Session '+i+' als Nullnummer klassifiziert ï¿½ wird entfernt');
+                                        this.log.info('[OC-SEX-RA-PY] Session '+i+' als Nullnummer klassifiziert � wird entfernt');
                                         _raIntimacyEvents[i]=null;
                                     } else if (r.type&&r.type!=='nullnummer'&&r.confidence>=0.55){
                                         _raIntimacyEvents[i].type=r.type;
@@ -5051,7 +5092,7 @@ class CogniLiving extends utils.Adapter {
         var topo = this._cachedTopoMatrix;
         if (!topo || !topo.rooms || !topo.matrix) return;
 
-        // OC-11: Adaptives Fenster â€” gelernter p90 pro Raum-Paar, Fallback 5s
+        // OC-11: Adaptives Fenster — gelernter p90 pro Raum-Paar, Fallback 5s
         var DEFAULT_WINDOW_MS = 5000;
         var MIN_HOPS = 2;
         var now = Date.now();
