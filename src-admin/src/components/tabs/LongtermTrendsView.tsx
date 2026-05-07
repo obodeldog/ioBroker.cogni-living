@@ -1732,7 +1732,7 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                 date: d.date ? d.date.substring(5) : '',
                                                 sleepStart: toMinsFrom18(d.sleepWindowStart),
                                                 wakeTime: toMinsFrom18(d.sleepWindowEnd),
-                                                sleepDurationH: (d.sleepWindowStart && d.sleepWindowEnd)
+                                                sleepDurationH: (d.sleepWindowStart && d.sleepWindowEnd && d.sleepWindowEnd > d.sleepWindowStart)
                                                     ? Math.round((d.sleepWindowEnd - d.sleepWindowStart) / 360000) / 10
                                                     : null,
                                             }));
@@ -1757,7 +1757,8 @@ export default function LongtermTrendsView(props: LongtermTrendsViewProps) {
                                                                 date: d.date ? d.date.substring(5) : '',
                                                                 sleepStart: toMinsFrom18(d.personData?.[person]?.sleepWindowStart),
                                                                 wakeTime:   toMinsFrom18(d.personData?.[person]?.sleepWindowEnd),
-                                                                sleepDurationH: (d.personData?.[person]?.sleepWindowStart && d.personData?.[person]?.sleepWindowEnd)
+                                                                sleepDurationH: (d.personData?.[person]?.sleepWindowStart && d.personData?.[person]?.sleepWindowEnd
+                                                                    && d.personData[person].sleepWindowEnd > d.personData[person].sleepWindowStart)
                                                                     ? Math.round((d.personData[person].sleepWindowEnd - d.personData[person].sleepWindowStart) / 360000) / 10
                                                                     : null,
                                                             }));

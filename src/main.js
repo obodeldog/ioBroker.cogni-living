@@ -2957,16 +2957,8 @@ class CogniLiving extends utils.Adapter {
                     }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
                     var wakeTimeMin = morningEvt.length > 0 ? Math.round(((morningEvt[0].timestamp||0) - new Date(morningEvt[0].timestamp||0).setHours(0,0,0,0)) / 60000) : null;
                     var bathroomIds2 = new Set(((_self.config && _self.config.devices)||[]).filter(function(d){ return d.isBathroomSensor || d.sensorFunction==='bathroom'; }).map(function(d){ return d.id; }));
-                    var bathroomNightEvents = todayEvents.filter(function(e) {
-                        if (!bathroomIds2.has(e.id)) return false;
-                        var ts = e.timestamp||e.ts||0; return ts >= winStart && ts <= winEnd;
-                    });
+                    // nocturiaAttr wird nach computePersonSleep mit personen-spezifischem Fenster berechnet
                     var nocturiaAttr = 0;
-                    bathroomNightEvents.forEach(function(bathEvt) {
-                        var bathTs = bathEvt.timestamp||0;
-                        var recentPersonEvt = nightEvents.filter(function(e) { var ts=e.timestamp||0; return ts>=bathTs-10*60*1000&&ts<bathTs; });
-                        if (recentPersonEvt.length > 0) nocturiaAttr++;
-                    });
                     // Per-Person Garmin (Zuweisung via config.garminPersonAssignment)
                     var _pGarminInfo = _personGarminData[person] || {};
                     var _pGarminTs = _pGarminInfo.sleepStartTs || null;
@@ -3164,6 +3156,24 @@ class CogniLiving extends utils.Adapter {
                         var s = typeof e.value === 'number' ? e.value : parseFloat(e.value);
                         if (isNaN(s) || s <= 0) return;
                         _pVibStrSum += s; _pVibStrCnt++; if (s > _pVibStrMax) _pVibStrMax = s;
+                    });
+                    // [nocturiaAttr-Fix] Personen-spezifisches Schlaffenster verwenden (nicht globales winEnd)
+                    // Verhindert, dass Morgenaktivitaet nach dem Aufwachen als Nacht-Toilettenbesuch zaehlt.
+                    var _pNocWinStart = _pResult.sleepWindowStart || winStart;
+                    var _pNocWinEnd   = _pResult.sleepWindowEnd   || winEnd;
+                    var _pBathNightEvts = sleepSearchEvents.filter(function(e) {
+                        if (!bathroomIds2.has(e.id)) return false;
+                        var ts = e.timestamp||e.ts||0; return ts >= _pNocWinStart && ts <= _pNocWinEnd;
+                    });
+                    var _pNightEvtsForNoc = sleepSearchEvents.filter(function(e) {
+                        if (!ids.has(e.id)) return false;
+                        var ts = e.timestamp||e.ts||0; return ts >= _pNocWinStart && ts <= _pNocWinEnd;
+                    });
+                    nocturiaAttr = 0;
+                    _pBathNightEvts.forEach(function(bathEvt) {
+                        var _nBathTs = bathEvt.timestamp||0;
+                        var _nRecent = _pNightEvtsForNoc.filter(function(e) { var ts=e.timestamp||0; return ts>=_nBathTs-10*60*1000&&ts<_nBathTs; });
+                        if (_nRecent.length > 0) nocturiaAttr++;
                     });
                     result[person] = {
                         nightActivityCount:        nightActivityCount,
