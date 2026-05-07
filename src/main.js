@@ -3216,24 +3216,45 @@ class CogniLiving extends utils.Adapter {
                         if (isNaN(s) || s <= 0) return;
                         _pVibStrSum += s; _pVibStrCnt++; if (s > _pVibStrMax) _pVibStrMax = s;
                     });
-                    // [nocturiaAttr-Fix] Personen-spezifisches Schlaffenster verwenden (nicht globales winEnd)
-                    // Verhindert, dass Morgenaktivitaet nach dem Aufwachen als Nacht-Toilettenbesuch zaehlt.
+                    // [nocturiaAttr-Fix2] Personen-spez. Schlaffenster (Fix1) + nur Rising Edges (Fix2)
+                    // Fix1: Personen-spez. sleepWindowEnd statt globalem winEnd (kein Morgen-Overhang).
+                    // Fix2: Nur val=True (nicht True+False) -> Jeder Besuch wurde sonst doppelt gezaehlt.
                     var _pNocWinStart = _pResult.sleepWindowStart || winStart;
                     var _pNocWinEnd   = _pResult.sleepWindowEnd   || winEnd;
                     var _pBathNightEvts = sleepSearchEvents.filter(function(e) {
                         if (!bathroomIds2.has(e.id)) return false;
+                        if (!isActiveValue(e.value)) return false;
                         var ts = e.timestamp||e.ts||0; return ts >= _pNocWinStart && ts <= _pNocWinEnd;
                     });
                     var _pNightEvtsForNoc = sleepSearchEvents.filter(function(e) {
                         if (!ids.has(e.id)) return false;
                         var ts = e.timestamp||e.ts||0; return ts >= _pNocWinStart && ts <= _pNocWinEnd;
                     });
+                    // [OC-45b] SLEEPING-Phase: Nykturie-SM — Trip-Merging statt Event-Zaehlen
+                    // Mehrere Bad-Sensor True-Events innerhalb OC45B_MERGE_MS = 1 einziger Trip.
+                    // Sensor-agnostisch: Jeder Batch aus aufeinanderfolgenden True-Events = 1 Trip.
+                    // Bestaetigung: Person muss in den 10 Min vor dem Trip aktiv (im Bett) gewesen sein.
+                    var OC45B_MERGE_MS = 10 * 60 * 1000; // 10 Min Merge-Fenster (PIR Nachtrigger)
                     nocturiaAttr = 0;
-                    _pBathNightEvts.forEach(function(bathEvt) {
-                        var _nBathTs = bathEvt.timestamp||0;
-                        var _nRecent = _pNightEvtsForNoc.filter(function(e) { var ts=e.timestamp||0; return ts>=_nBathTs-10*60*1000&&ts<_nBathTs; });
-                        if (_nRecent.length > 0) nocturiaAttr++;
-                    });
+                    if (_pBathNightEvts.length > 0) {
+                        var _oc45bTrips = [];
+                        var _oc45bLastTs = null;
+                        _pBathNightEvts.forEach(function(bathEvt) {
+                            var _bts = bathEvt.timestamp || 0;
+                            if (!_oc45bLastTs || _bts - _oc45bLastTs > OC45B_MERGE_MS) {
+                                _oc45bTrips.push({ start: _bts, end: _bts });
+                            } else {
+                                _oc45bTrips[_oc45bTrips.length - 1].end = _bts;
+                            }
+                            _oc45bLastTs = _bts;
+                        });
+                        nocturiaAttr = _oc45bTrips.filter(function(trip) {
+                            return _pNightEvtsForNoc.some(function(e) {
+                                var ts = e.timestamp || 0;
+                                return ts >= trip.start - 10 * 60 * 1000 && ts < trip.start;
+                            });
+                        }).length;
+                    }
                     result[person] = {
                         nightActivityCount:        nightActivityCount,
                         wakeTimeMin:               wakeTimeMin,
