@@ -2201,6 +2201,12 @@ class CogniLiving extends utils.Adapter {
                 bedPresenceMinutesFinal = Math.round((_gR.sleepWindowEnd - _gR.sleepWindowStart) / 60000);
                 this.log.info('[BedPresence] Kein FP2: sleepWindow-Proxy = ' + bedPresenceMinutesFinal + ' min');
             }
+            // [BedPresence-Freeze] Bei eingefrorener Nacht gespeicherte Bettzeit beibehalten.
+            // Verhindert Abend-Ueberschreiben (18:00+) derselben Nacht auf 1-2h.
+            if (_sleepFrozen && _existingSnap && Number.isFinite(_existingSnap.bedPresenceMinutes) && _existingSnap.bedPresenceMinutes > 0) {
+                bedPresenceMinutesFinal = Number(_existingSnap.bedPresenceMinutes);
+                this.log.info('[BedPresence-Freeze] Verwende frozen bedPresenceMinutes=' + bedPresenceMinutesFinal + ' min');
+            }
 
                         // Schlaffenster fuer OC-7 (Sleep Score): FP2 ??? Bewegungsmelder ??? Fixfenster (Fallback-Kette).
             // Betrifft NICHT sleepWindowStart/End im Snapshot -- die Schlafzeit-Kachel bleibt FP2-only.
