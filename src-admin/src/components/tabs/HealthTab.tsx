@@ -2133,19 +2133,26 @@ export default function HealthTab(props: any) {
                                 )}
                             </div>
                             <div style={{textAlign:'right'}}>
-                                <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Aufstehen</div>
-                                <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>
-                                    {wakeConfirmed ? '✓' : '⟳'} {fmtTime(wakeDisplayTs)}
-                                </div>
-                                <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
-                                    {wakeDisplay.icon} {wakeDisplay.label}
-                                </div>
-                                {/* [OC-42] Sekundär-Label: Aufgewacht (Garmin) wenn bedExitTs bekannt und > swEnd */}
-                                {bedExitTs && swEnd && bedExitTs > swEnd && (
-                                    <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
-                                        Aufgewacht: {fmtTime(swEnd)}
-                                    </div>
-                                )}
+                                {/* [OC-47c] Label-Logik: 'Aufstehen' nur wenn bedExitTs sicher nach Aufwachen liegt, sonst 'Aufgewacht'. */}
+                                {(() => {
+                                    const _hasPhysicalExit = !!(bedExitTs && swEnd && bedExitTs > swEnd);
+                                    const _bigLabel = _hasPhysicalExit ? 'Aufstehen' : 'Aufgewacht';
+                                    const _bigTs    = _hasPhysicalExit ? bedExitTs   : swEnd;
+                                    return (<>
+                                        <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>{_bigLabel}</div>
+                                        <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>
+                                            {wakeConfirmed ? '✓' : '⟳'} {fmtTime(_bigTs)}
+                                        </div>
+                                        <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
+                                            {wakeDisplay.icon} {wakeDisplay.label}
+                                        </div>
+                                        {_hasPhysicalExit && (
+                                            <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
+                                                Aufgewacht: {fmtTime(swEnd)}
+                                            </div>
+                                        )}
+                                    </>);
+                                })()}
                                 {/* [OC-42] vorläufig prominenter wenn noch nicht bestätigt */}
                                 {!wakeConfirmed ? (
                                     <div style={{
