@@ -854,6 +854,19 @@ function computePersonSleep(p) {
                 }
                 if (_vibBefore) { _score += 2; _evidence.push('Vibration vor Aufstehen'); }
             }
+            // [OC-47d] Widerspruchs-Check: Wenn waehrend FP2-leer-Fenster regelmaessige Matratzen-Vibrationen
+            // mit Staerke >= 10 auftreten, ist das ein starkes Indiz dass Person im Bett liegt (FP2 blind).
+            // Konsequenz: confidence-Punkte abziehen + Widerspruchs-Hinweis ins evidence-Array.
+            var _vibStrongInside = (allEvents||[]).filter(function(e) {
+                if (!isMine(e) || !e.isVibrationStrength) return false;
+                var _ts = e.timestamp || 0;
+                if (_ts < _m.start || _ts > _m.end) return false;
+                return (Number(e.value) || 0) >= 10;
+            });
+            if (_vibStrongInside.length >= 2) {
+                _score = Math.max(0, _score - 4);
+                _evidence.push('Widerspruch: ' + _vibStrongInside.length + ' starke Vibrationen waehrend Bett-leer');
+            }
             // Mindestdauer: < 5 Min nicht zeigen (kurzer Toilettenbesuch < 5 Min wird ignoriert)
             if ((_m.end - _m.start) < 5 * 60000) continue;
             // Schwelle (angepasst an neue Punkteskala)
@@ -2593,15 +2606,50 @@ class CogniLiving extends utils.Adapter {
             var wakeSource = garminWakeTs ? 'garmin' : (_gR.wakeSource || 'fixed');
             var wakeConf   = garminWakeTs ? 'maximal' : (_gR.wakeConf   || 'niedrig');
             if (garminWakeTs) {
-                sleepWindowOC7.end = garminWakeTs;
-                this.log.info('[Wake] Garmin-Override (global): ' + new Date(garminWakeTs).toISOString());
+                // [OC-47] Vibration-Gate: Verlaengere sleepWindowEnd wenn Vibrationssensor
+                // NACH Garmin-Wake noch starke Aktivitaet auf Matratze meldet (>= 2 Events Staerke>=10)
+                // UND FP2 KEIN klares Bett-leer in dieser Phase meldet (Blindspot-Fall).
+                // Wenn FP2 ein klares Aufstehen meldet, bleibt sleepWindowEnd bei Garmin-Wake -
+                // das echte Aufstehen wird dann durch OC-45a/bedExitTs gefunden.
+                var _oc47ExtendedEnd = garminWakeTs;
+                try {
+                    var _oc47Window = garminWakeTs + 120 * 60 * 1000;
+                    var _oc47Fp2ExitFound = sleepSearchEvents.some(function(e) {
+                        if (!e.isFP2Bed) return false;
+                        var _ts = e.timestamp || 0;
+                        if (_ts < garminWakeTs || _ts > _oc47Window) return false;
+                        return !isActiveValue(e.value);
+                    });
+                    if (!_oc47Fp2ExitFound) {
+                        var _oc47VibAfter = sleepSearchEvents.filter(function(e) {
+                            if (!e.isVibrationStrength) return false;
+                            var _ts = e.timestamp || 0;
+                            if (_ts < garminWakeTs || _ts > _oc47Window) return false;
+                            return (Number(e.value) || 0) >= 10;
+                        }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+                        if (_oc47VibAfter.length >= 2) {
+                            var _oc47Last = _oc47VibAfter[_oc47VibAfter.length - 1].timestamp || 0;
+                            if (_oc47Last > garminWakeTs + 5 * 60 * 1000) {
+                                _oc47ExtendedEnd = _oc47Last;
+                                this.log.info('[OC-47] Vibration-Extension (FP2 blind): Garmin='
+                                    + new Date(garminWakeTs).toLocaleTimeString()
+                                    + ' -> ' + new Date(_oc47Last).toLocaleTimeString()
+                                    + ' (' + _oc47VibAfter.length + ' Vib-Events Staerke>=10)');
+                            }
+                        }
+                    } else {
+                        this.log.debug('[OC-47] FP2-Aufstehen erkannt - kein Vibration-Override (OC-45a uebernimmt).');
+                    }
+                } catch(_oc47e) { this.log.debug('[OC-47] Fehler: ' + _oc47e.message); }
+                sleepWindowOC7.end = _oc47ExtendedEnd;
+                this.log.info('[Wake] Garmin-Override (global): ' + new Date(_oc47ExtendedEnd).toISOString());
             } else if (_gR.sleepWindowEnd) {
                 sleepWindowOC7.end = _gR.sleepWindowEnd;
             }
 
             // [OC-45a] Post-Wake State Machine — sensor-agnostische bedExitTs Berechnung
             // Ersetzt OC-42 (statische 15-Min-FP2-Schwelle, zu konservativ nach Aufwachen).
-            // Laeuft von sleepWindowOC7.end bis max. 45 Min (cap: 12:00).
+            // Laeuft von sleepWindowOC7.end bis max. 120 Min (cap: 12:00) // OC-47b.
             // States: WAKING -> DEPARTED -> POTENTIAL_RETURN -> (TRANSIT|GENUINE_RETURN)
             // Sensor-Hierarchie: FP2 (+3) > Bad-Sensor (+2) > Anderer Raum (+2)
             // Graceful Degradation: fehlende Sensoren = geringere Konfidenz, kein Absturz.
@@ -2609,7 +2657,7 @@ class CogniLiving extends utils.Adapter {
             var _oc45aAnchor = sleepWindowOC7.end;
             if (_oc45aAnchor) {
                 var _oc45aHardCap = (function(){ var _d = new Date(); _d.setHours(12,0,0,0); return _d.getTime(); })();
-                var _oc45aCap = Math.min(_oc45aAnchor + 45 * 60 * 1000, _oc45aHardCap);
+                var _oc45aCap = Math.min(_oc45aAnchor + 120 * 60 * 1000, _oc45aHardCap); // [OC-47b] 45->120 Min (Garmin-Fehlmeldungen abfangen)
                 var _oc45aIsTrue = function(v){ return v===true||v==='true'||v===1||v==='1'; };
                 var _oc45aDevs = (this.config && this.config.devices) ? this.config.devices : [];
                 var _oc45aBathIds = new Set(_oc45aDevs.filter(function(d){

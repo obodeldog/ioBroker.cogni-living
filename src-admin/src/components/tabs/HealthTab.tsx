@@ -1557,6 +1557,11 @@ export default function HealthTab(props: any) {
                     return timeStr + label + ' (' + evt.duration + ' min)';
                 }
             }
+            // [OC-42b] Slots nach swEnd (Aufgewacht) bis bedExitTs -> Wachliegen-Tooltip (analog slotColor)
+            if (absMs && swEnd && bedExitTs && bedExitTs > swEnd && absMs >= swEnd) {
+                const _wachMin = Math.round((bedExitTs - swEnd) / 60000);
+                return 'Wachliegen: ' + fmtTime(swEnd) + '–' + fmtTime(bedExitTs) + ' (' + _wachMin + ' Min)';
+            }
             return timeStr + (stageLabel[slot.s] || slot.s);
         };
         const renderedStages = (stagesWindowStart && (swEnd || _barRightTs))
@@ -1803,14 +1808,22 @@ export default function HealthTab(props: any) {
                                         )}
                                     </div>
                                     <div style={{textAlign:'right'}}>
-                                        <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>Aufstehen</div>
-                                        <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>{fmtTime(wakeDisplayTs)}</div>
-                                        <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
-                                            {wakeDisplay.icon} {wakeDisplay.label}
-                                        </div>
-                                        {bedExitTs && swEnd && bedExitTs > swEnd && (
-                                            <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>Aufgewacht: {fmtTime(swEnd)}</div>
-                                        )}
+                                        {/* [OC-47c] Label-Logik: 'Aufstehen' nur wenn bedExitTs sicher nach Aufwachen liegt, sonst 'Aufgewacht'. */}
+                                        {(() => {
+                                            const _hasPhysicalExit = !!(bedExitTs && swEnd && bedExitTs > swEnd);
+                                            const _bigLabel = _hasPhysicalExit ? 'Aufstehen' : 'Aufgewacht';
+                                            const _bigTs    = _hasPhysicalExit ? bedExitTs   : swEnd;
+                                            return (<>
+                                                <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>{_bigLabel}</div>
+                                                <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>{fmtTime(_bigTs)}</div>
+                                                <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
+                                                    {wakeDisplay.icon} {wakeDisplay.label}
+                                                </div>
+                                                {_hasPhysicalExit && (
+                                                    <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>Aufgewacht: {fmtTime(swEnd)}</div>
+                                                )}
+                                            </>);
+                                        })()}
                                         {wakeOverridden && (
                                             <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
                                         )}
