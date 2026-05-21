@@ -749,26 +749,41 @@ function computePersonSleep(p) {
                                          .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
         var _hasFP2Primary = _fp2EvtsBA.length > 0;
         if (_hasFP2Primary) {
+            // [OC-49a] Vorberechnung FP2 True->False Paar-Dauern fuer BED_TOUCH Erkennung.
+            // Post-Wake: kurze Rueckkehren (Bett machen, < 2 Min) sind BED_TOUCH und
+            // unterbrechen einen offenen Absenz-Zeitraum NICHT (Bsp: 07:03-07:04 = 85s).
+            // Pre-Sleep: 20 Min Schwelle bleibt (kurze Abend-Besuche herausfiltern).
+            var _oc49PwAnchor = (wakeTs && wakeTs > (_baLowerTs||0)) ? wakeTs : ((_baLowerTs||0) + 5*3600000);
+            var _oc49PairDur = {};
+            var _oc49PtLast = null;
+            for (var _oc49pi = 0; _oc49pi < _fp2EvtsBA.length; _oc49pi++) {
+                var _oc49pe = _fp2EvtsBA[_oc49pi]; var _oc49pts = _oc49pe.timestamp||0;
+                if (isActiveValue(_oc49pe.value)) { _oc49PtLast = _oc49pts; }
+                else if (_oc49PtLast !== null) { _oc49PairDur[_oc49PtLast] = _oc49pts - _oc49PtLast; _oc49PtLast = null; }
+            }
             var _emptyTs = null;
             var _fp2LastTrueTs = null; // Zeitpunkt letzter FP2-true-Uebergang
             for (var _fpi = 0; _fpi < _fp2EvtsBA.length; _fpi++) {
                 var _fpE = _fp2EvtsBA[_fpi];
                 var _fpTs = _fpE.timestamp || 0;
                 var _fpVal = isActiveValue(_fpE.value);
+                // [OC-49a] Schwelle: Post-Wake 2 Min, Pre-Sleep 20 Min
+                var _oc49MinSust = _fpTs > _oc49PwAnchor ? 2*60000 : 20*60000;
                 if (_fpVal) {
                     // FP2 true -> Bett belegt: letzten true-Zeitpunkt merken
                     _fp2LastTrueTs = _fpTs;
-                    // Offenes leer-Intervall abschliessen
-                    if (_emptyTs !== null && _fpTs >= _baLowerTs && _fpTs <= _wakeCap) {
+                    // [OC-49a] Absenz nur schliessen wenn True-Periode signifikant (kein BED_TOUCH)
+                    var _oc49thisDur = (typeof _oc49PairDur[_fpTs] !== 'undefined') ? _oc49PairDur[_fpTs] : (24*3600000);
+                    if (_oc49thisDur >= _oc49MinSust && _emptyTs !== null && _fpTs >= _baLowerTs && _fpTs <= _wakeCap) {
                         if (_fpTs - _emptyTs >= 2 * 60000) {
                             _candidates.push({ start: _emptyTs, end: _fpTs, src: 'fp2_bed' });
                         }
                         _emptyTs = null;
                     }
+                    // Bei BED_TOUCH (nicht signifikant): _emptyTs offen lassen -> Absenz laeuft weiter
                 } else {
-                    // FP2 false -> Bett leer: nur oeffnen wenn vorher >= 20 Min ununterbrochen true
-                    // (filtert kurze Abend-Besuche raus, z.B. Lesen auf Bettkante fuer 5 Min)
-                    var _sustainedTrue = _fp2LastTrueTs !== null && (_fpTs - _fp2LastTrueTs) >= 20 * 60000;
+                    // FP2 false -> Bett leer
+                    var _sustainedTrue = _fp2LastTrueTs !== null && (_fpTs - _fp2LastTrueTs) >= _oc49MinSust;
                     if (_sustainedTrue && _fpTs >= _baLowerTs && _fpTs <= _wakeCap && _emptyTs === null) {
                         _emptyTs = _fpTs;
                     }
@@ -2709,6 +2724,19 @@ class CogniLiving extends utils.Adapter {
                     return (e.timestamp||0) > _oc45aAnchor && (e.timestamp||0) <= _oc45aCap;
                 }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
                 var _oc45aHasFp2 = _oc45aPwEvts.some(function(e){ return e.isFP2Bed; });
+                // [OC-49b] Vibrations-Evidenz-Paare: trigger=True + strength innerhalb 120s = sustained movement.
+                // Unterscheidet echtes Liegen (regelmaessige Bewegung) von kurzem BED_TOUCH (Bett machen).
+                // Sensor-neutral: funktioniert ohne FP2 als alleiniges Diskriminierungs-Signal.
+                var _oc49VibTrigs = _oc45aPwEvts.filter(function(e){ return e.isVibrationBed && e.type==='vibration_trigger' && _oc45aIsTrue(e.value); });
+                var _oc49VibStrs  = _oc45aPwEvts.filter(function(e){ return e.isVibrationBed && e.type==='vibration_strength'; });
+                var _oc49VibSustTs = [];
+                for (var _oc49vi=0; _oc49vi<_oc49VibTrigs.length; _oc49vi++) {
+                    var _oc49vTrigTs = _oc49VibTrigs[_oc49vi].timestamp||0;
+                    for (var _oc49si=0; _oc49si<_oc49VibStrs.length; _oc49si++) {
+                        var _oc49sDiff = (_oc49VibStrs[_oc49si].timestamp||0) - _oc49vTrigTs;
+                        if (_oc49sDiff >= -10000 && _oc49sDiff <= 120000) { _oc49VibSustTs.push(_oc49vTrigTs); break; }
+                    }
+                }
                 var _OC45S_WAKING=0, _OC45S_DEPARTED=1, _OC45S_POTENTIAL_RETURN=2, _OC45S_GENUINE_RETURN=3;
                 var _oc45aState = _OC45S_WAKING;
                 var _oc45aCandidate = null;
@@ -2746,15 +2774,30 @@ class CogniLiving extends utils.Adapter {
                         var _opTE = 0;
                         if (_oc45aLastBathTrue && (_oc45aRetAnchor - _oc45aLastBathTrue) < 90000) _opTE += 2;
                         if (_opOtherRoom && _opPresMs < 90000) _opTE += 3;
+                        // [OC-49b] Vibrations-Evidenz im Rueckkehr-Fenster zaehlen
+                        var _oc49VibEv = 0;
+                        for (var _oc49vei=0; _oc49vei<_oc49VibSustTs.length; _oc49vei++) {
+                            if (_oc49VibSustTs[_oc49vei] >= _oc45aRetAnchor && _oc49VibSustTs[_oc49vei] <= _opts) _oc49VibEv++;
+                        }
+                        // [OC-49b] BED_TOUCH: FP2 < 7 Min UND < 2 Vib-Evidenz-Paare = kurze Beruehrung, kein GENUINE_RETURN
+                        var _oc49BtMaxMs = 7 * 60 * 1000;
                         if (_opFp2 && !_oc45aIsTrue(_ope.value)) {
-                            if (_opPresMs < 3 * 60 * 1000) _opTE += 2;
-                            if (_opTE >= 2) {
+                            var _oc49isBedTouch = _opPresMs < _oc49BtMaxMs && _oc49VibEv < 2;
+                            if (_oc49isBedTouch) {
+                                // BED_TOUCH: Bett kurz beruehrt (Bett machen, Kissen holen etc.) -> DEPARTED
+                                this.log['info']('[OC-49b] BED_TOUCH: ' + Math.round(_opPresMs/60000) + 'min FP2, ' + _oc49VibEv + ' Vib-Paare -> bleibt DEPARTED');
+                                _oc45aState = _OC45S_DEPARTED; _oc45aRetAnchor = null;
+                            } else if (_opPresMs < 3 * 60 * 1000 || _opTE >= 2) {
                                 _oc45aState = _OC45S_DEPARTED; _oc45aRetAnchor = null;
                             } else {
                                 _oc45aState = _OC45S_GENUINE_RETURN;
                                 _oc45aCandidate = null; _oc45aSrc = null; _oc45aRetAnchor = null;
                             }
-                        } else if (_opPresMs > 5 * 60 * 1000) {
+                        } else if (_oc49VibEv >= 2) {
+                            // Vibration-only: genug Evidenz ohne FP2 -> GENUINE_RETURN
+                            _oc45aState = _OC45S_GENUINE_RETURN;
+                            _oc45aCandidate = null; _oc45aSrc = null; _oc45aRetAnchor = null;
+                        } else if (_opPresMs > 7 * 60 * 1000) { // [OC-49b] 5->7 Min
                             _oc45aState = _OC45S_GENUINE_RETURN;
                             _oc45aCandidate = null; _oc45aSrc = null; _oc45aRetAnchor = null;
                         }
