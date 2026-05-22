@@ -772,15 +772,18 @@ function computePersonSleep(p) {
                 if (_fpVal) {
                     // FP2 true -> Bett belegt: letzten true-Zeitpunkt merken
                     _fp2LastTrueTs = _fpTs;
-                    // [OC-49a] Absenz nur schliessen wenn True-Periode signifikant (kein BED_TOUCH)
+                    // [OC-49a] Absenz schliessen: Post-Wake = nur wenn True-Dauer >= 2 Min (BED_TOUCH-Schutz).
+                    // SLEEPING-Phase (vor wakeTs): immer schliessen, egal wie kurz True war.
+                    // Warum: noisy FP2 (kurze True-Aussetzer im Schlaf) darf nicht zu Riesen-Absenz akkumulieren.
                     var _oc49thisDur = (typeof _oc49PairDur[_fpTs] !== 'undefined') ? _oc49PairDur[_fpTs] : (24*3600000);
-                    if (_oc49thisDur >= _oc49MinSust && _emptyTs !== null && _fpTs >= _baLowerTs && _fpTs <= _wakeCap) {
+                    var _oc49isSignif = _fpTs > _oc49PwAnchor ? (_oc49thisDur >= _oc49MinSust) : true;
+                    if (_oc49isSignif && _emptyTs !== null && _fpTs >= _baLowerTs && _fpTs <= _wakeCap) {
                         if (_fpTs - _emptyTs >= 2 * 60000) {
                             _candidates.push({ start: _emptyTs, end: _fpTs, src: 'fp2_bed' });
                         }
                         _emptyTs = null;
                     }
-                    // Bei BED_TOUCH (nicht signifikant): _emptyTs offen lassen -> Absenz laeuft weiter
+                    // Post-Wake BED_TOUCH (nicht signifikant): _emptyTs offen lassen -> Absenz laeuft weiter
                 } else {
                     // FP2 false -> Bett leer
                     var _sustainedTrue = _fp2LastTrueTs !== null && (_fpTs - _fp2LastTrueTs) >= _oc49MinSust;
@@ -2277,7 +2280,7 @@ class CogniLiving extends utils.Adapter {
                     if (!s.ts || _excl.indexOf(s.source) >= 0) return false;
                     return s.ts <= _sleepStart && (_sleepStart - s.ts) <= CLUSTER_WIN_MS;
                 }).sort(function(a, b) { return (a.ts || 0) - (b.ts || 0); });
-                if (_clusterSources.length === 0) return (_gR && _gR.bedEntryTs) ? _gR.bedEntryTs : null;
+                if (_clusterSources.length === 0) { var _fbEt = (_gR && _gR.bedEntryTs) ? _gR.bedEntryTs : null; if (_fbEt && (_sleepStart - _fbEt) > 120 * 60000) { if (_oc48Log) _oc48Log['debug']('[OC-48b] bedEntryTs Fallback verworfen: ' + new Date(_fbEt).toLocaleTimeString() + ' ist > 120 Min vor sleepStart'); return null; } return _fbEt; }
                 var _isFarMotion = function(e) {
                     if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed || e.isBathroomSensor) return false;
                     if (e.type !== 'motion' && e.type !== 'presence_radar_bool') return false;
