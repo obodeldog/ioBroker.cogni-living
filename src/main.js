@@ -1,4 +1,8 @@
 ﻿/* eslint-disable */
+
+
+
+/* eslint-disable */
 'use strict';
 
 /*
@@ -804,8 +808,11 @@ function computePersonSleep(p) {
                 _candidates.push({ start: _baP.start, end: _baP.end, src: 'sm' });
         }
         // --- Quelle 3: Pattern-Matcher (nachtAufstehen) ---
+        // [OC-45b] Nur Post-Sleep Fenster verwenden: Pre-Sleep-Trips (FP2-Dropouts, Einschlaf-Bewegungen)
+        // gehoeren nicht zu bedAbsenceEvents waehrend der Nacht.
         for (var _baJ = 0; _baJ < (_nachtAufstehenWindows||[]).length; _baJ++) {
             var _baN = _nachtAufstehenWindows[_baJ];
+            if (_baN.departureTs && sleepStart && _baN.departureTs < sleepStart) continue; // [OC-45b] Pre-Sleep
             var _nStart = _baN.departureTs || _baN.start || 0;
             var _nEnd   = _baN.returnTs    || _baN.end   || (_nStart + 5*60000);
             if (_nStart >= _baLowerTs && _nEnd <= _wakeCap)
@@ -931,7 +938,7 @@ function computePersonSleep(p) {
         sleepScoreRaw:        sleepScoreRaw,
         _motionAnchor:        motionAnchor,
         _hausStillTs:         hausStillTs,
-        nachtAufstehenEvents: _nachtAufstehenWindows,
+        nachtAufstehenEvents: _nachtAufstehenWindows.filter(function(w){ return !sleepStart || w.departureTs >= sleepStart; }), // [OC-45b] nur Post-Sleep
         bedEntryTs:          bedEntryTs,
         smWakePhases:        _smWakePhases,
         bedAbsenceEvents:    _bedAbsenceEvents
@@ -2704,6 +2711,23 @@ class CogniLiving extends utils.Adapter {
                 sleepWindowOC7.end = _gR.sleepWindowEnd;
             }
 
+            // ═══════════════════════════════════════════════════════════════
+            // [OC-45d] SLEEP-CYCLE STATE MACHINE FRAMEWORK (ab v0.33.254)
+            // ═══════════════════════════════════════════════════════════════
+            // Langfristiges Ziel: Eine einzige SM fuer den gesamten Schlafzyklus.
+            //   PRE_SLEEP  -> OC-48 (aktiv) | OC-45c (geplant, ersetzt OC-48)
+            //   SLEEPING   -> OC-31 Stage 2 smWakePhases | OC-45b (geplant)
+            //   POST_WAKE  -> OC-45a + OC-49 (implementiert)
+            //   DAY        -> (geplant)
+            // Sensor-neutral: Evidenz-basierte Uebergaenge, Graceful Degradation.
+            // Jedes Modul ist einzeln deploybar - keine Big-Bang-Migration.
+            //
+            // State-Enum (wird von OC-45a/b/c verwendet):
+            var _SC_IDLE=0, _SC_BED_PRESENT=1, _SC_SLEEPING=2, _SC_NOCTURIA=3,
+                _SC_WAKING=4, _SC_BED_TOUCH=5, _SC_DEPARTED=6, _SC_DAY=7;
+            // Evidenz-Gewichte (sensor-neutral): Garmin=4, FP2=3, Vibration=2, PIR=1
+            var _SC_CONF = { maximal: 4, high: 3, medium: 2, low: 1, none: 0 };
+            // ───────────────────────────────────────────────────────────────
             // [OC-45a] Post-Wake State Machine — sensor-agnostische bedExitTs Berechnung
             // Ersetzt OC-42 (statische 15-Min-FP2-Schwelle, zu konservativ nach Aufwachen).
             // Laeuft von sleepWindowOC7.end bis max. 120 Min (cap: 12:00) // OC-47b.
