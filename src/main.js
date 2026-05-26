@@ -678,20 +678,41 @@ function computePersonSleep(p) {
     var _smWakePhases = (function() {
         if (!sleepStart || !bedroomLocations || bedroomLocations.length === 0) return [];
         var _bedroomLocSet = new Set(bedroomLocations);
-        // [OC-42] Immer bis wakeHardCap (nicht wakeTs) - SM sieht echte Aufwach-Events auch wenn wakeTs zuvor falsch war
-        var _wakeCapMs = wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000);
+        // [OC-42/OC-45b] Cap: wakeTs wenn bekannt, sonst garminWakeTs (kein Post-Aufwach-Nykturie), sonst wakeHardCap.
+        var _wakeCapMs = wakeTs ? wakeTs : (garminWakeTs ? garminWakeTs : (wakeHardCap ? (wakeHardCap.getTime ? wakeHardCap.getTime() : wakeHardCap) : (sleepStart + 12 * 3600000)));
         // Untergrenze: sleepStart (Garmin/Vib-basiert) - bedEntryTs ist nur fuer bedAbsenceEvents relevant
         var _smLowerTs = sleepStart;
         var _phases = [];
         var _inBed = true;
         var _deptTs = null;
+        // [OC-45b] SLEEPING SM: Motion fuer Abgang + FP2-True fuer Rueckkehr
+        // FP2-True = Person zurueck im Bett. Ermoeglicht korrekte Kurzabsenz-Erkennung.
         var _postEvts = allEvents.filter(function(e) {
-            return isMine(e) && e.type === 'motion' && isActiveValue(e.value) &&
-                   (e.timestamp || 0) > _smLowerTs && (e.timestamp || 0) < _wakeCapMs;
+            if (!isMine(e)) return false;
+            var _smTs = e.timestamp || 0;
+            if (_smTs <= _smLowerTs || _smTs >= _wakeCapMs) return false;
+            if (e.type === 'motion' && isActiveValue(e.value)) return true;
+            if (e.isFP2Bed && isActiveValue(e.value)) return true; // [OC-45b] FP2-Rueckkehr
+            return false;
         }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
         for (var _si = 0; _si < _postEvts.length; _si++) {
             var _sEvt = _postEvts[_si];
             var _sTs  = _sEvt.timestamp || 0;
+            // [OC-45b] FP2-True = Rueckkehr ins Bett: Offene Wake-Phase schliessen
+            if (_sEvt.isFP2Bed && isActiveValue(_sEvt.value)) {
+                if (!_inBed && _deptTs) {
+                    if (_sTs - _deptTs > 5 * 60000) {
+                        var _smFp2Nocturia = (_nachtAufstehenWindows||[]).some(function(w) {
+                            return _deptTs >= (w.start||0) - 2*60*1000 && _deptTs <= (w.end||0) + 2*60*1000;
+                        });
+                        _phases.push({ type: _smFp2Nocturia ? 'nocturia' : 'wake',
+                            start: _deptTs, end: _sTs,
+                            durationMin: Math.round((_sTs - _deptTs) / 60000), source: 'sm_stage2_fp2' });
+                    }
+                    _inBed = true; _deptTs = null;
+                }
+                continue; // FP2-True nicht als Motion-Abgang werten
+            }
             var _isOutside = !_bedroomLocSet.has(_sEvt.location || '');
             if (_inBed && _isOutside) {
                 // Hop-Distanz pruefen (analog nachtAufstehenEvents: max. 3 Hops)
@@ -701,22 +722,17 @@ function computePersonSleep(p) {
                         var _smH = hopDistFn(bedroomLocations[_sbli], _sEvt.location || '');
                         if (_smH !== null && _smH !== undefined && _smH < _smMinHop) _smMinHop = _smH;
                     }
-                    if (_smMinHop > 3) continue; // Zu weit weg -> Abgang ignorieren (z.B. OG Flur)
+                    if (_smMinHop > 3) continue; // Zu weit weg -> Abgang ignorieren
                 }
                 _deptTs = _sTs; _inBed = false;
             } else if (!_inBed && !_isOutside) {
                 if (_deptTs && (_sTs - _deptTs) > 5 * 60000) {
-                    // [OC-42] Phase als nocturia markieren wenn sie in bekanntem Nacht-Aufsteh-Fenster liegt
                     var _smIsNocturia = (_nachtAufstehenWindows||[]).some(function(w) {
                         return _deptTs >= (w.start||0) - 2*60*1000 && _deptTs <= (w.end||0) + 2*60*1000;
                     });
-                    _phases.push({
-                        type: _smIsNocturia ? 'nocturia' : 'wake',
-                        start: _deptTs,
-                        end: _sTs,
-                        durationMin: Math.round((_sTs - _deptTs) / 60000),
-                        source: 'sm_stage2'
-                    });
+                    _phases.push({ type: _smIsNocturia ? 'nocturia' : 'wake',
+                        start: _deptTs, end: _sTs,
+                        durationMin: Math.round((_sTs - _deptTs) / 60000), source: 'sm_stage2' });
                 }
                 _inBed = true; _deptTs = null;
             }
@@ -889,8 +905,10 @@ function computePersonSleep(p) {
                 return (Number(e.value) || 0) >= 10;
             });
             if (_vibStrongInside.length >= 2) {
-                _score = Math.max(0, _score - 4);
-                _evidence.push('Widerspruch: ' + _vibStrongInside.length + ' starke Vibrationen waehrend Bett-leer');
+                // [OC-47d+] Harter Override: 2+ starke Vibrationen waehrend FP2-Absenz = Person schlaeft.
+                // Vib-vor-Aufstehen-Bonus war Schlafbewegung, kein Aufsteh-Stoss -> Score komplett nullen.
+                _score = 0;
+                _evidence.push('Widerspruch: ' + _vibStrongInside.length + ' starke Vibrationen waehrend Bett-leer (FP2 blind)');
             }
             // Mindestdauer: < 5 Min nicht zeigen (kurzer Toilettenbesuch < 5 Min wird ignoriert)
             if ((_m.end - _m.start) < 5 * 60000) continue;
