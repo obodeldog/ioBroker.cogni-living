@@ -2341,6 +2341,52 @@ class CogniLiving extends utils.Adapter {
                 if (_oc48Log) _oc48Log['debug']('[OC-48] bedEntryTs Fallback: letzter Kandidat @ ' + new Date(_last).toLocaleTimeString());
                 return _last;
             })();
+            // [OC-45c] PRE_SLEEP SM: FP2-Counterevidence fuer false bedEntryTs
+            // Wenn FP2 < 30 Min nach bedEntryTs wieder False + danach Motion ausserhalb Schlafzimmer
+            // -> Person hat Bett wieder verlassen (Pre-Sleep-Besuch). Naechste stabile FP2-True-Periode suchen.
+            // Sensor-neutral: greift nur wenn FP2 vorhanden (FP2-only Pfad). Ohne FP2: kein Eingriff.
+            if (_bedEntryTsFinal && sleepWindowOC7.start) {
+                var _oc45cSlStart      = sleepWindowOC7.start;
+                var _oc45cEarlyExitMs  = 30 * 60000;
+                var _oc45cMinStableMs  = 20 * 60000;
+                var _oc45cFp2Evts = sleepSearchEvents.filter(function(e) {
+                    return e.isFP2Bed && (e.timestamp||0) >= _bedEntryTsFinal && (e.timestamp||0) <= _oc45cSlStart;
+                }).sort(function(a,b) { return (a.timestamp||0) - (b.timestamp||0); });
+                // Schritt 1: FP2=False innerhalb 30 Min nach bedEntryTs?
+                var _oc45cEarlyFalse = null;
+                for (var _oc45i = 0; _oc45i < _oc45cFp2Evts.length; _oc45i++) {
+                    var _oc45e = _oc45cFp2Evts[_oc45i];
+                    if (!isActiveValue(_oc45e.value) && ((_oc45e.timestamp||0) - _bedEntryTsFinal) < _oc45cEarlyExitMs) {
+                        _oc45cEarlyFalse = _oc45e; break;
+                    }
+                }
+                if (_oc45cEarlyFalse) {
+                    // Schritt 2: Motion ausserhalb Schlafzimmer nach FP2=False?
+                    var _oc45cOutside = sleepSearchEvents.some(function(e) {
+                        return (e.timestamp||0) > (_oc45cEarlyFalse.timestamp||0) &&
+                               (e.timestamp||0) < _oc45cSlStart &&
+                               !e.isBedroomMotion && !e.isFP2Bed && !e.isVibrationBed &&
+                               e.type === 'motion' && isActiveValue(e.value);
+                    });
+                    if (_oc45cOutside) {
+                        // Schritt 3: Naechste stabile FP2-True-Periode (>= 20 Min) als neues bedEntryTs
+                        var _oc45cNewEntry = null;
+                        for (var _oc45j = 0; _oc45j < _oc45cFp2Evts.length; _oc45j++) {
+                            var _oc45ne = _oc45cFp2Evts[_oc45j];
+                            if (!isActiveValue(_oc45ne.value)) continue;
+                            if ((_oc45ne.timestamp||0) <= (_oc45cEarlyFalse.timestamp||0)) continue;
+                            var _oc45nf = null;
+                            for (var _oc45k = _oc45j+1; _oc45k < _oc45cFp2Evts.length; _oc45k++) {
+                                if (!isActiveValue(_oc45cFp2Evts[_oc45k].value)) { _oc45nf = _oc45cFp2Evts[_oc45k]; break; }
+                            }
+                            var _oc45dur = _oc45nf ? ((_oc45nf.timestamp||0) - (_oc45ne.timestamp||0)) : _oc45cMinStableMs;
+                            if (_oc45dur >= _oc45cMinStableMs) { _oc45cNewEntry = _oc45ne.timestamp||0; break; }
+                        }
+                        if (_oc48Log) _oc48Log['info']('[OC-45c] Pre-Sleep-Besuch: bedEntryTs ' + new Date(_bedEntryTsFinal).toLocaleTimeString() + ' verworfen. FP2-False: ' + new Date(_oc45cEarlyFalse.timestamp||0).toLocaleTimeString() + '. Neu: ' + (_oc45cNewEntry ? new Date(_oc45cNewEntry).toLocaleTimeString() : 'null'));
+                        _bedEntryTsFinal = _oc45cNewEntry;
+                    }
+                }
+            }
             // FP2-Roh-Aufwachzeit vor Garmin-Override sichern (fuer allWakeSources)
             var _fp2RawWakeTs = sleepWindowCalc.firstEmpty || null;  // FP2-Abgangzeit vor Garmin-Override
 
