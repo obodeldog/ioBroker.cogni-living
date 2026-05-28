@@ -2143,14 +2143,15 @@ export default function HealthTab(props: any) {
                                         <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>
                                             {wakeConfirmed ? '✓' : '⟳'} {fmtTime(_bigTs)}
                                         </div>
-                                        <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
-                                            {wakeDisplay.icon} {wakeDisplay.label}
-                                        </div>
+                                        {/* Symmetrie-Fix: Sub-Zeit (Aufgewacht) zuerst, dann Source -> analog Links-Seite */}
                                         {_hasPhysicalExit && (
                                             <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
                                                 Aufgewacht: {fmtTime(swEnd)}
                                             </div>
                                         )}
+                                        <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
+                                            {wakeDisplay.icon} {wakeDisplay.label}
+                                        </div>
                                     </>);
                                 })()}
                                 {/* [OC-42] vorläufig prominenter wenn noch nicht bestätigt */}

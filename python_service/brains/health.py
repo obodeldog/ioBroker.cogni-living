@@ -45,21 +45,28 @@ class HealthBrain:
         except Exception as e: return False, str(e)
 
     def predict(self, digest):
-        if not self.is_ready: return 0, 0.0, "Not Ready"
+        # Bug-Fix: bei nicht-trainiertem Modell None zurueckgeben, damit UI "Lernphase" anzeigen kann
+        # (vorher: 0.0 -> nicht von normalem Tag mit Score=0 unterscheidbar)
+        if not self.is_ready: return 0, None, "Not Ready"
         try:
             X = self._prepare_features([digest])
             res = self.model.predict(X)[0]
             raw_score = self.model.score_samples(X)[0]
-            # IsolationForest(contamination=0.1): Normale Tage liefern raw_score ~ -0.10.
-            # Alte Formel (-raw_score) ergab 0.10 fuer normale Tage → verwirrend.
-            # Neue Formel: 0.0 = normal, 1.0 = stark anomal (zentriert um -0.10 Baseline).
-            # Bereich: -0.10 (normal) bis -0.50 (sehr anomal) → skaliert auf 0.0 bis 1.0
-            BASELINE_RAW = -0.10  # Erwarteter Score fuer normalen Tag bei contamination=0.1
-            RANGE_RAW = 0.40      # Spanne von normal (-0.10) bis stark anomal (-0.50)
-            norm_score = max(0.0, min(1.0, (BASELINE_RAW - raw_score) / RANGE_RAW))
+            # IsolationForest score_samples: positive Werte = normal, negative = anomal.
+            # Erwarteter Bereich:  0.10 (perfekt normal) ... -0.50 (sehr anomal).
+            # Neue Formel (symmetrisch, ohne asymmetrisches Clipping):
+            #   norm_score = max(0.0, min(1.0, (-raw_score + 0.10) / 0.60))
+            # Mapping:
+            #   raw_score = 0.10  -> norm 0.00 (sehr normal)
+            #   raw_score = 0.00  -> norm 0.17 (normaler Tag)
+            #   raw_score = -0.10 -> norm 0.33 (leicht abweichend)
+            #   raw_score = -0.20 -> norm 0.50 (leicht auffaellig)
+            #   raw_score = -0.50 -> norm 1.00 (stark anomal)
+            # So zeigen normale Tage 15-30% Variation, statt alle = 0.
+            norm_score = max(0.0, min(1.0, (-raw_score + 0.10) / 0.60))
             print(f"[HealthBrain.predict] raw_score={raw_score:.4f} | norm_score={norm_score:.4f} | inlier={res==1}")
             return res, norm_score, f"Anomaly Score: {raw_score:.3f} (norm: {norm_score:.2f})"
-        except Exception as e: return 0, 0.0, str(e)
+        except Exception as e: return 0, None, str(e)
 
     def analyze_gait_speed(self, sequences, hallway_locations=None):
         """

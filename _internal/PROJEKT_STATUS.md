@@ -1,5 +1,639 @@
-# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 02.05.2026 | **Version:** 0.33.226
+﻿# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
+**Letzte Aktualisierung:** 28.05.2026 | **Version:** 0.33.261
+
+---
+
+## Sitzung 28.05.2026 (nachts) -- v0.33.261 -- Health-Score Lernphase + Schlafkachel OC-7-Layout
+
+### Abgeschlossen
+
+**Bug-Diagnose Tagesstatus "Score 0.00" (5 Bugs identifiziert in Kette):**
+1. `setup.js` L106 - `analysis.health.anomalyScore` ohne `def`-Wert -> ioBroker setzt 0 als Default.
+2. `ai_agent.js` L188 - `ANALYZE_HEALTH` nur via `createDailyDigest()` getriggert, bricht ab wenn Gemini fehlt oder < 5 Events.
+3. `health.py` L47 - bei `is_ready=False` returnt `(0, 0.0, "Not Ready")` - 0.0 nicht von echtem Score 0 unterscheidbar.
+4. `health.py` L59 - asymmetrisches Clipping: `max(0.0, ...)` schneidet alle normalen Tage auf 0.0 ab.
+5. `python_bridge.js` L190 - schrieb 0.0 in State auch bei "Not Ready", zusaetzlich `security.lastScore` synchronisiert (State-Inkonsistenz).
+
+**Beweis aus User-JSON (`2026-05-28.json`):** Top-Level `anomalyScore: 0.1` (aus `security.lastScore` gelesen),
+PWA-UI dagegen `Score: 0.00` (aus `health.anomalyScore` - Default-Wert nie ueberschrieben).
+
+### Code-Fixes
+- `python_service/brains/health.py`:
+  - `if not self.is_ready: return 0, None, "Not Ready"` (None statt 0.0).
+  - Neue symmetrische Formel: `norm_score = max(0.0, min(1.0, (-raw_score + 0.10) / 0.60))`.
+  - Mapping: raw=0.10 -> 0.00 (sehr normal), raw=-0.10 -> 0.33 (leicht abw.), raw=-0.50 -> 1.00 (stark anomal).
+- `src/lib/python_bridge.js` (HEALTH_RESULT-Handler):
+  - `None`/`null` wird NICHT mehr in State geschrieben (Modell-Lernphase erhalten).
+  - `analysis.security.lastScore`-Sync entfernt (war Quelle der Verwirrung).
+- `src/lib/setup.js`:
+  - `analysis.health.anomalyScore` mit `def:null`, `min:0`, `max:1`, klarem Namen.
+- `src/lib/pwa_server.js` (Backend + Frontend):
+  - Backend: liest `LTM.dailyDigests` + `analysis.health.lastCheck` + State-Timestamp -> berechnet `learningPhase` Objekt.
+  - Frontend: zeigt nur Label + farbigen Indikator (Gruen/Orange/Rot), KEINE Zahl mehr.
+  - Lernphase-Anzeige: "Lernphase aktiv · X von 14 Tagen gesammelt".
+
+### UI-Umbau Schlafkachel (PWA + Admin synchron)
+- `src/lib/pwa_sleep_tile_client.js`:
+  - Header rechts symmetrisch: Aufgewacht-Sub VOR Source (vorher umgekehrt).
+  - Helper `fmtDur(min)` ergaenzt - formatiert wie OC-7 Admin ("1h 35min").
+  - Farbcode-Legende: Quadrate (■) statt Kreise (●), einheitlich.
+  - 4 graue Kacheln mit grossen Minutenwerten (`grid-template-columns:repeat(4,1fr)` analog Admin OC-7).
+  - Sekundaerzeile: Bad / Aussen / Radar-Aussetzer / Weg-vom-Bett nur wenn vorhanden.
+  - Smartwatch-Referenz mit `border-top:1px dashed` + Quadraten + `fmtDur`.
+- `src-admin/src/components/tabs/HealthTab.tsx` Z2135-2155:
+  - Symmetrie-Fix: Aufgewacht-Sub VOR Source-Icon, analog Links-Seite.
+
+### Offen / Hinweise
+- Health-Modell wird vermutlich **noch** nicht trainiert (Gemini-Setup-Pfad oder `_dailyDigests`-Schritt traegt nicht durch ANALYZE_HEALTH).
+- Nach Adapter-Neustart auf v0.33.261: Tagesstatus zeigt "Lernphase aktiv · X / 14 Tage". Echte Score-Werte erst nach 14 Tagen vollstaendiger LTM-Digests.
+- Wenn `analysis.health.anomalyScore` aufgrund alter Adapter-Installationen weiter 0 bleibt: State manuell auf null setzen, dann re-init via `setObjectExistsAsync` (oder Object loeschen, Adapter restartet).
+
+---
+
+## Sitzung 28.05.2026 (abends) -- v0.33.260 -- OC-45d Unified SM + OC-50a Hover-Fix
+
+### Abgeschlossen
+
+**OC-45d Unified SM Context (alle 4 Phasen verbunden):**
+- `_scCtx` shared context object initialisiert vor OC-45b (var hoisting, gleicher Scope)
+- OC-45b SLEEPING schreibt `_scCtx.sleepingPhases` + setzt `phase=_SC_SLEEPING`
+- OC-45c PRE_SLEEP schreibt `_scCtx.preSleepTs`
+- OC-45a POST_WAKE schreibt `_scCtx.postWakeTs` + setzt `phase=_SC_DAY` + `dayStart=bedExitTs`
+- OC-45d Framework-Kommentar aktualisiert: alle 4 Module DONE (kein "geplant" mehr)
+- OC-48 Tagphase-Guard (03-18h Kandidaten-Filter) formal als DAY-Phase dokumentiert
+
+**OC-50a Frontend Hover-Fix:**
+- Problem: `slotTip()` pruefte alle `clippedOutsideBedEvts` fuer Balken-Tooltip, auch Radar-Aussetzer
+- Folge: Hover auf blauem Balken in FP2-Dropout-Periode zeigte "Radar-Aussetzer" statt "Leicht"
+- Fix: `slotTip()` prueft per `bedAbsenceEvts.some(match)` ob es ein echtes bedAbsenceEvent gibt
+  - Match: zeigt Abwesenheits-Label
+  - Kein Match (Radar-Aussetzer): `break` -> Schlafstadium aus `stageLabel[slot.s]`
+- Eingriff: `src/lib/pwa_sleep_tile_build.js` L430-449
+
+### Naechster Schritt
+- Validierung ueber mehrere Naechte. OC-45d Big Unified Loop optional als spaetere Session.
+
+---
+
+## Sitzung 28.05.2026 (Strategie) -- Markenarchitektur + Innovation-Seite (kein Code)
+
+### Abgeschlossen
+- **Markenarchitektur Option A** in `VERTRIEBSKONZEPT.md` Abschnitt 13 dokumentiert:
+  - Plattform-Arbeitstitel: **AURA** (vorbehaltlich DPMA-/EUIPO-Recherche Klasse 9 + 10)
+  - Familien-App-Submarke: **NUUKANNI** (bleibt, in `io-package.json:titleLang` verankert)
+  - Technischer Adaptername: **cogni-living** (intern, ioBroker-Repo)
+  - Plan B-Kandidaten: CASA / HOMA / AMARA (nur falls AURA-Recherche scheitert)
+- **Innovation-Seite jwgi.de:** Reihenfolge fixiert (1. Marken-Check, 2. Screenshots aufbereitet, 3. Seite live). Aktuelle Veroeffentlichung verschoben.
+- **Web-Text-Perspektive:** Hybrid A+E (persoenlicher Anker + Pitch-Struktur). Vorheriger Foerderantrag-Stil verworfen.
+
+### Offene Baustellen (Strategie)
+- DPMA-/EUIPO-Recherche AURA (User-Eigenarbeit, ca. 30-60 Min).
+- Marketing-Screenshots: nach Mojibake-Fix v0.33.258 Validierung 1-2 Naechte, dann aufbereiten (OC-7 / "kg_flur" / Version / Sex+Zyklus-Tabs ausblenden).
+- Datenschutz-Entscheidung: Erwaehnung Familienkreis-Diabetes-T1 im Webtext direkt oder anonym?
+
+### Naechster Schritt (Strategie)
+- Marken-Recherche durchfuehren, Ergebnis in VERTRIEBSKONZEPT §13 eintragen.
+
+---
+
+## Sitzung 28.05.2026 -- v0.33.257 + v0.33.258 -- OC-47d-OBE + OC-AT + Mojibake-Fix
+
+### Abgeschlossen
+
+**OC-47d-OBE: Roter Ausserhalb-Balken bei FP2-Dropout mit Vibration**
+- Root Cause (Nacht 28.05.2026, 05:03-05:18):
+  - FP2 hatte 15-Min-Dropout (05:03:07 false -> 05:18:00 true).
+  - Bad-PIR feuerte 19s NACH fp2.end (05:18:19) -> fiel noch in +2min-Puffer von _hasAnySensorOutside.
+  - Ergebnis: confirmed=true, type="outside" -> ROTER Balken, obwohl Person im Bett lag.
+  - Beweis: vibration_trigger 05:16:36 in EG Schlafen WAEHREND des Dropout-Fensters.
+- Fix: In Phase 3 outsideBedEvents, nach FP2-Solo-Dropout-Filter:
+  Wenn !_hasBath && _hasAnySensorOutside && Vibration im fp2.start-fp2.end Fenster -> confirmed=false (grauer Radar-Aussetzer).
+  Echter WC-Besuch (Bad-PIR innerhalb fp2.end) bleibt orange und unberuehrt.
+
+**OC-AT: Auto-Trigger saveDailyHistory() nach Schlaf-Sensor-Events**
+- Debounce 90s in onStateChange, aktiv 22:00-11:59 Uhr, nur wenn health-Modul aktiv.
+- Relevante Sensoren: sensorFunction='bed' oder 'bathroom', dev.isFP2Bed=true, dev.isBathroomSensor=true.
+- Jedes neue Event setzt Debounce neu (immer 90s nach letztem Event = Ruhezeit).
+- Kein Ersatz fuer stundliche saveDailyHistory (die bleibt), sondern Ergaenzung.
+
+**PWA Familienansicht Sonderzeichen (Mojibake-Fix)**
+- pwa_http_shim.js komplett auf klaren Code umgestellt (war obfuskiert).
+- Automatische latin1->utf8 Erkennung und Korrektur fuer alle /api/status Responses.
+- Typische Artefakte: Ã¼, â€", ðŸ... werden automatisch korrekt gerendert.
+
+### Naechster Schritt
+- Naechste Nacht validieren: OC-47d-OBE zeigt grau statt rot bei Aussetzer mit Vibration.
+- OC-AT Log pruefen: "[OC-AT] Schlaf-Sensor-Event -> saveDailyHistory()" nach WC-Besuch.
+
+---
+
+## Sitzung 26.05.2026 (abends) -- v0.33.256 -- OC-45c PRE_SLEEP SM (letztes OC-45d Modul)
+
+### Abgeschlossen
+
+**OC-45c PRE_SLEEP SM: bedEntryTs FP2-Counterevidence**
+- Erkennt Pre-Sleep-Besuche: FP2 False < 30 Min nach bedEntryTs + Motion outside = Person hat Bett verlassen.
+- Danach: Naechste stabile FP2-True-Periode (>= 20 Min) wird neues bedEntryTs.
+- Sensor-neutral: Greift nur wenn FP2 vorhanden. Ohne FP2 kein Eingriff.
+- Simulation 25.05: bedEntryTs 01:13 (Vibration-Anker) verworfen -> 01:59:37 (stabile FP2-True bis nach sleepStart).
+  - Step 1: FP2 False bei 01:15 (1.6 Min nach bedEntry) -> verdaechtig
+  - Step 2: 32 Motion-Events in Wohnen/Kueche nach 01:15 -> Counterevidence bestaetigt
+  - Step 3: FP2-True 01:44 (2.3 Min), 01:52 (1.3 Min), 01:54 (3.5 Min), 01:59:37 (keine False bis sleepStart) -> WINNER
+
+**OC-45d Status: Alle 4 Phasen-Module implementiert:**
+| Phase | Modul | Version |
+|---|---|---|
+| PRE_SLEEP | OC-48 + OC-45c Counterevidence | v0.33.256 |
+| SLEEPING | OC-45b FP2-Return + OC-47d Fix | v0.33.255 |
+| POST_WAKE | OC-45a + OC-49 BED_TOUCH | v0.33.252 |
+| DAY | geplant | --- |
+
+### Naechster Schritt
+- Validierung: Naechste 2-3 Naechte beobachten.
+- Optional: OC-45d Unified Refactoring (alle Module in einer runSleepCycleSM() Schleife).
+
+---
+
+
+## Sitzung 26.05.2026 (abends) -- v0.33.255 -- OC-45b SLEEPING SM + OC-47d Fix
+
+### Diagnose: Nacht 25./26.05.2026
+
+**Zwei falsche Weg-vom-Bett-Balken (02:46-03:33 und 03:57-04:57)**
+- FP2 meldete Bett leer. Vibrationssensor widersprach: strength 9,10,12 (Absenz 1) und 30,7,11 (Absenz 2).
+- OC-47d zog 4 Punkte ab, ABER _vibBefore-Bonus (+2) hob das teilweise auf.
+  Absenz 1 = score 2 (low, bestehen). Absenz 2 = score 3 (medium, sm+outside).
+- Vibration bei 02:44 als Aufsteh-Stoss gewertet (+2), war aber Schlafbewegung.
+
+**Falsche smWakePhases nach Aufwachen (09:22, 09:35 als nocturia)**
+- smWakePhases Cap war wakeHardCap (nicht garminWakeTs). Events nach Aufwachen als Nykturie klassifiziert.
+
+**bedEntryTs 01:13 falsch** (noch nicht gefixt)
+- FP2 True 01:07, Vibration 01:09, strength 01:13 -> bedEntryTs. Aber FP2 False 01:15 + Motion Wohnen/Kueche.
+- OC-48b 120-Min-Check greift nicht (delta=65 Min). -> OC-45c geplant.
+
+### Abgeschlossen
+
+**OC-47d FIX:**
+- score=0 (statt score-4) wenn _vibStrongInside.length >= 2.
+- _vibBefore (+2) kann den Widerspruchs-Override nicht mehr aushebeln.
+
+**OC-45b SLEEPING SM (Modul 2 von OC-45d):**
+- _postEvts: FP2-True-Events neben Motion-Events.
+- Loop: FP2-True -> Rueckkehr-Branch. FP2-Rueckkehr in 1:22 min -> < 5 min -> korrekt verworfen.
+- Quelle: sm_stage2_fp2.
+- Cap: wakeTs > garminWakeTs > wakeHardCap. Post-Aufwach kein Nykturie mehr.
+
+### Naechster Schritt
+- OC-45c: bedEntryTs Counterevidence (FP2 < 30 Min False + Motion outside -> verwerfen).
+
+---
+
+
+## 🗓️ Sitzung 26.05.2026 — Strategie Vertrieb / Roadmap (kein Code)
+
+### ✅ Abgeschlossen
+- **VERTRIEBSKONZEPT.md** neu fokussiert: Zwei-Spuren-Modell (Marke Health-first, Einstieg Sicherheit/Energie als Trojan Horse).
+- Dauerhafte Referenz: [ingenieur.de Wearables/Medizinprodukte, 25.05.2026](https://www.ingenieur.de/technik/fachbereiche/medizin/wearables-werden-zu-medizinprodukten-was-die-neue-sensorik-leisten-kann-3645420.html) — Claim-Tabelle + Marketing-Saetze.
+- **BRAINSTORMING OC-50:** Nightscout/AAPS/CGM — im Haushalt via VIS/Pushover live, AURA-Integration offen (Pilot Tochter T1).
+- **BRAINSTORMING OC-51:** Forschungsfoerderung (PearNet/GO-Bio next) — Trendbeleg; fuer AURA eher EXIST/ZIM/Pflegekasse relevant.
+
+### 🔧 Offene Baustellen
+- OC-50 technisch: State-Mapping Nightscout → dailyDigests / diabetes1-Score.
+- Disease-Scores Backend: weiterhin nur fallRisk/dementia/frailty taeglich (UI zeigt mehr Profile).
+
+### 🎯 Naechster logischer Schritt
+- Care-Pilot-Demos (Gesundheit zuerst) + OC-50 Scope-Dokument mit konkreten ioBroker-State-IDs.
+
+---
+
+## 🗓️ Sitzung 22.05.2026 (abends) — v0.33.254 — OC-45d Framework + OC-45b Pre-Sleep-Filter
+
+### ✅ Abgeschlossen
+
+#### OC-45d: SLEEP-CYCLE STATE MACHINE FRAMEWORK (Grundstein)
+- State-Enum definiert in `src/main.js` direkt vor OC-45a:
+  - `_SC_IDLE=0, _SC_BED_PRESENT=1, _SC_SLEEPING=2, _SC_NOCTURIA=3, _SC_WAKING=4, _SC_BED_TOUCH=5, _SC_DEPARTED=6, _SC_DAY=7`
+- Evidenz-Gewichte (sensor-neutral): `Garmin=4, FP2=3, Vibration=2, PIR=1`
+- Framework-Kommentar-Block dokumentiert alle vier geplanten Module:
+  - `PRE_SLEEP` → OC-48 (aktiv) | OC-45c (geplant)
+  - `SLEEPING` → OC-31 Stage 2 | OC-45b (naechster Schritt)
+  - `POST_WAKE` → OC-45a + OC-49 (implementiert)
+  - `DAY` → geplant
+- Jedes Modul ist einzeln deploybar — keine Big-Bang-Migration noetig.
+
+#### OC-45b (Schritt 1/2): Pre-Sleep nachtAufstehen-Filter
+- **Problem:** FP2-Dropouts und Einschlaf-Bewegungen VOR dem Einschlafen (z.B. 22:43, 22:48, 22:53 bei sleepStart 23:08)
+  wurden als `nachtAufstehenEvents` exportiert und im UI als Nykturie angezeigt (6 Events statt 1-3 echte).
+- **Fix 1 (`nachtAufstehenEvents` Export, L960):**
+  Gefiltert auf `departureTs >= sleepStart` — nur echte Nacht-Aufstehen werden angezeigt.
+- **Fix 2 (bedAbsenceEvents Quelle 3, L830):**
+  Pre-Sleep nachtAufstehen-Fenster (`departureTs < sleepStart`) werden als Absenz-Kandidat uebersprungen.
+  Verhindert dass Einschlaf-Trips zu falschen bedAbsenceEvents werden.
+- **WICHTIG:** Die ungefilterter `_nachtAufstehenWindows` (intern) bleiben fuer Schlafeinsatz-Kandidaten-Filterung (L331)
+  und Abend-Attribution (L610) erhalten — NUR Export + Quelle-3-Absenz werden gefiltert.
+
+### 🔧 Offene Baustellen
+- **OC-45b Schritt 2 (SLEEPING SM):** smWakePhases mit FP2-Events erweitern.
+  Aktuell: nur Motion-Events. FP2 False = Abgang, FP2 True = Rueckkehr koennte Nykturie besser erkennen.
+- **OC-45c (PRE_SLEEP SM):** bedEntryTs als SM-Ausgabe (ersetzt OC-48 Counterevidence-Ansatz).
+- **Validierung v0.33.253+v0.33.254:** naechste 1-2 Naechte beobachten.
+
+### 🎯 Naechster logischer Schritt
+- OC-45b Schritt 2: `_smWakePhases` IIFE um FP2-Events erweitern. Source-Feld `sm_stage2_fp2` fuer FP2-basierte Phasen.
+
+---
+
+## Hotfix 22.05.2026 — v0.33.253 — OC-49a Regression + OC-48b bedEntryTs Fix
+
+### Ursache (Diagnose)
+- **OC-49a Regression (kritisch):** Der neue _oc49isSignif-Check (Absenz nur schliessen wenn True >= 20 Min)
+  wurde faelschlicherweise auch auf die SLEEPING-Phase angewendet. FP2 war heute Nacht sehr noisy (kurze
+  True-Perioden von 7-17 Min), kein Schliessen → eine 29-Min-Absenz wuchs zu 4:47h Riesen-Absenz an.
+  Ergebnis: bedAbsenceEvents 01:08-05:55 (falsch).
+- **bedEntryTs = 19:12 (OC-48b):** FP2-Reconnect oder Zigbee-Reset um 19:12, erster FP2-Event = bedEntryTs.
+  OC-48 fiel auf _gR.bedEntryTs Fallback zurueck (kein Cluster-Kandidat), ohne Plausibilitaetspruefung.
+
+### Fix
+- OC-49a: _oc49isSignif Check gilt nur POST-WAKE (_fpTs > _oc49PwAnchor). Waehrend SLEEPING: immer schliessen.
+- OC-48b: Fallback bedEntryTs wird verworfen wenn > 120 Min vor sleepStart (Phantom-Ankerpunkt-Schutz).
+
+---
+
+## 🗓️ Sitzung 21.05.2026 — Version 0.33.252 — OC-49 BED_TOUCH-Filter
+
+### ✅ Abgeschlossen
+- **OC-49a (bedAbsenceEvents):** FP2 Post-Wake Threshold 20 Min → 2 Min gesenkt.
+  Kurze Bett-Beruehrungen (< 2 Min) unterbrechen laufende Absenz-Erfassung nicht.
+  Konkret: 07:03-07:04 (85 Sek FP2 True = Bett umraeumen) laesst Absenz-Zeitraum 07:01-07:45 intakt.
+  Vorher: 06:34-07:58 erschien als Wachliegen. Nachher: 07:01-07:45 korrekt als Ausserhalb.
+- **OC-49b (OC-45a SM):** BED_TOUCH-Zustand in POTENTIAL_RETURN eingebaut.
+  FP2 unter 7 Min UND unter 2 Vib-Evidenz-Paare = BED_TOUCH → bleibt DEPARTED (kein falsches GENUINE_RETURN).
+  Vibration-only-Pfad: 2+ Evidenz-Paare = echte Rueckkehr auch ohne FP2.
+  Vib-Evidenz-Pair: trigger=True + strength innerhalb ±120s Fenster.
+  Timeout in POTENTIAL_RETURN angehoben: 5 Min → 7 Min.
+- HANDBUCH.md: OC-49a Schutzregel ergaenzt + neuer Laien-Abschnitt am Ende.
+- Version 0.33.252 gebaut (prod) + gepusht.
+
+### 🔧 Offene Baustellen
+- OC-49 noch nicht live getestet — erste Nacht nach Push abwarten.
+- OC-45b (SLEEPING Phase SM, Nykturie-Integration) — noch nicht begonnen.
+- OC-45c (PRE_SLEEP Phase SM) — OC-48 ist pragmatischer Fix, OC-45c die langfristige Loesung.
+- OC-45d (Unified Sleep-Cycle-SM) — naechster groesserer Schritt.
+
+### 🎯 Naechster logischer Schritt
+- OC-45d: Globale State Machine konzipieren + Umsetzungsplan mit User abstimmen.
+- Dann: OC-45b (Nykturie in Sleeping Phase) implementieren.
+
+### 🔍 Technischer Hintergrund (Diagnose dieser Sitzung)
+- Analysiert: 2026-05-21.json — Nacht 20./21.05.2026.
+- Ursache: FP2-Sequenz 06:57 (True 4 Min) → 07:01 False → 07:03 True (85 Sek) → 07:04 False.
+  85-Sek-True-Periode schloss offenen Absenz-Zeitraum (emptyTs=07:01) falsch.
+  Dann: 07:04-07:45 = 40 Min FP2 False, kein neuer Absenz-Eintrag wegen _sustainedTrue (1:25 < 20 Min).
+  Ergebnis alt: 07:01-07:45 nie in bedAbsenceEvents → als Wachliegen gerendert.
+- Vib-Rohdaten (CSV) analysiert: trigger=True Fenster 90 Sek, strength nur bei echtem Liegen zeitgleich.
+
+---
+
+**Letzte Aktualisierung:** 17.05.2026 | **Version:** 0.33.251
+
+---
+
+## 📍 Sitzung 17.05.2026 — Version 0.33.251 — OC-48 PRE_SLEEP Counterevidence-Filter
+
+### ✅ Abgeschlossen
+- **OC-48 implementiert (src/main.js):** PRE_SLEEP Counterevidence-Filter für `bedEntryTs`. Ersetzt den bisherigen "frühesten Cluster-Kandidaten gewinnt immer"-Ansatz durch eine sensor-neutrale Gegenbeleg-Prüfung.
+- **Algorithmus:** Für jeden Cluster-Kandidaten (aus `allSleepStartSources`, max. 240 Min vor `sleepWindowOC7.start`) wird geprüft ob innerhalb von 60 Min danach Bewegungen in entfernten Räumen (Hop-Distanz ≥ 2 vom Schlafzimmer) stattfanden. Falls ja → Pre-Sleep-Touch, überspringen. Erster Kandidat ohne Gegenbeleg gewinnt.
+- **Sensor-neutral:** Ohne Topologie zählen alle Nicht-Schlafzimmer-Nicht-Bad-Bewegungen. Mit Topologie (`_roomHopDistance`) werden z.B. OG-Kinderzimmer-Bewegungen nicht als Gegenbeleg für EG-Schlafzimmer-Bett gewertet. Ohne FP2: rein Vibrations-basiert.
+- **OC-46 bleibt korrekt:** Person liegt ruhig im Bett (lange Einschlaf-Latenz) = keine Gegenbeleg-Bewegungen = frühes `bedEntryTs` wird korrekt behalten.
+- **Fallback:** Wenn alle Kandidaten Gegenbelege haben → letzter Kandidat (nächster an `sleepStart`).
+- **Validierung Nacht 14./15.05.2026:** Vorher bedEntryTs = 22:15 (2h25min falsch). Nachher: 22:15 abgelehnt (Wohnzimmer 22:32), 22:57 abgelehnt (Wohnzimmer-Aktivität bis ~23:58), 00:33 (fp2_vib, kein Gegenbeleg in 7-Min-Fenster bis sleepStart) → `bedEntryTs = 00:33` ✅
+- **Version 0.33.251** gepusht (commit `3c5c7be`), 17.05.2026.
+
+### 🔧 Offene Baustellen
+- OC-48 in der Praxis validieren: nächste Nacht JSON-Dump prüfen → `[OC-48]`-Log-Einträge kontrollieren.
+- OC-45c (PRE_SLEEP SM vollständig): OC-48 ist ein pragmatischer Fix, OC-45c würde das als echte State Machine (AWAY → BED_TOUCH → BED_ENTRY) lösen — mittelfristig.
+
+### 🎯 Nächster Schritt
+- 0.33.251 installieren, morgen früh prüfen: `bedEntryTs` korrekt? Log: `[OC-48] bedEntryTs: fp2_vib @ 00:33`.
+
+---
+
+## 📍 Sitzung 15.05.2026 — Analyse bedEntryTs-Fehlbestimmung (Pre-Sleep Touch)
+
+### ✅ Abgeschlossen
+- **Tiefenanalyse "Ins Bett gegangen 22:15":** Anhand JSON-Dumps (2026-05-14 + 2026-05-15) und EventHistory identifiziert, dass eine einzelne `vibration_strength=5`-Event um 22:15 Uhr die `vib_refined`-Quelle ausgelöst hat.
+- **Ursachenkette:** FP2-BED False (22:14:20), danach 2h Bewegungen außerhalb. OC-46 (240-Min-Fenster) fasste 22:15-Vibration und echte Vibrationen ab 00:16 zum selben Cluster → `bedEntryTs = 22:15`.
+- **Erkenntnisse:** Feste Stärke-Schwellen sind nicht sensor-neutral. FP2-Invalidierung allein nicht ausreichend. Lösung muss Motion-Counterevidence + Topologie-Filter sein.
+- **PROJEKT_STATUS.md nachgepflegt:** Sitzungen 11./12.05. (v0.33.248–250) rückwirkend dokumentiert.
+- **"Tür EG Schlafen" = Fenster-Sensor:** `Homematic EG Schlafen Fenster 1` (typ=door intern).
+
+### 🎯 Nächster Schritt
+- → OC-48 implementiert in Sitzung 17.05.2026 (s.o.)
+
+---
+
+## 📍 Sitzung 12.05.2026 — Version 0.33.250 — OC-47c Bugfix zweite Render-Stelle
+
+### ✅ Abgeschlossen
+- **Buganalyse:** Nach v0.33.249 zeigte HealthTab-Kachel im Hard-Refresh noch immer "Aufstehen" statt "Aufgewacht", weil eine zweite Render-Stelle im `wakeConfirmed=true`-Pfad das Label hardcodiert hatte (OC-47c war nur in eine der beiden Stellen eingebaut worden).
+- **Fix:** Beide Render-Blöcke in HealthTab.tsx dynamisch gemacht — kein Block mehr hardcodiert. Jetzt zeigt auch der `wakeConfirmed=true`-Pfad korrekt "Aufgewacht" oder "Aufstehen" je nach bedExitTs.
+- **Version 0.33.250** gepusht (commit `d1a465d`), 12.05.2026.
+
+### 🔧 Offene Baustellen
+- OC-47 validieren: nächste Nacht mit Garmin-Wake-Fehlmeldung prüfen ob bedExitTs korrekt erkannt wird.
+- OC-48 bedEntryTs-Qualitätssicherung (Pre-Sleep-Touch-Problem, s. Sitzung 15.05.2026).
+
+### 🎯 Nächster Schritt
+- Nacht 12./13.05. prüfen ob OC-47 bedExitTs korrekt findet + UI "Aufgewacht" statt "Aufstehen" zeigt.
+
+---
+
+## 📍 Sitzung 12.05.2026 — Version 0.33.249 — OC-47 Garmin-Wake Vibration-Gate + UI-Labels
+
+### ✅ Abgeschlossen
+- **OC-47:** Garmin-Wake darf `sleepWindowEnd` nicht hard-cappen wenn Vibrationssensor danach starke Matratzen-Aktivität meldet (>=2 Events Stärke>=10 in 120 Min). Greift nur wenn FP2 KEIN klares Aufstehen erkennt (Blindspot-Fall). Verhindert, dass Garmin-Fehlmeldung lokale Sensoren abschneidet.
+- **OC-47b:** OC-45a Cap 45→120 Min. Findet bedExitTs auch wenn Garmin-Wake >45 Min zu früh meldet.
+- **OC-47c:** UI-Label dynamisch — "Aufgewacht" wenn nur swEnd vorhanden, "Aufstehen" nur wenn bedExitTs vorhanden und nach swEnd liegt. Verhindert dass Garmin-Wake als "Aufstehen" angezeigt wird.
+- **OC-47d:** `bedAbsenceEvent`-Confidence wird gesenkt (-4 Punkte) wenn während FP2-leer-Fenster >=2 Vibrationen mit Stärke>=10 auftreten (Widerspruchs-Signal: Vibration während Bett-leer).
+- **Version 0.33.249** gepusht (commit `039ddef`), 12.05.2026.
+
+### 🔧 Offene Baustellen
+- OC-47 testen: nächste Nacht mit Garmin-Wake-Fehlmeldung prüfen.
+- OC-47c Bugfix (zweite Render-Stelle) noch offen → direkt als 0.33.250 gefolgt.
+
+### 🎯 Nächster Schritt
+- Hard-Refresh nach 0.33.249: Nacht 11./12.05. sollte "Aufgewacht: 05:08" zeigen.
+
+---
+
+## 📍 Sitzung 11.05.2026 — Version 0.33.248 — OC-46 bedEntryTs-Cluster-Fenster 90→240 Min
+
+### ✅ Abgeschlossen
+- **Problem:** Nächte mit >90 Min Einschlaf-Latenz (Person liegt wach im Bett) führten dazu, dass alle Sensor-Quellen außerhalb des 90-Min-Fensters lagen und der Algorithmus auf falschen FP2-Kurzdetektions-Timestamp zurückfiel (z.B. 19:55 statt real 22:33).
+- **Fix:** `CLUSTER_WIN_MS` von 90→240 Minuten erweitert. Deckt nun auch Haushalte mit extrem langer Einschlaf-Zeit ab.
+- **Hinweis (nachträglich erkannt 15.05.):** Das 240-Min-Fenster kann Pre-Sleep-Touches (Matratze kurz berührt) mit echtem Einschlafen 2+ Stunden später zu einem Cluster zusammenfassen → falsch früher bedEntryTs. Gegenmittel: OC-48 (Intra-Cluster-Lücken-Prüfung).
+- **Version 0.33.248** gepusht (commit `1573c08`), 11.05.2026.
+
+### 🔧 Offene Baustellen
+- CLUSTER_WIN_MS=240 schlägt für Pre-Sleep-Touches durch (s. OC-48).
+
+### 🎯 Nächster Schritt
+- 0.33.248 bei Gondelsheim installieren. Prüfen: bedEntryTs korrekt bei langer Einschlaf-Latenz.
+
+---
+
+## 📍 Sitzung 08.05.2026 — Version 0.33.247 — BedPresence-Freeze Hotfix
+
+### ✅ Abgeschlossen
+- **Buganalyse BETT-PRAESENZ-Kachel:** Aktueller Tag zeigte morgens korrekte Bettzeit (z.B. 8.1h), fiel aber nach Tagesabschluss auf 1-2h und wechselte gruen -> rot.
+- **Ursache:** `bedPresenceMinutes` wurde trotz abgeschlossener Nacht erneut aus dem neuen 18:00-Suchfenster berechnet und ueberschrieb den stabilen Nachtwert.
+- **Backend-Hotfix (src/main.js):** Bei `_sleepFrozen` wird `bedPresenceMinutesFinal` aus `_existingSnap.bedPresenceMinutes` uebernommen (`[BedPresence-Freeze]`).
+- **Wirkung:** Abgeschlossene Nacht bleibt im Longterm-Chart stabil, kein abendlicher Umsprung mehr.
+- **Version 0.33.247** gepusht (commit `f7dd2cc`).
+
+### 🔧 Offene Baustellen
+- Feldvalidierung ueber den Abend: BETT-PRAESENZ fuer den bereits abgeschlossenen Tag darf nicht mehr auf 1-2h zurueckfallen.
+- OC-45c / OC-45d bleiben on hold.
+
+### 🎯 Nächster Schritt
+- Morgen/Abend JSON pruefen: `bedPresenceMinutes` fuer abgeschlossene Nacht bleibt konstant.
+
+---
+## 📍 Sitzung 07.05.2026 (3) — Version 0.33.246 — nocturiaAttr Fix2 + OC-45b Trip-Merging
+
+### ✅ Abgeschlossen
+- **OC-45a validiert:** Marc bedExitTs = 06:24 im UI bestätigt (vorher 06:38). State Machine funktioniert.
+- **nocturiaAttr Fix2 (src/main.js Zeile 3226):** Nur `isActiveValue(e.value) = True` Events in `_pBathNightEvts` filtern. Ursache: True+False wurden beide gezählt → jeder Besuch doppelt. Gondelsheim Robert: 10→5 durch diesen Fix allein.
+- **OC-45b Trip-Merging (src/main.js Zeile 3233ff):** `_oc45bTrips`-Array: mehrere True-Events innerhalb 10 Min → 1 Trip. Bestätigung: Person-Events in 10 Min vor Trip-Start nötig. Gondelsheim Robert: ~5→~3 erwartet.
+- **Version 0.33.246** gepusht (commit 8984026)
+
+### 🔧 Offene Baustellen
+- nocturiaAttr-Validierung: Nach nächster Nacht prüfen ob Robert/Ingrid realistisch (<5 Besuche).
+- OC-45c (PRE_SLEEP) und OC-45d (Unified SM): zukünftig.
+
+### 🎯 Nächster Schritt
+- v0.33.246 installieren, morgen früh prüfen: Robert nocturiaAttr < 5?
+
+---
+
+## 📍 Sitzung 07.05.2026 (2) — Version 0.33.245 — OC-45a Post-Wake State Machine
+
+### ✅ Abgeschlossen
+- **OC-45a implementiert (src/main.js):** Neue sensor-agnostische Post-Wake State Machine ersetzt OC-42 (statische 15-Min-FP2-Schwelle).
+  - Problem: bedExitTs zeigte 06:38 statt 06:24, weil FP2=True um 06:36 (Walk-Through nach Dusche) als Rückkehr ins Bett gewertet wurde. 15-Min-Schwelle ließ keinen "echten" Abgang davor erkennen.
+  - Lösung: SM mit 4 Zuständen: WAKING→DEPARTED→POTENTIAL_RETURN→TRANSIT|GENUINE_RETURN.
+  - TRANSIT-Erkennung: Bad-Sensor-Nachtrigger (<90s) + kurze Präsenz (<3 Min) + Durchgangs-Sensor (<90s) → Kandidat bleibt auf ursprünglichem Abgangszeitpunkt.
+  - Sensor-agnostisch: FP2(+3), Bad-Sensor(+2), Anderer Raum(+2). Snapshot-Fallback für Neustart-Szenarien bleibt erhalten.
+- **BRAINSTORMING.md:** OC-45 Roadmap (4 Schritte) dokumentiert für nächste Woche.
+- **Version 0.33.245** gepusht (commit 6705403)
+
+### 🔧 Offene Baustellen
+- OC-45a muss in der Praxis validiert werden (nächster Morgen: [OC-45a]-Log im ioBroker-Log prüfen).
+- OC-45b (SLEEPING-Phase Nykturie-SM): nächste Woche — verbesserte Nykturie-Erkennung mit SM.
+- OC-45c (PRE_SLEEP Phase) und OC-45d (Unified SM): mittelfristig.
+
+### 🎯 Nächster Schritt
+- v0.33.245 installieren, morgen früh im ioBroker-Log prüfen: `[OC-45a] bedExitTs: HH:MM` — ist es jetzt früher/richtiger?
+- Nächste Woche: OC-45b SLEEPING-Phase (Nykturie-SM) beginnen.
+
+---
+
+## 📍 Sitzung 07.05.2026 — Version 0.33.244 — nocturiaAttr-Fix + Negative Schlafdauer-Balken
+
+### ✅ Abgeschlossen
+- **Diagnose nocturiaAttr-Bug:** Im Mehrpersonenhaushalt (Gondelsheim) zeigte Robert 24 Toilettenbesuche/Nacht statt realistischer ~3. Ursache: Die Berechnung verwendete `winEnd = globales Schlaffenster-Ende` (10:33 Uhr = Ingrids Aufwachzeit), obwohl Robert bereits um 06:42 aufgewacht war. Die 3,9h Morgenaktivität (06:42–10:33) wurde fälschlich als Nacht-Toilettenbesuche gezählt.
+- **Backend-Fix (src/main.js):** `nocturiaAttr`-Berechnung von vor `computePersonSleep` nach danach verschoben. Verwendet jetzt `_pResult.sleepWindowStart/End` (personen-spezifisch) statt globalem `winStart/winEnd`. Auch `sleepSearchEvents` statt `todayEvents` für Events vor Mitternacht.
+- **Diagnose negative Schlafdauer-Balken:** Im Schlafzeit-Chart (Mehrpersonenhaushalt) zeigten manche Balken nach unten. Ursache: Wenn `sleepWindowEnd < sleepWindowStart` (z.B. bei Fixed-Fallback auf 20:00 Uhr des aktuellen Tages), wird `sleepDurationH` negativ.
+- **Frontend-Fix (LongtermTrendsView.tsx):** Guard `end > start` bei `sleepDurationH`-Berechnung für Ein- und Mehrpersonenhaushalt. Negative Werte werden als `null` behandelt (kein Balken).
+- v0.33.244 gepusht (commit 6cf98e2)
+
+### 🔧 Offene Baustellen
+- Alte JSON-Snapshots haben noch alte (zu hohe) `nocturiaAttr`-Werte. Korrigiert sich automatisch nach der nächsten Nacht-Berechnung.
+- Ingrid (Gondelsheim) hat keine personen-spez. Sensoren → nocturiaAttr-Fenster = globales Fenster. Das ist korrekt (kein Bug), aber nocturiaAttr kann noch zu hoch sein wenn Ingrid kein eindeutiges Schlaffenster hat.
+
+### 🎯 Nächster Schritt
+- v0.33.244 bei Gondelsheim installieren und nächsten Morgen prüfen: Zeigt NYKTURIE-Kachel für Robert realistische Werte (<5 Besuche statt >20)?
+
+---
+
+## 📍 Sitzung 06.05.2026 — Version 0.33.242–0.33.243 — slotTip Wachliegen + PWA Multi-Person
+
+### ✅ Abgeschlossen
+- **v0.33.242:** slotTip in HealthTab.tsx und pwa_sleep_tile_build.js: Slots nach swEnd (Aufgewacht) bis bedExitTs zeigen "Wachliegen: HH:MM–HH:MM (N Min)" statt des Schlafstadiums (z.B. "Leicht").
+- **Diagnose Gondelsheim/Ingrid:** allSleepStartSources alle null (kein Garmin, kein FP2, kein Vibrationssensor für Ingrid) → globaler Fixed-Fallback 01:31 → fast alles Tiefschlaf (9h mit kaum Vibration). Kein Software-Bug, Sensor-Problem.
+- **v0.33.243 PWA Multi-Person:** pwa_sleep_data.js: getSleepSnapshotMulti() baut per-Person Payloads aus personData. pwa_http_shim.js: sleepCards-Dict (Robert/Ingrid) zusätzlich zu sleepCard. pwa_server.js: renderSleepCards() zeigt bei Mehrpersonenhaushalt zwei getrennte Kacheln mit Namens-Header.
+
+### 🔧 Offene Baustellen
+- Ingrid (Gondelsheim) hat keine eigenen Sensoren → schlechte Schlafanalyse. Lösung: Sensor einrichten oder Ingrid als "keine Analyse"-Person markieren.
+
+### 🎯 Nächster Schritt
+- v0.33.243 bei Gondelsheim installieren und prüfen ob Robert + Ingrid separate Kacheln zeigen.
+
+---
+
+## 📍 Sitzung 05.05.2026 — Version 0.33.241 — PWA: Overlap-Check + orange Bad-Besuch
+
+### ✅ Abgeschlossen
+- **PWA Labels/gelbe Balken:** Analyse ergab, dass "Ins Bett gegangen", "Aufgewacht"-Label und gelber Wachliegen-Balken bereits in `pwa_sleep_tile_build.js` / `pwa_sleep_tile_client.js` implementiert waren (in einer früheren Session zwischen v0.33.235 und v0.33.239). Der Plan für v0.33.241 wurde daher auf die echten Lücken fokussiert.
+- **v0.33.241 PWA slotColor Overlap-Check (pwa_sleep_tile_build.js):** `slotColor()` und `slotTip()` verwenden jetzt `e.start < absMs + SLOT_MS && e.end > absMs` statt Punkt-in-Intervall. Kurze Bad-Besuche (< 5 Min) die zwischen Slot-Grenzen liegen werden jetzt gefärbt.
+- **v0.33.241 PWA orange Bad-Besuch (build.js + client.js):** `bedAbsenceOverlays` bekommen ein `isBathroom`-Flag wenn FP2-Abwesenheit mit einem `outsideBedEvent` type='bathroom' überlappt. Der Client rendert dann solid orange (#ffb300) statt grau-gestreift.
+- git push → v0.33.241 (commit ca4832e)
+
+### 🔧 Offene Baustellen
+- Keine bekannten offenen Baustellen.
+
+### 🎯 Nächster Schritt
+- Testen: v0.33.240/241 installieren. Prüfen ob oranger/gestreifter Balken nach Neustart erscheint und ob PWA Bad-Besuch orange zeigt.
+
+---
+
+## 📍 Sitzung 05.05.2026 — Version 0.33.240 — bedAbsenceEvents Snapshot-Fallback + kurze Events min. 5-Min-Slot
+
+### ✅ Abgeschlossen
+- **v0.33.239 (Bed-Absence-Overlay):** bedAbsenceEvents (gestreift, FP2-basiert) werden als solid orange dargestellt, wenn sie sich mit einem `outsideBedEvent` vom Typ `bathroom` überlappen. Logik in `HealthTab.tsx` (bedAbsenceEvts.map): `_overlapBad`-Check. Striped bleibt für generische "Weg vom Bett"-Ereignisse (kein Bad-Sensor bestätigt).
+- **v0.33.240 Backend — bedAbsenceEvents Frozen-Fallback (src/main.js):** Wenn `_gR.bedAbsenceEvents` leer ist (FP2-Events nach Adapter-Neustart aus 2500-Event-Puffer gefallen), werden `bedAbsenceEvents` aus `_existingSnap.bedAbsenceEvents` geladen. Validierungsfenster: `sleepWindowOC7.start - 1h` bis `sleepWindowOC7.end + 1h`. Löst das "kein gestreifter Balken nach Neustart"-Problem dauerhaft.
+- **v0.33.240 Frontend — Kurze Events min. 1 Slot (HealthTab.tsx):** `slotColor()` und `slotTip()` verwenden jetzt Overlap-Logik (`e.start < absMs + SLOT_MS && e.end > absMs`) statt Punkt-in-Intervall. Kurze Bad-Besuche (z.B. 3 Min von 04:31–04:34) fallen nicht mehr zwischen zwei 5-Min-Slot-Grenzen und bleiben unsichtbar.
+- Build: backend:prod + react → v0.33.240 gepusht (commit 623e39c).
+
+### 🔧 Offene Baustellen
+- **PWA (v0.33.241):** Gelbe Wachliegen-Balken + Labels "Ins Bett gegangen"/"Aufgewacht" für PWA (Handy) noch nicht re-implementiert (durch Revert v0.33.235 verloren).
+
+### 🎯 Nächster Schritt
+- v0.33.240 bei Eigensystem + Gondelsheim prüfen. Danach PWA-Fixes als v0.33.241.
+
+---
+
+## 📍 Sitzung 05.05.2026 — Version 0.33.238 — Frontend-Fix: bedEntryTs/bedExitTs in Multi-Person-Kacheln
+
+### ✅ Abgeschlossen
+- **Analyse 2026-05-05.json Gondelsheim:** bedEntryTs und bedExitTs werden im Backend korrekt berechnet (Ingrid: bedEntryTs=20:05, bedExitTs=06:36). Aber Frontend zeigte weiterhin "Eingeschlafen".
+- **Root Cause:** `overrideData`-Objekt in HealthTab.tsx (Zeile ~3566) für Mehrpersonenkacheln fehlte `bedEntryTs` und `bedExitTs`. Diese Felder wurden beim Bau des overrideData-Objekts einfach vergessen/nicht übertragen.
+- **Fix:** Zwei Zeilen in `overrideData`: `bedEntryTs: (pd as any).bedEntryTs ?? null` und `bedExitTs: (pd as any).bedExitTs ?? null` ergänzt.
+- **Build:** npm run build:react → `index-Cp88UWZx.js` (neues Bundle). npm run build:backend:prod NICHT nötig (kein Backend-Change).
+- git push → v0.33.238
+
+### 🔧 Offene Baustellen
+- Gondelsheim verifizieren: Ingrid sollte "Ins Bett gegangen 20:05" + "Aufstehen ✓ 06:36" zeigen. Robert sollte "Ins Bett gegangen 21:48" zeigen.
+- Robert bedExitTs: vibration_alone=06:24, sleepWindowEnd=06:35 → vibration_alone ist VOR sleepWindowEnd → bedExitTs=null korrekt. Kein "Aufgewacht"-Label für Robert = OK.
+- PWA: Noch nicht aktualisiert (v0.33.231-Fixes durch Revert verloren).
+
+### 🎯 Nächster Schritt
+- v0.33.238 bei Gondelsheim installieren → Screenshot prüfen: "Ins Bett gegangen" für Ingrid und Robert?
+
+---
+
+## 📍 Sitzung 05.05.2026 — Version 0.33.237 — bedExitTs sensor-neutral + Mehrpersonenunterstützung
+
+### ✅ Abgeschlossen
+- **v0.33.236 bestätigt:** Heute Morgen funktioniert die Anzeige korrekt (Snapshot-Fallback greift nach Neustart).
+- **Root Cause "kein Garmin"-Haushalte:** Die bedExitTs-Berechnung setzte `garminWakeTs` als harten Anker voraus. Ohne Garmin → Block nie ausgeführt → bedExitTs immer null.
+- **Fix sensor-neutral (Change 1):** `garminWakeTs` durch `sleepWindowOC7.end` ersetzt. Dieser Wert ist IMMER gesetzt (bester verfügbarer Sensor laut allWakeSources). vibration_alone/SM-Phase funktionieren jetzt auch ohne Garmin.
+- **Fix Mehrpersonenhaushalte (Change 2+3):** Per-Person `bedExitTs` im personData-IIFE berechnet (_pBeAnchor = _pGarminWakeTs || _pResult.sleepWindowEnd). Snapshot-Fallback liest aus _existingSnap.personData[person].bedExitTs. `bedEntryTs` aus computePersonSleep-Rückgabe jetzt auch in result[person].
+- Build: npm run build:backend:prod ✅ | node --check main.js ✅ | git push → v0.33.237
+
+### 🔧 Offene Baustellen
+- PWA: v0.33.231-Fixes (Labels, gelbe Balken) durch Revert verloren → noch nicht neu eingebaut
+- bedExitTs für Gondelsheim-Kunden: Ob vibration_alone nach sleepWindowEnd > 45 min → kein bedExitTs. Prüfen ob Zeitfenster passt (ggf. anpassen).
+
+### 🎯 Nächster Schritt
+- v0.33.237 bei Gondelsheim installieren → prüfen ob bedExitTs für Ingrid/Robert nun berechnet wird (Log: `[OC-42p] Ingrid bedExitTs: ...`)
+
+---
+
+## 📍 Sitzung 04.05.2026 — Version 0.33.236 — Snapshot-Fallback für bedExitTs aktiviert
+
+### ✅ Abgeschlossen
+- **Root Cause identifiziert (bedExitTs null nach Neustart):** Nach späten Adapter-Neustarts (z.B. 17:00+) sind die Vibrations-Events vom Aufstehen (07:10) aus dem 2500-Event-Replay-Puffer herausgeschoben. bedExitTs wird dann null → "Aufstehen 06:46" statt "07:10" + kein "Aufgewacht" sub-label.
+- **Gondelsheim-Erkenntnis:** Bei Kunden ohne Garmin/FP2 sind "Ins Bett gegangen" und "Aufgewacht" PRINZIPIELL nicht verfügbar — kein Bug, sondern Sensor-Limitation. bedExitTs-Berechnung setzt garminWakeTs voraus; bedEntryTs setzt FP2 voraus.
+- **v0.33.235 war Code-korrekt:** Revert auf v0.33.230 hatte gewirkt, aber Daten waren durch nachmittägliche Neustarts bereits verloren → Display trotzdem falsch.
+- **Fix v0.33.236:** src/main.js bereits mit Snapshot-Fallback (aus v0.33.234) + vereinfachter garminWakeTs-Bedingung (aus v0.33.232). Neu gebaut und deployed. Fallback: wenn bedExitTs null UND _existingSnap.bedExitTs vorhanden UND garminWakeTs plausibel → bedExitTs aus Snapshot laden.
+- Build: npm run build:backend:prod ✅ | node --check main.js ✅ | git push → v0.33.236
+
+### 🔧 Offene Baustellen
+- **Heute** (04.05.2026): Snapshot hat bedExitTs=null (mehrfach mit null überschrieben) → fix hilft erst ab morgen früh
+- PWA: Noch nicht auf den neuesten Stand (v0.33.231-Fixes durch Revert verloren) → nächste Session
+
+### 🎯 Nächster Schritt
+- Morgen früh nach dem Aufstehen: Adapter prüfen → "Aufgewacht: HH:MM" + "Aufstehen ✓ HH:MM (bedExitTs)" sollten korrekt erscheinen
+
+---
+
+## 📍 Sitzung 04.05.2026 — Version 0.33.232 — REGRESSION v0.33.231 behoben
+
+### ✅ Abgeschlossen
+- **Root Cause v0.33.231 Regression:** Die Neu-Obfuskierung von src/main.js hatte einen subtilen Fehler erzeugt. Die Bedingung if (garminWakeTs && sleepWindowOC7.end === garminWakeTs) zur Berechnung von edExitTs war nach Obfuskierung instabil → edExitTs und edEntryTs wurden NULL.
+- **Symptome der Regression:** Admin-Tab zeigte "Eingeschlafen 23:25" (statt "Ins Bett gegangen 23:02"), "Aufstehen 06:46" (statt "07:10 + Aufgewacht 06:46 sub-label"), kein gelber Wachliegen-Balken vorne/hinten.
+- **Fix in src/main.js:** Bedingung vereinfacht zu if (garminWakeTs) — funktional äquivalent da sleepWindowOC7.end = garminWakeTs direkt in der Zeile davor gesetzt wird. Robuster gegen nicht-deterministische Obfuskierung.
+- **Technischer Hintergrund:** javascript-obfuscator ist nicht-deterministisch (random seeds). Jede Obfuskierung produziert anderen Code. Die strict-equality-Prüfung === auf Werte, die im selben Scope gerade zugewiesen wurden, kann durch Control-Flow-Manipulation des Obfuskators versagen.
+- **Admin-Bundle:** Keine Änderung nötig — index-BlEt9HDT.js war bereits korrekt (alle OC-42b Fixes drin seit v0.33.230 Build).
+- Build: 
+pm run build:backend:prod ✅ | 
+ode --check main.js ✅ | git push → v0.33.232
+
+### 🔧 Offene Baustellen
+- PWA: Nach Adapter-Update auf 0.33.232 Hard-Refresh im Browser nötig (aggressives Caching).
+
+### 🎯 Nächster Schritt
+- Adapter **0.33.232** über ioBroker installieren → Admin-Tab prüfen: "Ins Bett gegangen 23:02", "Aufstehen ✓ 07:10", "Aufgewacht: 06:46" sub-label, gelber Balken vorne und hinten sichtbar.
+
+---
+
+## 📍 Sitzung 04.05.2026 — Version 0.33.231 — PWA-Synchronisation: OC-42b + OC-43 auch in NUUKANNI
+
+### ✅ Abgeschlossen
+- **Erkenntnis:** PWA (NUUKANNI-Familienansicht) und ioBroker Admin-Tab sind zwei völlig getrennte Rendering-Systeme. Admin-Fixes (HealthTab.tsx) wirken sich NIE auf die PWA aus.
+- **pwa_sleep_tile_build.js:** Stage-Deduplication (OC-43) — gleiche Map-Logik wie HealthTab.tsx (_stagesRaw → _stagesByT)
+- **pwa_sleep_tile_build.js:** slotColor-Fix (OC-42b) — Slots die swEnd-Grenze überschreiten werden gelb eingefärbt (`absMs + 5min > swEnd`)
+- **pwa_sleep_tile_build.js:** wachliegenOverlay Payload-Feld (swEnd→bedExitTs), absolut positioniert, opacity:1, border-left gold
+- **pwa_sleep_tile_build.js:** Zeitachse-Fix — `bedExitTs` als rechtes Label wenn `bedExitTs > swEnd`, `swEnd` als Zwischen-Tick wenn Abstand ≥ 45 min
+- **pwa_sleep_tile_client.js:** Rendert `wachliegenOverlay` (opacity:1, z-index:3, border-left:#b8a000)
+- **pwa_sleep_tile_client.js:** pickTip gibt Wachliegen-Titel zurück bei Touch auf Overlay-Bereich
+- **Neue Cursor-Regel** `sleep-tile-dual-system.mdc`: erinnert Agent automatisch beide Systeme zu pflegen
+- Build: `npm run build:backend:prod` ✅ | `node --check main.js` ✅ | git push → v0.33.231
+
+### 🔧 Offene Baustellen
+- OC-42b: Dünner lila Streifen (1 Pixel) vor gelbem Block bleibt sichtbar (Stage t=440 startet 1 min vor swEnd). slotColor-Fix sollte ihn eliminieren — erst nach Adapter-Update prüfen.
+
+### 🎯 Nächster logischer Schritt
+- Adapter 0.33.231 installieren; PWA auf Handy öffnen (Hard Refresh oder Cache leeren) → gelber Wachliegen-Block prüfen, Zeitachse prüfen
+
+---
+
+## 📍 Sitzung 04.05.2026 — Version 0.33.228 — sleepStages Duplikat-Bug + OC-42b Wachliegen-Overlay
+
+### ✅ Abgeschlossen
+- **Backend Bug-Fix (src/main.js):** `sleepStages = []` vor dem Stage-Loop in `if (_shouldRecalcStages)` eingefügt. OC-43 Neuberechnung appendete bisher bei jeder Adapter-Run die Stages ans bestehende Array (statt zu ersetzen) → 4 Blöcke à 59/71/81/93 Slots = 304 Einträge statt 93. Root Cause: `sleepStages = _existingSnap.sleepStages || []` (Zeile 2319) + anschließend `_shouldRecalcStages = true` (OC-43) → `push()` auf vorhandenes Array.
+- **Frontend Bug-Fix (HealthTab.tsx):** `sleepStages` vor Rendering und Counting deduplizieren — pro t-Wert nur letzten Eintrag behalten (`Map<number,string>` + sort). Behebt: falsche Zähler (22h 35min Leicht, 1h 45min Tief statt 6h 25min / 50min), visuell komprimierter Balken (311% Overflow), falsch positionierte Deep-Phasen (zweimal dieselbe Phase durch 2 Blöcke), Phasen 2+3 unsichtbar.
+- **OC-42b Fix (HealthTab.tsx):** Gelber Wachliegen-Overlay als `position:absolute` von `swEnd` → `bedExitTs` (24 min). Unabhängig von Slot-Enden, robust gegen Garmin-Slot-Overshoot (±14 Sek.). Zeigt "wach im Bett" nach Aufwachzeit visuell klar.
+- **Cursor-Regel `sensor-hierarchy.mdc`:** Dokumentiert dass AURA quellenneutral ist — nie "Garmin ist Master" sagen, immer `wakeSource`/`allWakeSources` als dynamisches Konfidenz-System beschreiben.
+- **HANDBUCH.md:** Abschnitt "Schlafphasen-Klassifikation" erweitert: Mindestdauer Tiefschlaf (25 min), Mehrquellen-Architektur, Garmin-Referenz-Erklärung.
+
+### 🔧 Offene Baustellen
+- Historische Nächte mit doppelten sleepStages (vor 0.33.228): Adapter-Rerun würde sie fixen (bei nächstem Tages-Update automatisch durch Backend-Fix bereinigt).
+- Optional: Historische Tage 04-02 bis 04-22 ohne sleepStages/sleepScore (Feature war nicht impl.) — nicht retroaktiv reparierbar.
+
+### 🎯 Nächster logischer Schritt
+- Adapter 0.33.228 installieren; Schlafkachel prüfen: korrekte Zähler (Tief≈50min, Leicht≈385min), alle 3 Tiefschlaf-Phasen sichtbar, gelber Wachliegen-Overlay am rechten Balkenende.
+
+---
+
+## 📍 Sitzung 03.05.2026 — Version 0.33.227 — OC-44: Per-Person Stages-Fallback + Schlafzeit Schlafdauer-Balken
+
+### ✅ Abgeschlossen
+- **OC-44 Bug-Fix (Backend):** Per-Person `sleepStages`/`sleepScore` war auf 04-23/04-27 leer, weil `personTag`-Events für den Vorabend fehlten → `sleepStart` landete auf der falschen Nacht (`bedWasEmpty=true`). Root Cause: `computePersonSleep` mit `personTag='Ingrid'` findet keine Bett-Events im richtigen Fenster → `sleepStart` = nächster Abend, `wakeTs` = aktueller Morgen → `winSCheck > winECheck` → `bedInWin.length=0` → `bedWasEmpty=true` → Stages-Block übersprungen. **Fix:** Nach `computePersonSleep` + OC-38 prüfen: wenn `bedWasEmpty=true` aber globales `sleepWindowOC7` existiert → Stages inline aus globalem Fenster + Person-Vibrationsdaten neu berechnen (gleicher Algo).
+- **SCHLAFZEIT-Kacheln (Frontend, LongtermTrendsView):** `LineChart` → `ComposedChart` + `Bar` für Schlafdauer (18% Opazität) + rechte Y-Achse (0–12h). Gilt für Ein- und Mehrpersonenhaushalt. Tooltip zeigt Schlafdauer in Stunden. Schlafdauer wird aus vorhandenen `sleepWindowEnd - sleepWindowStart` berechnet (keine neuen Backend-Felder).
+- **BETT-PRÄSENZ-Kachel (Mehrpersonenhaushalt):** Wenn kein personTag am FP2-Sensor → Aggregat-Kachel bekommt Label „· Haushalt" statt anonym. Neue Sentinel-Logik: `_household` → `makeRawMiniData` statt `buildPersonSeriesData`.
+- Version **0.33.227**; `npm run build:backend:prod`, `npm run build:react`, `node --check main.js`, git push.
+
+### 🔧 Analyse-Ergebnisse
+- Untersuchte Dateien: `2026-04-23.json`, `2026-04-27.json`, `2026-05-03.json` (Gondelsheim/Mehrpersonen).
+- 04-23 Ingrid `sleepWindowStart=23.4 21:25`, `sleepWindowEnd=23.4 05:48` → End < Start = Bug (falsche Nacht).
+- 04-27 gleiche Anomalie für beide Personen.
+- 05-03 korrekt (beide Personen mit `sleepWindowStart=2.5.2026`).
+
+### 🎯 Nächster logischer Schritt
+- Adapter **0.33.227** installieren; ab der nächsten Nacht prüfen ob per-Person Stages/Score korrekt gefüllt.
 
 ---
 
@@ -5557,4 +6191,6 @@ Build-Details:
 - build:backend:dev = einfaches File-Copy (kein Transpiling): src/main.js -> main.js
 - lib/recorder.js direkt bearbeiten, dann mit Copy-Item zurueck nach src/lib/ syncen
 - src/ und src-admin/src/ stehen in .gitignore -> nur admin/ und lib/ werden gepusht
+
+
 
