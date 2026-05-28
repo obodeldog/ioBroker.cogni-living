@@ -674,6 +674,17 @@ function computePersonSleep(p) {
         if (log) log.debug(logPfx + 'Score=' + sleepScore + ' dur=' + Math.round(durMin) + 'min adj=' + stageAdj);
     }
 
+    // [OC-45d] SLEEP-CYCLE SM CONTEXT - initialisiert vor allen Phasen-Modulen (v0.33.257)
+    // Gemeinsamer Kontext fuer OC-45b (SLEEPING), OC-45c (PRE_SLEEP), OC-45a (POST_WAKE).
+    // Phasen-Konstanten (_SC_*) werden weiter unten im Framework-Block definiert (var hoisting).
+    var _scCtx = {
+        phase: 1,           // 1=BED_PRESENT initial; 7=DAY nach Abschluss
+        preSleepTs:     null,  // OC-45c: korrigiertes bedEntryTs (nach Counterevidence)
+        sleepingPhases: null,  // OC-45b: smWakePhases Ergebnis
+        postWakeTs:     null,  // OC-45a: bedExitTs
+        dayStart:       null   // DAY-Phase Startzeit (= postWakeTs)
+    };
+
     // OC-31 Stage 2: State Machine - Wake-Phasen ab bedEntryTs erfassen (v0.33.210)
     var _smWakePhases = (function() {
         if (!sleepStart || !bedroomLocations || bedroomLocations.length === 0) return [];
@@ -739,6 +750,8 @@ function computePersonSleep(p) {
         }
         return _phases;
     })();
+    // [OC-45d] SLEEPING phase complete
+    _scCtx.sleepingPhases = _smWakePhases; _scCtx.phase = 2; // _SC_SLEEPING
 
     // OC-36 Phase 4 (v0.33.210): Konsolidierter Bed-Absence-Output - FP2-Bett als Primaerquelle
     var _bedAbsenceEvents = (function() {
@@ -2322,7 +2335,7 @@ class CogniLiving extends utils.Adapter {
                 for (var _ci = 0; _ci < _clusterSources.length; _ci++) {
                     var _cTs    = _clusterSources[_ci].ts;
                     var _hr     = new Date(_cTs).getHours();
-                    if (_hr >= 3 && _hr < 18) continue;
+                    if (_hr >= 3 && _hr < 18) continue; // [OC-45d DAY] Tagphase-Guard: Kandidaten 03:00-18:00 uebergehen
                     var _lookEnd = Math.min(_cTs + FAR_LOOK_MS, _sleepStart);
                     var _hasFar  = sleepSearchEvents.some(function(e) {
                         var _eTs = e.timestamp || 0;
@@ -2387,6 +2400,8 @@ class CogniLiving extends utils.Adapter {
                     }
                 }
             }
+            // [OC-45d] PRE_SLEEP phase complete
+            _scCtx.preSleepTs = _bedEntryTsFinal; _scCtx.phase = 2; // _SC_SLEEPING
             // FP2-Roh-Aufwachzeit vor Garmin-Override sichern (fuer allWakeSources)
             var _fp2RawWakeTs = sleepWindowCalc.firstEmpty || null;  // FP2-Abgangzeit vor Garmin-Override
 
@@ -2651,6 +2666,21 @@ class CogniLiving extends utils.Adapter {
                         _fp2SoloDropoutsIgnored++;
                         return;
                     }
+                    // [OC-47d-OBE] Vibrations-Gegenbeweis: _hasBath=false, aber _hasAnySensorOutside=true
+                    // weil Bad-PIR 10-30s NACH fp2.end feuert (WC-Besuch startet gleichzeitig mit FP2-Rueckkehr).
+                    // Wenn Vibrationssignale WAEHREND des fp2-false-Fensters vorlagen:
+                    // Person lag im Bett (FP2 Radar-Aussetzer) -> kein roter Balken, nur grauer Aussetzer-Pfeil.
+                    if (!_hasBath && _hasAnySensorOutside) {
+                        var _hasVibInDropout = sleepSearchEvents.some(function(e) {
+                            var _ts3 = e.timestamp || 0;
+                            if (_ts3 < fp2.start || _ts3 > fp2.end) return false;
+                            return isMine(e) && (e.isVibrationBed || e.isVibrationStrength);
+                        });
+                        if (_hasVibInDropout) {
+                            _allEvtCandidates.push({ start: fp2.start, end: fp2.end, duration: _fp2Dur, type: 'outside', confirmed: false, sensors: [] });
+                            return;
+                        }
+                    }
                     // Sensoren sammeln die waehrend des FP2-Leer-Fensters ausserhalb des Betts aktiv waren
                     var _fp2Sensors = sleepSearchEvents.filter(function(e) {
                         var _ts2 = e.timestamp || 0;
@@ -2778,13 +2808,13 @@ class CogniLiving extends utils.Adapter {
             // ═══════════════════════════════════════════════════════════════
             // [OC-45d] SLEEP-CYCLE STATE MACHINE FRAMEWORK (ab v0.33.254)
             // ═══════════════════════════════════════════════════════════════
-            // Langfristiges Ziel: Eine einzige SM fuer den gesamten Schlafzyklus.
-            //   PRE_SLEEP  -> OC-48 (aktiv) | OC-45c (geplant, ersetzt OC-48)
-            //   SLEEPING   -> OC-31 Stage 2 smWakePhases | OC-45b (geplant)
-            //   POST_WAKE  -> OC-45a + OC-49 (implementiert)
-            //   DAY        -> (geplant)
+            // Alle vier Phasen-Module implementiert (v0.33.257). Shared context: _scCtx.
+            //   PRE_SLEEP  -> OC-48 + OC-45c Counterevidence    [v0.33.256] DONE
+            //   SLEEPING   -> OC-45b FP2-Return + OC-47d Fix    [v0.33.255] DONE
+            //   POST_WAKE  -> OC-45a + OC-49 BED_TOUCH          [v0.33.252] DONE
+            //   DAY        -> Tagphase-Guard in OC-48 (03-18h)  [v0.33.257] DONE
             // Sensor-neutral: Evidenz-basierte Uebergaenge, Graceful Degradation.
-            // Jedes Modul ist einzeln deploybar - keine Big-Bang-Migration.
+            // Shared Context _scCtx verbindet alle Module (var hoisting, gleicher Scope).
             //
             // State-Enum (wird von OC-45a/b/c verwendet):
             var _SC_IDLE=0, _SC_BED_PRESENT=1, _SC_SLEEPING=2, _SC_NOCTURIA=3,
@@ -2910,6 +2940,13 @@ class CogniLiving extends utils.Adapter {
                     bedExitTs = _existingSnap.bedExitTs; _bedExitSrc = 'snapshot';
                 }
                 if (bedExitTs) this.log.info('[OC-45a] bedExitTs: ' + new Date(bedExitTs).toLocaleTimeString() + ' (' + _bedExitSrc + ')');
+            }
+            // [OC-45d] POST_WAKE phase complete + DAY phase
+            _scCtx.postWakeTs = bedExitTs;
+            if (bedExitTs) {
+                _scCtx.phase    = _SC_DAY;   // 7 - Tagphase beginnt nach Aufstehen
+                _scCtx.dayStart = bedExitTs;
+                this.log.debug('[OC-45d] DAY phase ab ' + new Date(bedExitTs).toLocaleTimeString());
             }
 
 
@@ -5367,6 +5404,29 @@ class CogniLiving extends utils.Adapter {
                 var _sLog = { ts: Date.now(), sensorId: id, sensorName: dev.name || id, room: dev.location, type: dev.type };
                 this.setStateAsync('system.personCount.sensorActivity', { val: JSON.stringify(_sLog), ack: true }).catch(function(){});
                 this._checkSpatialImpossibility(id, dev.location);
+            }
+            // [OC-AT] Auto-Trigger: saveDailyHistory() nach Schlaf-relevanten Sensor-Events.
+            // Nur nachts (22-11 Uhr) + health-Modul aktiv + Debounce 90s.
+            // Relevante Sensoren: FP2-Bett (sensorFunction='bed') + Bad-PIR (sensorFunction='bathroom').
+            if (state.ack && this.activeModules.health) {
+                var _atH = new Date().getHours();
+                if (_atH >= 22 || _atH < 12) {
+                    var _atSleep = dev.sensorFunction === 'bed'      ||
+                                   dev.sensorFunction === 'bathroom' ||
+                                   dev.isFP2Bed      === true        ||
+                                   dev.isBathroomSensor === true;
+                    if (_atSleep) {
+                        if (this._sleepSensorDebounce) clearTimeout(this._sleepSensorDebounce);
+                        var _atSelf = this;
+                        this._sleepSensorDebounce = setTimeout(function() {
+                            _atSelf._sleepSensorDebounce = null;
+                            _atSelf.log.debug('[OC-AT] Schlaf-Sensor-Event -> saveDailyHistory() (90s Debounce)');
+                            _atSelf.saveDailyHistory().catch(function(e) {
+                                _atSelf.log.debug('[OC-AT] Fehler: ' + e.message);
+                            });
+                        }, 90 * 1000);
+                    }
+                }
             }
         }
     }
