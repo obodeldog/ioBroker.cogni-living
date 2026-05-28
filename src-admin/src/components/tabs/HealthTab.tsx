@@ -2502,29 +2502,7 @@ export default function HealthTab(props: any) {
                             )}
                         </div>
 
-                        {/* Legende */}
-                        <div style={{display:'flex', gap:'10px', flexWrap:'wrap', fontSize:'0.7rem', marginBottom:'8px'}}>
-                            {([['deep','Tief'],['light','Leicht'],['rem','REM (est.)'],['wake','Wachliegen']] as [string,string][]).map(([k,l]) => (
-                                <span key={k}><span style={{color: stageColor[k]}}>■</span> {l}</span>
-                            ))}
-                            {_hasBedAbsenceEngine && (
-                                <span title="Konsens aus State Machine, Pattern-Match und Bad-Sensor — mit Vibration/FP2-Cross-Check (OC-36)"><span style={{
-                                    display:'inline-block', width:'10px', height:'10px',
-                                    backgroundColor: isDark?'#3a3a3a':'#cfcfcf',
-                                    backgroundImage: 'repeating-linear-gradient(135deg, transparent 0px, transparent 2px, ' + (isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.25)') + ' 2px, ' + (isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.25)') + ' 4px)',
-                                    verticalAlign:'middle', marginRight:'3px'
-                                }}/> Weg vom Bett</span>
-                            )}
-                            {clippedOutsideBedEvts.some(e => e.type === 'bathroom') && (
-                                <span><span style={{color: stageColor.bathroom}}>■</span> Bad</span>
-                            )}
-                            {clippedOutsideBedEvts.some(e => e.type === 'outside') && (
-                                <span><span style={{color: stageColor.outside}}>■</span> Außerhalb</span>
-                            )}
-                            {clippedOutsideBedEvts.some(e => e.type === 'other_person') && (
-                                <span><span style={{color: stageColor.other_person}}>■</span> Andere Person</span>
-                            )}
-                        </div>
+                        {/* Farbcode-Legende entfernt: die 4 grauen Kacheln zeigen die Farben bereits durch die gefärbten Minuten-Werte */}
 
                         {/* Stage-Dauer Zeile */}
                         <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'4px', textAlign:'center', marginBottom:'10px'}}>
@@ -2536,13 +2514,21 @@ export default function HealthTab(props: any) {
                             ))}
                         </div>
 
-                        {/* Außerhalb-Zeile (nur bestätigte Events) */}
-                        {(outsideTotalMin > 0 || radarDropoutEvts.length > 0) && (
+                        {/* Außerhalb-/Aussetzer-Zeile (sichtbar wenn bestätigte Events oder Bed-Absence-Engine aktiv) */}
+                        {(outsideTotalMin > 0 || radarDropoutEvts.length > 0 || _hasBedAbsenceEngine) && (
                             <div style={{display:'flex', gap:'8px', fontSize:'0.7rem', marginBottom:'8px', color: isDark?'#aaa':'#666', flexWrap:'wrap'}}>
                                 {bathMin > 0 && <span><span style={{color: stageColor.bathroom}}>■</span> Bad: {toH(bathMin, true)}</span>}
                                 {confirmedEvts.filter(e => e.type === 'outside').reduce((a,e) => a+e.duration, 0) > 0 && <span><span style={{color: stageColor.outside}}>■</span> Außerhalb: {toH(confirmedEvts.filter(e => e.type === 'outside').reduce((a,e) => a+e.duration, 0), true)}</span>}
                                 {confirmedEvts.filter(e => e.type === 'other_person').reduce((a,e) => a+e.duration, 0) > 0 && <span><span style={{color: stageColor.other_person}}>■</span> Andere Person: {toH(confirmedEvts.filter(e => e.type === 'other_person').reduce((a,e) => a+e.duration, 0), true)}</span>}
                                 {radarDropoutEvts.length > 0 && <span style={{color:'#888', opacity:0.7}} title={`FP2-Radar hat ${radarDropoutEvts.length}× kurz keine Präsenz erkannt — kein Außensensor bestätigt`}>▲ {radarDropoutEvts.length}× Radar-Aussetzer</span>}
+                                {_hasBedAbsenceEngine && (
+                                    <span title="Konsens aus State Machine, Pattern-Match und Bad-Sensor — mit Vibration/FP2-Cross-Check (OC-36)"><span style={{
+                                        display:'inline-block', width:'10px', height:'10px',
+                                        backgroundColor: isDark?'#3a3a3a':'#cfcfcf',
+                                        backgroundImage: 'repeating-linear-gradient(135deg, transparent 0px, transparent 2px, ' + (isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.25)') + ' 2px, ' + (isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.25)') + ' 4px)',
+                                        verticalAlign:'middle', marginRight:'3px'
+                                    }}/> Weg vom Bett</span>
+                                )}
                             </div>
                         )}
 

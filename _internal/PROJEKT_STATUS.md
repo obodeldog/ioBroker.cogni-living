@@ -1,5 +1,35 @@
 ﻿# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 28.05.2026 | **Version:** 0.33.261
+**Letzte Aktualisierung:** 28.05.2026 | **Version:** 0.33.262
+
+---
+
+## Sitzung 28.05.2026 (spaet) -- v0.33.262 -- Schlafkachel Feinschliff (Legende weg + Uhr-Icon + kompakt)
+
+### Abgeschlossen
+- Redundante Farbcode-Legende (Tief/Leicht/REM/Wachliegen-Quadrate-Zeile) **entfernt** in PWA + Admin.
+  Begruendung: die 4 grauen Kacheln darunter zeigen die Farben bereits durch die gefaerbten
+  Minuten-Werte. Doppelinformation = visueller Ballast.
+- **PWA** `pwa_sleep_tile_client.js`:
+  - Z 104: Uhr-Icon 🕐 vor `H.sleepDurText` (Schlafdauer im Score-Block).
+  - Z 351-361: Farbcode-Legende-Block geloescht.
+  - Z 394-405: Smartwatch-Referenz von 2 Zeilen ("⌚ Smartwatch-Referenz:" + Werte-Zeile) auf
+    1 Zeile reduziert (Header inline mit Werten, kleinere Schrift fuer Header).
+- **Admin** `HealthTab.tsx` Z 2505-2527:
+  - Farbcode-Legende-Block entfernt.
+  - "Weg vom Bett" (mit gestreiftem Marker) zur Sekundaerzeile (Bad/Aussen/Andere Person/Radar) hinzugefuegt.
+  - Sichtbarkeits-Bedingung erweitert: `_hasBedAbsenceEngine` allein triggert Sekundaerzeile.
+- Admin Uhr-Icon vor `fmtDuration(sleepDurMin)` war bereits vorhanden (Z 2124) - keine Aenderung noetig.
+
+### Layout-Vergleich nach Aenderung (beide synchron)
+```
+Header (Eingeschlafen | 🕐 Score+Dauer | Aufgewacht)
+[Schlafbalken mit Markern]
+[4 graue Kacheln: 1h35min(blau)/Tief | 5h40min(hellblau)/Leicht | 40min(lila)/REM | 15min(gelb)/Wachliegen]
+[Sekundaerzeile: ■ Bad: 6min · ■ Aussen: 15min · ▲ 4× Radar-Aussetzer · ▨ Weg vom Bett]
+- - - gestrichelte Trennlinie - - -
+⌚ Smartwatch: ■ Tief 1h34min · ■ Leicht 5h25min · ■ REM 40min · Score 73    (PWA: 1 Zeile)
+Geschaetzte Schlafstadien (Vibrationssensor) · Kein Medizinprodukt
+```
 
 ---
 

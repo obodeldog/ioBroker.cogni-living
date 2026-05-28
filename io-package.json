@@ -1,7 +1,7 @@
 ﻿{
   "common": {
     "name": "cogni-living",
-    "version": "0.33.261",
+    "version": "0.33.262",
     "news": {
       "0": {
         "version": "0.33.212",
@@ -17,6 +17,10 @@
           "[Fix OC-7] Multi-Person-Motion-Only: sleepWindowEnd aus per-Person-Wakezeiten ableiten (Balken + Dreiecke fuer Haushalte ohne FP2/Garmin)",
           "[Fix OC-7] Invertiertes sleepWindowStart korrigieren wenn Abendberechnung heutigen Start schreibt"
         ]
+      },
+      "0.33.262": {
+        "en": "Sleep tile: remove redundant color legend, clock icon for sleep duration, compact smartwatch row",
+        "de": "Schlafkachel: redundante Farb-Legende entfernt, Uhr-Icon vor Schlafdauer, kompakte Smartwatch-Zeile"
       },
       "0.33.261": {
         "en": "Health score: detect learning phase, fix asymmetric formula, sleep tile OC-7 layout",
