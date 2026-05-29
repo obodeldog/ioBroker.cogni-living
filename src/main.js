@@ -2400,6 +2400,9 @@ class CogniLiving extends utils.Adapter {
                     }
                 }
             }
+            // [OC-45d] Shared SM-Context fuer saveDailyHistory-Scope (PRE_SLEEP, POST_WAKE, DAY)
+            // WICHTIG: computePersonSleep() hat eigenen _scCtx (OC-45b); dieser hier ist separat.
+            var _scCtx = { phase: 1, preSleepTs: null, sleepingPhases: null, postWakeTs: null, dayStart: null };
             // [OC-45d] PRE_SLEEP phase complete
             _scCtx.preSleepTs = _bedEntryTsFinal; _scCtx.phase = 2; // _SC_SLEEPING
             // FP2-Roh-Aufwachzeit vor Garmin-Override sichern (fuer allWakeSources)
