@@ -3527,7 +3527,8 @@ class CogniLiving extends utils.Adapter {
                         wakeTimeMin:               wakeTimeMin,
                         sleepOnsetMin:             sleepOnsetMin,
                         nocturiaAttr:              nocturiaAttr,
-                        sleepWindowStart:          _pResult.sleepWindowStart,
+                        // [OC-51] Guard: sleepWindowStart kann nicht vor bedEntryTs liegen (haus_still-Fallback)
+                        sleepWindowStart:          (_pResult.sleepWindowStart && _pResult.bedEntryTs && _pResult.sleepWindowStart < _pResult.bedEntryTs) ? null : _pResult.sleepWindowStart,
                         sleepWindowEnd:            _pResult.sleepWindowEnd,
                         wakeSource:                _pResult.wakeSource,
                         wakeConf:                  _pResult.wakeConf,
