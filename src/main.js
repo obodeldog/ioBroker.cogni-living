@@ -1146,6 +1146,14 @@ class CogniLiving extends utils.Adapter {
         }
         const devices = this.config.devices; if (devices) { for (const d of devices) { await this.subscribeForeignStatesAsync(d.id); } }
 
+        // [OC-55] Garmin-Sleep-End-State abonnieren -> saveDailyHistory() nach Garmin-Sync
+        // Loest das Problem: outsideBedEvents (orangefarbene Dreiecke) blieben leer weil
+        // Garmin-Sync NACH dem letzten Stunden-Save kam (sleepWindowOC7.end war null).
+        var _garminEndId55 = (this.config.garminSleepEndStateId || '').trim();
+        if (_garminEndId55) { await this.subscribeForeignStatesAsync(_garminEndId55).catch(function(){}); }
+        var _garminScoreId55 = (this.config.garminSleepScoreStateId || '').trim();
+        if (_garminScoreId55 && _garminScoreId55 !== _garminEndId55) { await this.subscribeForeignStatesAsync(_garminScoreId55).catch(function(){}); }
+
         // system.config.sensorList: Sensor-Konfiguration bei Start schreiben (Kontroll-Objekt)
         try {
             const _sensorListData = (this.config.devices || []).map(function(d) {
@@ -5430,6 +5438,25 @@ class CogniLiving extends utils.Adapter {
                             });
                         }, 90 * 1000);
                     }
+                }
+            }
+            // [OC-55] Garmin-Sleep-End-State: saveDailyHistory() nach Garmin-Sync (morgens 5-15h)
+            // Loest das Problem: orangefarbene Dreiecke erschienen erst nach manuellem 'System pruefen'
+            // weil sleepWindowOC7.end (kommt von Garmin) zum Zeitpunkt der letzten Stunden-Saves null war.
+            var _garminEndId55 = (this.config.garminSleepEndStateId || '').trim();
+            var _garminScoreId55 = (this.config.garminSleepScoreStateId || '').trim();
+            if (state.ack && this.activeModules.health && (_garminEndId55 || _garminScoreId55) && (id === _garminEndId55 || id === _garminScoreId55)) {
+                var _oc55H = new Date().getHours();
+                if (_oc55H >= 5 && _oc55H < 15) {
+                    if (this._garminSyncDebounce) clearTimeout(this._garminSyncDebounce);
+                    var _oc55Self = this;
+                    this._garminSyncDebounce = setTimeout(function() {
+                        _oc55Self._garminSyncDebounce = null;
+                        _oc55Self.log.info('[OC-55] Garmin-Sync erkannt -> saveDailyHistory() (outsideBedEvents neu berechnen)');
+                        _oc55Self.saveDailyHistory().catch(function(e) {
+                            _oc55Self.log.debug('[OC-55] Fehler: ' + e.message);
+                        });
+                    }, 60 * 1000);
                 }
             }
         }
