@@ -399,6 +399,39 @@ function computePersonSleep(p) {
         { source: 'fixed',        ts: ovWinMin + 2 * 3600000 }
     ];
 
+    // [OC-48c] Sustained-Absence-Guard (Single-Source-of-Truth: global + jede Person):
+    // Verwirft fruehes bedEntryTs wenn zwischen bedEntryTs und sleepStart ein zusammenhaengender
+    // Aktivitaetsblock >= 30 Min ausserhalb des Schlafzimmers liegt = Person war nachweislich nicht im Bett.
+    // Unterscheidet kurzen Toiletten-/Kuechen-Gang (kurzer Block) von stundenlangem Wachsein.
+    // Sensor-neutral; OC-46 (ruhiges Wachliegen) bleibt geschuetzt (keine Far-Aktivitaet).
+    if (bedEntryTs && sleepStart && bedEntryTs < sleepStart) {
+        var _oc48cFar = allEvents.filter(function(e) {
+            var _ts = e.timestamp || 0;
+            if (_ts <= bedEntryTs || _ts >= sleepStart) return false;
+            if (isOtherPerson(e)) return false; // gemeinsame/ungetaggte Raeume zaehlen, nur andere Person ausschliessen (wie otherRoomEvts)
+            if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed || e.isBathroomSensor) return false;
+            if (e.type !== 'motion' && e.type !== 'presence_radar_bool') return false;
+            if (!isActiveValue(e.value)) return false;
+            if (hopDistFn && bedroomLocations.length > 0 && e.location) {
+                var _mh = bedroomLocations.reduce(function(m, bl) { var h = hopDistFn(e.location, bl); return (h >= 0 && h < m) ? h : m; }, 999);
+                return _mh >= 2;
+            }
+            return true;
+        }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        var _oc48cMax = 0, _oc48cBs = null, _oc48cBe = null;
+        for (var _oc48ci = 0; _oc48ci < _oc48cFar.length; _oc48ci++) {
+            var _ets = _oc48cFar[_oc48ci].timestamp || 0;
+            if (_oc48cBs === null) { _oc48cBs = _ets; _oc48cBe = _ets; }
+            else if (_ets - _oc48cBe <= 12 * 60000) { _oc48cBe = _ets; }
+            else { if (_oc48cBe - _oc48cBs > _oc48cMax) _oc48cMax = _oc48cBe - _oc48cBs; _oc48cBs = _ets; _oc48cBe = _ets; }
+        }
+        if (_oc48cBs !== null && (_oc48cBe - _oc48cBs) > _oc48cMax) _oc48cMax = _oc48cBe - _oc48cBs;
+        if (_oc48cMax >= 30 * 60000) {
+            if (log) log.info(logPfx + '[OC-48c] bedEntryTs ' + new Date(bedEntryTs).toLocaleTimeString() + ' verworfen: anhaltende Ausserhalb-Aktivitaet (laengster Block ' + Math.round(_oc48cMax / 60000) + ' Min, ' + _oc48cFar.length + ' Events) -> bedEntry = sleepStart');
+            bedEntryTs = null;
+        }
+    }
+
     var p4amTs = (function() { var d = new Date(searchBase); d.setDate(d.getDate() + 1); d.setHours(4, 0, 0, 0); return d.getTime(); })();
     var minSlTs = (fp2RawStart || sleepStart || 0) + 3 * 3600000;
 
