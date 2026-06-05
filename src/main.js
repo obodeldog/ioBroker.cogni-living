@@ -2408,6 +2408,39 @@ class CogniLiving extends utils.Adapter {
                     }
                 }
             }
+            // [OC-48c] Sustained-Absence-Guard: verwirft fruehes bedEntryTs wenn zwischen
+            // Kandidat und sleepStart eine ANHALTENDE Aktivitaet ausserhalb des Schlafzimmers
+            // liegt (laengster zusammenhaengender Block >= 30 Min) = Person war nachweislich nicht im Bett.
+            // Unterscheidet kurzen Toiletten-/Kuechen-Gang (kurzer Block) von stundenlangem Wachsein.
+            // Sensor-neutral; schuetzt OC-46 (ruhiges Wachliegen erzeugt keine Far-Aktivitaet).
+            if (_bedEntryTsFinal && sleepWindowOC7.start && _bedEntryTsFinal < sleepWindowOC7.start) {
+                var _oc48cFarFn = function(e) {
+                    if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed || e.isBathroomSensor) return false;
+                    if (e.type !== 'motion' && e.type !== 'presence_radar_bool') return false;
+                    if (!isActiveValue(e.value)) return false;
+                    if (_oc48HopFn && _oc48BedLocs.length > 0 && e.location) {
+                        var _mh = _oc48BedLocs.reduce(function(m, bl) { var h = _oc48HopFn(e.location, bl); return (h >= 0 && h < m) ? h : m; }, 999);
+                        return _mh >= 2;
+                    }
+                    return true;
+                };
+                var _oc48cFar = sleepSearchEvents.filter(function(e) {
+                    var _ts = e.timestamp || 0;
+                    return _ts > _bedEntryTsFinal && _ts < sleepWindowOC7.start && _oc48cFarFn(e);
+                }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+                var _oc48cMaxBlock = 0; var _oc48cBlkStart = null; var _oc48cBlkEnd = null;
+                for (var _oc48ci = 0; _oc48ci < _oc48cFar.length; _oc48ci++) {
+                    var _ets = _oc48cFar[_oc48ci].timestamp || 0;
+                    if (_oc48cBlkStart === null) { _oc48cBlkStart = _ets; _oc48cBlkEnd = _ets; }
+                    else if (_ets - _oc48cBlkEnd <= 12 * 60000) { _oc48cBlkEnd = _ets; }
+                    else { if (_oc48cBlkEnd - _oc48cBlkStart > _oc48cMaxBlock) _oc48cMaxBlock = _oc48cBlkEnd - _oc48cBlkStart; _oc48cBlkStart = _ets; _oc48cBlkEnd = _ets; }
+                }
+                if (_oc48cBlkStart !== null && (_oc48cBlkEnd - _oc48cBlkStart) > _oc48cMaxBlock) _oc48cMaxBlock = _oc48cBlkEnd - _oc48cBlkStart;
+                if (_oc48cMaxBlock >= 30 * 60000) {
+                    if (_oc48Log) _oc48Log['info']('[OC-48c] bedEntryTs ' + new Date(_bedEntryTsFinal).toLocaleTimeString() + ' verworfen: anhaltende Ausserhalb-Aktivitaet (laengster Block ' + Math.round(_oc48cMaxBlock / 60000) + ' Min, ' + _oc48cFar.length + ' Events) -> bedEntry = sleepStart (kein Phantom-Wachliegen)');
+                    _bedEntryTsFinal = null;
+                }
+            }
             // [OC-45d] Shared SM-Context fuer saveDailyHistory-Scope (PRE_SLEEP, POST_WAKE, DAY)
             // WICHTIG: computePersonSleep() hat eigenen _scCtx (OC-45b); dieser hier ist separat.
             var _scCtx = { phase: 1, preSleepTs: null, sleepingPhases: null, postWakeTs: null, dayStart: null };
@@ -2798,7 +2831,26 @@ class CogniLiving extends utils.Adapter {
                         }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
                         if (_oc47VibAfter.length >= 2) {
                             var _oc47Last = _oc47VibAfter[_oc47VibAfter.length - 1].timestamp || 0;
-                            if (_oc47Last > garminWakeTs + 5 * 60 * 1000) {
+                            // [OC-47b] Abbruch wenn zwischen Garmin-Wach und letzter Vibration eine
+                            // Bad-/Far-Room-Aktivitaet liegt = Person hat das Schlafzimmer verlassen,
+                            // die spaeteren Vibrationen sind Re-Kontakte (kurz aufs Bett gesetzt), kein Schlaf.
+                            var _oc47Left = sleepSearchEvents.some(function(e) {
+                                var _lts = e.timestamp || 0;
+                                if (_lts <= garminWakeTs || _lts > _oc47Last) return false;
+                                if (e.isBathroomSensor) return true;
+                                if ((e.type !== 'motion' && e.type !== 'presence_radar_bool') || !isActiveValue(e.value)) return false;
+                                if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed) return false;
+                                if (_oc48HopFn && _oc48BedLocs.length > 0 && e.location) {
+                                    var _mh47 = _oc48BedLocs.reduce(function(m, bl) { var h = _oc48HopFn(e.location, bl); return (h >= 0 && h < m) ? h : m; }, 999);
+                                    return _mh47 >= 2;
+                                }
+                                return true;
+                            });
+                            if (_oc47Left) {
+                                this.log.info('[OC-47b] Vibration-Extension abgebrochen: Bad/Far-Room-Aktivitaet nach Garmin-Wach ('
+                                    + new Date(garminWakeTs).toLocaleTimeString()
+                                    + ') -> Vibrationen sind Re-Kontakte, bleibe bei Garmin-Wach.');
+                            } else if (_oc47Last > garminWakeTs + 5 * 60 * 1000) {
                                 _oc47ExtendedEnd = _oc47Last;
                                 this.log.info('[OC-47] Vibration-Extension (FP2 blind): Garmin='
                                     + new Date(garminWakeTs).toLocaleTimeString()
@@ -4118,7 +4170,9 @@ class CogniLiving extends utils.Adapter {
                     return _bae;
                 })(),
                 bedEntryTs: (function() {
-                    var _bet = _bedEntryTsFinal || (_gR && _gR.bedEntryTs) || null;
+                    // [OC-48c] _bedEntryTsFinal === null ist eine BEWUSSTE Ablehnung (OC-48b/OC-48c).
+                    // NICHT auf den Rohwert _gR.bedEntryTs zurueckfallen - sonst lebt das Phantom-Wachliegen wieder auf.
+                    var _bet = (_bedEntryTsFinal != null) ? _bedEntryTsFinal : null;
                     // OC-39b: Abend-Save-Valve fuer bedEntryTs (analog OC-39 fuer personData)
                     // Wenn berechnetes bedEntryTs NACH sleepWindowOC7.start liegt (= heutiger Abend-Event,
                     // z.B. FP2 erkennt Person um 19:38 nach dem Aufstehen), diesen Wert verwerfen.
