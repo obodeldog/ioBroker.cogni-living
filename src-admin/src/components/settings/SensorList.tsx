@@ -23,29 +23,34 @@ import { I18n } from "@iobroker/adapter-react-v5";
 import { createFilterOptions } from "@mui/material/Autocomplete";
 
 const SENSOR_TYPES = [
-    { id: "motion",               label: "Bewegung" },
-    { id: "door",                 label: "Tuer/Fenster" },
-    { id: "fire",                 label: "Rauch" },
-    { id: "temperature",          label: "Temperatur" },
-    { id: "light",                label: "Licht" },
-    { id: "dimmer",               label: "Dimmer" },
-    { id: "blind",                label: "Rollladen" },
-    { id: "lock",                 label: "Schloss" },
-    { id: "custom",               label: "Sonstiges" },
-    { id: "presence_radar_bool",  label: "Praesenz-Radar (Anwesenheit)" },
-    { id: "vibration_trigger",    label: "Vibration (Erkannt)" },
-    { id: "vibration_strength",   label: "Vibration (Staerke)" },
-    { id: "moisture",             label: "Feuchtigkeit/Wasser" },
+    { id: "motion",                label: "Bewegung" },
+    { id: "door",                  label: "Tuer/Fenster" },
+    { id: "fire",                  label: "Rauch" },
+    { id: "temperature",           label: "Temperatur" },
+    { id: "light",                 label: "Licht" },
+    { id: "dimmer",                label: "Dimmer" },
+    { id: "blind",                 label: "Rollladen" },
+    { id: "lock",                  label: "Schloss" },
+    { id: "custom",                label: "Sonstiges" },
+    { id: "presence_radar_bool",   label: "Praesenz-Radar (Anwesenheit)" },
+    { id: "presence_radar_count",  label: "Praesenz-Radar (Personenanzahl)" },
+    { id: "vibration_trigger",     label: "Vibration (Erkannt)" },
+    { id: "vibration_strength",    label: "Vibration (Staerke)" },
+    { id: "moisture",              label: "Feuchtigkeit/Wasser" },
 ];
 
 const SENSOR_FUNCTIONS = [
-    { id: "",         label: "Allgemein",              color: "inherit",  description: "Keine spezielle Funktion" },
-    { id: "hallway",  label: "Flur / Gang",            color: "#8d6e63",  description: "Ganggeschwindigkeits-Analyse" },
-    { id: "bathroom", label: "Bad / WC",               color: "#00acc1",  description: "Nykturie-Zaehlung (naechtl. Toilettenbesuche)" },
-    { id: "kitchen",  label: "Kueche / Essbereich",    color: "#66bb6a",  description: "Essrhythmus-Analyse (Diabetes T2, Depression)" },
-    { id: "bed",      label: "Bett / Schlafzimmer",    color: "#7b1fa2",  description: "Schlafanalyse, Bett-Belegung, Tremor-Erkennung" },
-    { id: "living",   label: "Wohnzimmer / Hauptraum", color: "#1976d2",  description: "Sozialisierungs-Analyse" },
+    { id: "",               label: "Allgemein",                    color: "inherit",  description: "Keine spezielle Funktion" },
+    { id: "hallway",        label: "Flur / Gang",                  color: "#8d6e63",  description: "Ganggeschwindigkeits-Analyse" },
+    { id: "bathroom",       label: "Bad / WC",                     color: "#00acc1",  description: "Nykturie-Zaehlung (naechtl. Toilettenbesuche)" },
+    { id: "kitchen",        label: "Kueche / Essbereich",          color: "#66bb6a",  description: "Essrhythmus-Analyse (Diabetes T2, Depression)" },
+    { id: "bed",            label: "Bett / Schlafzimmer",          color: "#7b1fa2",  description: "Schlafanalyse, Bett-Belegung, Tremor-Erkennung" },
+    { id: "bed_zone",       label: "Nur Bett-Zone (Radar-Zone)",   color: "#4a148c",  description: "Radar-Zone exklusiv fuer das Bett. Ermoeglicht Mehrpersonen-Erkennung (count >= 2 = beide im Bett). Nur fuer Praesenz-Radar Typen." },
+    { id: "bedroom_nonbed", label: "Schlafzimmer (ohne Bett)",     color: "#9c27b0",  description: "Radar-Zone fuer den Schlafzimmerbereich ausserhalb des Bettes. 'Im Zimmer aber nicht im Bett' Signal. Nur fuer Praesenz-Radar Typen." },
+    { id: "living",         label: "Wohnzimmer / Hauptraum",       color: "#1976d2",  description: "Sozialisierungs-Analyse" },
 ];
+
+const RADAR_TYPES = ["presence_radar_bool", "presence_radar_count"];
 
 function getFunctionsForType(type) {
     if (type === "vibration_trigger" || type === "vibration_strength")
@@ -54,8 +59,10 @@ function getFunctionsForType(type) {
         return SENSOR_FUNCTIONS.filter(f => ["", "bed", "bathroom"].includes(f.id));
     if (type === "temperature")
         return SENSOR_FUNCTIONS.filter(f => f.id === "");
-    // motion, door, custom, presence_radar_bool: alle Raumfunktionen erlaubt
-    return SENSOR_FUNCTIONS;
+    if (RADAR_TYPES.includes(type))
+        return SENSOR_FUNCTIONS; // Radar darf alle Rollen inkl. bed_zone + bedroom_nonbed
+    // motion, door, custom: Raumfunktionen ohne Radar-Zonen
+    return SENSOR_FUNCTIONS.filter(f => !["bed_zone", "bedroom_nonbed"].includes(f.id));
 }
 
 function getEffectiveSF(device) {

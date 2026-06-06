@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 
 
 
@@ -34,7 +34,7 @@ const cloudflareTunnel = require('./lib/cloudflare_tunnel');
 // --- CONSTANTS ---
 const GEMINI_MODEL = 'models/gemini-flash-latest';
 // =============================================================================
-// computePersonSleep â€” Einheitlicher Schlafanalyse-Algorithmus
+// computePersonSleep — Einheitlicher Schlafanalyse-Algorithmus
 // Wird sowohl fuer den globalen Haushalt als auch fuer Einzelpersonen verwendet.
 // Single-Source-of-Truth: Keine doppelte Implementierung.
 // Parameter (p): allEvents, personTag, fp2RawStart, garminTs, garminWakeTs, fp2WakeTs,
@@ -159,7 +159,7 @@ function computePersonSleep(p) {
         var commonEvts = allEvents.filter(function(e) {
             if (isOtherPerson(e)) return false;
             if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion || e.isBathroomSensor) return false;
-            if (!(e.type === 'motion' || e.type === 'presence_radar_bool') || !isActiveValue(e.value)) return false;
+            if (!(e.type === 'motion' || (e.type === 'presence_radar_bool' || e.type === 'presence_radar_count')) || !isActiveValue(e.value)) return false;
             // Hop-Filter (OC-24/Fix-1): Sensor >2 Hops vom Schlafzimmer -> raus
             if (hopDistFn && bedroomLocations.length > 0 && e.location) {
                 var minHops = bedroomLocations.reduce(function(min, bedLoc) {
@@ -249,11 +249,11 @@ function computePersonSleep(p) {
         if (!overrideApplied) {
         // Cluster-basierte Einschlafzeit-Auswahl
         // OC-31 Stage 1: Nacht-Aufstehen-Erkennung
-        // Erkennt kurze Abwesenheiten (Aufstehen+RÃ¼ckkehr) im Schlaffenster
+        // Erkennt kurze Abwesenheiten (Aufstehen+Rückkehr) im Schlaffenster
         // und entfernt dadurch verursachte Falsch-Kandidaten aus dem Pool.
         // Funktioniert fuer Ein- und Mehrpersonenhaushalt identisch:
-        //   - Abgang: Sensor ausserhalb Schlafzimmer â‰¤4 Hops, personTag egal (Shared-Sensoren eingeschlossen)
-        //   - RÃ¼ckkehr: Sensor IN Schlafzimmer-Location innerhalb 20 Min
+        //   - Abgang: Sensor ausserhalb Schlafzimmer ≤4 Hops, personTag egal (Shared-Sensoren eingeschlossen)
+        //   - Rückkehr: Sensor IN Schlafzimmer-Location innerhalb 20 Min
         var _nachtAufstehenWindows = (function() {
             if (!bedroomLocations || bedroomLocations.length === 0) return [];
             var _bedroomLocSet = new Set(bedroomLocations);
@@ -272,14 +272,14 @@ function computePersonSleep(p) {
                 var _eHour = new Date(_eTs).getHours();
                 return (_eHour >= 21 || _eHour <= 9);
             }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
-            // Fuer jeden externen Motion-Event: prÃ¼fe ob RÃ¼ckkehr folgt
+            // Fuer jeden externen Motion-Event: prüfe ob Rückkehr folgt
             for (var _wi = 0; _wi < _motAll.length; _wi++) {
                 var _wEvt = _motAll[_wi];
                 var _wTs  = _wEvt.timestamp || 0;
                 var _wLoc = _wEvt.location || '';
                 // Sensor muss ausserhalb Schlafzimmer sein
                 if (_bedroomLocSet.has(_wLoc)) continue;
-                // Hop-Distanz prÃ¼fen (â‰¤4 vom Schlafzimmer): verhindert Keller/Spinnen-Artefakte
+                // Hop-Distanz prüfen (≤4 vom Schlafzimmer): verhindert Keller/Spinnen-Artefakte
                 if (hopDistFn && _wLoc) {
                     var _minHop = 999;
                     for (var _bli = 0; _bli < bedroomLocations.length; _bli++) {
@@ -288,17 +288,17 @@ function computePersonSleep(p) {
                     }
                     if (_minHop > 3) continue; // Zu weit weg -> ignorieren (max. 3 Hops = Bad/Kueche/Diele, nicht OG/DG)
                 }
-                // Abgang bereits in einem bestehenden Fenster? â†’ Ã¼berspringen
+                // Abgang bereits in einem bestehenden Fenster? → überspringen
                 if (_windows.some(function(w) { return _wTs >= w.start && _wTs <= w.end; })) continue;
-                // RÃ¼ckkehr ins Schlafzimmer innerhalb 20 Min suchen
+                // Rückkehr ins Schlafzimmer innerhalb 20 Min suchen
                 var _retEvt = null;
                 for (var _ri = _wi + 1; _ri < _motAll.length; _ri++) {
                     var _rEvt = _motAll[_ri];
                     var _rTs  = _rEvt.timestamp || 0;
-                    if (_rTs > _wTs + 20 * 60000) break; // 20-Min-Fenster Ã¼berschritten
+                    if (_rTs > _wTs + 20 * 60000) break; // 20-Min-Fenster überschritten
                     if (_bedroomLocSet.has(_rEvt.location || '')) { _retEvt = _rEvt; break; }
                 }
-                if (!_retEvt) continue; // Keine RÃ¼ckkehr â†’ kein Nacht-Aufstehen
+                if (!_retEvt) continue; // Keine Rückkehr → kein Nacht-Aufstehen
                 _windows.push({
                     start: _wTs - 2 * 60000,
                     end:   (_retEvt.timestamp || 0) + 3 * 60000,
@@ -334,7 +334,7 @@ function computePersonSleep(p) {
 
         // OC-31: Kandidaten die in einem Nacht-Aufstehen-Fenster liegen herausfiltern
         // (betrifft prio >= 3: vib_refined, motion_vib, gap60, motion, last_outside, haus_still)
-        // Option A: vib_refined (prio 3) ebenfalls filtern, da 'letzte Matratzen-Stille' nach RÃ¼ckkehr
+        // Option A: vib_refined (prio 3) ebenfalls filtern, da 'letzte Matratzen-Stille' nach Rückkehr
         // neu gesetzt wird und damit einen falschen Einschlaf-Timestamp ergeben kann.
         // Nur Garmin (prio 0), fp2_vib (prio 1), fp2 (prio 2) bleiben absolut unangetastet.
         if (_nachtAufstehenWindows.length > 0) {
@@ -410,7 +410,7 @@ function computePersonSleep(p) {
             if (_ts <= bedEntryTs || _ts >= sleepStart) return false;
             if (isOtherPerson(e)) return false; // gemeinsame/ungetaggte Raeume zaehlen, nur andere Person ausschliessen (wie otherRoomEvts)
             if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed || e.isBathroomSensor) return false;
-            if (e.type !== 'motion' && e.type !== 'presence_radar_bool') return false;
+            if (e.type !== 'motion' && e.type !== 'presence_radar_bool' && e.type !== 'presence_radar_count') return false;
             if (!isActiveValue(e.value)) return false;
             if (hopDistFn && bedroomLocations.length > 0 && e.location) {
                 var _mh = bedroomLocations.reduce(function(m, bl) { var h = hopDistFn(e.location, bl); return (h >= 0 && h < m) ? h : m; }, 999);
@@ -438,7 +438,7 @@ function computePersonSleep(p) {
     var otherRoomEvts = allEvents.filter(function(e) {
         if (e.isFP2Bed || e.isVibrationBed || e.isBathroomSensor || e.isBedroomMotion) return false;
         if (isOtherPerson(e)) return false;
-        return (e.type === 'motion' || e.type === 'presence_radar_bool')
+        return (e.type === 'motion' || (e.type === 'presence_radar_bool' || e.type === 'presence_radar_count'))
             && (e.timestamp || 0) >= p4amTs && (e.timestamp || 0) >= minSlTs && (e.timestamp || 0) <= wakeHardCap;
     }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
 
@@ -503,7 +503,7 @@ function computePersonSleep(p) {
     if (fp2WakeTs) {
         var _fp2OtherEvts = allEvents.filter(function(e) {
             return !e.isFP2Bed && !e.isVibrationBed && !e.isBathroomSensor && !e.isBedroomMotion
-                && (e.type === 'motion' || e.type === 'presence_radar_bool')
+                && (e.type === 'motion' || (e.type === 'presence_radar_bool' || e.type === 'presence_radar_count'))
                 && !isOtherPerson(e)
                 && (e.timestamp||0) >= fp2WakeTs && (e.timestamp||0) <= fp2WakeTs + 60*60*1000;
         }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
@@ -608,7 +608,7 @@ function computePersonSleep(p) {
             var ts = e.timestamp || 0;
             if (ts < obeWinS || ts > obeWinE) return false;
             if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion) return false;
-            return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+            return (e.type === 'motion' || (e.type === 'presence_radar_bool' || e.type === 'presence_radar_count')) && isActiveValue(e.value);
         }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
         var obeCluster = null; var obeCGap = 5 * 60 * 1000; var obeCAfter = 3 * 60 * 1000;
         var obePush = function(c) {
@@ -1198,9 +1198,10 @@ class CogniLiving extends utils.Adapter {
                     funktion:        d.sensorFunction || '',
                     isBathroomSensor: !!(d.sensorFunction === 'bathroom' || d.isBathroomSensor),
                     isKitchenSensor:  !!(d.sensorFunction === 'kitchen'  || d.isKitchenSensor),
-                    isFP2Bed:         !!(d.sensorFunction === 'bed'      && (d.type||'').toLowerCase() === 'presence_radar_bool'),
+                    isFP2Bed:         !!((_sf_type => (_sf_type.sf === 'bed' || _sf_type.sf === 'bed_zone') && (_sf_type.t === 'presence_radar_bool' || _sf_type.t === 'presence_radar_count'))({sf: d.sensorFunction, t: (d.type||'').toLowerCase()})),
                     isVibrationBed:   !!(d.sensorFunction === 'bed'      && ['vibration_trigger','vibration_strength'].includes((d.type||'').toLowerCase())),
                     isBedroomMotion:  !!(d.sensorFunction === 'bed'      && (d.type||'').toLowerCase() === 'motion'),
+                    isBedroomNonBed:  !!(d.sensorFunction === 'bedroom_nonbed' && ['presence_radar_bool','presence_radar_count'].includes((d.type||'').toLowerCase())),
                 };
             });
             await this.setStateAsync('system.config.sensorList', { val: JSON.stringify(_sensorListData, null, 2), ack: true });
@@ -1384,8 +1385,8 @@ class CogniLiving extends utils.Adapter {
             await this.setStateAsync('system.sensorStatus', { val: JSON.stringify({ timestamp: now, sensors: statusList, offlineCount: offlineCount }), ack: true });
         } catch(e) {}
 
-        // OC-12: Gateway-Cluster-Erkennung â€” wenn >= 2 Sensoren desselben Gateways gleichzeitig offline
-        // -> einzelne Sensor-Alerts unterdrÃ¼cken, stattdessen einen Gateway-Alarm senden
+        // OC-12: Gateway-Cluster-Erkennung — wenn >= 2 Sensoren desselben Gateways gleichzeitig offline
+        // -> einzelne Sensor-Alerts unterdrücken, stattdessen einen Gateway-Alarm senden
         var offlineSensors = statusList.filter(function(s) { return s.status === 'offline'; });
         var gatewayGroups = {};
         offlineSensors.forEach(function(s) {
@@ -1415,7 +1416,7 @@ class CogniLiving extends utils.Adapter {
         var _isSleepTime = _nowH >= 22 || _nowH < 8;
         if (_isSleepTime) alerts = [];
 
-        // Einzelne Sensor-Alerts fuer Gateway-Cluster-Mitglieder unterdrÃ¼cken -> ein gebÃ¼ndelter Alert stattdessen
+        // Einzelne Sensor-Alerts fuer Gateway-Cluster-Mitglieder unterdrücken -> ein gebündelter Alert stattdessen
         if (gatewayOutages.length > 0 && !_isSleepTime) {
             alerts = alerts.filter(function(a) {
                 return !offlineSensors.some(function(s) { return gatewayOutageIds.has(s.id) && a.startsWith((s.name || s.id)); });
@@ -1429,9 +1430,9 @@ class CogniLiving extends utils.Adapter {
         }
 
         if (alerts.length > 0) {
-            var msg = 'âš ï¸ Sensor-Ausfall:\n' + alerts.join('\n');
+            var msg = '⚠️ Sensor-Ausfall:\n' + alerts.join('\n');
             this.log.warn('[SENSOR-CHECK] ' + alerts.join(', '));
-            try { setup.sendNotification(this, msg, true, false, 'âš ï¸ AURA: Sensor-Ausfall'); } catch(e) {}
+            try { setup.sendNotification(this, msg, true, false, '⚠️ AURA: Sensor-Ausfall'); } catch(e) {}
         }
         // OC-15: Batteriestand stuendlich pruefen (Pushover taeglich um 09:00)
         try { await this.checkBatteryLevels(); } catch(e) {}
@@ -1572,7 +1573,7 @@ class CogniLiving extends utils.Adapter {
             'params.battery.Battery_Level', 'params.battery.Battery_Level_Alarm'
         ];
         var WIRED_PREFIXES = ['knx.', 'loxone.', 'bacnet.', 'modbus.'];
-        var BATTERY_TYPES = ['motion', 'vibration', 'vibration_trigger', 'vibration_strength', 'presence_radar', 'presence_radar_bool', 'moisture', 'door', 'temperature'];
+        var BATTERY_TYPES = ['motion', 'vibration', 'vibration_trigger', 'vibration_strength', 'presence_radar', 'presence_radar_bool', 'presence_radar_count', 'moisture', 'door', 'temperature'];
         for (var _bi = 0; _bi < devices.length; _bi++) {
             var d = devices[_bi];
             if (!d.id) continue;
@@ -1948,7 +1949,7 @@ class CogniLiving extends utils.Adapter {
                 (
                     (_existingSnap.sleepStages && _existingSnap.sleepStages.length > 0) ||
                     _sleepFrozenMotionOnly ||
-                    // OC-12/Freeze-Fix: Abend-Sperre (18-22 Uhr) â€” vollstaendige Nacht vorhanden, noch keine neue Einschlafquelle
+                    // OC-12/Freeze-Fix: Abend-Sperre (18-22 Uhr) — vollstaendige Nacht vorhanden, noch keine neue Einschlafquelle
                     // Verhindert dass die korrekte Nacht-JSON um 18:00 durch eine leere Abend-Analyse ueberschrieben wird
                     // (trifft v.a. Multi-Person-Haushalte ohne Garmin/Vibration wo sleepStages+wakeConfirmed fehlen)
                     (() => {
@@ -2283,7 +2284,7 @@ class CogniLiving extends utils.Adapter {
                     const ts = e.timestamp || 0;
                     if (ts < _noiseWinStart2 || ts > _noiseWinEnd2) return false;
                     if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion || e.isBathroomSensor) return false;
-                    return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+                    return (e.type === 'motion' || (e.type === 'presence_radar_bool' || e.type === 'presence_radar_count')) && isActiveValue(e.value);
                 });
                 const _noiseCounts2 = {};
                 for (const e of _noiseEvts2) { const sid = e.id || e.name || '?'; _noiseCounts2[sid] = (_noiseCounts2[sid] || 0) + 1; }
@@ -2362,7 +2363,7 @@ class CogniLiving extends utils.Adapter {
                 if (_clusterSources.length === 0) { var _fbEt = (_gR && _gR.bedEntryTs) ? _gR.bedEntryTs : null; if (_fbEt && (_sleepStart - _fbEt) > 120 * 60000) { if (_oc48Log) _oc48Log['debug']('[OC-48b] bedEntryTs Fallback verworfen: ' + new Date(_fbEt).toLocaleTimeString() + ' ist > 120 Min vor sleepStart'); return null; } return _fbEt; }
                 var _isFarMotion = function(e) {
                     if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed || e.isBathroomSensor) return false;
-                    if (e.type !== 'motion' && e.type !== 'presence_radar_bool') return false;
+                    if (e.type !== 'motion' && e.type !== 'presence_radar_bool' && e.type !== 'presence_radar_count') return false;
                     if (!isActiveValue(e.value)) return false;
                     if (_oc48HopFn && _oc48BedLocs.length > 0 && e.location) {
                         var _minH = _oc48BedLocs.reduce(function(m, bl) {
@@ -2449,7 +2450,7 @@ class CogniLiving extends utils.Adapter {
             if (_bedEntryTsFinal && sleepWindowOC7.start && _bedEntryTsFinal < sleepWindowOC7.start) {
                 var _oc48cFarFn = function(e) {
                     if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed || e.isBathroomSensor) return false;
-                    if (e.type !== 'motion' && e.type !== 'presence_radar_bool') return false;
+                    if (e.type !== 'motion' && e.type !== 'presence_radar_bool' && e.type !== 'presence_radar_count') return false;
                     if (!isActiveValue(e.value)) return false;
                     if (_oc48HopFn && _oc48BedLocs.length > 0 && e.location) {
                         var _mh = _oc48BedLocs.reduce(function(m, bl) { var h = _oc48HopFn(e.location, bl); return (h >= 0 && h < m) ? h : m; }, 999);
@@ -2572,8 +2573,49 @@ class CogniLiving extends utils.Adapter {
                 ? (_existingSnap.sleepWindowSource || _gR.sleepWindowSource || 'fixed')
                 : (_gR.sleepWindowSource || 'fixed');
 
-            // Au+?erhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
+            // Ausserhalb-Bett-Ereignisse waehrend Schlaffenster (fuer OC-7 Balken-Overlay)
             var outsideBedEvents = [];
+
+            // [OC-SB] Shared-Bed-Perioden: Zeitraeume in denen >= 2 Personen im Bett erkannt wurden
+            // Quelle: presence_radar_count Events mit isFP2Bed=true (bed_zone oder bed Funktion)
+            // Debounce analytisch: nur Perioden >= 20 Sekunden zaehlen (ignoriert Radar-Rauschen)
+            var _sharedBedPeriods = [];
+            (function() {
+                var SHARED_BED_SUSTAIN_MS = 20000; // 20 Sekunden Mindeshdauer
+                var SHARED_BED_GAP_MS     = 10000; // Luecken < 10s werden ueberbrueckt
+                var _rcEvts = sleepSearchEvents.filter(function(e) {
+                    return e.type === 'presence_radar_count' && e.isFP2Bed;
+                }).sort(function(a, b) { return (a.timestamp||0) - (b.timestamp||0); });
+                if (_rcEvts.length === 0) return;
+                // Baue rohe Segmente (jeweils zusammenhaengende Bloecke mit count >= 2)
+                var _rawSegs = [];
+                var _segStart = null, _segEnd = null;
+                for (var _ri = 0; _ri < _rcEvts.length; _ri++) {
+                    var _re = _rcEvts[_ri];
+                    var _rc = toPersonCount(_re.value);
+                    if (_rc >= 2) {
+                        if (_segStart === null) _segStart = _re.timestamp;
+                        _segEnd = _re.timestamp;
+                    } else {
+                        if (_segStart !== null) { _rawSegs.push({start: _segStart, end: _segEnd}); _segStart = null; _segEnd = null; }
+                    }
+                }
+                if (_segStart !== null) _rawSegs.push({start: _segStart, end: _segEnd});
+                // Merge Segmente mit Luecke < GAP_TOLERANCE
+                var _merged = [];
+                for (var _mi = 0; _mi < _rawSegs.length; _mi++) {
+                    if (_merged.length === 0 || _rawSegs[_mi].start - _merged[_merged.length-1].end > SHARED_BED_GAP_MS) {
+                        _merged.push({start: _rawSegs[_mi].start, end: _rawSegs[_mi].end});
+                    } else {
+                        _merged[_merged.length-1].end = Math.max(_merged[_merged.length-1].end, _rawSegs[_mi].end);
+                    }
+                }
+                // Nur Perioden >= SUSTAIN_MS behalten
+                _sharedBedPeriods = _merged.filter(function(s) { return (s.end - s.start) >= SHARED_BED_SUSTAIN_MS; });
+                if (_sharedBedPeriods.length > 0) {
+                    this.log.info('[OC-SB] ' + _sharedBedPeriods.length + ' Shared-Bed-Periode(n) erkannt. Laengste: ' + Math.round((_sharedBedPeriods.reduce(function(m,p){return Math.max(m,p.end-p.start);},0)/60000)) + ' Min');
+                }
+            }.bind(this))();
 
             // [Multi-Person-Motion-Only Wake+Start-Fallback aus per-Person-Snapshot]
             // Ziel: sleepWindowOC7.end setzen wenn bisher null (kein FP2, kein Garmin),
@@ -2690,7 +2732,7 @@ class CogniLiving extends utils.Adapter {
                         var _evtLoc = (e.location || '').trim();
                         if (_evtLoc && !_topoNearRooms.has(_evtLoc)) return false;
                     }
-                    return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+                    return (e.type === 'motion' || (e.type === 'presence_radar_bool' || e.type === 'presence_radar_count')) && isActiveValue(e.value);
                 }).sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });                var _motEvents = []; var _curCluster = null;
                 _motOutEvts.forEach(function(e) {
                     var _ts = e.timestamp || 0;
@@ -2725,7 +2767,7 @@ class CogniLiving extends utils.Adapter {
                         if (_ts2 < fp2.start - 2*60*1000 || _ts2 > fp2.end + 2*60*1000) return false;
                         if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion) return false;
                         if (_topoNearRooms && _topoNearRooms.size > 0 && (e.location||'').trim() && !_topoNearRooms.has((e.location||'').trim())) return false;
-                        return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+                        return (e.type === 'motion' || (e.type === 'presence_radar_bool' || e.type === 'presence_radar_count')) && isActiveValue(e.value);
                     });
                     // Zusaetzlich: andere Raeume aktiv? (Kueche zaehlt als anderer Raum)
                     var _hasOtherInFp2 = _hasBath && sleepSearchEvents.some(function(e) {
@@ -2735,7 +2777,7 @@ class CogniLiving extends utils.Adapter {
                         var _isBed2  = e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion;
                         if (_isBath2 || _isBed2) return false;
                         if (_topoNearRooms && _topoNearRooms.size > 0 && (e.location||"").trim() && !_topoNearRooms.has((e.location||"").trim())) return false;
-                        return (e.type === "motion" || e.type === "presence_radar_bool") && isActiveValue(e.value);
+                        return (e.type === "motion" || (e.type === "presence_radar_bool" || e.type === "presence_radar_count")) && isActiveValue(e.value);
                     });
                     var _fp2Dur = fp2.duration;
                     // FP2-Solo-Dropout: kein externer Sensor bestaetigt + unter Mindestdauer -> kein Dreieck
@@ -2763,7 +2805,7 @@ class CogniLiving extends utils.Adapter {
                         var _ts2 = e.timestamp || 0;
                         if (_ts2 < fp2.start - 2*60*1000 || _ts2 > fp2.end + 2*60*1000) return false;
                         if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion) return false;
-                        return (e.type === 'motion' || e.type === 'presence_radar_bool') && isActiveValue(e.value);
+                        return (e.type === 'motion' || (e.type === 'presence_radar_bool' || e.type === 'presence_radar_count')) && isActiveValue(e.value);
                     }).map(function(e) {
                         return { name: e.name||e.id, location: e.location||'', isBathroomSensor: !!(e.isBathroomSensor || _bathDevIds.has(e.id)), timestamp: e.timestamp||0 };
                     }).filter(function(s, idx, arr) {
@@ -2871,7 +2913,7 @@ class CogniLiving extends utils.Adapter {
                                 var _lts = e.timestamp || 0;
                                 if (_lts <= garminWakeTs || _lts > _oc47Last) return false;
                                 if (e.isBathroomSensor) return true;
-                                if ((e.type !== 'motion' && e.type !== 'presence_radar_bool') || !isActiveValue(e.value)) return false;
+                                if ((e.type !== 'motion' && e.type !== 'presence_radar_bool' && e.type !== 'presence_radar_count') || !isActiveValue(e.value)) return false;
                                 if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed) return false;
                                 if (_oc48HopFn && _oc48BedLocs.length > 0 && e.location) {
                                     var _mh47 = _oc48BedLocs.reduce(function(m, bl) { var h = _oc48HopFn(e.location, bl); return (h >= 0 && h < m) ? h : m; }, 999);
@@ -2901,9 +2943,9 @@ class CogniLiving extends utils.Adapter {
                 sleepWindowOC7.end = _gR.sleepWindowEnd;
             }
 
-            // ═══════════════════════════════════════════════════════════════
+            // ---------------------------------------------------------------
             // [OC-45d] SLEEP-CYCLE STATE MACHINE FRAMEWORK (ab v0.33.254)
-            // ═══════════════════════════════════════════════════════════════
+            // ---------------------------------------------------------------
             // Alle vier Phasen-Module implementiert (v0.33.257). Shared context: _scCtx.
             //   PRE_SLEEP  -> OC-48 + OC-45c Counterevidence    [v0.33.256] DONE
             //   SLEEPING   -> OC-45b FP2-Return + OC-47d Fix    [v0.33.255] DONE
@@ -2917,8 +2959,8 @@ class CogniLiving extends utils.Adapter {
                 _SC_WAKING=4, _SC_BED_TOUCH=5, _SC_DEPARTED=6, _SC_DAY=7;
             // Evidenz-Gewichte (sensor-neutral): Garmin=4, FP2=3, Vibration=2, PIR=1
             var _SC_CONF = { maximal: 4, high: 3, medium: 2, low: 1, none: 0 };
-            // ───────────────────────────────────────────────────────────────
-            // [OC-45a] Post-Wake State Machine — sensor-agnostische bedExitTs Berechnung
+            // ---------------------------------------------------------------
+            // [OC-45a] Post-Wake State Machine � sensor-agnostische bedExitTs Berechnung
             // Ersetzt OC-42 (statische 15-Min-FP2-Schwelle, zu konservativ nach Aufwachen).
             // Laeuft von sleepWindowOC7.end bis max. 120 Min (cap: 12:00) // OC-47b.
             // States: WAKING -> DEPARTED -> POTENTIAL_RETURN -> (TRANSIT|GENUINE_RETURN)
@@ -2966,7 +3008,7 @@ class CogniLiving extends utils.Adapter {
                     var _opFp2 = !!_ope.isFP2Bed;
                     var _opBath = _oc45aBathIds.has(_ope.id);
                     var _opInBedroom = _oc45aBedroomLocs.size > 0 && _oc45aBedroomLocs.has(_ope.location||'');
-                    var _opIsMotion = _ope.type==='motion'||_ope.type==='presence_radar_bool'||_opFp2;
+                    var _opIsMotion = _ope.type==='motion'||(_ope.type==='presence_radar_bool'||_ope.type==='presence_radar_count')||_opFp2;
                     var _opOtherRoom = _opIsMotion && !_opInBedroom && !_opBath && _oc45aIsTrue(_ope.value);
                     var _opBathTrue = _opBath && _oc45aIsTrue(_ope.value);
                     if (_opBathTrue) _oc45aLastBathTrue = _opts;
@@ -3061,7 +3103,7 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_wovE) { this.log.warn('[WakeOv] Fehler: ' + _wovE.message); }
 
-            // === STAGES + SCORE: Jetzt berechnen ï¿½ sleepWindowOC7.end ist nach Wake-Detection gesetzt ===
+            // === STAGES + SCORE: Jetzt berechnen � sleepWindowOC7.end ist nach Wake-Detection gesetzt ===
             // Non-frozen: End-Zeit jetzt bekannt (von Garmin/FP2/motion/other-room/override)
             if (!_sleepFrozen && sleepWindowOC7.start && sleepWindowOC7.end) {
                 _shouldRecalcStages = true;
@@ -3079,7 +3121,7 @@ class CogniLiving extends utils.Adapter {
                     ' (Quelle: ' + (wakeSource || '?') + ')');
             }
             if (_shouldRecalcStages && sleepWindowOC7.start && sleepWindowOC7.end) {
-                // [BUG-FIX] Stages immer neu aufbauen ï¿½ nie auf bestehende appenden (OC-43 Neuberechnung erzeugte Duplikate).
+                // [BUG-FIX] Stages immer neu aufbauen � nie auf bestehende appenden (OC-43 Neuberechnung erzeugte Duplikate).
                 sleepStages = [];
                 var SLOT_MS = 5 * 60 * 1000;
                 var swStart = sleepWindowOC7.start;
@@ -3249,7 +3291,7 @@ class CogniLiving extends utils.Adapter {
             const nightVibrationStrengthAvg = _vibStrCount > 0 ? Math.round(_vibStrSum / _vibStrCount) : null;
             const nightVibrationStrengthMax = _vibStrCount > 0 ? _vibStrMax : null;
 
-            // OC-33 Teil B: Schwacher Vibrationssensor ï¿½ Hinweis fuer Nutzer
+            // OC-33 Teil B: Schwacher Vibrationssensor � Hinweis fuer Nutzer
             // Bedingung: Sensor hat gefeuert (count>0) + Staerke sehr niedrig (<10) + ausserhalb-Events vorhanden
             var weakVibrationSensor = null;
             var _WEAK_VIB_THRESHOLD = 10;
@@ -3590,7 +3632,7 @@ class CogniLiving extends utils.Adapter {
                         if (!ids.has(e.id)) return false;
                         var ts = e.timestamp||e.ts||0; return ts >= _pNocWinStart && ts <= _pNocWinEnd;
                     });
-                    // [OC-45b] SLEEPING-Phase: Nykturie-SM — Trip-Merging statt Event-Zaehlen
+                    // [OC-45b] SLEEPING-Phase: Nykturie-SM � Trip-Merging statt Event-Zaehlen
                     // Mehrere Bad-Sensor True-Events innerhalb OC45B_MERGE_MS = 1 einziger Trip.
                     // Sensor-agnostisch: Jeder Batch aus aufeinanderfolgenden True-Events = 1 Trip.
                     // Bestaetigung: Person muss in den 10 Min vor dem Trip aktiv (im Bett) gewesen sein.
@@ -3915,7 +3957,8 @@ class CogniLiving extends utils.Adapter {
                                 }
                             }
                         }
-                        intimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:_hrMax,garminHRAvg:_hrAvg,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
+                        var _partnerDet = _sharedBedPeriods.some(function(sbp){return sbp.start <= _evtEnd && sbp.end >= _evtStart;});
+                        intimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:_hrMax,garminHRAvg:_hrAvg,partnerDetected:_partnerDet,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
                     });
                     // Gap-Toleranz-Merge: Sessions mit Abstand <30 Min zu einer zusammenfassen
                     var _gapMs = 30 * 60 * 1000;
@@ -4008,7 +4051,7 @@ class CogniLiving extends utils.Adapter {
                                     _pyClassInfo.results.forEach(function(r, i) {
                                         if (!intimacyEvents[i]) return;
                                         if (r.type === 'nullnummer' && r.confidence >= 0.60) {
-                                            this.log.info('[OC-SEX-PY] Session '+i+' als Nullnummer klassifiziert ï¿½ wird entfernt');
+                                            this.log.info('[OC-SEX-PY] Session '+i+' als Nullnummer klassifiziert � wird entfernt');
                                             intimacyEvents[i] = null;
                                         } else if (r.type && r.type !== 'nullnummer' && r.confidence >= 0.55) {
                                             intimacyEvents[i].type = r.type;
@@ -4169,6 +4212,7 @@ class CogniLiving extends utils.Adapter {
                 garminRemMin: garminRemSec ? Math.round(garminRemSec/60) : null,
                 sleepWindowSource: sleepWindowSource,
                 outsideBedEvents: outsideBedEvents,
+                sharedBedPeriods: _sharedBedPeriods,
                 intimacyEvents: intimacyEvents,
                 sexCalibInfo: _calibInfo,
                 wakeSource: wakeSource,
@@ -4925,7 +4969,7 @@ class CogniLiving extends utils.Adapter {
                                     var _raLPkMax=_raLSPeaks[_raLSPeaks.length-1];
                                     var _raLAvgP=Math.round(_raLSPeaks.reduce(function(a,b){return a+b;},0)/_raLSPeaks.length);
                                     var _raLVarP=Math.round(_raLSPeaks.reduce(function(a,b){return a+(b-_raLAvgP)*(b-_raLAvgP);},0)/_raLSPeaks.length);
-                                    // Features einmalig im Label speichern (Migration â€” kein erneutes JSON-Lesen)
+                                    // Features einmalig im Label speichern (Migration — kein erneutes JSON-Lesen)
                                      
                                     // Kontext-Features aus eventHistory extrahieren (identisch zu saveDailyHistory)
                                     var _raLCtxE = _raLSnap.eventHistory || [];
@@ -4941,7 +4985,7 @@ class CogniLiving extends utils.Adapter {
                                     var _raLRoomT = _raLTempE.length>0?(Number(_raLTempE[_raLTempE.length-1].value)||null):null;
                                     var _raLBathB = _raLCtxE.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||e.type==='bathroom_motion')&&t>=(_raLSessP.start-3600000)&&t<_raLSessP.start;});
                                     var _raLBathA = _raLCtxE.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||e.type==='bathroom_motion')&&t>_raLSessP.end&&t<=(_raLSessP.end+3600000);});
-                                    // Features vollstÃ¤ndig speichern (incl. Kontext) â€” immer Ã¼berschreiben fÃ¼r Re-Migration
+                                    // Features vollständig speichern (incl. Kontext) — immer überschreiben für Re-Migration
                                     _raLbl._features = {peakMax:_raLPkMax,medianPeak:_raLMed,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP,hourSin:_raLHSin,hourCos:_raLHCos,lightOn:_raLLightOn,presenceOn:_raLPresOn,roomTemp:_raLRoomT,bathBefore:_raLBathB?1:0,bathAfter:_raLBathA?1:0,nearbyRoomMotion:0}; _raLabelsUpdated = true;
                                      _raSexTrainData.push({peak:_raLPkMax,durSlots:_raLSPeaks.length,avgPeak:_raLAvgP,variance:_raLVarP,tierB:0,label:_raLTyp,date:_raLbl.date||'',hourSin:_raLHSin,hourCos:_raLHCos,lightOn:_raLLightOn,presenceOn:_raLPresOn,roomTemp:_raLRoomT,bathBefore:_raLBathB?1:0,bathAfter:_raLBathA?1:0,nearbyRoomMotion:0});
                                 }
@@ -5064,7 +5108,7 @@ class CogniLiving extends utils.Adapter {
                                 _raPyInfo.results.forEach(function(r,i){
                                     if (!_raIntimacyEvents[i]) return;
                                     if (r.type==='nullnummer'&&r.confidence>=0.60){
-                                        this.log.info('[OC-SEX-RA-PY] Session '+i+' als Nullnummer klassifiziert ï¿½ wird entfernt');
+                                        this.log.info('[OC-SEX-RA-PY] Session '+i+' als Nullnummer klassifiziert � wird entfernt');
                                         _raIntimacyEvents[i]=null;
                                     } else if (r.type&&r.type!=='nullnummer'&&r.confidence>=0.55){
                                         _raIntimacyEvents[i].type=r.type;
@@ -5484,7 +5528,7 @@ class CogniLiving extends utils.Adapter {
             if (evt) {
                 this.setState('analysis.visualization.pulse', { val: Date.now(), ack: true });
             }
-            if (evt && (evt.type === 'motion' || evt.type === 'presence_radar_bool' || evt.type === 'door') && evt.location && this.isProVersion) {
+            if (evt && (evt.type === 'motion' || (evt.type === 'presence_radar_bool' || evt.type === 'presence_radar_count') || evt.type === 'door') && evt.location && this.isProVersion) {
                 deadMan.updateLocation(this, evt.location);
             }
             if (isActiveValue(state.val)) {
@@ -5587,7 +5631,7 @@ class CogniLiving extends utils.Adapter {
         var topo = this._cachedTopoMatrix;
         if (!topo || !topo.rooms || !topo.matrix) return;
 
-        // OC-11: Adaptives Fenster â€” gelernter p90 pro Raum-Paar, Fallback 5s
+        // OC-11: Adaptives Fenster — gelernter p90 pro Raum-Paar, Fallback 5s
         var DEFAULT_WINDOW_MS = 5000;
         var MIN_HOPS = 2;
         var now = Date.now();

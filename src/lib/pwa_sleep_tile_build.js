@@ -1,6 +1,6 @@
-ï»¿'use strict';
+'use strict';
 /**
- * Baut ein View-Model fuer die NUUKANNI Schlaf-Kachel â€” gleiche Kernlogik wie HealthTab renderSleepScoreCard (read-only).
+ * Baut ein View-Model fuer die NUUKANNI Schlaf-Kachel — gleiche Kernlogik wie HealthTab renderSleepScoreCard (read-only).
  */
 
 const stageColor = {
@@ -19,7 +19,7 @@ const stageLabel = {
     rem: 'REM (est.)',
     wake: 'Wachliegen',
     bathroom: 'Bad-Besuch',
-    outside: 'AuÃŸerhalb',
+    outside: 'Außerhalb',
     other_person: 'Andere Person'
 };
 
@@ -92,6 +92,7 @@ function pickSd(raw) {
         garminDataFresh: raw.garminDataFresh,
         garminLastSyncAgeH: raw.garminLastSyncAgeH != null ? Number(raw.garminLastSyncAgeH) : null,
         outsideBedEvents: Array.isArray(raw.outsideBedEvents) ? raw.outsideBedEvents : [],
+        sharedBedPeriods: Array.isArray(raw.sharedBedPeriods) ? raw.sharedBedPeriods : [],
         wakeConfirmed: !!raw.wakeConfirmed,
         allWakeSources: Array.isArray(raw.allWakeSources) ? raw.allWakeSources : [],
         allSleepStartSources: Array.isArray(raw.allSleepStartSources) ? raw.allSleepStartSources : [],
@@ -159,6 +160,16 @@ function buildSleepTilePayload(raw) {
         };
     }
 
+    // [OC-52] Daten-werden-gesammelt: Nacht (20-12h) + kein Score + kein bestaet. Aufwachen + keine Stages
+    // Verhindert dass stale Garmin-Vortags-Daten + falscher Bettkontakt als echte Nachtanalyse erscheinen.
+    var _oc52Hour = new Date().getHours();
+    if ((_oc52Hour >= 20 || _oc52Hour < 12) && displayScore == null && !sd.wakeConfirmed && stages.length === 0 && !sd.bedWasEmpty) {
+        return {
+            view: 'collecting',
+            garminScore: sd.garminScore
+        };
+    }
+
     const _bedEntryRaw = sd.bedEntryTs;
     const bedEntryTsVal =
         _bedEntryRaw && swStart && _bedEntryRaw < swStart - 5 * 60000 ? _bedEntryRaw : null;
@@ -198,7 +209,7 @@ function buildSleepTilePayload(raw) {
         return {
             view: 'degraded',
             header: headerCommon,
-            hint: 'Keine Vibrations-Schlafphasen â€” nur Zeiten (wie Admin ohne Bett-Vibration).'
+            hint: 'Keine Vibrations-Schlafphasen — nur Zeiten (wie Admin ohne Bett-Vibration).'
         };
     }
 
@@ -261,7 +272,7 @@ function buildSleepTilePayload(raw) {
 
     const markerTitleMap = {
         bathroom: 'Bad-Besuch',
-        outside: 'AuÃŸerhalb',
+        outside: 'Außerhalb',
         other_person: 'Andere Person aktiv'
     };
 
@@ -292,10 +303,10 @@ function buildSleepTilePayload(raw) {
                     })
                     .join('\n');
         } else if (allSensors.length > 0) {
-            sensorStr = '\n  (Sensordetails werden nach Update verfÃ¼gbar)';
+            sensorStr = '\n  (Sensordetails werden nach Update verfügbar)';
         }
         if (isDropout) {
-            return 'Radar-Aussetzer: ' + evt.duration + ' min (kein AuÃŸensensor bestÃ¤tigt)' + sensorStr;
+            return 'Radar-Aussetzer: ' + evt.duration + ' min (kein Außensensor bestätigt)' + sensorStr;
         }
         return (markerTitleMap[evtType] || 'Abwesenheit') + ': ' + evt.duration + ' min' + sensorStr;
     }
@@ -374,7 +385,7 @@ function buildSleepTilePayload(raw) {
                         ' (' +
                         durMin +
                         ' Min)' +
-                        (e.departureSensor ? '\n  â€¢ ' + e.departureSensor : '')
+                        (e.departureSensor ? '\n  • ' + e.departureSensor : '')
                 };
             });
     }
@@ -447,7 +458,7 @@ function buildSleepTilePayload(raw) {
         // [OC-42b] Slots nach swEnd (Aufgewacht) bis bedExitTs -> Wachliegen-Tooltip (analog slotColor)
         if (absMs && swEnd && bedExitTs && bedExitTs > swEnd && absMs >= swEnd) {
             var _wachMin = Math.round((bedExitTs - swEnd) / 60000);
-            return 'Wachliegen: ' + fmtTime(swEnd) + 'â€“' + fmtTime(bedExitTs) + ' (' + _wachMin + ' Min)';
+            return 'Wachliegen: ' + fmtTime(swEnd) + '–' + fmtTime(bedExitTs) + ' (' + _wachMin + ' Min)';
         }
         return timeStr + (stageLabel[slot.s] || slot.s);
     }
