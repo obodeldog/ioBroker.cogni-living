@@ -1,10 +1,10 @@
 {
     "common":  {
                    "name":  "cogni-living",
-                   "version":  "0.33.271",
+                   "version":  "0.33.272",
                    "news":  {
                                 "0.33.270":  {
-                                          "version":  "0.33.271",
+                                          "version":  "0.33.272",
                                           "date":  "2026-06-07",
                                           "changes":  [
                                                           "[Fix OC-45c] Radar-Rausch-Guard: kurze Sensor-Aussetzer (< 60s) verwerfen nicht mehr die Ins-Bett-Zeit",

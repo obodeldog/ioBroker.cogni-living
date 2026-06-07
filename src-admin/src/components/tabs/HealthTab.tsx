@@ -1495,6 +1495,8 @@ export default function HealthTab(props: any) {
             : '(keine allSleepStartSources — alter Snapshot ohne diese Daten)';
 
         const _displayScore = scoreCal ?? score;
+        const _oc52H = new Date().getHours();
+        const _isCollecting = (_oc52H >= 20 || _oc52H < 12) && _displayScore === null && !wakeConfirmed && stages.length === 0 && !bedWasEmpty;
         const scoreColor = _displayScore === null ? '#888'
             : _displayScore >= 80 ? '#00e676'
             : _displayScore >= 60 ? '#ffab40'
@@ -1591,6 +1593,10 @@ export default function HealthTab(props: any) {
                 swEnd ? ev.start < swEnd && ev.end > (swStart ?? 0) : true
             );
         const _hasBedAbsenceEngine = _bedAbsenceEvts.length > 0;
+        // [OC-SB] Shared-Bed-Perioden (2+ Personen im Bett erkannt via presence_radar_count)
+        const _sharedBedPeriods: {start:number,end:number}[] = ((sd as any)?.sharedBedPeriods ?? [])
+            .filter((p: {start:number,end:number}) => p.start && p.end && p.end > p.start);
+        const _sharedBedMin = Math.round(_sharedBedPeriods.reduce((a, p) => a + (p.end - p.start) / 60000, 0));
         // Kein-Daten-Bereich NACH dem letzten Stage-Slot (Stages decken oft nur Anfang der Nacht ab)
         const lastSlotEndMs = (stagesWindowStart && renderedStages.length > 0)
             ? stagesWindowStart + (renderedStages[renderedStages.length - 1].t + 5) * 60000
@@ -1682,7 +1688,14 @@ export default function HealthTab(props: any) {
                     'Balkenfarben: Dunkelblau=Tief, Hellblau=Leicht, Lila=REM, Gelb=Wach-im-Bett, Bernstein=Bad-Besuch, Orange=Außerhalb.\n' +
                     'Kein Medizinprodukt — für klinische Diagnose Arzt hinzuziehen.'
                 }>
-                {(bedWasEmpty && swStart != null && swEnd != null && swStart > swEnd) ? (
+                {_isCollecting ? (
+                    <div style={{textAlign:'center', padding:'16px 8px', color: isDark?'#555':'#aaa', fontSize:'0.8rem'}}>
+                        <div style={{fontSize:'1.3rem', marginBottom:'6px'}}>&#x1F319;</div>
+                        <div style={{fontWeight:'bold', marginBottom:'4px', color: isDark?'#888':'#666'}}>Heute Nacht werden die ersten Daten gesammelt</div>
+                        <div style={{fontSize:'0.72rem', color: isDark?'#555':'#999'}}>Der AURA-Sleepscore erscheint morgen frueh nach der analysierten Nacht</div>
+                        {garminScore !== null && (<div style={{fontSize:'0.68rem', color:'#ab47bc', marginTop:'8px', borderTop: isDark?'1px solid #333':'1px solid #eee', paddingTop:'6px'}}>Garmin (letzte Nacht): {garminScore}</div>)}
+                    </div>
+                ) : (bedWasEmpty && swStart != null && swEnd != null && swStart > swEnd) ? (
                     // OC-39: Abend-Fall — invertiertes Fenster = neue Nacht noch nicht begonnen.
                     // Zeigt neutrale Karte statt "Bett war leer" (welches nur für echte Abwesenheit gilt).
                     <div style={{textAlign:'center', padding:'16px 8px', color: isDark?'#555':'#aaa', fontSize:'0.8rem'}}>
@@ -2419,6 +2432,30 @@ export default function HealthTab(props: any) {
                                     }} title={'⏱ Wachphase (Legacy): ' + fmtTime(ph.start) + ' – ' + fmtTime(ph.end) + ' (' + ph.durationMin + ' Min)'} />
                                 );
                             })}
+                            {/* [OC-SB] Shared-Bed-Overlays: schwarzes Segment wenn 2 Personen erkannt */}
+                            {swStart && newBarTotalMs && _sharedBedPeriods.length > 0 && (() => {
+                                const _barBase = bedEntryTsVal ?? swStart;
+                                return _sharedBedPeriods.map((p, i) => {
+                                    const _left = Math.max(0, Math.min(100, ((p.start - _barBase) / newBarTotalMs!) * 100));
+                                    const _width = Math.max(0.5, Math.min(100 - _left, ((p.end - p.start) / newBarTotalMs!) * 100));
+                                    const _dur = Math.max(1, Math.round((p.end - p.start) / 60000));
+                                    return (
+                                        <div key={'sb'+i} style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: _left + '%',
+                                            width: _width + '%',
+                                            height: '28px',
+                                            backgroundColor: 'rgba(0,0,0,0.55)',
+                                            pointerEvents: 'none',
+                                            zIndex: 3,
+                                            boxSizing: 'border-box',
+                                            borderLeft: '2px solid #111',
+                                            borderRight: '1px solid #111'
+                                        }} title={`\uD83D\uDC65 Zwei Personen im Bett: ${fmtTime(p.start)} \u2013 ${fmtTime(p.end)} (${_dur} Min)`} />
+                                    );
+                                });
+                            })()}
                             </div>{/* Ende Wrapper */}
 
                             {/* Dreiecks-Marker UNTER Balken: Außerhalb rot ▲, Radar-Aussetzer grau ▲ */}
@@ -2515,7 +2552,7 @@ export default function HealthTab(props: any) {
                         </div>
 
                         {/* Außerhalb-/Aussetzer-Zeile (sichtbar wenn bestätigte Events oder Bed-Absence-Engine aktiv) */}
-                        {(outsideTotalMin > 0 || radarDropoutEvts.length > 0 || _hasBedAbsenceEngine) && (
+                        {(outsideTotalMin > 0 || radarDropoutEvts.length > 0 || _hasBedAbsenceEngine || _sharedBedMin > 0) && (
                             <div style={{display:'flex', gap:'8px', fontSize:'0.7rem', marginBottom:'8px', color: isDark?'#aaa':'#666', flexWrap:'wrap'}}>
                                 {bathMin > 0 && <span><span style={{color: stageColor.bathroom}}>■</span> Bad: {toH(bathMin, true)}</span>}
                                 {confirmedEvts.filter(e => e.type === 'outside').reduce((a,e) => a+e.duration, 0) > 0 && <span><span style={{color: stageColor.outside}}>■</span> Außerhalb: {toH(confirmedEvts.filter(e => e.type === 'outside').reduce((a,e) => a+e.duration, 0), true)}</span>}
@@ -2528,6 +2565,12 @@ export default function HealthTab(props: any) {
                                         backgroundImage: 'repeating-linear-gradient(135deg, transparent 0px, transparent 2px, ' + (isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.25)') + ' 2px, ' + (isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.25)') + ' 4px)',
                                         verticalAlign:'middle', marginRight:'3px'
                                     }}/> Weg vom Bett</span>
+                                )}
+                                {_sharedBedMin > 0 && (
+                                    <span title="Radar erkannte zwei Personen im Bett (OC-SB)">
+                                        <span style={{display:'inline-block', width:'8px', height:'8px', background:'rgba(0,0,0,0.6)', verticalAlign:'middle', marginRight:'3px', borderRadius:'2px'}}/>
+                                        Zwei Personen: {toH(_sharedBedMin, true)}
+                                    </span>
                                 )}
                             </div>
                         )}
@@ -2606,6 +2649,16 @@ export default function HealthTab(props: any) {
                                         </span>
                                     </div>
                                 ))}
+                            </div>
+                        )}
+
+                        {/* [OC-51] Vibrationssensor-Offline-Warnung */}
+                        {personLabel && hasVibBed && (sd as any)?.nightVibrationCount === null && (
+                            <div style={{borderTop: `1px dashed ${isDark?'#444':'#ddd'}`, paddingTop: '6px', marginTop: '6px', fontSize: '0.65rem', color: '#f44336'}}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <span>&#x26A0;</span>
+                                    <span><b>Vibrationssensor nicht erreichbar</b>{' - Schlafphasen unvollstaendig'}</span>
+                                </div>
                             </div>
                         )}
 
@@ -3596,7 +3649,8 @@ export default function HealthTab(props: any) {
                                         sleepScoreCalStatus: pd.sleepScoreCalStatus || 'uncalibrated',
                                         sleepStages: pd.sleepStages ?? [],
                                         garminScore: null, garminDeepMin: null, garminLightMin: null, garminRemMin: null,
-                                        sleepWindowStart:    pd.sleepWindowStart    ?? null,
+                                        // [OC-51] swStart-Guard
+                                        sleepWindowStart:    (pd.sleepWindowStart && (pd as any).bedEntryTs && pd.sleepWindowStart < (pd as any).bedEntryTs) ? null : (pd.sleepWindowStart ?? null),
                                         stagesWindowStart:   pd.stagesWindowStart   ?? pd.sleepWindowStart ?? null,
                                         sleepWindowEnd:      pd.sleepWindowEnd      ?? null,
                                         sleepWindowSource:   pd.sleepStartSource    || 'motion',
@@ -3616,6 +3670,7 @@ export default function HealthTab(props: any) {
                                         bedWasEmpty:            pd.bedWasEmpty            ?? false,
                                         bedEntryTs:             (pd as any).bedEntryTs    ?? null,
                                         bedExitTs:              (pd as any).bedExitTs     ?? null,
+                                        nightVibrationCount:    (pd as any).nightVibrationCount ?? null,
                                     };
                                     return <React.Fragment key={pName}>{renderSleepScoreCard(overrideData, pName)}</React.Fragment>;
                                 })}
