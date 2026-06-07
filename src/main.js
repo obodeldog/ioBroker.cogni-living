@@ -2027,15 +2027,31 @@ class CogniLiving extends utils.Adapter {
             const maxPersonsDetected = this._maxPersonsToday || _cfgBaseline;
             // FP2 Bett-Praesenz: Minuten die Bett-Zone heute belegt war (inkl. Vorabend ab 18:00)
             const bedPresenceMinutes = (function() {
-                var presStart = null; var total = 0;
                 var bedEvts = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })
                     .sort(function(a,b) { return (a.timestamp||0)-(b.timestamp||0); });
+                if (bedEvts.length === 0) return 0;
+                // [Radar-Gap-Fusion] Rohe Belegungsbloecke bilden, dann Luecken < 30 Min
+                // ueberbruecken. Sonst summieren Radar-Aussetzer (Shelly 0->1->0) die echte
+                // Bettzeit kaputt und OC-4 verwirft faelschlich das Schlaffenster.
+                // Sensor-neutral: echte FP2/Vibration-Sensoren haben keine Sekunden-Aussetzer.
+                var GAP_FUSE_MS = 30 * 60 * 1000;
+                var _blocks = []; var presStart = null; var lastActiveTs = null;
                 bedEvts.forEach(function(e) {
                     var v = isActiveValue(e.value) || toPersonCount(e.value) > 0;
-                    if (v && !presStart) { presStart = e.timestamp||0; }
-                    else if (!v && presStart) { total += ((e.timestamp||0) - presStart) / 60000; presStart = null; }
+                    var _ts = e.timestamp || 0;
+                    if (v) { if (presStart === null) presStart = _ts; lastActiveTs = _ts; }
+                    else if (presStart !== null) { _blocks.push({ start: presStart, end: _ts }); presStart = null; }
                 });
-                if (presStart) total += (Date.now() - presStart) / 60000;
+                if (presStart !== null) _blocks.push({ start: presStart, end: Date.now() });
+                if (_blocks.length === 0) return 0;
+                var _fused = [_blocks[0]];
+                for (var _bi = 1; _bi < _blocks.length; _bi++) {
+                    var _prev = _fused[_fused.length - 1];
+                    if (_blocks[_bi].start - _prev.end < GAP_FUSE_MS) { _prev.end = _blocks[_bi].end; }
+                    else { _fused.push(_blocks[_bi]); }
+                }
+                var total = 0;
+                for (var _fi = 0; _fi < _fused.length; _fi++) { total += (_fused[_fi].end - _fused[_fi].start) / 60000; }
                 return Math.round(total);
             })();
 
@@ -2408,10 +2424,23 @@ class CogniLiving extends utils.Adapter {
                     return e.isFP2Bed && (e.timestamp||0) >= _bedEntryTsFinal && (e.timestamp||0) <= _oc45cSlStart;
                 }).sort(function(a,b) { return (a.timestamp||0) - (b.timestamp||0); });
                 // Schritt 1: FP2=False innerhalb 30 Min nach bedEntryTs?
+                // [Radar-Rausch-Guard] Ein False muss mind. 60s anhalten, sonst ist es ein
+                // Sensor-Aussetzer (z.B. Shelly-Radar springt 0->1->0 in Sekunden) und kein
+                // echtes Bett-Verlassen. Echte FP2-Sensoren senden stabil -> > 60s bleibt erhalten.
+                var _oc45cMinFalseMs = 60000;
                 var _oc45cEarlyFalse = null;
                 for (var _oc45i = 0; _oc45i < _oc45cFp2Evts.length; _oc45i++) {
                     var _oc45e = _oc45cFp2Evts[_oc45i];
                     if (!isActiveValue(_oc45e.value) && ((_oc45e.timestamp||0) - _bedEntryTsFinal) < _oc45cEarlyExitMs) {
+                        // Dauer des False-Zustands: bis zum naechsten True (oder bis sleepStart)
+                        var _oc45cNextTrue = null;
+                        for (var _oc45m = _oc45i + 1; _oc45m < _oc45cFp2Evts.length; _oc45m++) {
+                            if (isActiveValue(_oc45cFp2Evts[_oc45m].value)) { _oc45cNextTrue = _oc45cFp2Evts[_oc45m]; break; }
+                        }
+                        var _oc45cFalseDur = _oc45cNextTrue
+                            ? ((_oc45cNextTrue.timestamp||0) - (_oc45e.timestamp||0))
+                            : (_oc45cSlStart - (_oc45e.timestamp||0));
+                        if (_oc45cFalseDur < _oc45cMinFalseMs) { continue; } // Radar-Rauschen -> ignorieren
                         _oc45cEarlyFalse = _oc45e; break;
                     }
                 }
@@ -2581,7 +2610,7 @@ class CogniLiving extends utils.Adapter {
             // Debounce analytisch: nur Perioden >= 20 Sekunden zaehlen (ignoriert Radar-Rauschen)
             var _sharedBedPeriods = [];
             (function() {
-                var SHARED_BED_SUSTAIN_MS = 20000; // 20 Sekunden Mindeshdauer
+                var SHARED_BED_SUSTAIN_MS = 120000; // 120 Sekunden Mindestdauer (Radar-Rauschen herausfiltern)
                 var SHARED_BED_GAP_MS     = 10000; // Luecken < 10s werden ueberbrueckt
                 var _rcEvts = sleepSearchEvents.filter(function(e) {
                     return e.type === 'presence_radar_count' && e.isFP2Bed;
@@ -2960,7 +2989,7 @@ class CogniLiving extends utils.Adapter {
             // Evidenz-Gewichte (sensor-neutral): Garmin=4, FP2=3, Vibration=2, PIR=1
             var _SC_CONF = { maximal: 4, high: 3, medium: 2, low: 1, none: 0 };
             // ---------------------------------------------------------------
-            // [OC-45a] Post-Wake State Machine — sensor-agnostische bedExitTs Berechnung
+            // [OC-45a] Post-Wake State Machine ï¿½ sensor-agnostische bedExitTs Berechnung
             // Ersetzt OC-42 (statische 15-Min-FP2-Schwelle, zu konservativ nach Aufwachen).
             // Laeuft von sleepWindowOC7.end bis max. 120 Min (cap: 12:00) // OC-47b.
             // States: WAKING -> DEPARTED -> POTENTIAL_RETURN -> (TRANSIT|GENUINE_RETURN)
@@ -3401,6 +3430,29 @@ class CogniLiving extends utils.Adapter {
                     if (!personSensorIds[p]) personSensorIds[p] = new Set();
                     personSensorIds[p].add(d.id);
                 });
+                // [OC-SB-S3] Szenario-3-Erkennung: Personen die sich ein Schlafzimmer teilen
+                // Basis: Sensoren mit Bett-Rolle (isFP2Bed, isVibrationBed, sensorFunction='bed'),
+                // gleicher location, unterschiedliche personTags -> geteiltes Schlafzimmer.
+                // Ergebnis: _personSharedRoom = { "Robert" -> Set(["Ingrid"]), "Ingrid" -> Set(["Robert"]) }
+                var _sharedBedroomByLoc = {};
+                devices.forEach(function(d) {
+                    if (!d.personTag || !d.personTag.trim()) return;
+                    if (!d.location || !d.location.trim()) return;
+                    var _isBedRole = d.sensorFunction === 'bed' || d.isFP2Bed || d.isVibrationBed;
+                    if (!_isBedRole) return;
+                    var _loc = d.location.trim();
+                    if (!_sharedBedroomByLoc[_loc]) _sharedBedroomByLoc[_loc] = new Set();
+                    _sharedBedroomByLoc[_loc].add(d.personTag.trim());
+                });
+                var _personSharedRoom = {}; // personTag -> Set(Zimmer-Partner-personTags)
+                Object.keys(_sharedBedroomByLoc).forEach(function(_loc) {
+                    var _psInRoom = _sharedBedroomByLoc[_loc];
+                    if (_psInRoom.size < 2) return; // Nur ein Bewohner -> kein geteiltes Zimmer
+                    _psInRoom.forEach(function(p) {
+                        if (!_personSharedRoom[p]) _personSharedRoom[p] = new Set();
+                        _psInRoom.forEach(function(p2) { if (p2 !== p) _personSharedRoom[p].add(p2); });
+                    });
+                });
                 if (Object.keys(personSensorIds).length === 0) return result;
                 var winStart = sleepWindowCalc.start || sleepWindowOC7.start || _sleepSearchBase.getTime(); // Fallback: gestern 18:00 (analog _sleepSearchBase) statt 22:00 heute
                 var winEnd   = sleepWindowCalc.end   || (function(){ var d=new Date(); d.setHours(6,0,0,0); if(d.getTime()<winStart) d.setDate(d.getDate()+1); return d.getTime(); })();
@@ -3632,7 +3684,7 @@ class CogniLiving extends utils.Adapter {
                         if (!ids.has(e.id)) return false;
                         var ts = e.timestamp||e.ts||0; return ts >= _pNocWinStart && ts <= _pNocWinEnd;
                     });
-                    // [OC-45b] SLEEPING-Phase: Nykturie-SM — Trip-Merging statt Event-Zaehlen
+                    // [OC-45b] SLEEPING-Phase: Nykturie-SM ï¿½ Trip-Merging statt Event-Zaehlen
                     // Mehrere Bad-Sensor True-Events innerhalb OC45B_MERGE_MS = 1 einziger Trip.
                     // Sensor-agnostisch: Jeder Batch aus aufeinanderfolgenden True-Events = 1 Trip.
                     // Bestaetigung: Person muss in den 10 Min vor dem Trip aktiv (im Bett) gewesen sein.
@@ -3651,10 +3703,39 @@ class CogniLiving extends utils.Adapter {
                             _oc45bLastTs = _bts;
                         });
                         nocturiaAttr = _oc45bTrips.filter(function(trip) {
-                            return _pNightEvtsForNoc.some(function(e) {
+                            // OC-45b Standard: Person muss in 10 Min vor Trip aktiv gewesen sein
+                            var _confirmed = _pNightEvtsForNoc.some(function(e) {
                                 var ts = e.timestamp || 0;
                                 return ts >= trip.start - 10 * 60 * 1000 && ts < trip.start;
                             });
+                            if (!_confirmed) return false;
+                            // [OC-SB-S3] Szenario-3-Tiebreaker: Bei geteiltem Schlafzimmer
+                            // vergleiche letztes Vib-Event. Wer JUENGSTES Vib-Event hat
+                            // (= gerade aufgestanden / letzte Bewegung vor dem Aufstehen),
+                            // bekommt den Trip zugeordnet. Partner schlaeft weiter (aelteres Vib).
+                            var _partners = _personSharedRoom[person];
+                            if (!_partners || _partners.size === 0) return true; // Sz.1/2: kein Partner
+                            var _myLastVib = 0;
+                            _pNightEvtsForNoc.forEach(function(e) {
+                                if (!e.isVibrationBed && !e.isBedroomMotion) return;
+                                var ts = e.timestamp || 0;
+                                if (ts < trip.start && ts > _myLastVib) _myLastVib = ts;
+                            });
+                            var _partnerLastVib = 0;
+                            _partners.forEach(function(_partnerPerson) {
+                                var _partnerIds = personSensorIds[_partnerPerson];
+                                if (!_partnerIds) return;
+                                sleepSearchEvents.forEach(function(e) {
+                                    if (!_partnerIds.has(e.id)) return;
+                                    if (!e.isVibrationBed && !e.isBedroomMotion) return;
+                                    var ts = e.timestamp || 0;
+                                    if (ts < trip.start && ts > _partnerLastVib) _partnerLastVib = ts;
+                                });
+                            });
+                            // Kein Partner-Sensor-Daten -> Standard-Bestaetigung genuegt
+                            if (_partnerLastVib === 0) return true;
+                            // Person mit JUNGSTEM letzten Vib-Event gewinnt (= gerade aufgestanden)
+                            return _myLastVib >= _partnerLastVib;
                         }).length;
                     }
                     result[person] = {
