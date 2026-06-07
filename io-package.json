@@ -1,8 +1,18 @@
 {
     "common":  {
                    "name":  "cogni-living",
-                   "version":  "0.33.269",
+                   "version":  "0.33.271",
                    "news":  {
+                                "0.33.270":  {
+                                          "version":  "0.33.271",
+                                          "date":  "2026-06-07",
+                                          "changes":  [
+                                                          "[Fix OC-45c] Radar-Rausch-Guard: kurze Sensor-Aussetzer (< 60s) verwerfen nicht mehr die Ins-Bett-Zeit",
+                                                          "[Fix OC-4] bedPresenceMinutes mit 30-Min Gap-Fusion: Radar-Aussetzer zerstoeren nicht mehr das Schlaffenster",
+                                                          "[Fix Shared-Bed] Doppelbelegungs-Schwelle 20s -> 120s (Radar-Rauschen herausgefiltert)",
+                                                          "[UI Schlafkachel] 'Ins Bett gegangen' zeigt Hinweis wenn kein plausibler Wert gefunden"
+                                                      ]
+                                      },
                                 "0":  {
                                           "version":  "0.33.212",
                                           "date":  "2026-04-08",
@@ -251,3 +261,5 @@
                         ],
     "version":  "0.33.256"
 }
+
+
