@@ -1746,6 +1746,11 @@ export default function HealthTab(props: any) {
                                                 Eingeschlafen: {fmtTime(swStart)}
                                             </div>
                                         )}
+                                        {!_bedEntryRaw && swStart && (
+                                            <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
+                                                Ins Bett gegangen: kein plausibler Wert gefunden
+                                            </div>
+                                        )}
                                         <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
                                             {srcDisplay.icon} {srcDisplay.label}
                                         </div>
@@ -2033,6 +2038,12 @@ export default function HealthTab(props: any) {
                                 {_bedEntryRaw && swStart && _bedEntryRaw < swStart - 5*60000 && (
                                     <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
                                         Eingeschlafen: {fmtTime(swStart)}
+                                    </div>
+                                )}
+                                {/* Parität zur PWA: Hinweis wenn keine plausible Ins-Bett-Zeit gefunden */}
+                                {!_bedEntryRaw && swStart && (
+                                    <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
+                                        Ins Bett gegangen: kein plausibler Wert gefunden
                                     </div>
                                 )}
                                 <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}} title={'Erkennungsmethode: ' + srcDisplay.label}>

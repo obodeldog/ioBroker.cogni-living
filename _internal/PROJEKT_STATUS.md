@@ -1,8 +1,213 @@
 ﻿# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 28.05.2026 | **Version:** 0.33.262
+**Letzte Aktualisierung:** 08.06.2026 | **Version:** 0.33.275
 
 ---
 
+## Sitzung 08.06.2026 (abend) - Version 0.33.275 -- REVERT v0.33.274 + forensische Re-Analyse Nacht 08.06.
+
+### Ausloeser
+Nutzer-Beschwerde zur Nacht 08.06.2026: In der Schlafkachel fehlte "Ins Bett gegangen" (bedEntryTs=null) und ein
+langer gelber "Wachliegen"-Balken reichte von ~06:30 bis 08:28. Nutzer schilderte den realen Ablauf:
+~23:00 ins Bett, ~20min Schlaf, ~00:00 ins Wohnzimmer (konnte nicht schlafen), ~01:03 zurueck, ~01:30 eingeschlafen;
+morgens ~06:37 aufgestanden, 07:38 Haus verlassen, 08:14 zurueck, 08:21 kurz im Schlafzimmer (Jacke), 08:28 raus.
+
+### Forensische Verifikation (2026-06-08.json, eventHistory 996 Events ab 00:00:09)
+- `bedEntryTs=null`, `bedExitTs=08:28`, `sleepWindowStart=01:30` (garmin), `sleepWindowEnd=06:30` (garmin).
+- `allSleepStartSources`: vib_refined=00:19, motion(_vib)=02:25, haus_still=22:48, garmin=01:30, fixed=20:00.
+- Wohnzimmer-PIR 00:23-01:02 (13+ Events) = ECHTE Praesenz (Nutzer bestaetigt). Rueckkehr-Vibration 01:03:35.
+- noisySensors: "Zigbee EG Wohnen" (count 22, thr 21), "Aqara EG Wohnen" (count 23, thr 21) - knapp ueber Schwelle,
+  Ueberschuss stammt aus dem realen Wohnzimmer-Aufenthalt, NICHT aus Rauschen.
+- Morgens: letzte starke Matratzen-Vibration 06:39 (strength 38), danach nur schwach (06:46 str 5, 07:36 str 6),
+  Haus verlassen 07:38 (EG Flur/Garage door), Rueckkehr 08:14, kurzer Schlafzimmer-PIR 08:21-08:27.
+- nachtAufstehenEvents erfasst die Morgen-Trips inkl. 08:14-Trip (return 08:21 = bedroom PIR).
+
+### Entscheidung A: REVERT v0.33.274
+v0.33.274 hatte Noisy-Sensoren aus OC-48/OC-48c-Gegenbeleg ausgeschlossen. Das war FALSCH begruendet:
+Der Nutzer war wirklich im Wohnzimmer, also soll OC-48c den 00:19-Kandidaten ablehnen (= korrektes Verhalten).
+v0.33.274 haette OC-48c blind fuer echte Praesenz gemacht. `scripts/_revert_noisy_oc48.js` entfernt exakt die
+3 eingefuegten Stellen (`_oc48NoisyIds`-Capture + 2 `.has(e.id)`-Checks). `this._noisySensorIds` (OC-24) bleibt.
+
+### Entscheidung D: Admin-HealthTab Hinweis-Paritaet
+HealthTab.tsx zeigt jetzt in beiden Header-Render-Bloecken (degradiert + voll) bei `bedEntryTs=null`
+"Ins Bett gegangen: kein plausibler Wert gefunden" - identisch zur PWA (`leftSubHint`).
+
+### Zwei korrigierte Fehldiagnosen (wichtig fuer kuenftige Sessions)
+1. **Buffer-Theorie verworfen:** Der eventHistory-Buffer ist BEREITS 5000 (src/main.js ~Z6164). Die JSON zeigt nur
+   ~996, weil das Snapshot auf "heute" gefiltert wird (Z1928 `>= startOfDayTimestamp`). Die Analyse selbst nutzt
+   den Live-Buffer ab 18:00 Vortag (`_sleepSearchBase` Z1975-1982) + Supplement aus Vortages-JSON (Z1986-1999).
+   Vor-Mitternacht-Events sind verfuegbar. "Buffer erhoehen" waere ein No-Op gewesen.
+2. **bedExitTs ist OC-45a State-Machine** (Z3003-3115), keine "letzte Bewegung". Sie hat bereits BED_TOUCH (OC-49b)
+   und Return-Logik. Das 08:28 entsteht, weil der 08:21-PIR-only-Besuch (keine Matratzen-Vibration) als
+   GENUINE_RETURN gewertet wird (No-FP2-Pfad Z3062 promoviert auf reines PIR, Z3093 nach >7min).
+
+### Bewusst NICHT umgesetzt (Hochrisiko - erst Diskussion/Freigabe)
+- **B (bedEntryTs=23:00):** Kandidaten-Selektion (`vib_refined`/`allSleepStartSources`) ist Hochrisiko-Shared-Variable
+  (OC_REGISTER). Fuer diese pathologische Nacht ist null der konservativ-korrekte Output; Hinweis greift.
+- **C (bedExitTs):** State-Machine-Fix mit Cross-Szenario-Risiko. Sicherster Ansatz: No-FP2-GENUINE_RETURN nur wenn
+  Vibrationssensor existiert UND Vibration im Rueckkehr-Fenster; pure PIR-Wiederkehr nach >30min Abwesenheit =
+  transient (Jacke holen). PIR-only-Haushalte: kein Eingriff (graceful).
+- **E (UI-Layout):** 4 Felder (Ins Bett / Eingeschlafen / Aufgewacht / Aufstehen) + Dauer-Badges, Skizze abgestimmt.
+
+### Build/Deploy
+Build prod OK (Backend obfuskiert + React `index-VNVZ-DU0.js`), node --check main.js OK. Version 0.33.275.
+
+---
+
+## Sitzung 07.06.2026 (abend-2) - Version 0.33.271-273 -- Shelly-Radar, Shared-Bed-UI, Szenario-3
+
+### Zusammenfassung der ganzen Abendsitzung (v0.33.271 bis v0.33.273)
+
+Diese Sitzung schloss die gesamte Shelly-Radar-Integrations-Saga (begonnen v0.33.269) ab.
+Drei aufbauende Versionen wurden implementiert, gebaut und gepusht.
+
+### v0.33.271 — Dropdown-Bereinigung (SensorList.tsx)
+- `bed_zone` ("Nur-Bett-Zone") und `bedroom_nonbed` ("Schlafzimmer ohne Bett") aus Rolle-Dropdown entfernt.
+  Begründung: Zu verwirrend für Kunden. Backend-Code bleibt (bestehende Konfigurationen laufen weiter).
+- `RADAR_TYPES` Constant in SensorList.tsx entfernt (nicht mehr benötigt).
+- React build + Push (commit 7c48614).
+
+### v0.33.272 — Shared-Bed-Visualisierung (PWA + Admin)
+- **pwa_sleep_tile_build.js**: `sharedBedPeriods` → `sharedBedOverlays` (leftPct/widthPct/title) + `legend.sharedBedMin` (Minuten-Summe).
+- **pwa_sleep_tile_client.js**: Schwarze Segmente (`rgba(0,0,0,0.55)`) auf Schlafbalken + Legende "Zwei Personen: X min".
+- **HealthTab.tsx**: `_sharedBedPeriods` + `_sharedBedMin` aus Snapshot lesen, schwarze Overlays + Legendeneintrag in Admin-Ansicht.
+- Build prod + React + Push (commit b27f03c).
+
+### v0.33.273 — Szenario-3-Erkennung + Nykturie-Fix (main.js)
+
+#### Analyse-Kontext: Die 3 Haushalts-Szenarien
+
+Ausführliche Analyse der Mehrpersonenszenarien. Ergebnis:
+- **Szenario 1** (Einperson): Vollständig abgedeckt seit v0.33.0.
+- **Szenario 2** (Mehrperson, getrennte Zimmer): Vollständig abgedeckt ab v0.33.200 via `personTag` + `computePersonSleep()`. Bestätigt durch Gondelsheim-JSON (Robert + Ingrid, getrennte Zimmer).
+- **Szenario 3** (Mehrperson, gemeinsames Zimmer): Vorher nur teilweise — Nykturie-Doppelzählung und fehlende `_personSharedRoom`-Erkennung.
+
+#### OC-SB-S3: Automatische Szenario-3-Erkennung (src/main.js)
+Wenn mehrere Sensoren mit Bett-Rolle (`isFP2Bed`, `isVibrationBed`, `sensorFunction=bed`) an derselben `location` konfiguriert sind, aber mit UNTERSCHIEDLICHEN `personTag`-Werten → gemeinsames Schlafzimmer erkannt.
+Ergebnis: `_personSharedRoom`-Map (`{ "Robert" → Set(["Ingrid"]) }`). Keine Auswirkung wenn nur ein personTag pro location.
+
+#### OC-SB-NOC: Nykturie-Tiebreaker (src/main.js)
+Ohne Fix: In Szenario 3 bekam JEDE Person +1 Nykturie für JEDEN Bad-Gang. Ursache: Beide Vib-Sensoren sind in den 10 Min vor dem Trip aktiv (schlafende Person ist nie still).
+Fix: Person mit **jüngstem letzten Vib-Event** vor dem Bad-Trip gewinnt. Heuristik: Wer sich gerade aufgestanden hat, hinterlässt das aktuellste Vibrations-Signal.
+Graceful Degradation: Ohne Szenario-3-Konfiguration → `_personSharedRoom` leer → exakt gleiches Verhalten wie vor v0.33.273.
+
+### ✅ Abgeschlossen
+- Shelly-Radar komplett integriert (Sensor-Typ, Debounce, OC-SB, OC-45c, OC-4, Visualisierung)
+- Shared-Bed schwarze Balken in PWA und Admin sichtbar
+- Szenario 1, 2, 3 vollständig abgedeckt
+- Handbuch: Szenarien-Übersicht + Konfigurations-Tabelle + Tiebreaker-Erklärung
+- OC_REGISTER: OC-SB-S3 + OC-SB-NOC eingetragen
+
+### 🔧 Offene Baustellen
+- Nächste Nächte beobachten ob Shared-Bed-Visualisierung + Nykturie-Tiebreaker korrekt auslösen
+- Szenario-3-Test: Wenn erste Kunden das gemischte Zimmer konfigurieren
+
+### 🎯 Nächster logischer Schritt
+- Stabilitäts-Beobachtung. Bei Auffälligkeiten: forensische JSON-Analyse.
+
+---
+
+## Sitzung 07.06.2026 (spaeter) - Version 0.33.270 -- Radar-Rausch-Robustheit (OC-45c + OC-4)
+
+### Anforderung / Befund
+Erste Nacht (07.06.2026) mit dem neuen Shelly-Mehrpersonen-Radar (v0.33.269). Aliase korrekt eingebunden
+(`alias.0.nuukanni.praesenz.eg-schlafen-shelly-anzahl` = `presence_radar_count`/`bed`/`isFP2Bed=true`,
+`...-nurBett` = `bed_zone`/`isFP2Bed=true`), alter FP2 via MQTT-Alias auf Shelly umgebogen.
+Problem: Schlafkachel zeigte KEINE Ins-Bett-Zeit (`bedEntryTs=null`). Tatsaechliche Bettgehzeit ~00:35
+(PIR + Shelly + Vibration gleichzeitig). Verifiziert ueber eventHistory in `2026-06-07.json`.
+
+### Root-Cause-Analyse (forensisch aus JSON eventHistory)
+Shelly-Radar rauscht stark (0->1->0 innerhalb von Sekunden, z.B. 00:42:14 val=0 nur 2s lang). Zwei Bugs:
+1. **OC-45c**: triggerte beim allerersten FP2=False-Event (egal wie kurz). Der 2-Sekunden-Aussetzer um
+   00:42:14 wurde als "Bett verlassen" gewertet -> suchte naechste stabile Periode (01:45) -> von OC-39b
+   verworfen (liegt nach sleepStart 00:49) -> `bedEntryTs=null`.
+2. **OC-4**: `bedPresenceMinutes` summierte nur aktive Sekunden = 81min < 180min-Schwelle -> `sleepWindowCalc.start`
+   genullt -> `fp2RawStart=null`.
+
+### Umsetzung (src/main.js + src/lib)
+- **OC-45c Radar-Rausch-Guard**: Ein FP2/Radar=False muss mind. 60s anhalten (bis naechstes True bzw. sleepStart),
+  sonst ignoriert. `_oc45cMinFalseMs = 60000`. Echte FP2-Sensoren senden stabil -> unveraendert.
+- **OC-4 Gap-Fusion**: `bedPresenceMinutes` baut jetzt rohe Belegungsbloecke und fusioniert Luecken < 30 Min
+  (`GAP_FUSE_MS = 30*60*1000`), bevor summiert wird. Analog zur bereits existierenden sleepWindowCalc-Logik.
+- **Shared-Bed**: `SHARED_BED_SUSTAIN_MS` 20000 -> 120000 (30s-Doppelerkennungen waren Rauschen).
+- **Frontend** (pwa_sleep_tile_build.js + _client.js): neues `leftSubHint`-Feld. Wenn kein plausibler
+  bedEntryTs -> Hinweiszeile "Ins Bett gegangen: kein plausibler Wert gefunden" (vorher fehlte die Info ganz).
+
+### Sensor-Neutralitaet (Guard-Regel, alle 5 Stufen geprueft)
+Nur-PIR / Nur-Vibration / Vibration+PIR / echtes FP2-bool: alle unveraendert (keine Sekunden-Aussetzer,
+kein isFP2Bed-Rauschen). Nur Shelly-Radar-Konfigurationen profitieren. Graceful Degradation gewahrt.
+
+### Prozess
+- Regel `algorithm-change-guard.mdc` erweitert: Pflicht "Erst Code/Daten pruefen - DANN Aussagen machen"
+  (mehrfach falsche Aussagen aus dem Gedaechtnis statt aus Code/JSON gemacht).
+- Patches via scripts/_patch_bedentry_fixes.js + _patch_bedentry_frontend.js (src/ ist .cursorignore).
+- Build prod OK, node --check (src + build) OK.
+
+---
+
+## Sitzung 05.06.2026 - Version 0.33.268 -- OC-48c fuer Mehrpersonenhaushalte
+
+### Anforderung
+OC-48c (v0.33.267) wirkte nur im globalen Pfad (saveDailyHistory). Mehrpersonen-Kacheln (_pResult aus computePersonSleep) hatten den Phantom-Wachliegen-Guard noch nicht. Wird fuer Kunden mit Mehrpersonenhaushalt sofort gebraucht.
+
+### Umsetzung (src/main.js)
+- OC-48c-Block in **computePersonSleep()** (nach allSleepStartSources, ~L401) eingefuegt. Da computePersonSleep Single-Source-of-Truth ist, wirkt der Guard nun fuer globalen Haushalt (_gR) UND jede Person (_pResult).
+- Filter: **isOtherPerson(e)** als Ausschluss (NICHT isMine) - gemeinsame/ungetaggte Raeume (Wohnzimmer) zaehlen als Gegenbeleg, nur Events der anderen Person ausgeschlossen. Konsistent mit otherRoomEvts (L407).
+- bedEntryTs=null robust: L795 _baLowerTs-Guard, L3624 OC-51-Clamp (bedEntryTs &&), L3648 Passthrough, Frontend (Admin+PWA) null-robust.
+- Der globale OC-48c in saveDailyHistory bleibt (guardet das unabhaengig aus Clustern abgeleitete _bedEntryTsFinal) - beide Schichten komplementaer, Ergebnis konsistent (31.05/05.06 unveraendert null).
+
+### OC-47b bleibt global-only
+Per-Person-Wake nimmt garminWakeTs direkt (cPS L511), keine Vibration-Extension -> kein Morgen-Over-Extension-Problem pro Person. OC-47b daher nur global noetig.
+
+---
+
+## Sitzung 05.06.2026 - Version 0.33.267 -- OC-47b + OC-48c: Falsche Bett-Zeiten
+
+### Problem (User-Reports 31.05 + 05.06)
+Vibration/PIR-Setup ohne FP2, teils Partnerin zeitweise im Bett.
+1. Langer gelber 'Wachliegen'-Balken (z.B. 21:23->00:56 bzw. 20:19->23:56) obwohl Person ausser Haus/im Wohnzimmer war.
+2. Aufwachzeit zu spaet (09:16 statt Garmin 08:27), Aufstehen 10:44.
+
+### Root Causes (3 Mechanismen, gleiches Thema 'kurzer Bettkontakt != im Bett')
+- **31.05 Abend**: OC-48 Look-Ahead nur 60 Min -> Wohnzimmer-Aktivitaet begann erst nach 74 Min Stille -> Kandidat 21:23 faelschlich akzeptiert.
+- **05.06 Abend**: OC-48b lehnte 20:19 korrekt ab (null, >120min vor sleepStart), aber L4121 '_bedEntryTsFinal || _gR.bedEntryTs' holte den Rohwert zurueck.
+- **31.05 Morgen**: OC-47 Vibration-Extension verlaengerte sleepWindowEnd von Garmin 08:27 auf 09:16, obwohl dazwischen Bad-Gaenge (08:51/08:58/09:11) belegen, dass die Person auf war (Re-Kontakte).
+
+### Fixes (src/main.js)
+- **OC-48c** (nach OC-45c, ~L2411): Sustained-Absence-Guard. Far-Events (Nicht-Bett/Nicht-Bad, Hop>=2 wenn Topologie da) zwischen bedEntry und sleepStart zu Bloecken (Gap<=12min) clustern; laengster Block >= 30 Min -> bedEntryTs = null. Verifiziert gegen Echtdaten: 31.05=116min, 05.06=73min -> null; OC-46 (keine Far-Events) -> behalten.
+- **OC-48c L4121**: 'var _bet = (_bedEntryTsFinal != null) ? _bedEntryTsFinal : null;' - kein Rueckfall auf Rohwert.
+- **OC-47b** (~L2834): Vor Vibration-Extension pruefen ob zwischen garminWakeTs und letzter Vibration Bad-/Far-Room-Aktivitaet liegt; wenn ja -> Abbruch, sleepWindowEnd = garminWakeTs.
+
+### Verifikation
+- Node-Simulation der OC-48c-Block-Logik gegen 2026-05-30_1/2026-05-31 und 2026-06-04/2026-06-05 Eventdaten: beide -> null. OC-46-Gegenprobe (keine Far-Events) -> behalten.
+- OC-47b-Simulation gegen 2026-05-31: Verlassen-Beleg zwischen 08:27 und 09:16 = true -> Abbruch.
+- Frontend (HealthTab + PWA) bereits null-robust: kein Wachliegen-Segment, Balken startet bei sleepStart, Label 'Eingeschlafen'.
+
+### Offen / Follow-up
+- Per-Person-Pfad (_pResult.bedEntryTs, L3563) nutzt OC-48c noch NICHT - relevant fuer Mehrpersonen-Kacheln.
+
+---
+
+
+## Sitzung 30.05.2026 - Version 0.33.266 -- OC-55 Garmin-Sync-Trigger
+
+### Diagnose: Warum orangefarbene Dreiecke erst nach 'System pruefen' sichtbar
+**Root Cause:** Die outsideBedEvents-Berechnung (Quelle der orange/roten Dreiecke)
+hat eine Guard-Bedingung: if (sleepWindowOC7.start && sleepWindowOC7.end) (L2542).
+- sleepWindowOC7.end kommt von Garmin (Wake-Zeit 08:44)
+- Garmin synct erst Minuten nach dem Aufwachen (hier: ca. 09:15-09:20)
+- Alle stundlichen Saves liefen BEVOR Garmin-Sync -> end=null -> Guard schlaegt fehl -> outsideBedEvents=[]
+- Frozen-Fallback (L2733) half nicht weil erster Snapshot auch outsideBedEvents=[] hatte
+- Resultat: Dreieck fehlte bis manuelles 'System pruefen' nach Garmin-Sync
+
+### Fix v0.33.266 (OC-55)
+- **onReady**: garminSleepEndStateId + garminSleepScoreStateId jetzt abonniert
+- **onStateChange**: Neuer OC-55 Block - bei Garmin-Sync-Event zwischen 5-15h: 60s Debounce -> saveDailyHistory() automatisch
+
+### Sonstige aktive Features dieser Session
+- v0.33.265: OC-52 Gute-Nacht-Kachel (collecting view) + OC-51 Multi-Person Sensor-Offline-Warnung
+- v0.33.264: OC-51 sleepWindowStart-Guard fuer Multi-Person
+
+---
 ## Sitzung 28.05.2026 (spaet) -- v0.33.262 -- Schlafkachel Feinschliff (Legende weg + Uhr-Icon + kompakt)
 
 ### Abgeschlossen
