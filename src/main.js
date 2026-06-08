@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 
 
 
@@ -1014,6 +1014,7 @@ class CogniLiving extends utils.Adapter {
     constructor(options) {
         super({ ...options, name: 'cogni-living' });
         this.eventHistory = []; this.analysisHistory = []; this.rawEventLog = []; this.dailyDigests = []; this.sensorLastValues = {};
+        this.cgmBuffer = {}; this._cgmStateMap = {};
         this.systemConfig = { latitude: 0, longitude: 0, city: '' }; this.isPresent = true; this.exitTimer = null; this.exitGraceTimer = null; this.isGracePeriodActive = false;
         this.genAI = null; this.geminiModel = null; this.currentSystemMode = setup.SYSTEM_MODES.NORMAL; this.isProVersion = false; this.lastAlertState = false;
         this.analysisTimer = null; this.calendarCheckTimer = null; this.presenceCheckTimer = null; this.ltmJob = null; this.modeResetJob = null; this.driftAnalysisTimer = null; this.briefingJob = null; this.weeklyBriefingJob = null;
@@ -1186,6 +1187,26 @@ class CogniLiving extends utils.Adapter {
         if (_garminEndId55) { await this.subscribeForeignStatesAsync(_garminEndId55).catch(function(){}); }
         var _garminScoreId55 = (this.config.garminSleepScoreStateId || '').trim();
         if (_garminScoreId55 && _garminScoreId55 !== _garminEndId55) { await this.subscribeForeignStatesAsync(_garminScoreId55).catch(function(){}); }
+
+        // [CGM] Glukose-States pro Person abonnieren (aus cgmPersonAssignment)
+        {
+            var _cgmAssign0 = (this.config.cgmPersonAssignment && typeof this.config.cgmPersonAssignment === 'object') ? this.config.cgmPersonAssignment : {};
+            for (var _cgmStartPerson of Object.keys(_cgmAssign0)) {
+                var _cgmStartEntry = _cgmAssign0[_cgmStartPerson];
+                if (!_cgmStartEntry || typeof _cgmStartEntry !== 'object') continue;
+                var _cgmGlucId0 = (_cgmStartEntry.glucoseStateId || '').trim();
+                var _cgmTrendId0 = (_cgmStartEntry.trendStateId || '').trim();
+                if (_cgmGlucId0) {
+                    await this.subscribeForeignStatesAsync(_cgmGlucId0).catch(function(){});
+                    this._cgmStateMap[_cgmGlucId0] = { person: _cgmStartPerson, type: 'glucose', unit: _cgmStartEntry.unit || 'mgdl' };
+                    this.log.info('[CGM] Abonniert: ' + _cgmGlucId0 + ' -> ' + _cgmStartPerson);
+                }
+                if (_cgmTrendId0 && _cgmTrendId0 !== _cgmGlucId0) {
+                    await this.subscribeForeignStatesAsync(_cgmTrendId0).catch(function(){});
+                    this._cgmStateMap[_cgmTrendId0] = { person: _cgmStartPerson, type: 'trend' };
+                }
+            }
+        }
 
         // system.config.sensorList: Sensor-Konfiguration bei Start schreiben (Kontroll-Objekt)
         try {
@@ -4371,6 +4392,19 @@ class CogniLiving extends utils.Adapter {
                     }
                     return _bet;
                 })(),
+                cgmReadings: (function(_cgmBufSelf, _cgmSodTs) {
+                    var _cgmR = {};
+                    var _cgmAsgn = (_cgmBufSelf.config && _cgmBufSelf.config.cgmPersonAssignment && typeof _cgmBufSelf.config.cgmPersonAssignment === 'object') ? _cgmBufSelf.config.cgmPersonAssignment : {};
+                    var _cgmPersonKeys = Object.keys(_cgmAsgn);
+                    for (var _cpi = 0; _cpi < _cgmPersonKeys.length; _cpi++) {
+                        var _cgmP = _cgmPersonKeys[_cpi];
+                        if (!_cgmAsgn[_cgmP] || !_cgmAsgn[_cgmP].glucoseStateId) continue;
+                        var _cpBuf = (_cgmBufSelf.cgmBuffer && _cgmBufSelf.cgmBuffer[_cgmP]) ? _cgmBufSelf.cgmBuffer[_cgmP] : [];
+                        var _cpToday = _cpBuf.filter(function(r) { return r.ts >= _cgmSodTs; });
+                        if (_cpToday.length > 0) _cgmR[_cgmP] = _cpToday;
+                    }
+                    return Object.keys(_cgmR).length > 0 ? _cgmR : null;
+                })(_self, startOfDayTimestamp),
                 smWakePhases: (_gR && _gR.smWakePhases) ? _gR.smWakePhases : []
             };
 
@@ -5440,6 +5474,29 @@ class CogniLiving extends utils.Adapter {
 
         if (this.config.infrasoundEnabled && id === this.config.infrasoundSensorId && this.activeModules.security) {
             this.handleInfrasound(state.val);
+            return;
+        }
+
+        // [CGM] Glukose- / Trend-State -> in cgmBuffer schreiben
+        if (this._cgmStateMap && this._cgmStateMap[id]) {
+            var _cgmMeta = this._cgmStateMap[id];
+            var _cgmPerson = _cgmMeta.person;
+            if (!this.cgmBuffer[_cgmPerson]) this.cgmBuffer[_cgmPerson] = [];
+            var _cgmBuf = this.cgmBuffer[_cgmPerson];
+            if (_cgmMeta.type === 'glucose' && state.val != null) {
+                var _cgmNow = Date.now();
+                var _cgmLast = _cgmBuf.length > 0 ? _cgmBuf[_cgmBuf.length - 1] : null;
+                if (_cgmLast && (_cgmNow - _cgmLast.ts) < 2 * 60 * 1000) {
+                    _cgmLast.val = Number(state.val);
+                } else {
+                    _cgmBuf.push({ ts: _cgmNow, val: Number(state.val), unit: _cgmMeta.unit || 'mgdl' });
+                    if (_cgmBuf.length > 600) _cgmBuf.splice(0, _cgmBuf.length - 600);
+                }
+                this.log.debug('[CGM] ' + _cgmPerson + ': ' + state.val + ' ' + (_cgmMeta.unit || 'mgdl'));
+            } else if (_cgmMeta.type === 'trend' && state.val != null) {
+                var _cgmLastForTrend = _cgmBuf.length > 0 ? _cgmBuf[_cgmBuf.length - 1] : null;
+                if (_cgmLastForTrend) _cgmLastForTrend.trend = String(state.val);
+            }
             return;
         }
 
