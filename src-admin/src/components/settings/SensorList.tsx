@@ -16,6 +16,7 @@ import BlockIcon from "@mui/icons-material/Block";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import WatchIcon from "@mui/icons-material/Watch";
+import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
@@ -130,6 +131,7 @@ export default function SensorList(props) {
     )).sort() as string[];
     const [wearableOpen, setWearableOpen] = useState(false);
     const [batteryOpen, setBatteryOpen] = useState(false);
+    const [cgmOpen, setCgmOpen] = useState(false);
     const [testResults, setTestResults] = useState<Record<string, 'loading' | 'ok' | 'error' | null>>({});
 
     const testStateId = (key: string) => {
@@ -644,6 +646,113 @@ export default function SensorList(props) {
                                 </Box>
                             );
                         })()}
+                    </Box>
+                </Collapse>
+            </Box>
+
+
+            {/* ─── CGM-DATENQUELLEN (Blutzucker pro Person) ─── */}
+            <Box sx={{ mt: 2, border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)"}`, borderRadius: 1 }}>
+                <Box
+                    onClick={() => setCgmOpen(o => !o)}
+                    sx={{
+                        display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 0.8,
+                        cursor: "pointer", userSelect: "none",
+                        bgcolor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+                        borderRadius: cgmOpen ? "4px 4px 0 0" : 1,
+                        "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)" }
+                    }}
+                >
+                    <MonitorHeartIcon sx={{ fontSize: 16, opacity: 0.7, color: "#2196f3" }} />
+                    <Box sx={{ fontSize: "0.78rem", fontWeight: 600, flex: 1 }}>
+                        Vitaldaten / CGM (Blutzucker pro Person)
+                    </Box>
+                    {cgmOpen ? <ExpandLessIcon sx={{ fontSize: 16 }} /> : <ExpandMoreIcon sx={{ fontSize: 16 }} />}
+                </Box>
+                <Collapse in={cgmOpen}>
+                    <Box sx={{ px: 1.5, py: 1, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.1)"}` }}>
+                        <Box sx={{ fontSize: "0.67rem", color: "text.secondary", mb: 1.2, lineHeight: 1.5 }}>
+                            Trage hier die ioBroker-Objekt-ID des CGM-Blutzuckerwerts ein (aktueller Wert in mg/dl oder mmol/l).
+                            Kompatibel mit allen CGM-Systemen die Daten in ioBroker liefern (Dexcom, Libre, Nightscout, xDrip usw.).
+                            Der <b>Trend</b> ist optional (Rate of Change, z.B. mg/dl pro Minute).
+                            Kein Ort n&ouml;tig &mdash; CGM ist personengebunden, nicht raumgebunden.
+                        </Box>
+                        {uniquePersonTags.length === 0 ? (
+                            <Alert severity="info" sx={{ fontSize: "0.72rem", py: 0.5 }}>
+                                Noch keine Personen konfiguriert. Trage zuerst in der Sensorliste oben einen <b>Personennamen</b> bei einem Schlafzimmer- oder Vibrationssensor ein.
+                            </Alert>
+                        ) : (
+                            uniquePersonTags.map((person: string) => {
+                                const cgmAssignment: Record<string, { glucoseStateId?: string; trendStateId?: string; unit?: string }> =
+                                    (native?.cgmPersonAssignment && typeof native.cgmPersonAssignment === 'object')
+                                        ? native.cgmPersonAssignment : {};
+                                const pc = cgmAssignment[person] || {};
+                                const updateCgmPerson = (field: 'glucoseStateId' | 'trendStateId' | 'unit', val: string) => {
+                                    const prev = cgmAssignment[person] || {};
+                                    const updated = { ...prev, [field]: val };
+                                    if (!updated.glucoseStateId && !updated.trendStateId) {
+                                        const next = { ...cgmAssignment };
+                                        delete next[person];
+                                        onNativeChange && onNativeChange('cgmPersonAssignment', next);
+                                    } else {
+                                        onNativeChange && onNativeChange('cgmPersonAssignment', { ...cgmAssignment, [person]: updated });
+                                    }
+                                };
+                                return (
+                                    <Box key={person} sx={{ mb: 1.5 }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.72rem', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                            {person}
+                                        </Typography>
+                                        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "flex-start" }}>
+                                            <Box sx={{ flex: 2, minWidth: 180 }}>
+                                                <TextField
+                                                    label="Blutzucker-State-ID (aktueller Wert)"
+                                                    value={pc.glucoseStateId || ''}
+                                                    onChange={e => updateCgmPerson('glucoseStateId', e.target.value)}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    fullWidth
+                                                    placeholder="z.B. nightscout.0.current_glucose.sgv"
+                                                    sx={{ "& .MuiInputBase-input": { fontSize: "0.68rem" }, "& .MuiInputLabel-root": { fontSize: "0.68rem" } }}
+                                                    InputProps={{
+                                                        endAdornment: pc.glucoseStateId && socket ? (
+                                                            <FreshnessChip stateId={pc.glucoseStateId} socket={socket} isDark={isDark} />
+                                                        ) : undefined
+                                                    }}
+                                                />
+                                            </Box>
+                                            <Box sx={{ flex: 1, minWidth: 130 }}>
+                                                <TextField
+                                                    label="Trend / Rate (optional)"
+                                                    value={pc.trendStateId || ''}
+                                                    onChange={e => updateCgmPerson('trendStateId', e.target.value)}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    fullWidth
+                                                    placeholder="z.B. ...delta"
+                                                    sx={{ "& .MuiInputBase-input": { fontSize: "0.68rem" }, "& .MuiInputLabel-root": { fontSize: "0.68rem" } }}
+                                                />
+                                            </Box>
+                                            <TextField
+                                                select
+                                                label="Einheit"
+                                                value={pc.unit || 'mgdl'}
+                                                onChange={e => updateCgmPerson('unit', e.target.value)}
+                                                size="small"
+                                                variant="outlined"
+                                                sx={{ minWidth: 82, "& .MuiInputBase-input": { fontSize: "0.68rem" }, "& .MuiInputLabel-root": { fontSize: "0.68rem" } }}
+                                            >
+                                                <MenuItem value="mgdl" sx={{ fontSize: "0.75rem" }}>mg/dl</MenuItem>
+                                                <MenuItem value="mmol" sx={{ fontSize: "0.75rem" }}>mmol/l</MenuItem>
+                                            </TextField>
+                                        </Box>
+                                    </Box>
+                                );
+                            })
+                        )}
+                        <Box sx={{ mt: 0.5, fontSize: "0.62rem", color: "text.disabled", fontStyle: "italic" }}>
+                            Verwendet f&uuml;r Diabetes-Typ-1-Monitoring (Medizinisch-Tab). Korreliert automatisch mit dem Vibrationssensor derselben Person (personTag).
+                        </Box>
                     </Box>
                 </Collapse>
             </Box>

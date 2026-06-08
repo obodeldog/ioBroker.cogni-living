@@ -5,6 +5,26 @@
 
 ---
 
+## 🗺️ SYSTEM-ARCHITEKTUR (Interaktives Diagramm)
+
+Das vollständige Architektur-Diagramm (Sensoren → Algorithmen → UI-Tabs) ist als interaktives Cursor-Canvas verfügbar.
+
+**Öffnen:** Datei direkt in Cursor anklicken:
+```
+C:\Users\MarcJaeger\.cursor\projects\c-ioBroker-ioBroker-cogni-living\canvases\aura-system-architecture.canvas.tsx
+```
+
+**Was das Diagramm zeigt:**
+- Alle Sensoren, Algorithmen und UI-Tabs auf einen Blick
+- Klick auf ein Element → alle Verbindungen werden hervorgehoben
+- Klick auf einen Sensor → zeigt welche Algorithmen und Tabs er beeinflusst
+- Klick auf einen Algorithmus → zeigt benötigte Sensoren und Ausgabe-Tabs
+- Klick auf einen Tab → zeigt alle zugehörigen Algorithmen und Sensoren
+
+**Hinweis:** Das Canvas liegt im Cursor-verwalteten Ordner und kann nicht nach `_internal/` verschoben werden — es würde sonst nicht mehr als interaktives Diagramm gerendert.
+
+---
+
 ## 🚨 RECHTLICHER HINWEIS
 
 Diese Software ist **KEIN Medizinprodukt** gemäß der Verordnung (EU) 2017/745 (MDR).
@@ -320,6 +340,108 @@ Wenn mehrere Personen im Haus sind, könnte ein Wohnzimmer-Signal von **einer an
 - **Kein Garmin-Durchsickern:** `fp2WakeTs` in `allWakeSources` zeigt jetzt den rohen FP2-Wert (`firstEmpty`) — nicht mehr den von Garmin überschriebenen `sleepWindowOC7.end`. Garmin gewinnt nur in der Prioritätskette, aber jede Quelle behält ihren eigenständigen Wert im Dropdown.
 - **Aufwach-Vibration:** `fp2_vib` sucht Vibrationsereignisse im Fenster **30 Min vor dem Abgang** — das entspricht dem typischen Wachmuster (Person dreht sich, bevor sie aufsteht). Vorher wurde +5 Min nach dem Abgang eingeschlossen, was keine sinnvollen Events liefert.
 - **Mehrfaches Zurückkehren:** Bei einem Nutzer der mehrmals ins Bett zurückkehrt, zeigt `fp2` den ersten echten Abgang (erste =15-Min-Leerphase). `other` zeigt wann erstmals ein anderer Raum betreten wurde.
+
+#### Ins-Bett-Zeit — bedEntryTs (OC-48, ab v0.33.251)
+
+`bedEntryTs` ist der Zeitpunkt "Ins Bett gegangen" — also **wann die Person das Bett betreten hat**, um zu schlafen. Das ergibt das gelbe **Wachliegen-Segment** im Schlafbalken (von `bedEntryTs` bis `sleepWindowStart`).
+
+> **Schlafkachel-Header-Layout (ab v0.33.277):** Die vier Kernzeiten sind hierarchisch dargestellt (PWA-Familienansicht + Admin-HealthTab identisch):
+> - **Links:** *Ins Bett gegangen* (klein, sekundär, oben) → orange Latenz-Badge `↓ Xh Ymin` (Einschlaf-Latenz = `sleepWindowStart − bedEntryTs`) → **Eingeschlafen** (groß, primär).
+> - **Rechts:** **Aufgewacht** (groß, primär, = `sleepWindowEnd`) → orange Latenz-Badge `↓ Xmin` (Aufwach-Latenz = `bedExitTs − sleepWindowEnd`) → *Aufstehen* (klein, sekundär, = `bedExitTs`).
+> - **Begründung:** Eingeschlafen/Aufgewacht sind die mit Garmin vergleichbaren Kernzeiten (daher primär/groß). Die beiden Latenz-Badges sind der Mehrwert ggü. Garmin (Liegezeit vor dem Schlaf bzw. nach dem Aufwachen). Fehlt ein Wert (z.B. keine plausible Ins-Bett-Zeit), entfällt Badge/Sekundärzeile bzw. erscheint der Hinweis „kein plausibler Wert gefunden".
+
+> **bedExitTs Walk-Through-Guard (OC-57, ab v0.33.276):** `bedExitTs` (= *Aufstehen*) wird nicht durch einen kurzen PIR-only-Schlafzimmerbesuch nach dem Aufstehen (z.B. Jacke holen) verschoben. Gibt es einen Vibrationssensor und kein FP2, wird `bedExitTs` auf den letzten echten Matratzen-Kontakt begrenzt, sofern die Person danach nachweislich außerhalb des Schlafzimmers aktiv war. Ohne Vibrationssensor / mit FP2 / bei stillem Liegen: kein Eingriff.
+
+> **Wichtig:** `bedEntryTs` ≠ Einschlafzeit (`sleepWindowStart`). Wer um 22:15 ins Bett geht und erst um 00:40 einschläft, hat 2h 25min gelben Balken. `bedEntryTs` markiert den **Beginn des Balken-Starts**, `sleepWindowStart` das Ende des Gelb-Bereichs.
+
+**Das Problem vor OC-48:** Wenn die Person abends kurz die Matratze berührt (Pre-Sleep-Touch), setzte der Algorithmus `bedEntryTs` auf diesen Moment — auch wenn die Person danach noch 2+ Stunden im Wohnzimmer war. Ein 240-Minuten-Cluster-Fenster (nötig für Kunden mit langer Einschlaf-Latenz) fasste Touch und echtes Einschlafen zu einem Cluster zusammen.
+
+**OC-48 — Counterevidence-Filter (ab v0.33.251):**
+
+```mermaid
+flowchart TD
+    classDef start  fill:#1a3a1a,stroke:#66bb6a,color:#c8e6c9
+    classDef check  fill:#1a2a3a,stroke:#4fc3f7,color:#e1f5fe
+    classDef reject fill:#3a1a1a,stroke:#ef5350,color:#ffcdd2
+    classDef accept fill:#1a3a1a,stroke:#66bb6a,color:#c8e6c9
+    classDef fall   fill:#3a2a00,stroke:#ffb300,color:#fff3e0
+
+    START(["`**Cluster-Kandidaten**
+    aus allSleepStartSources
+    sortiert aufsteigend nach Zeit
+    *(max. 240 Min vor Einschlafzeit)*`"]):::start
+    --> NEXT{Weiterer Kandidat<br/>verfügbar?}
+
+    NEXT -->|Nein| FALLBACK(["`⚠️ **Fallback**
+    Letzter Kandidat gewinnt
+    *(nächster an Einschlafzeit)*`"]):::fall
+
+    NEXT -->|Ja — Kandidat T| DAY{T liegt zwischen<br/>03:00 und 18:00 Uhr?}
+    DAY -->|Ja: Tageszeit<br/>überspringen| NEXT
+
+    DAY -->|Nein: Abend/Nacht| WIN["`**Prüffenster öffnen**
+    von T bis min(T+60 Min, Einschlafzeit)`"]:::check
+
+    WIN --> TOPO{Topologie verfügbar?<br/>_roomHopDistance}
+    TOPO -->|Ja| HOPCHECK["`Bewegung in Raum
+    mit **Hop-Distanz ≥ 2**
+    vom Schlafzimmer?`"]:::check
+    TOPO -->|Nein| ANYCHECK["`Bewegung in
+    **beliebigem** Nicht-Schlafzimmer-Raum
+    *(außer Bad)*?`"]:::check
+
+    HOPCHECK -->|Ja: Gegenbeleg gefunden| REJ(["`❌ **Pre-Sleep-Touch**
+    Person war danach noch aktiv
+    → überspringen, nächster Kandidat`"]):::reject
+    ANYCHECK -->|Ja: Gegenbeleg gefunden| REJ
+    REJ --> NEXT
+
+    HOPCHECK -->|Nein: kein Gegenbeleg| ACC(["`✅ **bedEntryTs = T**
+    Person war ruhig → echter Bett-Einstieg`"]):::accept
+    ANYCHECK -->|Nein: kein Gegenbeleg| ACC
+```
+
+**Sensor-Hierarchie (Graceful Degradation):**
+
+| Sensorkonfiguration | OC-48 Verhalten |
+|---|---|
+| Vibration + Bewegungsmelder + Topologie | Exakteste Erkennung: OG-Kinderzimmer o.ä. zählen **nicht** als Gegenbeleg |
+| Vibration + Bewegungsmelder (kein Topologie) | Alle Nicht-Schlafzimmer-Bewegungen zählen als Gegenbeleg |
+| Nur Vibration (kein PIR, kein FP2) | Kein Gegenbeleg möglich → Fallback auf frühesten Kandidaten (wie vor OC-48) |
+| FP2 + Vibration | FP2-basierte Kandidaten werden bevorzugt; Gegenbeleg-Prüfung gleich |
+
+**OC-46 bleibt korrekt:** Wer tatsächlich früh ins Bett geht und ruhig liegt (keine Außen-Bewegungen), hat **keinen Gegenbeleg** → frühes `bedEntryTs` wird korrekt beibehalten.
+
+**Beispiel Nacht 14./15.05.2026:**
+
+| Kandidat | Zeitpunkt | Prüffenster | Gegenbeleg | Ergebnis |
+|---|---|---|---|---|
+| `vib_refined` | 22:15 | 22:15–23:15 | Wohnzimmer 22:32 (Hop ≥ 2) | ❌ abgelehnt |
+| `fp2` | 22:57 | 22:57–23:57 | Wohnzimmer-Aktivität bis ~23:58 | ❌ abgelehnt |
+| `fp2_vib` | 00:33 | 00:33–00:40 | keine | ✅ **bedEntryTs = 00:33** |
+
+> **Log-Erkennungsmuster:** Im ioBroker-Log erscheint `[OC-48] bedEntryTs: fp2_vib @ 00:33 (kein Gegenbeleg in 7 Min)` bei korrekter Erkennung, und `[OC-48] bedEntryTs reject: vib_refined @ 22:15 (Gegenbeleg bis 23:15)` bei abgelehnten Kandidaten.
+
+#### OC-48c - Sustained-Absence-Guard (ab v0.33.267, Mehrpersonen ab v0.33.268)
+
+Der OC-48 Counterevidence-Filter schaut nur **60 Min** voraus. Bei kurzem Abend-Bettkontakt (Kuscheln, kurz hinsetzen) gefolgt von **stundenlanger** Wohnzimmer-Aktivitaet, die erst spaeter als 60 Min beginnt, wurde der fruehe Kandidat faelschlich akzeptiert -> langer Phantom-"Wachliegen"-Balken.
+
+**OC-48c (laeuft nach OC-48/OC-45c):** Pruefe das **gesamte** Fenster zwischen `bedEntryTs` und `sleepWindowStart`. Alle Bewegungen ausserhalb des Schlafzimmers (Bad ausgenommen; mit Topologie: Hop >= 2) werden zu Bloecken zusammengefasst (Luecke <= 12 Min = selber Block). Ist der **laengste zusammenhaengende Block >= 30 Min**, war die Person nachweislich nicht im Bett -> `bedEntryTs = null`, der Balken startet bei der Einschlafzeit, kein Phantom-Wachliegen.
+
+- **Kurzer Toiletten-/Kuechengang** (kurzer Block) -> bleibt erhalten, fruehes `bedEntryTs` korrekt.
+- **OC-46 (ruhiges Wachliegen)** -> keine Aussen-Bewegung, kein Block -> fruehes `bedEntryTs` bleibt korrekt.
+- **L4121-Fix:** Eine bewusste Ablehnung (`bedEntryTs = null` durch OC-48b/OC-48c) faellt **nicht** mehr auf den Garmin/computePersonSleep-Rohwert zurueck.
+- **Mehrpersonenhaushalt (ab v0.33.268):** OC-48c laeuft in `computePersonSleep()` (Single-Source-of-Truth) und wirkt damit fuer den globalen Haushalt UND jede Einzelperson. Der Gegenbeleg-Filter schliesst nur Bewegungen der **anderen** Person aus; gemeinsame Raeume (Wohnzimmer, Diele) zaehlen weiterhin.
+
+> Log: `[OC-48c] bedEntryTs 21:23 verworfen: anhaltende Ausserhalb-Aktivitaet (laengster Block 116 Min, 49 Events) -> bedEntry = sleepStart`.
+
+#### OC-47b - Vibration-Extension-Abbruch am Morgen (ab v0.33.267)
+
+OC-47 verlaengert die Aufwachzeit ueber die Garmin-Wachzeit hinaus, wenn nach dem Garmin-Wach noch starke Bett-Vibrationen kommen (FP2-blind-Fall: Person doest weiter im Bett). **OC-47b** bricht diese Verlaengerung ab, wenn zwischen Garmin-Wach und der letzten Vibration eine **Bad-/Far-Room-Aktivitaet** liegt: dann war die Person auf (Morgenroutine), die Vibrationen sind kurze **Re-Kontakte** (z.B. aufs Bett setzen) - es bleibt bei der vertrauenswuerdigen Garmin-Wachzeit.
+
+> Log: `[OC-47b] Vibration-Extension abgebrochen: Bad/Far-Room-Aktivitaet nach Garmin-Wach (08:27) -> Vibrationen sind Re-Kontakte, bleibe bei Garmin-Wach.`
+
+---
 
 #### Sonderfälle
 
@@ -771,13 +893,31 @@ Der Garmin-Score nutzt zusätzlich HRV, Ruheherzrate, SpO2. AURA V2 schätzt den
 
 ### Schlafphasen-Klassifikation (5-Minuten-Slots)
 
+Die Schlafphasen werden in **5-Minuten-Slots** eingeteilt. Kürzere Ereignisse (< 5 min) werden dem übergeordneten Slot zugerechnet und sind im Balken **nicht sichtbar** — systembedingt, kein Fehler.
+
+#### Klassifikationsregeln (Vibrationssensor-basiert)
+
 | Bedingung | Phase |
 |---|---|
 | 0 Vibrationen im Slot | Leichtschlaf (< 5 ruhige Slots in Folge) |
-| 0 Vibrationen, = 5 ruhige Slots in Folge (25 min) | Tiefschlaf |
-| = 5 Vibrationen ODER Stärke > 28 | Wach |
-| = 2 Vibrationen + mittlere Stärke (12–28) + > 2,5h Schlaf | REM (geschätzt) |
+| 0 Vibrationen, ≥ 5 ruhige Slots in Folge (= 25 min ununterbrochen) | **Tiefschlaf** |
+| ≥ 5 Vibrationen ODER Stärke > 28 | Wach |
+| ≈ 2 Vibrationen + mittlere Stärke (12–28) + > 2,5h Schlaf | REM (geschätzt) |
 | Sonstige Vibration | Leichtschlaf |
+
+#### Mindestdauer für Tiefschlaf: 25 Minuten
+
+**Tiefschlaf wird erst nach 25 Minuten ununterbrochener Ruhe erkannt** (= 5 leere 5-min-Slots in Folge). Das bedeutet:
+- Kurze Ruhephasen < 25 min → werden als **Leichtschlaf** gezählt, nicht als Tief
+- Einzelne Tiefschlaf-Fragmente (5–10 min) im Balken sind sehr schmal (≈1–2% Balkenbreite) und kaum sichtbar — die Zusammenfassungs-Zahlen unter dem Balken sind zuverlässiger als die visuelle Balkenbreite
+
+#### Mehrquellen-Architektur
+
+Das `sleepStages`-Array kann Einträge von mehreren Quellen (z. B. mehrere Personen oder Sensoren) für denselben Zeitslot enthalten. Der letzte Eintrag je Slot ist im Balken visuell dominant. Die Minuten-Zähler unter dem Balken können dadurch inflationiert sein (Duplikate werden mitgezählt). Bei Abweichungen ist die **Garmin-Referenz** (unterer Bereich der Kachel) der zuverlässigere Wert.
+
+#### Garmin als Referenz (optional)
+
+Wenn eine Garmin-Uhr konfiguriert ist, werden Garmin-eigene Schlafphasen als separate Zeile angezeigt (`garminDeepMin`, `garminLightMin`, `garminRemMin`). Abweichungen zwischen AURA und Garmin sind normal: AURA misst Bettvibrationen, Garmin misst Herzratenvariabilität am Handgelenk. Garmin-Tiefschlaf ist typischerweise geringer als der AURA-Vibrationswert.
 
 ### Außerhalb-Bett-Ereignisse
 
@@ -807,7 +947,8 @@ Danach werden alle Treffer zu einer Liste `bedAbsenceEvents` zusammengeführt.
 **Wichtige Schutzregeln (für stabile, alltagstaugliche Anzeige):**
 - **Hop-Filter auf alle Außenraum-Typen:** Nur Räume in Schlafzimmer-Nähe werden akzeptiert (OG-Kinderbad wird verworfen).
 - **Mindestdauer 5 Minuten:** Sehr kurze Ereignisse erzeugen keinen grauen Block.
-- **FP2-Abwesenheit nur nach stabiler Bett-Präsenz:** FP2 muss vorher mindestens 20 Minuten durchgehend "Bett belegt" gesehen haben.
+- **FP2-Abwesenheit nur nach stabiler Bett-Präsenz:** FP2 muss vorher mindestens 20 Minuten durchgehend "Bett belegt" gesehen haben (Pre-Sleep-Filter).
+- **OC-49a BED_TOUCH-Filter (ab v0.33.252):** Nach dem Aufwachen (Post-Wake) reichen bereits **2 Minuten** FP2-Präsenz, um eine echte Rückkehr zu erkennen. Kurze Berührungen unter 2 Minuten (z. B. Bett machen, Kissen holen) gelten als "BED_TOUCH" und unterbrechen eine laufende Abwesenheits-Erfassung **nicht**. So wird z. B. ein 40-Minuten-Zeitraum außerhalb des Bettes korrekt als Außerhalb angezeigt, auch wenn die Person das Bett kurz berührt hat.
 - **Safety-Valve für `bedEntryTs` (ab v0.33.212):** `bedEntryTs` wird nur verwendet, wenn er **vor** `sleepStart` liegt. So kann ein heutiger Live-Wert (z. B. abends nach Neustart) nicht mehr die alte Nacht kaputtfiltern.
 
 **So sieht es in der UI aus (verständlich für Anwender):**
@@ -829,6 +970,53 @@ Danach werden alle Treffer zu einer Liste `bedAbsenceEvents` zusammengeführt.
 | Kein Schlafzimmer-Sensor | Keine "Weg vom Bett"-Blöcke |
 
 **Kompatibilität:** Alte JSON-Dateien ohne `bedAbsenceEvents` bleiben lauffähig; dann greift automatisch das ältere Verhalten.
+
+### Schlafanalyse-Ablaufdiagramm (technisch)
+
+```mermaid
+flowchart TD
+    A([Start: saveDailyHistory]) --> B[Eventfenster laden<br/>sleepSearchEvents ab 18:00 Vortag]
+    B --> C[computePersonSleep fuer Person]
+
+    C --> C1[Kandidaten bilden:<br/>garmin, fp2_vib, fp2, vib_refined,<br/>motion_vib, gap60, motion, last_outside, haus_still]
+    C1 --> C2[OC-31: Nacht-Aufstehen-Fenster erkennen<br/>Abgang + Rueckkehr]
+    C2 --> C3[Filter: Kandidaten in Aufstehen-Fenstern entfernen<br/>prio >= 3]
+
+    C3 --> D{Trusted Quelle vorhanden<br/>garmin oder fp2_vib oder fp2}
+    D -->|Ja| E[sleepStart = trusted Quelle]
+    D -->|Nein| F{vib_refined vorhanden?}
+    F -->|Ja| G[sleepStart = vib_refined<br/>trusted fallback]
+    F -->|Nein| H[Cluster-Auswahl 90min<br/>ggf. haus_still]
+
+    E --> I{Alle echten Quellen null?}
+    G --> I
+    H --> I
+
+    I -->|Nein| J[Aufwachzeit bestimmen<br/>wakeConfirmed]
+    I -->|Ja| K[OC-38 Safety-Valve<br/>Quellen aus sleepDate.json wiederherstellen<br/>nur morgens + Zeitfenster-validiert]
+    K --> J
+
+    J --> L[OC-36: bedAbsenceEvents + smWakePhases berechnen]
+    L --> M[Snapshot schreiben<br/>history YYYY-MM-DD.json]
+    M --> N([Frontend-Kachel<br/>Einschlafen / Aufwachen / Quellen])
+```
+
+### Schlafanalyse-Ablauf (vereinfacht für Nichttechniker)
+
+```mermaid
+flowchart TD
+    A([Nacht wird ausgewertet]) --> B[System sammelt Sensorhinweise<br/>Bett, Bewegung, Vibration, ggf. Garmin]
+    B --> C{Ist eine starke Quelle da?}
+    C -->|Ja| D[Einschlafzeit wird direkt gesetzt]
+    C -->|Nein| E[System schaetzt vorsichtiger<br/>ueber Muster und Hausruhe]
+    D --> F{Sind Daten lueckenhaft?}
+    E --> F
+    F -->|Ja| G[OC-38: bereits gespeicherte<br/>gueltige Nachtwerte wiederherstellen]
+    F -->|Nein| H[Direkt mit aktuellen Daten weiter]
+    G --> I[Aufwachzeit + Nacht-Aufstehen berechnen]
+    H --> I
+    I --> J([Anzeige in der Schlafkachel])
+```
 
 ### Farbkonzept (Best ? Schlimmste, Usability-Prinzip)
 
@@ -1201,16 +1389,319 @@ Dieser Hinweis erscheint nur wenn AURA gleichzeitig Nachtbewegungen erkannt hat 
 
 ---
 
-### 🛏️ Gemeinsames Schlafzimmer — Sensorkonfiguration
+### 🛏️ Mehrpersonenhaushalte — Szenarien und Konfiguration (ab v0.33.200/v0.33.273)
 
-Bei einem Doppelzimmer (beide Personen schlafen im selben Raum) empfiehlt sich folgende Sensorkonfiguration:
+AURA unterstützt drei grundlegende Wohnsituationen. Die Erkennung erfolgt automatisch anhand der Sensor-Konfiguration.
+
+---
+
+#### Szenario-Übersicht (Automatische Erkennung)
+
+| Szenario | Konfiguration | Auto-Erkennung | Analysegüte |
+|---|---|---|---|
+| **1 — Einpersonenhaushalt** | Ein personTag (oder keiner) | Nur ein personTag in Bett-Sensoren | Volle Analyse: Schlafphasen, Score, Nykturie, OBEs |
+| **2 — Mehrpersonen, getrennte Zimmer** | Robert im SZ1, Ingrid im SZ2 — je eigener personTag | Verschiedene `location`-Felder → eigenständige Zimmer | Volle Analyse pro Person, vollständig unabhängig |
+| **3 — Mehrpersonen, gemeinsames Zimmer** | Robert + Ingrid in SZ1 — beide mit eigenem Vib-Sensor | Gleiche `location`, beide mit Bett-Rolle und personTag → Szenario 3 erkannt | Analyse pro Person mit Szenario-3-Korrekturen (ab v0.33.273) |
+
+**Erkennungslogik für Szenario 3** (ab v0.33.273): Wenn mindestens zwei Sensoren mit Bett-Rolle (`sensorFunction=bed`, `isFP2Bed`, oder `isVibrationBed`) und unterschiedlichen personTags dieselbe `location` haben, erkennt AURA automatisch ein geteiltes Schlafzimmer und aktiviert Szenario-3-Korrekturen.
+
+---
+
+#### Was AURA in jedem Szenario liefert
+
+| Feature | Szenario 1 | Szenario 2 | Szenario 3 |
+|---|---|---|---|
+| Schlafphasen-Balken (Tiefschlaf/REM/Leicht) | ✅ | ✅ je Person | ✅ je Person (eigener Vib) |
+| Einschlaf- und Aufwachzeit | ✅ | ✅ je Person | ✅ je Person |
+| Ins-Bett-Zeit (`bedEntryTs`) | ✅ | ✅ je Person | ✅ je Person |
+| Nykturie (Bad-Aufstände nachts) | ✅ | ✅ je Person | ✅ mit Tiebreaker-Korrektur |
+| OBE-Dreiecke (Bett-Verlassen-Marker) | ✅ wenn Radar | ✅ je Person | ✅ wenn Radar mit personTag |
+| Shared-Bed-Anzeige (schwarze Segmente) | ✅ wenn Radar count | n/a (getrennte Zimmer) | ℹ️ nur global sinnvoll |
+| Garmin-Overlay | ✅ | ✅ je Person | ✅ je Person |
+| Per-Person-Schlafkachel (eigene Kachel) | n/a | ✅ automatisch | ✅ automatisch |
+
+---
+
+#### Empfohlene Sensor-Konfiguration: Gemeinsames Schlafzimmer (Szenario 3)
 
 | Sensor | Konfiguration | Wirkung |
 |---|---|---|
-| Bewegungsmelder im Zimmer | Kein PersonTag | Erkannt nur ob jemand im Zimmer aktiv ist — keine Personenzuordnung |
-| Vibrationssensor unter Matratze Person A | PersonTag = "Anna" | Matratzen-Aktivität von Anna |
-| Vibrationssensor unter Matratze Person B | PersonTag = "Marco" | Matratzen-Aktivität von Marco |
-| Shelly Presence Gen4 Zone 1 (linke Bettseite) | PersonTag = "Anna" | Radarbasierte Präsenzerkennung Anna |
-| Shelly Presence Gen4 Zone 2 (rechte Bettseite) | PersonTag = "Marco" | Radarbasierte Präsenzerkennung Marco |
+| Vibrationssensor Matratze Person A | PersonTag = "Anna", location = "Schlafzimmer", Funktion = Bett | Matratzen-Aktivität von Anna → volle Schlafphasenanalyse |
+| Vibrationssensor Matratze Person B | PersonTag = "Marco", location = "Schlafzimmer", Funktion = Bett | Matratzen-Aktivität von Marco → volle Schlafphasenanalyse |
+| Bewegungsmelder im Zimmer | Kein PersonTag, location = "Schlafzimmer" | Erkennt ob jemand im Zimmer aktiv ist — ohne Personenzuordnung |
+| Shelly Presence Gen4 Zone gesamt | Kein PersonTag, location = "Schlafzimmer", Funktion = Bett | Doppelbelegungs-Erkennung (OC-SB: schwarze Balken-Segmente) |
+| Shelly Presence Gen4 Zone A (Bettseite A) | PersonTag = "Anna" | Radarbasierte Präsenzerkennung Anna (optional, für OBE-Dreiecke) |
+| Shelly Presence Gen4 Zone B (Bettseite B) | PersonTag = "Marco" | Radarbasierte Präsenzerkennung Marco (optional, für OBE-Dreiecke) |
 
-**Wichtig:** Der Shelly Presence Gen4 muss vor der ioBroker-Einbindung in der Shelly-App mit zwei Zonen konfiguriert werden. Jede Zone erscheint dann als eigenes Objekt in ioBroker und kann dort mit einem PersonTag versehen werden.
+**Wichtig:** Der Shelly Presence Gen4 muss vor der ioBroker-Einbindung in der Shelly-App mit mehreren Zonen konfiguriert werden. Jede Zone erscheint dann als eigenes Objekt in ioBroker.
+
+**Szenario-3-Auto-Erkennung tritt in Kraft**, wenn Anna und Marco beide einen Sensor mit Bett-Rolle an derselben `location` haben. Dann aktiviert AURA automatisch den Nykturie-Tiebreaker.
+
+---
+
+#### OC-SB-NOC: Nykturie-Tiebreaker im geteilten Schlafzimmer (ab v0.33.273)
+
+**Das Problem:** In Szenario 3 sind beide Vibrationssensoren fast immer aktiv (schlafende Person bewegt sich leicht). Wenn Robert um 02:00 auf die Toilette geht, ist nicht nur Vib-Robert vor dem Trip aktiv — auch Vib-Ingrid zeigt Aktivität (Ingrid schläft weiter). Ohne Tiebreaker würden beide Personen +1 Nykturie erhalten.
+
+**Die Lösung:** AURA vergleicht das *letzte* Vib-Event jeder Person kurz vor dem Bad-Trip:
+- Person, die **gerade aufgestanden ist**: hat ein sehr aktuelles letztes Vib-Signal (Bewegung beim Aufstehen)
+- Person, die **weiterschläft**: hat ein etwas älteres letztes Vib-Signal (liegt ruhig)
+
+→ Die Person mit dem **jüngsten letzten Vib-Event** gewinnt den Trip zugeordnet.
+
+**Graceful Degradation:** Kein Zimmer-Partner (Szenario 1/2) → Standard-OC-45b-Bestätigung bleibt unverändert.
+
+---
+
+#### Bekannte Einschränkungen Szenario 3 (Stand v0.33.273)
+
+| Einschränkung | Auswirkung | Workaround |
+|---|---|---|
+| Geteilter PIR/Radar ohne personTag | Trägt nicht zu `isBedroomMotion` einer Einzelperson bei | Vib-Sensor des Nutzers übernimmt diese Rolle (ausreichend) |
+| Vib-Tiebreaker bei gleichzeitigem Aufstehen | Wenn beide Personen gleichzeitig aufstehen: zufälliger Gewinner | Sehr seltener Randfall, kein Workaround nötig |
+| `sharedBedPeriods` nur global | Schwarze Balken erscheinen nur in der Gesamt-Ansicht, nicht in per-Person-Kacheln | Gewollt — wäre irreführend in Einzel-Ansicht |
+
+---
+
+## 🛏️ OC-49: BED_TOUCH-Filter – "Bett machen" wird nicht mehr als Rückkehr gezählt *(ab v0.33.252)*
+
+### Das Problem in der Praxis
+
+Stell dir vor: Du wachst um 06:34 auf (Garmin erkennt das Ende des Schlafs), gehst um 06:46 ins Bad, kommst um 06:57 zurück – und machst kurz das Bett. Dann bist du um 07:04 endgültig aufgestanden und wieder zu Hause tätig. Aber: Der Radar-Sensor hat die 4 Minuten "Bett machen" registriert und denkt, du warst wieder im Bett. Ergebnis: AURA zeigt bis 07:58 Uhr eine durchgehende "Wachliegen"-Phase, obwohl du über eine Stunde lang gar nicht im Schlafzimmer warst.
+
+**Der BED_TOUCH-Filter behebt genau das.**
+
+### Was ist ein BED_TOUCH?
+
+Ein BED_TOUCH ist eine sehr kurze Rückkehr ans Bett, bei der die Person **nicht wirklich hineingelegt** hat, sondern nur kurz Kontakt hatte – zum Beispiel:
+- Bett machen (Kissen aufschütteln, Decke ausbreiten)
+- Ein Kissen oder Handy vom Bett nehmen
+- Kurz auf die Bettkante setzen, bevor man weitergeht
+
+Im Gegensatz dazu: ein **echtes Zurücklegen** dauert mehrere Minuten, der Körper liegt auf der Matratze und erzeugt regelmäßige Vibrationssignale.
+
+### Wie erkennt AURA den Unterschied?
+
+AURA verwendet zwei ergänzende Methoden (sensor-neutral – je nach verfügbaren Sensoren):
+
+**Methode 1: FP2-Radar-Dauer (falls FP2 vorhanden)**
+- Nach dem Aufwachen: Wenn der Radar das Bett als "belegt" meldet, aber **kürzer als 2 Minuten**, gilt das als BED_TOUCH.
+- Vorher (vor dem Aufwachen): Die Schwelle bleibt bei 20 Minuten – damit kurze Abend-Besuche nicht als Schlaf gezählt werden.
+
+**Methode 2: Vibrations-Evidenz-Paare (falls Vibrationssensor vorhanden)**
+- Der Vibrationssensor sendet bei echtem Liegen innerhalb von 90 Sekunden nach dem ersten Trigger auch einen Stärke-Wert. Das ist ein "Evidenz-Paar".
+- BED_TOUCH = Trigger ohne nachfolgenden Stärke-Wert = Person hat das Bett berührt, aber sich nicht hingelegt.
+- Für eine echte Rückkehr braucht AURA mindestens 2 solcher Evidenz-Paare.
+
+**Methode 3: PIR-only (falls nur Bewegungsmelder vorhanden)**
+- Wenn nach der kurzen Schlafzimmer-Bewegung sofort Bewegung in anderen Räumen folgt (< 2 Min Pause), gilt das als BED_TOUCH.
+
+### Was ändert sich in der Anzeige?
+
+| Vorher (ohne OC-49) | Nachher (mit OC-49) |
+|---|---|
+| 06:34–07:58 = durchgehend gelb "Wachliegen" | 06:34–06:46 = kurzes Wachliegen |
+| Kein "Außerhalb"-Block für 07:01–07:45 | 07:01–07:45 = grauer "Außerhalb"-Block |
+| `bedAbsenceEvents` zeigt nur den Bad-Besuch | `bedAbsenceEvents` zeigt auch die 43 Min außerhalb |
+
+Das Bett machen um 06:57 (4 Min) und das Bett-Umräumen um 07:45 (3 Min) werden jetzt korrekt ignoriert – die Abwesenheits-Uhr läuft durch.
+
+### Wie passt das zu den State Machines?
+
+OC-49 ist ein **Enhancement von OC-45a (POST_WAKE State Machine)**. Die bestehenden Zustände:
+
+```
+WAKING → DEPARTED → POTENTIAL_RETURN → (GENUINE_RETURN | BED_TOUCH=DEPARTED)
+```
+
+Der neue BED_TOUCH-Pfad:
+- POTENTIAL_RETURN + FP2-Rückkehr unter 7 Min + keine Vib-Evidenz → **BED_TOUCH → zurück zu DEPARTED**
+- Der bedExitTs-Kandidat wird NICHT zurückgesetzt, die Abwesenheitserfassung läuft weiter.
+
+### Sensor-Kompatibilität
+
+| Setup | Verhalten |
+|---|---|
+| FP2 + Vibrationssensor | Beste Erkennung: Dauer-Prüfung + Vib-Evidenz |
+| Nur FP2 | Nur Dauer-Prüfung (unter 2 Min = BED_TOUCH) |
+| Nur Vibrationssensor | Nur Vib-Evidenz-Paare (0 Paare = BED_TOUCH) |
+| Nur PIR (Bewegungsmelder) | Raum-Sequenz-Prüfung (andere Räume danach = BED_TOUCH) |
+
+> **Für Laien:** Stell dir AURA vor wie einen aufmerksamen Beobachter. Früher hat er gesagt: "Du warst am Bett – du warst also im Bett." Jetzt sagt er: "Du warst **kurz** am Bett und danach sofort woanders – das war nur Bett machen." AURA ist jetzt schlauer bei der Unterscheidung zwischen Bett machen und Schlafen.
+
+---
+
+## 🏗️ OC-45d: SLEEP-CYCLE STATE MACHINE FRAMEWORK *(vollständig ab v0.33.260)*
+
+AURA arbeitet mit mehreren kleinen **"Zustandsautomaten"** (State Machines) — jede ist für eine bestimmte Phase der Nacht zuständig. Seit v0.33.260 sind **alle vier Phasen implementiert** und über einen gemeinsamen Kontext (`_scCtx`) verbunden.
+
+---
+
+### Ablaufdiagramm: Ein Schlafzyklus
+
+```
+   ABEND                    NACHT                      MORGEN
+     │                        │                           │
+     ▼                        ▼                           ▼
+┌─────────────┐    ┌────────────────────┐    ┌─────────────────────┐    ┌──────────┐
+│  PRE_SLEEP  │───▶│     SLEEPING       │───▶│     POST_WAKE       │───▶│   DAY    │
+│             │    │                    │    │                     │    │          │
+│ OC-48       │    │ OC-45b             │    │ OC-45a              │    │ OC-48    │
+│ OC-45c      │    │ OC-47d+            │    │ OC-49 BED_TOUCH     │    │ Guard    │
+│             │    │ smWakePhases       │    │                     │    │          │
+│ Korrigiert  │    │ Nykturie-Erkennung │    │ bedExitTs berechnen │    │ 03-18h   │
+│ bedEntryTs  │    │ FP2-Rückkehr       │    │ BED_TOUCH filtern   │    │ ignoriert│
+└─────────────┘    └────────────────────┘    └─────────────────────┘    └──────────┘
+       │                    │  ▲                        │
+       │            ┌───────┴──┴──────┐                │
+       │            │  Nykturie-Loop  │                │
+       │            │  (mehrfach)     │                │
+       │            │  OUT → IN → OUT │                │
+       │            └─────────────────┘                │
+       │                                               │
+       ▼                                               ▼
+  _scCtx.preSleepTs                          _scCtx.postWakeTs
+  _scCtx.phase = SLEEPING                    _scCtx.phase = DAY
+                                             _scCtx.dayStart = bedExitTs
+```
+
+**Zustandsübergänge im Detail:**
+
+```
+Abend:    INS_BETT_LEGEN  ──────────────────►  BED_PRESENT
+                                                    │
+                                                    │  Einschlafen (Garmin/Vibration)
+                                                    ▼
+Nacht:                                          SLEEPING
+                                                    │
+                              ┌─────────────────────┤
+                              │ FP2 False + Motion  │
+                              ▼                     │
+                          DEPARTED                  │
+                              │                     │
+                   kurz <5min │ lang >5min          │
+                     (Rückkehr │  (Nykturie)         │
+                       sofort)▼     ▼               │
+                              SLEEPING          NOCTURIA ──► SLEEPING
+                                                    │
+Morgen:   Aufwachzeit ───────►│  WAKING
+                              │
+                              │ kurz: BED_TOUCH (Bett machen etc.)
+                              │ lang: DEPARTED ──► GENUINE_RETURN
+                              ▼
+                          DAY (Tagphase)
+```
+
+---
+
+### Die vier Phasen — aktueller Status
+
+| Phase | Zuständige Module | Version | Was es löst |
+|---|---|---|---|
+| **PRE_SLEEP** | OC-48 + OC-45c (Counterevidence) | v0.33.256 | Falsches bedEntryTs durch kurzen Vorab-Besuch |
+| **SLEEPING** | OC-45b FP2-Return + OC-47d+ | v0.33.255 | Falsche Nykturie, FP2-Aussetzer während Schlaf |
+| **POST_WAKE** | OC-45a + OC-49 BED_TOUCH | v0.33.252 | Bett-machen vs. echte Rückkehr nach Aufwachen |
+| **DAY** | OC-48 Tagphase-Guard (03–18 Uhr) | v0.33.260 | Tages-Bett-Kontakte beeinflussen nächste Nacht nicht |
+
+---
+
+### Der gemeinsame Kontext `_scCtx` *(ab v0.33.260)*
+
+Alle Module schreiben ihre Ergebnisse in ein gemeinsames Objekt:
+
+```
+_scCtx = {
+  phase:          7          ← Aktueller Zustand (1=BED_PRESENT, 2=SLEEPING, 7=DAY)
+  preSleepTs:    "02:40"     ← OC-45c: korrigiertes bedEntryTs
+  sleepingPhases: [...]      ← OC-45b: erkannte Wach-/Nykturie-Phasen
+  postWakeTs:    "09:21"     ← OC-45a: bedExitTs (Aufgestanden)
+  dayStart:      "09:21"     ← DAY-Phase startet hier
+}
+```
+
+Das ermöglicht es, in zukünftigen Sessions alle Module in **einer einzigen chronologischen Schleife** zu vereinen (`runSleepCycleSM()` — optional, kein zwingender nächster Schritt).
+
+---
+
+### Warum ist das wichtig?
+
+Früher waren alle Erkennungsregeln als einzelne, lose Codeblöcke verstreut. Das Framework sorgt jetzt dafür, dass:
+- Alle Phasen die gleichen **Zustandsnamen** verwenden (z.B. `SLEEPING`, `DEPARTED`, `BED_TOUCH`)
+- Neue Verbesserungen in eine bestehende Phase eingefügt werden, ohne andere zu brechen
+- Das System **sensor-neutral** bleibt: egal ob jemand nur PIR hat oder Garmin + FP2
+- Ein **geteilter Kontext** (`_scCtx`) dafür sorgt, dass Phasen voneinander wissen
+
+### OC-45b: Nykturie-Erkennung verbessert (Schritt 1 von 2)
+
+**Problem vorher:** Wenn der FP2-Radar kurz vor dem Einschlafen einen Aussetzer hatte (z.B. 22:43 und 22:48 Uhr, obwohl der Schlaf erst um 23:08 begann), wurden diese "Phantom-Trips" als Nacht-Aufstehen gezählt. Statt 1-2 echte Nykturie-Ereignisse zeigte AURA dann 4-6 an.
+
+**Fix (v0.33.254):** Alle Nacht-Aufstehen-Ereignisse, die **vor dem tatsächlichen Einschlafen** liegen, werden jetzt herausgefiltert. Nur echte Nacht-Trips (nach sleepStart) erscheinen im Protokoll.
+
+> **Für Laien:** AURA schaut jetzt erst, wann du wirklich eingeschlafen bist — und zählt nur die Aufsteh-Momente danach. Was vorher passiert ist (Abend-Aktivität, Sensor-Rauschen), wird ignoriert.
+
+### OC-45b (Schritt 2/2): Schlaf-SM mit FP2-Rückkehr *(ab v0.33.255)*
+
+**Problem vorher:** Wenn du nachts kurz auf die Toilette gegangen bist (z.B. 03:57 Uhr) und FP2 dich um 03:58 Uhr wieder als "im Bett" erkannte, hat die alte Logik trotzdem noch eine 60-Minuten-Abwesenheit angezeigt — weil die Bewegungs-Sensoren erst viel später einen "Rückkehr"-Bewegungsblitz im Schlafzimmer sahen.
+
+**Fix (v0.33.255):** AURA nutzt jetzt auch den FP2-Radar als Rückkehr-Signal. Wenn der Radar das Bett nach einem kurzen Ausflug wieder als "belegt" meldet, wird die Abwesenheits-Phase sofort geschlossen. Eine echte Nykturie braucht dann mindestens 5 Minuten — kürzere Trips (z.B. Trinken, Toilette und zurück) werden korrekt als Kurzabsenz oder gar nicht angezeigt.
+
+**Cap-Fix:** AURA berechnet die Schlaf-Phasen jetzt nur noch bis zur bestätigten Aufwachzeit. Bewegungen nach dem Aufstehen (z.B. Küche, Bad um 09:22) werden nicht mehr als nächtliches Aufstehen gezählt.
+
+> **Für Laien:** Der Radar sagt "Person ist wieder da" — AURA glaubt ihm sofort. Früher hat AURA auf einen Bewegungsmelder gewartet, der manchmal erst Stunden später auslöste.
+
+---
+
+## 🕐 OC-45c: PRE_SLEEP SM — Bettgehzeit-Korrektur *(ab v0.33.256)*
+
+**Problem:** Wenn jemand kurz vor dem Schlafen kurz ins Schlafzimmer geht (z.B. kurz hinlegen zum Buch holen, Handy laden) und dann wieder weg ist, wurde dieser Moment manchmal fälschlich als "Ins Bett gegangen" angezeigt — z.B. 01:13 statt der echten 01:59.
+
+**Wie AURA das jetzt erkennt (3 Schritte):**
+
+1. **FP2 geht schnell wieder False:** Wenn der Bett-Radar innerhalb von 30 Minuten nach der erkannten Bettgehzeit wieder "Bett leer" meldet → Verdacht auf Pre-Sleep-Besuch.
+2. **Danach Bewegung außerhalb Schlafzimmer:** Wenn nach dem "Bett leer"-Signal Bewegungen in Wohnzimmer, Küche etc. folgen → Counterevidence bestätigt (Person war noch wach).
+3. **Nächste stabile Bettphase suchen:** AURA sucht das nächste Mal, wo der Radar das Bett als "belegt" meldet und diese Meldung mindestens 20 Minuten lang anhält. Das ist die echte Bettgehzeit.
+
+| Schritt | Beispiel 25.05.2026 |
+|---|---|
+| Vorher (falsch) | Ins Bett: 01:13 (kurzer Besuch) |
+| Step 1 | FP2 False schon bei 01:15 (+1.6 Min) |
+| Step 2 | 32 Bewegungen in Wohnen/Küche nach 01:15 |
+| Step 3 | Nächste stabile Phase: 01:59 (bleibt > 20 Min) |
+| Nachher (korrekt) | Ins Bett: **01:59** |
+
+> **Für Laien:** AURA unterscheidet jetzt zwischen "kurz ins Schlafzimmer gegangen" und "wirklich ins Bett gelegt". Erst wenn der Radar dich dauerhaft als "im Bett" erkennt, setzt AURA die Bettgehzeit.
+
+---
+
+## 🔍 OC-47d: Vibrations-Widerspruchs-Filter *(verschärft ab v0.33.255)*
+
+**Hintergrund:** Wenn der FP2-Radar das Bett als "leer" meldet, aber der Vibrationssensor gleichzeitig Bewegungen im Bett misst — dann hat der Radar einen Aussetzer. Der OC-47d-Filter erkennt diesen Widerspruch.
+
+**Wie es funktioniert:**
+- Wenn mindestens **2 Vibrationen mit Stärke ≥ 10** innerhalb einer FP2-Absenz auftreten → Person liegt im Bett (Radar blind)
+- Die Abwesenheits-Phase wird komplett verworfen (Score = 0)
+
+**Verschärfung v0.33.255:** Früher wurde der Widerspruch durch einen "Vibrations-vor-Aufstehen"-Bonus teilweise wieder aufgehoben. Dieser Bonus wird jetzt blockiert wenn gleichzeitig Schlafvibration-Widerspruch vorliegt.
+
+> **Für Laien:** Der Radar sagt "Bett leer", aber die Matratze vibriert. AURA traut der Matratze mehr — du schläfst einfach.
+
+---
+
+## 🖱️ OC-50a: Frontend Hover-Fix — Tooltip im Schlafbalken *(ab v0.33.260)*
+
+**Problem:** Wenn der FP2-Radar während des Schlafs einen langen Aussetzer hatte (z.B. 32 Minuten) und du mit der Maus über den **blauen Schlafbalken** in dieser Zeit fuhrst, zeigte das Tooltip fälschlicherweise "Radar-Aussetzer (32 min)" — obwohl der Balken korrekt **blau** (Leicht-Schlaf) war und AURA wusste, dass du schliefst.
+
+**Ursache:** Die Tooltip-Funktion für den Balken prüfte alle FP2-Ereignisse (inkl. unbestätigte Dropouts), nicht nur die echten Abwesenheiten.
+
+**Fix:**
+```
+Vorher: Hover auf blauem Balken bei FP2-Dropout → "Radar-Aussetzer (32 min)"  ❌
+Jetzt:  Hover auf blauem Balken bei FP2-Dropout → "Leicht"                     ✅
+        Hover auf grauem Dreieck (▲)             → "Radar-Aussetzer (32 min)"  ✅
+```
+
+**Wie AURA jetzt unterscheidet:**
+- Balken-Tooltip: zeigt nur "Abwesenheit" wenn ein echtes `bedAbsenceEvent` die Zeit abdeckt
+- Dreieck-Marker (▲): zeigt immer "Radar-Aussetzer" mit Dauer — unabhängig vom Balken darüber
+
+> **Für Laien:** Der blaue Balken ist jetzt ehrlich. Wenn er blau ist und "Leicht" sagt, dann schliefst du. Das Dreieck darunter sagt dir zusätzlich: "Der Radar hatte hier einen Aussetzer — aber die Vibrationsdaten haben bestätigt, dass du im Bett warst."
