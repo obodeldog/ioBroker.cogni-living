@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Baut ein View-Model fuer die NUUKANNI Schlaf-Kachel — gleiche Kernlogik wie HealthTab renderSleepScoreCard (read-only).
+ * Baut ein View-Model fuer die NUUKANNI Schlaf-Kachel ï¿½ gleiche Kernlogik wie HealthTab renderSleepScoreCard (read-only).
  */
 
 const stageColor = {
@@ -19,7 +19,7 @@ const stageLabel = {
     rem: 'REM (est.)',
     wake: 'Wachliegen',
     bathroom: 'Bad-Besuch',
-    outside: 'Außerhalb',
+    outside: 'Auï¿½erhalb',
     other_person: 'Andere Person'
 };
 
@@ -182,7 +182,15 @@ function buildSleepTilePayload(raw) {
         leftTime: fmtTime(_bedEntryRaw != null ? _bedEntryRaw : swStart),
         leftSubEinschlaf:
             _bedEntryRaw && swStart && _bedEntryRaw < swStart - 5 * 60000 ? fmtTime(swStart) : null,
+        leftSubHint:
+            !_bedEntryRaw && swStart ? 'Ins Bett gegangen: kein plausibler Wert gefunden' : null,
         leftSource: srcDisplay.icon + ' ' + srcDisplay.label,
+        einschlafTime: fmtTime(swStart),
+        bedEntryTime: bedEntryTsVal != null ? fmtTime(bedEntryTsVal) : null,
+        sleepLatencyText: (bedEntryTsVal != null && swStart && swStart > bedEntryTsVal) ? fmtDuration(Math.round((swStart - bedEntryTsVal) / 60000)) : null,
+        aufgewachtTime: swEnd != null ? fmtTime(swEnd) : (wakeDisplayTs != null ? fmtTime(wakeDisplayTs) : '\u2014'),
+        aufstehenTime: (bedExitTs != null && swEnd != null && bedExitTs > swEnd) ? fmtTime(bedExitTs) : null,
+        wakeLatencyText: (bedExitTs != null && swEnd != null && bedExitTs > swEnd) ? fmtDuration(Math.round((bedExitTs - swEnd) / 60000)) : null,
         sleepStartOverridden: sd.sleepStartOverridden,
         score: displayScore,
         scoreRaw: scoreRaw,
@@ -209,7 +217,7 @@ function buildSleepTilePayload(raw) {
         return {
             view: 'degraded',
             header: headerCommon,
-            hint: 'Keine Vibrations-Schlafphasen — nur Zeiten (wie Admin ohne Bett-Vibration).'
+            hint: 'Keine Vibrations-Schlafphasen ï¿½ nur Zeiten (wie Admin ohne Bett-Vibration).'
         };
     }
 
@@ -272,7 +280,7 @@ function buildSleepTilePayload(raw) {
 
     const markerTitleMap = {
         bathroom: 'Bad-Besuch',
-        outside: 'Außerhalb',
+        outside: 'Auï¿½erhalb',
         other_person: 'Andere Person aktiv'
     };
 
@@ -303,10 +311,10 @@ function buildSleepTilePayload(raw) {
                     })
                     .join('\n');
         } else if (allSensors.length > 0) {
-            sensorStr = '\n  (Sensordetails werden nach Update verfügbar)';
+            sensorStr = '\n  (Sensordetails werden nach Update verfï¿½gbar)';
         }
         if (isDropout) {
-            return 'Radar-Aussetzer: ' + evt.duration + ' min (kein Außensensor bestätigt)' + sensorStr;
+            return 'Radar-Aussetzer: ' + evt.duration + ' min (kein Auï¿½ensensor bestï¿½tigt)' + sensorStr;
         }
         return (markerTitleMap[evtType] || 'Abwesenheit') + ': ' + evt.duration + ' min' + sensorStr;
     }
@@ -385,7 +393,7 @@ function buildSleepTilePayload(raw) {
                         ' (' +
                         durMin +
                         ' Min)' +
-                        (e.departureSensor ? '\n  • ' + e.departureSensor : '')
+                        (e.departureSensor ? '\n  ï¿½ ' + e.departureSensor : '')
                 };
             });
     }
@@ -458,7 +466,7 @@ function buildSleepTilePayload(raw) {
         // [OC-42b] Slots nach swEnd (Aufgewacht) bis bedExitTs -> Wachliegen-Tooltip (analog slotColor)
         if (absMs && swEnd && bedExitTs && bedExitTs > swEnd && absMs >= swEnd) {
             var _wachMin = Math.round((bedExitTs - swEnd) / 60000);
-            return 'Wachliegen: ' + fmtTime(swEnd) + '–' + fmtTime(bedExitTs) + ' (' + _wachMin + ' Min)';
+            return 'Wachliegen: ' + fmtTime(swEnd) + 'ï¿½' + fmtTime(bedExitTs) + ' (' + _wachMin + ' Min)';
         }
         return timeStr + (stageLabel[slot.s] || slot.s);
     }
@@ -551,6 +559,23 @@ function buildSleepTilePayload(raw) {
         };
     }
 
+    // [OC-SB] Shared-Bed-Overlays (schwarze Balken: 2+ Personen im Bett erkannt)
+    var sharedBedOverlays = [];
+    if (swStart && newBarTotalMs > 0 && sd.sharedBedPeriods && sd.sharedBedPeriods.length > 0) {
+        var _barBaseSB = bedEntryTsVal != null ? bedEntryTsVal : swStart;
+        sd.sharedBedPeriods.forEach(function(p) {
+            if (!p.start || !p.end || p.end <= p.start) return;
+            var _leftSB = Math.max(0, Math.min(100, ((p.start - _barBaseSB) / newBarTotalMs) * 100));
+            var _widthSB = Math.max(0.5, Math.min(100 - _leftSB, ((p.end - p.start) / newBarTotalMs) * 100));
+            var _durSB = Math.max(1, Math.round((p.end - p.start) / 60000));
+            sharedBedOverlays.push({
+                leftPct: _leftSB,
+                widthPct: _widthSB,
+                title: 'ðŸ‘¥ Zwei Personen im Bett: ' + fmtTime(p.start) + ' â€“ ' + fmtTime(p.end) + ' (' + _durSB + ' Min)'
+            });
+        });
+    }
+
     const segments = [];
     if (newBarTotalMs && newBarTotalMs > 0) {
         if (bedEntryTsVal && bedEntrySegMs > 0) {
@@ -600,7 +625,13 @@ function buildSleepTilePayload(raw) {
             wakeMin: wakeCount * 5,
             bathMin: confirmedEvts.filter(function(e){return e.type==='bathroom';}).reduce(function(a,e){return a+e.duration;},0) || 0,
             outsideMin: confirmedEvts.filter(function(e){return (e.type||'outside')!=='bathroom' && (e.type||'outside')!=='other_person';}).reduce(function(a,e){return a+e.duration;},0) || 0,
-            radarCount: radarDropoutEvts.length
+            radarCount: radarDropoutEvts.length,
+            sharedBedMin: (function() {
+                if (!sd.sharedBedPeriods || !sd.sharedBedPeriods.length) return 0;
+                return Math.round(sd.sharedBedPeriods.reduce(function(a, p) {
+                    return a + (p.end && p.start ? (p.end - p.start) / 60000 : 0);
+                }, 0));
+            })()
         },
         garminPhases:
             sd.garminDeepMin != null ||
@@ -628,7 +659,8 @@ function buildSleepTilePayload(raw) {
         hasBedAbsenceEngine: hasBedAbsenceEngine,
         bedAbsenceOverlays: bedAbsenceOverlays,
         smWakeOverlays: smWakeOverlays,
-        wachliegenOverlay: wachliegenOverlay
+        wachliegenOverlay: wachliegenOverlay,
+        sharedBedOverlays: sharedBedOverlays
     };
 }
 

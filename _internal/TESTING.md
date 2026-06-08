@@ -6,6 +6,16 @@
 
 ---
 
+## 🧪 v0.33.277 — E: Schlafkachel-Header Neugestaltung (08.06.2026)
+
+| ID | Testfall | Erwartetes Ergebnis | Geprüft am | ✅/❌ |
+|---|---|---|---|---|
+| T-K277a | Nacht mit Ins-Bett-Zeit + Einschlaf-Latenz, PWA | Links: klein "Ins Bett gegangen" HH:MM, orange Badge "↓ Xh Ymin", gross "Eingeschlafen" HH:MM. | 08.06.2026 | ⏳ |
+| T-K277b | Nacht mit physischem Aufstehen nach Aufwachen, PWA | Rechts: gross "Aufgewacht" HH:MM, orange Badge "↓ Xmin", klein "Aufstehen" HH:MM. | 08.06.2026 | ⏳ |
+| T-K277c | Gleiche Nacht im Admin HealthTab (full + degraded) | Gleiches Layout wie PWA (Parität), beide Header-Blöcke. | 08.06.2026 | ⏳ |
+| T-K277d | Ohne plausible Ins-Bett-Zeit | Links: "Ins Bett gegangen" + "kein plausibler Wert gefunden", darunter gross "Eingeschlafen". Kein Badge. | 08.06.2026 | ⏳ |
+| T-K277e | Ohne bedExitTs (kein physisches Aufstehen erkannt) | Rechts: nur gross "Aufgewacht", kein Aufstehen-Block, kein Badge. | 08.06.2026 | ⏳ |
+
 ## 🧪 v0.33.276 — OC-57 bedExitTs Walk-Through-Guard (08.06.2026)
 
 | ID | Testfall | Erwartetes Ergebnis | Geprüft am | ✅/❌ |

@@ -1580,6 +1580,8 @@ export default function HealthTab(props: any) {
         // bedEntryTs: Ins-Bett-Zeit (vor Einschlafzeit) aus Snapshot
         const _bedEntryRaw: number | null = (sd as any)?.bedEntryTs ?? null;
         const bedEntryTsVal: number | null = (_bedEntryRaw && swStart && _bedEntryRaw < swStart - 5*60000) ? _bedEntryRaw : null;
+        // [E] Dauer-Formatter fuer Latenz-Badges (Einschlaf-/Aufwach-Latenz)
+        const _fmtDur = (ms: number): string => { const m = Math.round(ms/60000); const h = Math.floor(m/60); const mm = m%60; return h > 0 ? (h + 'h ' + mm + 'min') : (mm + 'min'); };
         const bedEntrySegMs = (bedEntryTsVal && swStart) ? swStart - bedEntryTsVal : 0;
         const newBarTotalMs = (bedEntrySegMs > 0 && totalWindowMs) ? bedEntrySegMs + totalWindowMs : totalWindowMs;
         // smWakePhases: Wake-Phasen aus State Machine (OC-31 Stage 2) - als Overlay auf dem Balken (LEGACY)
@@ -1735,22 +1737,24 @@ export default function HealthTab(props: any) {
                                 {/* Degradierter View: Zeiten bekannt, aber keine Vibrationsdaten */}
                                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px'}}>
                                     <div>
-                                        <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>
-                                            {_bedEntryRaw ? 'Ins Bett gegangen' : 'Eingeschlafen'}
-                                        </div>
-                                        <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>
-                                            {fmtTime(_bedEntryRaw ?? swStart)}
-                                        </div>
-                                        {_bedEntryRaw && swStart && _bedEntryRaw < swStart - 5*60000 && (
-                                            <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
-                                                Eingeschlafen: {fmtTime(swStart)}
-                                            </div>
+                                        {/* [E] Sekundär oben: Ins Bett gegangen + Latenz-Badge; Primär: Eingeschlafen (groß) */}
+                                        {_bedEntryRaw && (
+                                            <>
+                                                <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Ins Bett gegangen</div>
+                                                <div style={{fontSize:'0.9rem', fontWeight:600, color: isDark?'#eee':'#222'}}>{fmtTime(_bedEntryRaw)}</div>
+                                                {swStart && _bedEntryRaw < swStart - 5*60000 && (
+                                                    <div style={{fontSize:'0.6rem', color:'#ff9800', border:'1px solid rgba(255,152,0,0.4)', borderRadius:'4px', padding:'1px 5px', display:'inline-block', margin:'3px 0'}}>↓ {_fmtDur(swStart - _bedEntryRaw)}</div>
+                                                )}
+                                            </>
                                         )}
                                         {!_bedEntryRaw && swStart && (
-                                            <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
-                                                Ins Bett gegangen: kein plausibler Wert gefunden
-                                            </div>
+                                            <>
+                                                <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Ins Bett gegangen</div>
+                                                <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', fontStyle:'italic', marginBottom:'3px'}}>kein plausibler Wert gefunden</div>
+                                            </>
                                         )}
+                                        <div style={{fontSize:'1.4rem', fontWeight:'bold', color: isDark?'#eee':'#222', lineHeight:'1.1'}}>{fmtTime(swStart)}</div>
+                                        <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Eingeschlafen</div>
                                         <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
                                             {srcDisplay.icon} {srcDisplay.label}
                                         </div>
@@ -1829,17 +1833,20 @@ export default function HealthTab(props: any) {
                                         {/* [OC-47c] Label-Logik: 'Aufstehen' nur wenn bedExitTs sicher nach Aufwachen liegt, sonst 'Aufgewacht'. */}
                                         {(() => {
                                             const _hasPhysicalExit = !!(bedExitTs && swEnd && bedExitTs > swEnd);
-                                            const _bigLabel = _hasPhysicalExit ? 'Aufstehen' : 'Aufgewacht';
-                                            const _bigTs    = _hasPhysicalExit ? bedExitTs   : swEnd;
                                             return (<>
-                                                <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>{_bigLabel}</div>
-                                                <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>{fmtTime(_bigTs)}</div>
+                                                {/* [E] Primär: Aufgewacht (groß); Sekundär unten: Aufstehen + Latenz-Badge */}
+                                                <div style={{fontSize:'1.4rem', fontWeight:'bold', color: isDark?'#eee':'#222', lineHeight:'1.1'}}>{fmtTime(swEnd)}</div>
+                                                <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Aufgewacht</div>
+                                                {_hasPhysicalExit && (
+                                                    <>
+                                                        <div style={{fontSize:'0.6rem', color:'#ff9800', border:'1px solid rgba(255,152,0,0.4)', borderRadius:'4px', padding:'1px 5px', display:'inline-block', margin:'3px 0'}}>↓ {_fmtDur((bedExitTs as number) - (swEnd as number))}</div>
+                                                        <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Aufstehen</div>
+                                                        <div style={{fontSize:'0.9rem', fontWeight:600, color: isDark?'#eee':'#222'}}>{fmtTime(bedExitTs)}</div>
+                                                    </>
+                                                )}
                                                 <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
                                                     {wakeDisplay.icon} {wakeDisplay.label}
                                                 </div>
-                                                {_hasPhysicalExit && (
-                                                    <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>Aufgewacht: {fmtTime(swEnd)}</div>
-                                                )}
                                             </>);
                                         })()}
                                         {wakeOverridden && (
@@ -2028,24 +2035,25 @@ export default function HealthTab(props: any) {
                         <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'10px'}}>
                             <div>
                                 {/* [OC-42b] Primär: Ins Bett gegangen (_bedEntryRaw aus Snapshot), sekundär Eingeschlafen (swStart) — nicht useState(bedEntryTs) (Namenskollision)! */}
-                                <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>
-                                    {_bedEntryRaw ? 'Ins Bett gegangen' : 'Eingeschlafen'}
-                                </div>
-                                <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>
-                                    {fmtTime(_bedEntryRaw ?? swStart)}
-                                </div>
-                                {/* Sekundärlabel: Eingeschlafen HH:MM nur wenn Bettgehzeit bekannt und deutlich vor swStart */}
-                                {_bedEntryRaw && swStart && _bedEntryRaw < swStart - 5*60000 && (
-                                    <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
-                                        Eingeschlafen: {fmtTime(swStart)}
-                                    </div>
+                                {/* [E] Sekundär oben: Ins Bett gegangen + Latenz-Badge; Primär: Eingeschlafen (groß) */}
+                                {_bedEntryRaw && (
+                                    <>
+                                        <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Ins Bett gegangen</div>
+                                        <div style={{fontSize:'0.9rem', fontWeight:600, color: isDark?'#eee':'#222'}}>{fmtTime(_bedEntryRaw)}</div>
+                                        {swStart && _bedEntryRaw < swStart - 5*60000 && (
+                                            <div style={{fontSize:'0.6rem', color:'#ff9800', border:'1px solid rgba(255,152,0,0.4)', borderRadius:'4px', padding:'1px 5px', display:'inline-block', margin:'3px 0'}}>↓ {_fmtDur(swStart - _bedEntryRaw)}</div>
+                                        )}
+                                    </>
                                 )}
                                 {/* Parität zur PWA: Hinweis wenn keine plausible Ins-Bett-Zeit gefunden */}
                                 {!_bedEntryRaw && swStart && (
-                                    <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
-                                        Ins Bett gegangen: kein plausibler Wert gefunden
-                                    </div>
+                                    <>
+                                        <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Ins Bett gegangen</div>
+                                        <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', fontStyle:'italic', marginBottom:'3px'}}>kein plausibler Wert gefunden</div>
+                                    </>
                                 )}
+                                <div style={{fontSize:'1.4rem', fontWeight:'bold', color: isDark?'#eee':'#222', lineHeight:'1.1'}}>{fmtTime(swStart)}</div>
+                                <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Eingeschlafen</div>
                                 <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}} title={'Erkennungsmethode: ' + srcDisplay.label}>
                                     {srcDisplay.icon} {srcDisplay.label}
                                 </div>
@@ -2160,18 +2168,18 @@ export default function HealthTab(props: any) {
                                 {/* [OC-47c] Label-Logik: 'Aufstehen' nur wenn bedExitTs sicher nach Aufwachen liegt, sonst 'Aufgewacht'. */}
                                 {(() => {
                                     const _hasPhysicalExit = !!(bedExitTs && swEnd && bedExitTs > swEnd);
-                                    const _bigLabel = _hasPhysicalExit ? 'Aufstehen' : 'Aufgewacht';
-                                    const _bigTs    = _hasPhysicalExit ? bedExitTs   : swEnd;
                                     return (<>
-                                        <div style={{fontSize:'0.75rem', color: isDark?'#aaa':'#666'}}>{_bigLabel}</div>
-                                        <div style={{fontSize:'1.1rem', fontWeight:'bold', color: isDark?'#eee':'#222'}}>
-                                            {wakeConfirmed ? '✓' : '⟳'} {fmtTime(_bigTs)}
+                                        {/* [E] Primär: Aufgewacht (groß); Sekundär unten: Aufstehen + Latenz-Badge */}
+                                        <div style={{fontSize:'1.4rem', fontWeight:'bold', color: isDark?'#eee':'#222', lineHeight:'1.1'}}>
+                                            {wakeConfirmed ? '✓' : '⟳'} {fmtTime(swEnd)}
                                         </div>
-                                        {/* Symmetrie-Fix: Sub-Zeit (Aufgewacht) zuerst, dann Source -> analog Links-Seite */}
+                                        <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Aufgewacht</div>
                                         {_hasPhysicalExit && (
-                                            <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', marginTop:'1px'}}>
-                                                Aufgewacht: {fmtTime(swEnd)}
-                                            </div>
+                                            <>
+                                                <div style={{fontSize:'0.6rem', color:'#ff9800', border:'1px solid rgba(255,152,0,0.4)', borderRadius:'4px', padding:'1px 5px', display:'inline-block', margin:'3px 0'}}>↓ {_fmtDur((bedExitTs as number) - (swEnd as number))}</div>
+                                                <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Aufstehen</div>
+                                                <div style={{fontSize:'0.9rem', fontWeight:600, color: isDark?'#eee':'#222'}}>{fmtTime(bedExitTs)}</div>
+                                            </>
                                         )}
                                         <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
                                             {wakeDisplay.icon} {wakeDisplay.label}

@@ -1,5 +1,35 @@
 ﻿# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 08.06.2026 | **Version:** 0.33.276
+**Letzte Aktualisierung:** 08.06.2026 | **Version:** 0.33.277
+
+---
+
+## Sitzung 08.06.2026 (abend-4) - Version 0.33.277 -- E: Schlafkachel-Header Neugestaltung
+
+### Ziel (aus Diskussion mit Nutzer)
+Garmin zeigt v.a. Eingeschlafen + Aufgewacht. Bisher waren in unserer Kachel "Ins Bett gegangen" (links)
+und "Aufstehen" (rechts) die grossen/primaeren Werte - die Hierarchie war verkehrt herum. Zudem soll der
+Mehrwert ggü. Garmin (Zeit Ins-Bett->Eingeschlafen und Aufgewacht->Aufstehen) prominenter werden.
+
+### Umsetzung (faithful zur Skizze)
+Header beider Ansichten (PWA Familienansicht + Admin HealthTab), je beide Bloecke (degraded + full):
+- PRIMAER, gross (1.4rem, bold): Eingeschlafen (links) / Aufgewacht (rechts).
+- SEKUNDAER, klein (0.9rem, 600): Ins Bett gegangen (links oben) / Aufstehen (rechts unten).
+- LATENZ-BADGE (orange, Pfeil ↓): zwischen den beiden je Seite - Einschlaf-Latenz bzw. Aufwach-Latenz (h/min).
+- Randfall ohne plausible Ins-Bett-Zeit: Label "Ins Bett gegangen" bleibt, darunter Hinweis
+  "kein plausibler Wert gefunden" (Wunsch des Nutzers, keine "?"-Uhrzeit).
+
+### Dateien
+- `src/lib/pwa_sleep_tile_build.js`: headerCommon neue Felder einschlafTime, bedEntryTime, sleepLatencyText,
+  aufgewachtTime, aufstehenTime, wakeLatencyText (fmtTime/fmtDuration, im Build-Scope vorhanden).
+- `src/lib/pwa_sleep_tile_client.js`: Header links + rechts neu gerendert.
+- `src-admin/src/components/tabs/HealthTab.tsx`: Helper `_fmtDur`; beide Header-Bloecke (degraded ~1736, full ~2030)
+  links + rechts neu strukturiert.
+- Patch-Skripte: `_patch_e_layout_pwa.js` (Build-Felder), `_patch_e_layout_client.js` (Client; LF-Erkennung gefixt).
+
+### Hinweise
+- Reiner UI-/Darstellungs-Change, keine Algorithmus-Logik beruehrt. Werte stammen weiterhin aus Snapshot
+  (bedEntryTs, sleepWindowStart/End, bedExitTs). Graceful: fehlende Werte -> Badge/Sekundaerzeile entfaellt.
+- Build prod (PWA-Tiles) + react (admin/) OK, node --check main.js OK, ReadLints HealthTab clean. Version 0.33.277.
 
 ---
 
