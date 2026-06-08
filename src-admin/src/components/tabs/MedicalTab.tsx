@@ -722,6 +722,287 @@ function ScreeningPanel({ result, isDark, enabledProfiles }: {
     );
 }
 
+
+// --- CGM + Vibration Korrelations-Panel (Forschungstool, Phase 3) -------------
+interface CgmReading { ts: number; val: number; unit?: string; trend?: string; }
+
+function PersonCgmChart({ person, readings, vibrationTs, unit, isDark }: {
+    person: string; readings: CgmReading[]; vibrationTs: number[]; unit: string; isDark: boolean;
+}) {
+    const hasData = readings.length > 0;
+    const unitLabel = unit === 'mmoll' ? 'mmol/l' : 'mg/dl';
+
+    // Zeitfenster: 20:00 Vortag bis 12:00 heute
+    const now = Date.now();
+    const todayMidnight = new Date().setHours(0, 0, 0, 0);
+    const windowStart = todayMidnight - 4 * 3600000;  // 20:00 Vortag
+    const windowEnd   = todayMidnight + 12 * 3600000; // 12:00 heute
+    const windowDur   = windowEnd - windowStart;
+
+    const wReadings   = readings.filter(r => r.ts >= windowStart && r.ts <= Math.min(windowEnd, now));
+    const wVibs       = vibrationTs.filter(ts => ts >= windowStart && ts <= Math.min(windowEnd, now));
+
+    if (!hasData || wReadings.length === 0) {
+        return (
+            <Box sx={{ mt: 1, mb: 2 }}>
+                <Typography variant="body2" fontWeight="bold" sx={{ mb: 0.5, color: isDark ? '#aaa' : '#555' }}>{person}</Typography>
+                <Alert severity="info" icon={<MonitorHeartIcon />} sx={{ py: 0.5, fontSize: '0.8rem' }}>
+                    Noch keine CGM-Daten fuer heute. Die Daten werden heute Nacht gesammelt und ab der naechsten
+                    stuendlichen Speicherung hier sichtbar.
+                </Alert>
+            </Box>
+        );
+    }
+
+    // SVG Dimensionen
+    const W = 1000, H = 220;
+    const PL = 48, PR = 16, PT = 18, PB = 28;
+    const pW = W - PL - PR, pH = H - PT - PB;
+    const G_MIN = 40, G_MAX = unit === 'mmoll' ? 22 : 300;
+    const xS = (ts: number) => PL + ((ts - windowStart) / windowDur) * pW;
+    const yS = (v: number)  => PT + pH - ((v - G_MIN) / (G_MAX - G_MIN)) * pH;
+
+    const yHypo   = yS(unit === 'mmoll' ? 3.9 : 70);
+    const yTarget = yS(unit === 'mmoll' ? 10.0 : 180);
+    const yAtRisk = yS(unit === 'mmoll' ? 5.6 : 100);
+    const yBottom = PT + pH;
+
+    const hypoThr  = unit === 'mmoll' ? 3.9  : 70;
+    const hyperThr = unit === 'mmoll' ? 10.0 : 180;
+
+    const pathD = wReadings.length > 1
+        ? wReadings.map((r, i) => `${i === 0 ? 'M' : 'L'}${xS(r.ts).toFixed(1)} ${yS(r.val).toFixed(1)}`).join(' ')
+        : '';
+
+    const hypoReadings = wReadings.filter(r => r.val < hypoThr);
+    const CORR_WIN = 15 * 60 * 1000;
+    const corrVibs = wVibs.filter(vts => hypoReadings.some(r => Math.abs(r.ts - vts) < CORR_WIN));
+
+    // Zeitlabels alle 2h
+    const tLabels: { x: number; label: string }[] = [];
+    for (let h = 0; h <= 16; h += 2) {
+        const ts = windowStart + h * 3600000;
+        const d  = new Date(ts);
+        tLabels.push({ x: xS(ts), label: `${d.getHours()}:00` });
+    }
+    const yAxisVals = unit === 'mmoll' ? [4, 6, 8, 10, 14, 18] : [70, 100, 140, 180, 240, 300];
+
+    const minVal  = Math.min(...wReadings.map(r => r.val));
+    const maxVal  = Math.max(...wReadings.map(r => r.val));
+    const avgVal  = wReadings.reduce((s, r) => s + r.val, 0) / wReadings.length;
+    const inRange = wReadings.filter(r => r.val >= hypoThr && r.val <= hyperThr).length;
+    const irPct   = Math.round((inRange / wReadings.length) * 100);
+
+    return (
+        <Box sx={{ mt: 1.5, mb: 2 }}>
+            {/* Metriken-Chips */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mb: 1, flexWrap: 'wrap' }}>
+                <Typography variant="body2" fontWeight="bold" sx={{ mr: 0.5 }}>{person}</Typography>
+                <Chip size="small" label={`Ø ${avgVal.toFixed(unit === 'mmoll' ? 1 : 0)} ${unitLabel}`} sx={{ bgcolor: '#2196f320', color: '#2196f3', fontSize: '0.68rem' }} />
+                <Chip size="small" label={`Min: ${minVal.toFixed(unit === 'mmoll' ? 1 : 0)}`} sx={{ bgcolor: '#4caf5020', color: '#4caf50', fontSize: '0.68rem' }} />
+                <Chip size="small" label={`Max: ${maxVal.toFixed(unit === 'mmoll' ? 1 : 0)}`} sx={{ bgcolor: '#ff980020', color: '#ff9800', fontSize: '0.68rem' }} />
+                <Chip size="small" label={`${irPct}% Zielbereich`} sx={{ bgcolor: '#4caf5020', color: '#4caf50', fontSize: '0.68rem' }} />
+                {hypoReadings.length > 0 && (
+                    <Chip size="small" label={`${hypoReadings.length}\u00d7 Hypo`}
+                        sx={{ bgcolor: '#f4433625', color: '#f44336', fontSize: '0.68rem', fontWeight: 'bold' }} />
+                )}
+                <Typography variant="caption" color="text.secondary">{wReadings.length} Messwerte</Typography>
+            </Box>
+
+            {/* SVG-Timeline */}
+            <Box sx={{ width: '100%', overflow: 'hidden', borderRadius: 1, border: `1px solid ${isDark ? '#2a2a2a' : '#ddd'}` }}>
+                <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+                    {/* Hintergrund */}
+                    <rect x={PL} y={PT} width={pW} height={pH} fill={isDark ? '#0d1117' : '#fafffe'} />
+                    {/* Nacht-Bereich 22:00-06:00 */}
+                    <rect x={xS(windowStart + 2 * 3600000)} y={PT} width={xS(windowStart + 10 * 3600000) - xS(windowStart + 2 * 3600000)} height={pH} fill={isDark ? '#ffffff06' : '#00000006'} />
+                    {/* Hypo-Zone */}
+                    <rect x={PL} y={yHypo} width={pW} height={yBottom - yHypo} fill="#f4433615" />
+                    {/* Zielbereich 70-180 */}
+                    <rect x={PL} y={yTarget} width={pW} height={yHypo - yTarget} fill="#4caf5008" />
+                    {/* Schwellenlinien */}
+                    <line x1={PL} y1={yHypo}   x2={PL + pW} y2={yHypo}   stroke="#f44336" strokeWidth={1}   strokeDasharray="5,3" opacity={0.7} />
+                    <line x1={PL} y1={yTarget}  x2={PL + pW} y2={yTarget} stroke="#ff9800" strokeWidth={0.6} strokeDasharray="4,4" opacity={0.5} />
+                    <line x1={PL} y1={yAtRisk}  x2={PL + pW} y2={yAtRisk} stroke="#ff9800" strokeWidth={0.4} strokeDasharray="2,4" opacity={0.35} />
+                    {/* Y-Gitter */}
+                    {yAxisVals.map(v => (
+                        <g key={v}>
+                            <line x1={PL} y1={yS(v)} x2={PL + pW} y2={yS(v)} stroke={isDark ? '#ffffff12' : '#00000010'} strokeWidth={0.5} />
+                            <text x={PL - 3} y={yS(v) + 4} textAnchor="end" fontSize={9} fill={isDark ? '#666' : '#888'}>{v}</text>
+                        </g>
+                    ))}
+                    {/* Vibrations-Events */}
+                    {wVibs.map((vts, i) => {
+                        const xv = xS(vts);
+                        const isCorr = corrVibs.includes(vts);
+                        return (
+                            <line key={i} x1={xv} y1={PT} x2={xv} y2={yBottom}
+                                stroke={isCorr ? '#f44336' : '#2196f3'}
+                                strokeWidth={isCorr ? 1.8 : 0.9}
+                                opacity={isCorr ? 0.75 : 0.35}
+                                strokeDasharray={isCorr ? undefined : '2,3'}
+                            />
+                        );
+                    })}
+                    {/* Glukose-Linie */}
+                    {pathD && <path d={pathD} fill="none" stroke="#4caf50" strokeWidth={2.2} strokeLinejoin="round" strokeLinecap="round" />}
+                    {/* Glukose-Punkte */}
+                    {wReadings.map((r, i) => (
+                        <circle key={i} cx={xS(r.ts)} cy={yS(r.val)} r={r.val < hypoThr ? 4.5 : r.val > hyperThr ? 3.5 : 2.5}
+                            fill={r.val < hypoThr ? '#f44336' : r.val > hyperThr ? '#ff9800' : '#4caf50'} opacity={0.9} />
+                    ))}
+                    {/* Hypo-Label */}
+                    <text x={PL + 4} y={yHypo - 3} fontSize={9} fill="#f44336" opacity={0.85}>Hypo</text>
+                    {/* X-Achse */}
+                    {tLabels.map(({ x, label }) => (
+                        <g key={label}>
+                            <line x1={x} y1={yBottom} x2={x} y2={yBottom + 4} stroke={isDark ? '#444' : '#bbb'} strokeWidth={0.8} />
+                            <text x={x} y={yBottom + 13} textAnchor="middle" fontSize={9} fill={isDark ? '#666' : '#999'}>{label}</text>
+                        </g>
+                    ))}
+                    {/* Y-Achsen-Label */}
+                    <text x={10} y={PT + pH / 2 + 4} textAnchor="middle" fontSize={9} fill={isDark ? '#666' : '#999'}
+                        transform={`rotate(-90,10,${PT + pH / 2 + 4})`}>{unitLabel}</text>
+                    {/* Rahmen */}
+                    <rect x={PL} y={PT} width={pW} height={pH} fill="none" stroke={isDark ? '#2a2a2a' : '#ccc'} strokeWidth={0.8} />
+                </svg>
+            </Box>
+
+            {/* Legende */}
+            <Box sx={{ display: 'flex', gap: 2, mt: 0.5, flexWrap: 'wrap', pl: 0.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{ width: 18, height: 3, bgcolor: '#4caf50', borderRadius: 2 }} />
+                    <Typography variant="caption" color="text.secondary">Glukose</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{ width: 2, height: 14, bgcolor: '#2196f380' }} />
+                    <Typography variant="caption" color="text.secondary">Vibration (Bett)</Typography>
+                </Box>
+                {corrVibs.length > 0 && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Box sx={{ width: 2, height: 14, bgcolor: '#f44336' }} />
+                        <Typography variant="caption" sx={{ color: '#f44336', fontWeight: 'bold' }}>
+                            Vibration bei Hypo (\u00b115 min)
+                        </Typography>
+                    </Box>
+                )}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{ width: 14, height: 8, bgcolor: '#f4433615', border: '1px solid #f4433640' }} />
+                    <Typography variant="caption" color="text.secondary">Hypo-Zone</Typography>
+                </Box>
+            </Box>
+
+            {/* Korrelations-Zusammenfassung */}
+            {hypoReadings.length > 0 && (
+                <Alert severity={corrVibs.length > 0 ? 'warning' : 'info'} sx={{ mt: 1.5, py: 0.5, fontSize: '0.82rem' }}>
+                    <strong>{hypoReadings.length} Hypo-Episode{hypoReadings.length > 1 ? 'n' : ''}</strong> erkannt.{' '}
+                    {corrVibs.length > 0
+                        ? `Bei ${corrVibs.length} davon trat eine Bett-Bewegung im \u00b115-min-Fenster auf \u2014 m\u00f6gliche Korrelation.`
+                        : 'Keine Bett-Bewegung im \u00b115-min-Fenster \u2014 kein direktes Signal.'}
+                </Alert>
+            )}
+            {hypoReadings.length === 0 && wReadings.length > 0 && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, pl: 0.5 }}>
+                    Keine Hypoglyk\u00e4mie in diesem Zeitfenster. Bett-Bewegungen: {wVibs.length}.
+                </Typography>
+            )}
+        </Box>
+    );
+}
+
+function CgmCorrelationPanel({ socket, adapterName, instance, native, isDark }: {
+    socket: any; adapterName: string; instance: number; native: Record<string, any>; isDark: boolean;
+}) {
+    const [cgmData, setCgmData]     = useState<Record<string, CgmReading[]>>({});
+    const [vibTs, setVibTs]         = useState<number[]>([]);
+    const [loading, setLoading]     = useState(true);
+    const [dateLabel, setDateLabel] = useState('');
+
+    useEffect(() => {
+        const fmt = (d: Date) =>
+            `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const today     = new Date();
+        const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+        const todayStr  = fmt(today);
+        const yestStr   = fmt(yesterday);
+        setDateLabel(todayStr);
+
+        Promise.all([
+            socket.sendTo(`${adapterName}.${instance}`, 'getHistoryData', { date: todayStr,  _t: Date.now() }).catch(() => null),
+            socket.sendTo(`${adapterName}.${instance}`, 'getHistoryData', { date: yestStr,   _t: Date.now() }).catch(() => null),
+        ]).then(([todayData, yestData]: [any, any]) => {
+            // CGM-Readings zusammenfuehren (gestern 20:00+ + heute)
+            const merged: Record<string, CgmReading[]> = {};
+            const cutoff = new Date().setHours(0,0,0,0) - 4 * 3600000; // 20:00 Vortag
+            for (const data of [yestData, todayData]) {
+                if (!data?.cgmReadings) continue;
+                for (const [p, rList] of Object.entries(data.cgmReadings as Record<string, CgmReading[]>)) {
+                    if (!merged[p]) merged[p] = [];
+                    merged[p].push(...(rList as CgmReading[]).filter(r => r.ts >= cutoff));
+                }
+            }
+            // Deduplizieren + sortieren
+            for (const p of Object.keys(merged)) {
+                const seen = new Set<number>();
+                merged[p] = merged[p]
+                    .filter(r => { if (seen.has(r.ts)) return false; seen.add(r.ts); return true; })
+                    .sort((a, b) => a.ts - b.ts);
+            }
+            const allVibs: number[] = [
+                ...((todayData?.nightVibrationTimestamps as number[]) || []),
+                ...((yestData?.nightVibrationTimestamps  as number[]) || []),
+            ].filter((v, i, arr) => arr.indexOf(v) === i).sort((a, b) => a - b);
+
+            setCgmData(merged);
+            setVibTs(allVibs);
+            setLoading(false);
+        });
+    }, [socket, adapterName, instance]);
+
+    const cgmAssign   = (native?.cgmPersonAssignment || {}) as Record<string, any>;
+    const cfgPersons  = Object.keys(cgmAssign).filter(p => cgmAssign[p]?.glucoseStateId);
+
+    if (cfgPersons.length === 0) return null; // kein CGM konfiguriert -> kein Panel
+
+    return (
+        <Paper variant="outlined" sx={{ p: 2.5, mt: 2.5, bgcolor: isDark ? '#0a120a' : '#f5fff5', borderColor: '#4caf5035' }}>
+            {/* Header */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
+                <MonitorHeartIcon sx={{ color: '#f44336', fontSize: 20 }} />
+                <Typography variant="subtitle1" fontWeight="bold">CGM \u2194 Bett-Vibration Korrelation</Typography>
+                <Chip size="small" label="Forschungstool" sx={{ bgcolor: '#9c27b018', color: '#9c27b0', border: '1px solid #9c27b030', fontSize: '0.65rem' }} />
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+                Ziel: Nachweis einer Korrelation zwischen Blutglukoseverlauf und Bett-Bewegung.
+                Gr\u00fcne Linie = Glukose \u00b7 Blaue Balken = Vibrations-Events \u00b7 Rote Balken = Vibration bei Hypo-Zeitfenster.
+            </Typography>
+
+            {loading ? (
+                <Box sx={{ py: 1 }}>
+                    <LinearProgress sx={{ borderRadius: 2 }} />
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>Lade Tagesdaten ({dateLabel})...</Typography>
+                </Box>
+            ) : (
+                cfgPersons.map(person => (
+                    <PersonCgmChart
+                        key={person}
+                        person={person}
+                        readings={cgmData[person] || []}
+                        vibrationTs={vibTs}
+                        unit={cgmAssign[person]?.unit || 'mgdl'}
+                        isDark={isDark}
+                    />
+                ))
+            )}
+
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, fontStyle: 'italic', fontSize: '0.65rem' }}>
+                Kein klinisches Diagnose-System. Die Korrelationsanalyse dient ausschlie\u00dflich Forschungszwecken.
+                Daten-Basis: Nightscout CGM-Integration + AURA Vibrationssensor (personTag-Zuweisung).
+            </Typography>
+        </Paper>
+    );
+}
+
 // --- Welcome Screen (kein Profil ausgewaehlt) ---------------------------------
 function WelcomeScreen({ isDark }: { isDark: boolean }) {
     return (
@@ -904,12 +1185,23 @@ export default function MedicalTab({ socket, adapterName, instance, theme, theme
                 )}
                 {selectedProfileId !== 'screening' && !selectedProfile && <WelcomeScreen isDark={isDark} />}
                 {selectedProfileId !== 'screening' && selectedProfile && selectedValidation && (
-                    <DiseaseDashboard
-                        profile={selectedProfile}
-                        validation={selectedValidation}
-                        isDark={isDark}
-                        diseaseScore={selectedProfileId ? (diseaseScores[selectedProfileId] ?? null) : null}
-                    />
+                    <>
+                        <DiseaseDashboard
+                            profile={selectedProfile}
+                            validation={selectedValidation}
+                            isDark={isDark}
+                            diseaseScore={selectedProfileId ? (diseaseScores[selectedProfileId] ?? null) : null}
+                        />
+                        {selectedProfileId === 'diabetes1' && (
+                            <CgmCorrelationPanel
+                                socket={socket}
+                                adapterName={adapterName}
+                                instance={instance}
+                                native={native}
+                                isDark={isDark}
+                            />
+                        )}
+                    </>
                 )}
             </Box>
         </Box>
