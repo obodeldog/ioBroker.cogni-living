@@ -2359,6 +2359,9 @@ class CogniLiving extends utils.Adapter {
             // in entfernten Raeumen (Hop >= 2 vom Schlafzimmer) stattfanden = Pre-Sleep-Touch.
             // OC-46 (lange Einschlaf-Latenz, Person liegt ruhig) bleibt korrekt: kein Gegenbeleg -> frueh behalten.
             // Funktioniert ohne FP2, ohne Topologie, mit allen Sensor-Konfigurationen.
+            // [OC-24-OC48-Fix] Noisy-Sensoren (zu-sensibel-Bewegungsmelder) aus Gegenbeleg-Pruefung ausschliessen.
+            // Sie feuern auch wenn niemand im Raum ist und wuerden sonst korrekte bedEntryTs verwerfen.
+            var _oc48NoisyIds = (this._noisySensorIds && this._noisySensorIds.size > 0) ? this._noisySensorIds : new Set();
             var _oc48BedLocs = (this.config.devices || [])
                 .filter(function(d) { return d.sensorFunction === 'bed' || d.isBedroomMotion || d.isFP2Bed || d.isVibrationBed; })
                 .map(function(d) { return d.location; })
@@ -2381,6 +2384,7 @@ class CogniLiving extends utils.Adapter {
                     if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed || e.isBathroomSensor) return false;
                     if (e.type !== 'motion' && e.type !== 'presence_radar_bool' && e.type !== 'presence_radar_count') return false;
                     if (!isActiveValue(e.value)) return false;
+                    if (_oc48NoisyIds.has(e.id)) return false; // [OC-24-OC48-Fix] Noisy-Sensor = kein Gegenbeleg
                     if (_oc48HopFn && _oc48BedLocs.length > 0 && e.location) {
                         var _minH = _oc48BedLocs.reduce(function(m, bl) {
                             var h = _oc48HopFn(e.location, bl);
@@ -2481,6 +2485,7 @@ class CogniLiving extends utils.Adapter {
                     if (e.isBedroomMotion || e.isFP2Bed || e.isVibrationBed || e.isBathroomSensor) return false;
                     if (e.type !== 'motion' && e.type !== 'presence_radar_bool' && e.type !== 'presence_radar_count') return false;
                     if (!isActiveValue(e.value)) return false;
+                    if (_oc48NoisyIds.has(e.id)) return false; // [OC-24-OC48-Fix] Noisy-Sensor = kein Sustained-Absence-Beweis
                     if (_oc48HopFn && _oc48BedLocs.length > 0 && e.location) {
                         var _mh = _oc48BedLocs.reduce(function(m, bl) { var h = _oc48HopFn(e.location, bl); return (h >= 0 && h < m) ? h : m; }, 999);
                         return _mh >= 2;

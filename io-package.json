@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "cogni-living",
-        "version": "0.33.273",
+        "version": "0.33.274",
         "news": {
             "0": {
                 "version": "0.33.212",
@@ -17,6 +17,9 @@
                     "[Fix OC-7] Multi-Person-Motion-Only: sleepWindowEnd aus per-Person-Wakezeiten ableiten (Balken + Dreiecke fuer Haushalte ohne FP2/Garmin)",
                     "[Fix OC-7] Invertiertes sleepWindowStart korrigieren wenn Abendberechnung heutigen Start schreibt"
                 ]
+            },
+            "0.33.274": {
+                "de": "v0.33.274: Bugfix OC-24-OC48: Noisy-Sensoren werden aus OC-48/OC-48c Gegenbeleg-Pruefung ausgeschlossen - verhindert faelschliches Verwerfen von bedEntryTs durch zu-sensible Bewegungsmelder"
             },
             "0.33.273": {
                 "de": "v0.33.273: Szenario-3 (geteiltes Schlafzimmer): automatische Erkennung per personTag+Location, Nykturie-Doppelzaehlungs-Fix (Vib-Tiebreaker)"
