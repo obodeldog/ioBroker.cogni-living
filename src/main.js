@@ -3106,6 +3106,35 @@ class CogniLiving extends utils.Adapter {
                     _existingSnap.bedExitTs > _oc45aAnchor && _existingSnap.bedExitTs <= _oc45aCap) {
                     bedExitTs = _existingSnap.bedExitTs; _bedExitSrc = 'snapshot';
                 }
+                // [OC-57] Walk-Through-Guard: bedExitTs nicht spaeter als letzter echter Matratzen-Kontakt,
+                // wenn Person danach nachweislich ausserhalb des Schlafzimmers aktiv war und kein FP2 bestaetigt.
+                // Graceful: ohne Vibrationssensor ODER mit FP2 -> kein Eingriff. Stilles Liegen -> kein Eingriff.
+                if (bedExitTs && !_oc45aHasFp2) {
+                    var _oc57VibTs = [];
+                    for (var _o57i = 0; _o57i < _oc49VibTrigs.length; _o57i++) _oc57VibTs.push(_oc49VibTrigs[_o57i].timestamp || 0);
+                    for (var _o57s = 0; _o57s < _oc49VibStrs.length; _o57s++) { if ((Number(_oc49VibStrs[_o57s].value) || 0) >= 10) _oc57VibTs.push(_oc49VibStrs[_o57s].timestamp || 0); }
+                    if (_oc57VibTs.length > 0) {
+                        var _oc57LastVib = Math.max.apply(null, _oc57VibTs);
+                        if (bedExitTs > _oc57LastVib + 5 * 60000) {
+                            var _oc57Outside = _oc45aPwEvts.filter(function(e) {
+                                var _ts57 = e.timestamp || 0;
+                                if (_ts57 <= _oc57LastVib || _ts57 >= bedExitTs) return false;
+                                if (e.type !== 'motion') return false;
+                                if (!_oc45aIsTrue(e.value)) return false;
+                                return !(_oc45aBedroomLocs.size > 0 && _oc45aBedroomLocs.has(e.location || ''));
+                            });
+                            var _oc57Span = 0;
+                            if (_oc57Outside.length > 0) {
+                                var _oc57Ts = _oc57Outside.map(function(e) { return e.timestamp || 0; });
+                                _oc57Span = Math.max.apply(null, _oc57Ts) - Math.min.apply(null, _oc57Ts);
+                            }
+                            if (_oc57Outside.length >= 3 && _oc57Span >= 20 * 60000) {
+                                this.log.info('[OC-57] bedExitTs Walk-Through-Guard: ' + new Date(bedExitTs).toLocaleTimeString() + ' -> ' + new Date(_oc57LastVib).toLocaleTimeString() + ' (letzter Matratzen-Kontakt; danach ' + _oc57Outside.length + ' Ausser-Schlafzimmer-Events ueber ' + Math.round(_oc57Span / 60000) + 'min)');
+                                bedExitTs = _oc57LastVib; _bedExitSrc = 'oc57_vib_cap';
+                            }
+                        }
+                    }
+                }
                 if (bedExitTs) this.log.info('[OC-45a] bedExitTs: ' + new Date(bedExitTs).toLocaleTimeString() + ' (' + _bedExitSrc + ')');
             }
             // [OC-45d] POST_WAKE phase complete + DAY phase

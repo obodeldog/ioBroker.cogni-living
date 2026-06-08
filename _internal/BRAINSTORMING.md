@@ -7,6 +7,210 @@ Neue offene Konzepte immer OBEN in den Abschnitt "🚧 OFFENE KONZEPTE" einfüge
 
 ---
 
+## 🚧 OC-56: "Ins Bett gegangen" (erster Bettkontakt) + Vor-Schlaf-Abwesenheit im Balken (08.06.2026)
+
+> **Status:** KONZEPT — noch NICHT implementiert. Bewusst zurückgestellt (Hochrisiko, berührt
+> Kandidatenlogik UND Balken-Rendering gleichzeitig). Erst nach expliziter Freigabe umsetzen.
+> **Auslöser:** Nacht 08.06.2026 — `bedEntryTs=null`, Nutzer wollte "Ins Bett gegangen ~23:00" sehen.
+
+### 0. Worum geht es (in einem Satz)
+Heute erkennt das System nur Varianten von "**ging still / eingeschlafen**". Es gibt KEINEN Kandidaten
+für "**erster Bettkontakt des Abends**" (= die Zeit, die der Nutzer als "Ins Bett gegangen" versteht).
+Dieses Konzept fügt diesen Kandidaten hinzu UND macht den nächtlichen Wohnzimmer-Ausflug im Balken
+als Abwesenheit sichtbar — statt einen falschen langen "Wachliegen"-Balken zu zeichnen oder `null` zu liefern.
+
+### 1. Forensische Faktenlage Nacht 08.06.2026 (aus Rohdaten verifiziert — NICHT raten)
+
+**Quelle:** `2026-06-07_1.json` (Abend, eventHistory 2473 Events, endet 23:59:09) + `2026-06-08.json`
+(eventHistory 996 Events ab 00:00:09, Snapshot auf "heute" gefiltert).
+
+Bett-Vibrationen am Abend (alle Zeiten Europe/Berlin):
+```
+22:47:47  erste Vibration (Nutzer legt sich hin)  ← DAS ist "Ins Bett gegangen"
+22:47–00:19  durchgehend unruhig, größte Lücke nur ~15 min (23:08→23:24)
+             → KEINE 20-min-Stille in diesem Fenster (Nutzer war wach, konnte nicht schlafen)
+00:19:16  letzte Vibration (str 49) ... danach 44 min Stille
+00:23–01:02  Wohnzimmer-PIR (13+ Events) = ECHTER Aufenthalt (vom Nutzer bestätigt)
+01:03:35  Vibration Schlafzimmer (Rückkehr ins Bett)
+01:20–01:29  weitere Vibrationen (Einrichten)
+01:30     Garmin: eingeschlafen
+```
+
+`allSleepStartSources` dieser Nacht: `vib_refined=00:19`, `motion(_vib)=02:25`, `haus_still=22:48`,
+`garmin=01:30`, `fixed=20:00`. **Kein** 22:47/23:00-Kandidat vorhanden.
+
+**Warum `vib_refined=00:19`:** Definition = "erste Bett-Vibration, auf die ≥20 min Stille folgt".
+Die erste 20-min-Stille trat erst nach 00:19 auf — weil der Nutzer da AUFSTAND (Wohnzimmer), NICHT
+weil er einschlief. Der Algorithmus kann "still = eingeschlafen" vs. "still = Bett verlassen" aus
+Vibration allein nicht unterscheiden. → **Der Algorithmus arbeitet korrekt nach seiner Definition.**
+
+### 2. Historischer Kontext (NICHT erneut umdrehen!)
+- **v0.33.150 (16.04.2026):** Alle 4 Vib-Verfeinerungs-Algorithmen (`fp2_vib`, `motion_vib`,
+  `vib_refined`, `_pVibRefine`) wurden von **rückwärts → vorwärts** umgestellt. Grund: Rückwärts +
+  `Date.now()`-Fallback gab falsche **späte** Zeiten (01:11 statt 22:39).
+  ⚠️ **NICHT wieder auf rückwärts stellen** — das öffnet exakt diesen Bug wieder.
+- Die **Aufwach**-Erkennung (`motion_vib` als Wake-Quelle) nutzt bewusst **rückwärts (letztes Event)**
+  (verhindert dass 04:11-Toilettengang als Aufwachzeit gilt). Andere Stelle, nicht verwechseln.
+
+### 3. Begriffsklärung (im Code + UI konsequent trennen!)
+| Begriff | Bedeutung | Beispielnacht | aktueller Code |
+|---|---|---|---|
+| **Ins Bett gegangen** (`bedEntryTs`) | erster Bettkontakt des Abends | 22:47 | wird NICHT sauber erkannt |
+| **Eingeschlafen** (`sleepWindowStart`) | erste echte Schlafphase | 01:30 | `vib_refined`/garmin etc. |
+| **Aufgewacht** (`sleepWindowEnd`) | Ende Schlaf | 06:30 | garmin/vib/motion |
+| **Aufstehen** (`bedExitTs`) | endgültiges Bett-Verlassen | ~06:39 | OC-45a State-Machine |
+
+### 4. Das Kern-Hindernis: die OC-48c-Wand
+Selbst MIT einem 22:47-Kandidaten würde er für diese Nacht **verworfen**, weil OC-48c einen frühen
+`bedEntryTs` ablehnt, wenn dazwischen ein ≥30-min-Block außerhalb des Schlafzimmers liegt
+(hier: Wohnzimmer 00:23–01:02 = 39 min). OC-48c existiert genau, um einen **falschen langen
+Wachliegen-Balken** zu verhindern (Phantom-Wachliegen, dokumentiert OC-48c, v0.33.267).
+
+→ "Ins Bett 22:47 anzeigen" UND "keinen falschen 2,5h-Wachliegen-Balken zeichnen" sind im
+aktuellen Balkenmodell ein **Widerspruch**. Auflösung nur durch: früher Bettkontakt erlaubt,
+ABER der Ausflug wird als **Abwesenheit** im Balken gerendert (nicht als Wachliegen).
+
+### 5. Schrittweises Umsetzungskonzept (3 Stufen — EINZELN bauen + testen)
+
+#### STUFE 1 — Neuer Kandidat `bed_first_contact` (nur Datenfeld, noch KEINE Anzeige-Änderung)
+**Ziel:** Erstkontakt erkennen, ohne irgendetwas Sichtbares zu ändern (reines Logging/Feld).
+
+- **Ort:** `computePersonSleep` in `src/main.js`, im Block wo `candVibRefined` etc. berechnet werden
+  (aktuell ~Z188–239). Neuen IIFE `candBedFirstContact` ergänzen.
+- **Definition:**
+  - Filter: `isMine(e) && e.isVibrationBed && (isActiveValue(e.value) || toPersonCount(e.value)>0)`,
+    Stunden `hr >= 21 || hr < 4` (identisch zu `vib_refined`-Fenster).
+  - Sortierung aufsteigend.
+  - **Cluster-Schutz (PFLICHT gegen Streuvibration):** Erstes Event nur akzeptieren, wenn innerhalb
+    der nächsten **10 min mindestens 1 weiteres** Bett-Vib-Event folgt (= echtes Hinlegen, nicht
+    "kurz auf Bettkante gesessen" / "Bett gemacht 20:00"). Ideal sogar ≥2 weitere in 15 min.
+  - Rückgabe: Timestamp des ersten Events des ersten gültigen Clusters (hier: 22:47).
+- **Nebenwirkungs-Schutz:**
+  - FP2/Radar-Haushalt: FP2-Bettkontakt bleibt Vorrang (neuer Kandidat NUR genutzt wenn kein
+    fp2/fp2_vib-Bettkontakt vorliegt). 
+  - PIR-only: keine Bett-Vib → Kandidat = null → kein Effekt (graceful).
+  - Mehrpersonen: `isMine`/`personTag`-Filter MUSS aktiv sein (Partner-Vibration nicht zuordnen).
+- **NICHT in `allSleepStartSources` als Einschlaf-Quelle aufnehmen** — das ist eine BETT-Zeit, keine
+  Schlafzeit. Separat führen (z.B. `_bedFirstContactTs`), damit Einschlaf-Logik unberührt bleibt.
+- **Test Stufe 1:** Log-Ausgabe prüfen über mehrere Nächte (auch FP2-, PIR-only-, Mehrpersonen-
+  Nächte): liefert der Kandidat plausible Erstkontakt-Zeiten? Noch KEINE UI-Änderung deployen.
+
+#### STUFE 2 — `bedEntryTs`-Ableitung + OC-48c-Lockerung (kontrolliert)
+**Ziel:** `bedEntryTs` darf der frühe Erstkontakt sein, OHNE Phantom-Wachliegen zu erzeugen.
+
+- **Neue `bedEntryTs`-Quelle:** Wenn `_bedFirstContactTs` existiert und früher als der bisherige
+  `bedEntryTs`-Kandidat ist → als `bedEntryTs` verwenden, Quelle z.B. `bed_first_contact`.
+- **OC-48c-Anpassung (heikelster Teil):** OC-48c soll einen frühen `bedEntryTs` NICHT mehr komplett
+  verwerfen (→ null), sondern:
+  - **wenn** zwischen `bedEntryTs` und `sleepWindowStart` ein ≥30-min-Außerhalb-Block existiert,
+  - **dann** `bedEntryTs` BEHALTEN, aber den Block als **Vor-Schlaf-Abwesenheit** markieren
+    (neues Feld, z.B. `preSleepAbsenceEvents[]`), damit Stufe 3 ihn im Balken zeichnen kann.
+  - **Voraussetzung:** Der Block muss als echte Abwesenheit belegt sein (Far-Room/Bad-PIR, Hop≥2),
+    nicht durch Noisy-Sensoren (OC-24 berücksichtigen — aber NICHT pauschal ausschließen, siehe
+    Lehre aus v0.33.274-Revert: echte Präsenz darf nicht ausgeblendet werden).
+- **Fallback-Garantie:** Wenn KEIN Far-Block dazwischen liegt (Normalnacht: hinlegen → einschlafen),
+  bleibt das Verhalten 1:1 wie heute. OC-46 (ruhiges Wachliegen) unverändert.
+- **Risiko-Register-Pflicht:** OC-48c ist Hochrisiko-Shared-Variable (`bedEntryTs`). Vor Umsetzung
+  OC_REGISTER prüfen: OC-46, OC-48, OC-48c, Frontend-Balken, computePersonSleep.
+- **Test Stufe 2:** Drei Nacht-Typen verifizieren:
+  1. Normalnacht (hinlegen→schlafen): bedEntryTs unverändert, kein Phantom-Balken.
+  2. Nacht mit echtem Ausflug (wie 08.06.): bedEntryTs=22:47, Block als preSleepAbsence markiert.
+  3. PIR-only / kein Vibrationssensor: keine Änderung.
+
+#### STUFE 3 — Balken: Vor-Schlaf-Abwesenheit rendern (PWA + Admin)
+**Ziel:** Der Abschnitt `bedEntryTs → sleepWindowStart` zeigt den Ausflug als Abwesenheit
+(schraffiert/grau, wie `bedAbsenceOverlays` im Schlafbereich), NICHT als gelbes Wachliegen.
+
+- **Backend:** `pwa_sleep_tile_build.js` — `preSleepAbsenceEvents` in das View-Model übernehmen
+  (analog zu `bedAbsenceOverlays`: leftPct/widthPct/title/confidence). Der Vor-Schlaf-Balkenbereich
+  (heute "Ins Bett / Wachliegen"-Segment, ~Z575–580) muss die Abwesenheit ausstanzen.
+- **PWA-Client:** `pwa_sleep_tile_client.js` — schraffierte Overlays auch im Vor-Schlaf-Bereich
+  zeichnen (Rendering-Code für `bedAbsenceOverlays` existiert bereits, ~Z206ff — wiederverwenden).
+- **Admin:** `HealthTab.tsx` — gleiche Overlays im Vor-Schlaf-Segment (Parität).
+- **Tooltip:** "Außerhalb des Bettes (Wohnzimmer) 00:23–01:02" statt "Wachliegen".
+- **Test Stufe 3:** Balken zeigt: 22:47 Bettkontakt → kurzes Wachliegen → Abwesenheit (schraffiert)
+  00:23–01:02 → Rückkehr → Einschlafen 01:30. Legende/Tooltip korrekt.
+
+### 6. Nebenwirkungs-Matrix (Gesamtkonzept) — vor JEDER Stufe erneut prüfen
+| Setup | Stufe 1 | Stufe 2 | Stufe 3 |
+|---|---|---|---|
+| FP2/Radar vorhanden | kein Effekt (FP2 Vorrang) | kein Effekt | kein Effekt |
+| Nur PIR (keine Vibration) | Kandidat null | kein Effekt | kein Effekt |
+| Vibrationssensor (Standard) | neuer Erstkontakt-Wert | früheres bedEntryTs + Absence-Flag | Abwesenheit sichtbar |
+| Mehrpersonen geteiltes Bett | personTag-Filter Pflicht | personTag-Filter Pflicht | pro Person rendern |
+| Normalnacht (hinlegen→schlafen) | Kandidat = Einschlaf-nah | bedEntryTs wie heute | kein neues Overlay |
+
+### 7. Bewusste Nicht-Ziele (Scope-Grenze)
+- KEINE Shelly-Offline-Sondererkennung (separates Thema; MQTT liefert keinen Heartbeat).
+- KEINE Umstellung der Einschlaf-Erkennung (`sleepWindowStart` bleibt wie heute).
+- KEINE Rückwärts-Suche wieder einführen (v0.33.150-Bug).
+
+### 8. Definition of Done
+- [ ] Stufe 1 über ≥3 reale Nächte geloggt, plausibel, kein UI-Effekt.
+- [ ] Stufe 2: 3 Nacht-Typen verifiziert, OC_REGISTER aktualisiert (neue Quelle + preSleepAbsence).
+- [ ] Stufe 3: Balken PWA+Admin identisch, Tooltip/Legende korrekt.
+- [ ] HANDBUCH (Algorithmus-Tabellen + Kachel-Tooltips) + TESTING (T-Fälle je Stufe) gepflegt.
+- [ ] Graceful Degradation für alle 5 Setups bestätigt.
+
+---
+
+## 🚧 OC-45: Sleep-Cycle State Machine — Architektur-Roadmap (07.05.2026)
+
+### Hintergrund (Diagnose aus 07.05.2026)
+`bedExitTs` wird aktuell durch eine statische Fallback-Kette (OC-42) berechnet:
+FP2-firstEmpty (≥15 Min) → vibration_alone → SM-Wake-Phase → Snapshot.
+Problem: Die 15-Min-Schwelle ist für nächtliche Nykturie-Trips korrekt, aber nach dem
+Aufwachen (post-sleepWindowEnd) zu konservativ. Kurze "Walk-Throughs" (Person geht
+durch Schlafzimmer nach Dusche) werden als "Rückkehr ins Bett" gewertet und verzögern
+bedExitTs um bis zu 15 Minuten.
+
+Konkretbeispiel: Marc, 07.05.2026 — erster Abgang 06:24, Dusche, Walk-Through um 06:36
+→ FP2 sieht kurz True → System denkt Rückkehr → bedExitTs = 06:38 statt 06:24.
+
+### Langfristiges Ziel: Eine Sleep-Cycle-State-Machine
+Eine einzige State Machine die den gesamten Schlafzyklus (18:00–14:00) abdeckt.
+Sensor-agnostisch: Evidenz-basierte Übergänge, Graceful Degradation wenn Sensoren fehlen.
+
+```
+PRE_SLEEP            SLEEPING           POST_WAKE           DAY
+(Bett legen)  →  (Nacht + Nykturie) →  (Aufstehen)  →  (Tag)
+  18:00–23:00       23:00–05:00           05:00–12:00    12:00+
+```
+
+### Implementierungs-Reihenfolge (Schritt für Schritt, NICHT auf einmal)
+
+**Schritt 1 — POST_WAKE Phase (OC-45a) ← JETZT IMPLEMENTIERT (07.05.2026)**
+Ersetzt OC-42 bedExitTs-Fallback-Kette.
+Läuft von `sleepWindowEnd` bis `wakeHardCap`.
+Output: `bedExitTs` (präziser) + `bedExitConf` (Konfidenz).
+States: WAKING → DEPARTED → AWAY_CONFIRMED | POTENTIAL_RETURN → TRANSIT | GENUINE_RETURN → FINAL_DEPARTURE
+
+**Schritt 2 — SLEEPING Phase Nykturie-Integration (OC-45b) ← NÄCHSTE WOCHE**
+Ersetzt smWakePhases (OC-31 Stage 2) und nocturiaAttr-Berechnung.
+Bessere Nykturie-Erkennung: unterscheidet echte Toilettengänge von Schlafstörungen.
+Input: FP2, Bad-Sensor, PIR-Kette, Vibration.
+
+**Schritt 3 — PRE_SLEEP Phase (OC-45c) ← ÜBERNÄCHSTE WOCHE**
+Verbindet Einschlafzeit-Detektion mit dem State Machine Kontext.
+sleepWindowStart wird Teil der State Machine, nicht mehr isoliert.
+
+**Schritt 4 — Unified Sleep-Cycle-SM (OC-45d) ← WENN 1-3 STABIL**
+Alle drei Phasen zu einer einzigen State Machine zusammenführen.
+Eine Zentralinstanz, ein Kontext, alle Outputs.
+
+### Sensor-Agnostik-Prinzip für alle Schritte
+Jeder Sensor liefert Evidenz-Punkte. Kein Sensor ist Pflicht.
+Fehlender Sensor = geringere Konfidenz, aber kein Absturz.
+Exakt dasselbe Prinzip wie wakeSource/sleepStartSource heute.
+
+### Warum Hybrid (viele kleine → eine große) und nicht sofort eine große?
+- Schritt 1 allein löst das konkrete Problem und ist testbar
+- Jeder Schritt kann einzeln deployed werden — keine Big-Bang-Migration
+- Wenn Schritt 1 eine Woche stabil läuft → Schritt 2 bauen
+- Rückfall auf altes Verhalten jederzeit möglich (Snapshot-Fallback bleibt)
+
+---
+
 ## 🏗️ KERN-DESIGNPRINZIP — Skalierbarkeit für Tausende Kunden (17.03.2026)
 
 > **Dieses Prinzip gilt für JEDE Funktion, JEDEN Algorithmus und JEDE UI-Kachel in AURA.**
@@ -82,6 +286,131 @@ Das bedeutet bereits heute:
 
 ---
 
+### OC-50: CGM / Nightscout / AAPS — Fusion mit AURA (26.05.2026)
+
+**Status:** Konzept — im Haushalt bereits live (ioBroker VIS), **nicht** in AURA-Algorithmen integriert.
+
+**Ausgangslage (Referenz-Installation):**
+- Tochter: Diabetes Typ 1 mit **AAPS** (Android APS) + **Nightscout** (CGM-Verlauf, aktueller Wert, Trend).
+- ioBroker: Blutzucker im VIS-Header, Nightscout-Widget, Pushover-Aktionen (z. B. „Niedrig — Traubenzucker“, „Hoch — Spritzen“).
+- AURA `diabetes2` / `diabetes1`: aktuell nur **Verhaltens-Proxies** (Nykturie, Küche, Aktivität) — **kein CGM**.
+
+**Warum trotzdem strategisch wichtig:**
+- Der [ingenieur.de-Artikel (25.05.2026)](https://www.ingenieur.de/technik/fachbereiche/medizin/wearables-werden-zu-medizinprodukten-was-die-neue-sensorik-leisten-kann-3645420.html) nennt Diabetes-Monitoring als Vorreiter **kontinuierlicher** digitaler Medizin.
+- AURA-Positionierung bleibt **ambient-first** (Raumsensoren = kein „Du bist krank“-Gefühl), aber **Wearables/CGM sind komplementär**, nicht konkurrierend.
+- Fusion-Story: *„Haus beobachtet Alltag und Routinen — CGM liefert den Biomarker — AURA verknüpft beides.“*
+
+**Zielbild (Fusion, nicht Ersatz):**
+| Quelle | Was AURA daraus lernt |
+|--------|------------------------|
+| Nightscout/AAPS States | BZ, Trend, IOB (optional), Hypo/Hyper-Episoden |
+| Raumsensoren (bestehend) | Nacht-Aufstehen, Küche, Aktivität, Schlaf |
+| Kombination | z. B. nächtliche Nykturie **mit** nächtlichem BZ-Verlauf; Tagesstruktur bei CGM-Ausfall |
+
+**Referenz-Installation — ioBroker Nightscout-Adapter (Instanz `nightscout.0`):**
+
+> Quelle: Objekte-Tab, 26.05.2026. Instanz-Nummer kann pro Kunde abweichen (`nightscout.1` …).
+
+| State-ID | Name (Adapter) | Rolle / Typ | Nutzen für AURA |
+|----------|----------------|-------------|-----------------|
+| **`nightscout.0.data.mgdl`** | Sugar value | `value.blood.sugar`, number | **Primär-BZ** (mg/dl) — Pflichtfeld für CGM-Fusion |
+| `nightscout.0.data.mgdlScaled` | — | number | Gleicher Wert numerisch (für Logik bevorzugen wenn stabil) |
+| `nightscout.0.data.mgdlDirection` | — | text | Trend: `Flat`, `FortyFiveDown`, `SingleUp`, … → Kurzstatus + Alerts |
+| `nightscout.0.data.lastUpdate` | — | number (ms) | Datenfrische / Offline-Erkennung |
+| `nightscout.0.data.alarm` | — | boolean | Aktiver Alarm (nicht dringend) |
+| `nightscout.0.data.urgentAlarm` | — | boolean | Dringender Alarm — **nicht** durch AURA ersetzen |
+| `nightscout.0.data.pumpBattery` | — | number (%) | Pumpen-Status (Kontext Care-Report) |
+| `nightscout.0.data.reservoir` | — | number (U) | Rest-Insulin im Reservoir |
+| `nightscout.0.data.uploaderBattery` | — | number (%) | Handy/Uploader — Ausfall-Frühwarnung |
+| `nightscout.0.data.clock` | — | text | Pumpenuhr (Sync-Check) |
+| `nightscout.0.data.notification` | — | text | z. B. „Meal Bolus Insulin“ — Ereignis-Kontext |
+
+**AAPS:** Läuft upstream zu Nightscout; AURA liest vorerst **nur** die Nightscout-States (kein separater AAPS-Adapter nötig).
+
+**Konfiguration in AURA (geplant):**
+```json
+"cgmSource": {
+  "enabled": false,
+  "instance": "nightscout.0",
+  "states": {
+    "glucose": "nightscout.0.data.mgdl",
+    "direction": "nightscout.0.data.mgdlDirection",
+    "lastUpdate": "nightscout.0.data.lastUpdate",
+    "urgentAlarm": "nightscout.0.data.urgentAlarm"
+  },
+  "unit": "mgdl",
+  "profile": "diabetes1"
+}
+```
+Alternativ: freie State-ID-Eingabe pro Feld (Graceful Degradation wenn Adapter fehlt).
+
+**Technische Skizze (Implementierung):**
+1. ~~State-IDs dokumentieren~~ → siehe Tabelle oben.
+2. `saveDailyHistory` / Digest: `cgmMean`, `cgmMin`, `cgmMax`, `cgmDirectionChanges`, `timeInRangePercent` (Schwellen konfigurierbar), `cgmStaleMinutes`.
+3. Profil `diabetes1`: Score nur wenn `cgmSource.enabled` + `lastUpdate` < X Min; sonst `SENSOR_MISSING` + Hint „Nightscout/CGM verbinden“.
+4. **Hypo/Hyper:** Kurzzeit über bestehende Pushover/VIS — AURA nur **Tages-/Wochen-Trends** und Fusion mit Nykturie/Aktivität.
+5. Datenschutz: CGM Opt-in, separates Care-Profil, **keine** Roh-CGM-Werte an Gemini (nur aggregierte Texte).
+
+**Priorität:** Mittel — nach Phase-2-Sturz/Demenz/Frailty stabil; idealer Pilot = eigener Haushalt (Tochter, States oben).
+
+**Abgrenzung:** AURA wird kein Closed-Loop und kein CGM-Ersatz; Integration = **Datenfusion** für Angehörigen- und Langzeit-Übersicht.
+
+---
+
+### OC-51: Externe Trend-Referenz + Forschungsfoerderung (26.05.2026)
+
+**Referenz-Artikel (dauerhaft zitieren):**
+- [Wearables werden zu Medizinprodukten — ingenieur.de, 25.05.2026](https://www.ingenieur.de/technik/fachbereiche/medizin/wearables-werden-zu-medizinprodukten-was-die-neue-sensorik-leisten-kann-3645420.html)
+- Kernthesen: Dauer-Messung statt Stichprobe, multimodale KI-Auswertung, Fruehwarnung chronischer Erkrankungen, Grenze Consumer vs. validiertes Medizinprodukt.
+- **AURA-Differenzierung:** Raumsensorik + Smart-Home-Sensoren (Licht, Praesenz, Energie) = Monitoring **ohne** Pflicht-Wearable; gleiche Makro-Story, andere Modalitaet.
+
+**Im Artikel genannte Forschungsprojekte / Foerderung — wo nachlesen:**
+
+| Name | Was | Wo | Relevanz fuer AURA |
+|------|-----|-----|-------------------|
+| **PearNet** | Multimodales Körpersensornetzwerk Epilepsie (UKB Bonn), KI auf Biosignalen | [GO-Bio Projektseite](https://www.go-bio.de/gobio/de/gefoerderte-projekte/gobio-initial/_documents/PearNet.html), [Uni Bonn News 2026](https://www.uni-bonn.de/de/neues/092-2026) | **Thematisch** (Epilepsie-Profil), **nicht** Wettbewerb — die setzen auf Wearables/EEG-am-Ohr; wir auf Raum + Vibration |
+| **GO-Bio next** | BMFTR-Gründungsoffensive Biotechnologie, PoC → Ausgründung, >100 Mio. bis 2032 | [go-bio.de](https://www.go-bio.de/gobio/de/go-bio/go-bio-next/go-bio-next_node.html), [Förderdatenbank](https://www.foerderdatenbank.de/FDB/Content/DE/Foerderprogramm/Bund/BMBF/go-bio-next.html) | Nur relevant bei **eigener Ausgründung / MDR-Pfad** und Lebenswissenschafts-Bezug; AURA ist Software+SH, nicht Biotech-Wirkstoff |
+| **GO-Bio initial** (Vorgänger PearNet) | Sondierung/Machbarkeit Epilepsie-Wearables | siehe PearNet-Seite | Benchmark fuer Transfer Geschwindigkeit |
+
+**Weitere für uns nuetzlichere Foerder-Spuren (nicht im Artikel, aber passender):**
+- **EXIST-Forschungstransfer** (BMWK) — Software/Hardware-Prototyp, kuerzere Wege als GO-Bio next
+- **ZIM / KMU-innovativ** — Digitalisierung, AAL-nahe Produkte
+- **Pflegekasse / SGB XI** — „Wohnumfeldverbessernde Massnahmen“ (siehe Paketierung unten in dieser Datei)
+- **EU / BMBF Digital Health** — nur bei klarer Kooperation mit Forschungspartner (Validierungsstudie)
+
+**Entscheidung:** Forschungsgelder jetzt **nicht** priorisieren — erst Pilot-Kunden und Care-Story. GO-Bio/PearNet als **Markt- und Trendbeleg** in Vertrieb/Marketing nutzen, nicht als sofortigen Antragsfahrplan.
+
+---
+
+### OC-44: State Machine mit Gedächtnis (Schlaf-Plausibilisierung via History) (01.05.2026)
+
+**Kontext:** OC-42 hat die grundlegenden Wake-Detection-Bugs behoben. Der nächste Reifegrad wäre eine lernende State Machine die historische Daten nutzt um Sensor-Events zu plausibilisieren.
+
+**Konzept-Stufen:**
+
+**Stufe 1: Wake-Time-Prior (einfach, hohe Wirkung)**
+- Aus letzten 14 History-Dateien lernen: wann ist dieser Nutzer typischerweise aufgestanden (bestätigte Werte)?
+- Ergebnis: `wakeWindowP5 / wakeWindowP95` pro Wochentag (7-Tage-Modell, nicht Bundesland/Ferien)
+- Beim Adapter-Start in `LTM.wakeTimeWindow` speichern (analog `LTM.roomTransitionTimes`)
+- SM und motion_vib: Events außerhalb des gelernten Fensters → Konfidenz-Abzug, nicht Hard-Block
+- **Wichtig: Wochentag vs. Wochenende** reicht für 85-90% der Varianz. Ferien/Feiertage sind zu selten (<3-4% der Tage) um den Bucket wesentlich zu verzerren. Kein Bundesland/Kalender-API nötig.
+
+**Stufe 2: Nocturia-Stunden-Muster**
+- Häufigkeitsverteilung der nachtAufstehen-Events nach Stunde aus History
+- Wenn 04:00-05:00 historisch ein Toilet-Fenster ist → motion/SM-Events in dieser Stunde automatisch als `nocturia` klassifizieren
+- Ergänzt den OC-42-Zusatzschutz (der nur bekannte nachtAufstehenWindows nutzt)
+
+**Stufe 3: MAE-gewichtete Quellenpriorität (OC-16 ausbauen)**
+- MAE-Ranking existiert bereits (OC-16), wird aber nur für Display genutzt
+- Quelle mit niedrigstem historischen MAE bekommt bei Gleichstand Priorität in der Kette
+- Macht System selbst-korrigierend über Zeit
+
+**Daten-Grundlage:** `this._historyDir` (history/*.json), bereits beim Adapter geladen. `LTM.dailyDigests` ist vorhanden aber für AI/Health — für Wake-Prior die raw History-Dateien verwenden.
+
+**Implementierungsort:** `saveDailyHistory` am Ende: neues `this._wakeTimeWindow` berechnen und in `LTM.wakeTimeWindow` persistieren. Bei `onReady`: laden.
+
+---
+
 ### OC-36: State Machine Bed-Presence Cross-Check + Architektur-Konsolidierung (27.04.2026)
 
 **Kontext:**
@@ -97,69 +426,14 @@ Die Frontend-Visualisierung zeigt dies als **Overlays auf dem Balken** (smWakePh
 
 ---
 
-#### Phase 1 — Stabilisierung (✅ erledigt in v0.33.205)
-
-Quick-Wins ohne Architektur-Umbau:
-- ✅ **B4**: Hop-Filter in `smWakePhases` (max. 3 Hops, analog nachtAufstehenEvents)
-- ✅ **Splitter-Fix**: `smWakePhases`-Phasen mit `start >= sleepWindowEnd` werden gefiltert (kein abgebrochener Balken)
-- ✅ **UI**: 🛏-Label über dem Balken entfernt (Uhrzeit ist jetzt nur in X-Achse sichtbar)
-- ✅ **UI**: Pre-Sleep-Dreiecke (nachtAufstehen vor Einschlafen) und Post-Sleep-Dreiecke (Bad/Außerhalb) in einer gemeinsamen Zeile über dem Balken
-
----
-
-#### Phase 4 — Architektur-Konsolidierung (🟢 in Umsetzung v0.33.209)
+#### Phase 4 — Architektur-Konsolidierung (offene Ideen / Zielbild)
 
 **Ziel:** SM als Single Source of Truth für "weg vom Bett" — alle drei Algorithmen sprechen miteinander.
 
 **WICHTIG — Klare Abgrenzung:** Wir werfen NICHTS um. Alle bestehenden Algorithmen (`smWakePhases`, `nachtAufstehenEvents`, `outsideBedEvents`, `nightVibrationTimestamps`) bleiben. Wir bauen NUR einen **Merger** der die drei zu einem konsolidierten Output verbindet, mit Konfidenz-Bewertung anhand vorhandener Sensoren.
 
-#### Finale Implementierungs-Spec (v0.33.209)
-
-**Backend: neue Funktion `_buildBedAbsenceEvents()` in `computePersonSleep()`**
-
-Inputs (alles existiert bereits):
-- `_smWakePhases` — State Machine Output
-- `_nachtAufstehenWindows` — Pattern-Matcher Output
-- `obe` — outsideBedEvents (Bad-PIR confirmed)
-- `allEvents` — gefiltert nach `isVibrationBed` (Vibrations-Pre-Trigger) und `isFP2Bed` (FP2-Cross-Check)
-
-Algorithmus:
-1. **Sammeln**: Kandidaten-Fenster aus allen drei Quellen
-2. **Mergen**: Überlappende Fenster (1-Min-Toleranz) zu einem Fenster zusammenfassen, `sources`-Array merken
-3. **Konfidenz** pro Fenster:
-   - **Quellen-Indizien** (max +6): outside +3, sm +2, nacht +1
-   - **Cross-Check Vibration** (+2): wenn Vibration im Bett 0-3 Min vor Fenster-Start
-   - **Cross-Check FP2** (+2 / -2): wenn FP2 vorhanden — leer im Fenster: +2; durchgehend belegt während ≥5 Min: -2
-4. **Schwelle**:
-   - Score ≥ 5 → `confidence: 'high'`
-   - Score ≥ 3 → `confidence: 'medium'`
-   - Score ≥ 1 → `confidence: 'low'`
-   - Score ≤ 0 → Event verworfen
-
-Output-Format:
-```json
-{
-  "start": 1777258143907,
-  "end": 1777258323907,
-  "durationMin": 3,
-  "sources": ["outside", "sm"],
-  "confidence": "high",
-  "confidenceScore": 7,
-  "evidence": ["Bad bestätigt", "SM-Phase", "Vibration vor Aufstehen"]
-}
-```
-
-**Frontend: HealthTab.tsx Schlafphasen-Balken**
-
-- Wenn `bedAbsenceEvents` vorhanden: hellgraues, schraffiertes Segment im Balken (statt Farbe der Schlafphase)
-- Tooltip: Zeitraum + Konfidenz + Indizien-Liste
-- Wenn `bedAbsenceEvents` NICHT vorhanden (alte JSONs): Fallback auf altes gelbes `smWakePhases`-Overlay
-
-**Migration:**
-- Backend produziert `bedAbsenceEvents` ab v0.33.209 IMMER für aktuelle Nacht
-- Alte JSON-Dateien haben das Feld nicht → Frontend fällt automatisch auf alte Visualisierung zurück
-- Kein Cutover nötig — natürliche Migration über Tage hinweg
-- Felder `smWakePhases`, `nachtAufstehenEvents`, `outsideBedEvents` bleiben weiterhin im JSON für Backwards-Compat und Debug
+> Hinweis: Umgesetzte Details, Bugfixes und Lessons Learned stehen ab jetzt ausschließlich im `PROJEKT_STATUS.md`.
+> `BRAINSTORMING.md` enthält nur noch offene Ideen, Zielbilder und noch nicht umgesetzte Varianten.
 
 **Kern-Ideen:**
 
@@ -199,7 +473,7 @@ Output-Format:
 3. Frontend: `bedAbsenceEvents` als eigenes Balken-Segment rendern
 4. Frontend: Gelbes Overlay entfernen (nur noch für Legacy ohne FP2/PIR)
 
-**Priorität:** 🔴 HOCH — wird als separates Projekt nach v0.33.x angegangen.
+**Priorität:** 🔴 HOCH (für offene Weiterentwicklung)
 
 ---
 
@@ -971,6 +1245,7 @@ Profile die im Frontend konfigurierbar aber in health.py noch ohne Score sind:
 | bipolar | Wie Depression aber mit Manie-Detektion (Nacht sehr niedrig + Tag sehr hoch) | Klein | Niedrig |
 | epilepsy | Vibration Bett (rhythmische Bewegung) + FP2 Sturz | Mittel | Hoch (Hardware vorhanden) |
 | diabetes1 | Vibration + Feuchtigkeit + Nacht-Kueche | Mittel | Mittel |
+| diabetes1 (CGM) | **Nightscout/AAPS** — siehe **OC-50** (VIS live, AURA offen) | Mittel | Hoch (eigener Pilot) |
 | uti | Akut-Erkennung Bad-Besuche (Tag-zu-Tag statt Wochen-Trend) | Klein | Niedrig |
 
 ### Parkinson - Naechster sinnvoller Schritt

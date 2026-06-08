@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.275",
+    "version": "0.33.276",
     "news": {
       "0": {
         "version": "0.33.212",
@@ -17,6 +17,10 @@
           "[Fix OC-7] Multi-Person-Motion-Only: sleepWindowEnd aus per-Person-Wakezeiten ableiten (Balken + Dreiecke fuer Haushalte ohne FP2/Garmin)",
           "[Fix OC-7] Invertiertes sleepWindowStart korrigieren wenn Abendberechnung heutigen Start schreibt"
         ]
+      },
+      "0.33.276": {
+        "de": "v0.33.276: OC-57 bedExitTs Walk-Through-Guard - kurzer PIR-only Schlafzimmerbesuch (z.B. Jacke holen) verschiebt die Aufstehzeit nicht mehr; bedExitTs nicht spaeter als letzter echter Matratzen-Kontakt (graceful: ohne Vibrationssensor/mit FP2 kein Eingriff).",
+        "en": "v0.33.276: OC-57 bedExitTs walk-through guard - a brief PIR-only bedroom visit no longer pushes wake-up time; bedExitTs capped at last real mattress contact (graceful)."
       },
       "0.33.275": {
         "de": "v0.33.275: Revert v0.33.274 (OC-24-OC48 Noisy-Ausschluss war falsch begruendet - Wohnzimmer-Aktivitaet war echt, OC-48c lehnt korrekt ab). Admin-HealthTab: Hinweis \"Ins Bett gegangen: kein plausibler Wert gefunden\" (Paritaet zur PWA).",

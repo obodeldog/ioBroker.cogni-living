@@ -6,6 +6,16 @@
 
 ---
 
+## 🧪 v0.33.276 — OC-57 bedExitTs Walk-Through-Guard (08.06.2026)
+
+| ID | Testfall | Erwartetes Ergebnis | Geprüft am | ✅/❌ |
+|---|---|---|---|---|
+| T-K276a | Vib-Haushalt, morgens aufgestanden + spaeter kurzer PIR-only Schlafzimmerbesuch (Jacke), kein FP2 | bedExitTs = letzter echter Matratzen-Kontakt, NICHT der spaete PIR-Besuch. Gelber Balken endet frueh. | 08.06.2026 | ⏳ |
+| T-K276b | PIR-only-Haushalt (kein Vibrationssensor) | Kein OC-57-Cap, bedExitTs unveraendert wie v0.33.275. | 08.06.2026 | ⏳ |
+| T-K276c | FP2/Radar-Haushalt | Kein OC-57-Cap (FP2 bestaetigt Praesenz). | 08.06.2026 | ⏳ |
+| T-K276d | Vib-Haushalt, stilles Liegen nach Aufwachen (keine Aussen-Aktivitaet) | Kein Cap (Person koennte noch im Bett liegen). | 08.06.2026 | ⏳ |
+| T-K276e | Vib-Haushalt, Normalnacht (Aufstehen ohne Walk-Through) | Kein Cap (letzter Vib ~ bedExitTs, <5min Abstand). | 08.06.2026 | ⏳ |
+
 ## 🧪 v0.33.275 — Revert OC-24-OC48 + Admin-Hinweis-Paritaet (08.06.2026)
 
 | ID | Testfall | Erwartetes Ergebnis | Geprüft am | ✅/❌ |

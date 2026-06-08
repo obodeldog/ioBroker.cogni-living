@@ -1,5 +1,42 @@
 ﻿# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 08.06.2026 | **Version:** 0.33.275
+**Letzte Aktualisierung:** 08.06.2026 | **Version:** 0.33.276
+
+---
+
+## Sitzung 08.06.2026 (abend-3) - Version 0.33.276 -- OC-57 bedExitTs Walk-Through-Guard (Fix C)
+
+### Problem
+Nacht 08.06.2026: `bedExitTs=08:28` statt ~06:39 -> langer falscher gelber "Wachliegen"-Balken 06:30-08:28.
+Ursache (Code-verifiziert): `bedExitTs` kommt aus der OC-45a State-Machine (WAKING->DEPARTED->POTENTIAL_RETURN
+->GENUINE_RETURN). Der kurze PIR-only Schlafzimmerbesuch um 08:21 (Jacke holen, KEINE Matratzen-Vibration,
+nach Haus-Verlassen 07:38-08:14) wird im No-FP2-Pfad als echte Rueckkehr ins Bett gewertet.
+
+### Loesung (OC-57, nachgelagerter Guard - bewusst NICHT die State-Machine umgebaut)
+Statt die delikate State-Machine-Transition zu aendern (Hochrisiko), ein self-contained Post-Cap nach der
+bedExitTs-Bestimmung: bedExitTs darf nicht spaeter sein als der letzte ECHTE Matratzen-Kontakt
+(Vibration trigger=true ODER strength>=10), WENN:
+- ein Vibrationssensor aktiv ist (sonst kein Eingriff - graceful PIR-only),
+- KEIN FP2/Radar Bett-Praesenz bestaetigt (`_oc45aHasFp2==false`),
+- zwischen letztem Bett-Kontakt und bedExitTs >=3 Ausser-Schlafzimmer-Motion-Events ueber >=20min Spanne
+  liegen (Person nachweislich auf/draussen).
+Sonst: kein Eingriff (stilles Liegen bleibt unberuehrt).
+Nacht 08.06.: letzter Vib>=10 = 06:39, danach reichlich Aussen-Aktivitaet -> Cap 08:28 -> 06:39. Balken korrekt.
+
+Loest zugleich das in der OC-45-Roadmap (BRAINSTORMING) dokumentierte Walk-Through-Problem
+(Person geht nach Dusche durch Schlafzimmer -> faelschliche Rueckkehr, bedExitTs zu spaet).
+
+### Nebenwirkungs-Analyse
+| Setup | Wirkung |
+|---|---|
+| Kein Vibrationssensor (PIR-only) | kein Cap (graceful) |
+| FP2/Radar vorhanden | kein Cap (FP2 bestaetigt Praesenz) |
+| Stilles Liegen nach Wake (kein Aussen-Event) | kein Cap |
+| Normalnacht (Aufstehen ohne Walk-Through) | kein Cap (5min-Abstand nicht erreicht) |
+| Walk-Through / Jacke holen (Vib-Haushalt) | Cap auf letzten Matratzen-Kontakt |
+
+### Build/Deploy
+`scripts/_patch_oc57_bedexit_walkthrough.js`. Build prod OK, node --check main.js OK. Version 0.33.276.
+OC_REGISTER OC-57 ergaenzt. TESTING T-K276 ergaenzt.
 
 ---
 
