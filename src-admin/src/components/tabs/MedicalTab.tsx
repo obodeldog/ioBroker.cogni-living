@@ -726,6 +726,15 @@ function ScreeningPanel({ result, isDark, enabledProfiles }: {
 // --- CGM + Vibration Korrelations-Panel (Forschungstool, Phase 3) -------------
 interface CgmReading { ts: number; val: number; unit?: string; trend?: string; }
 
+function mapTrend(trend?: string): string {
+    const map: Record<string, string> = {
+        'DoubleUp': '⇈', 'SingleUp': '↑', 'FortyFiveUp': '↗',
+        'Flat': '→', 'FortyFiveDown': '↘', 'SingleDown': '↓', 'DoubleDown': '⇊',
+        'NOT COMPUTABLE': '?', 'RATE OUT OF RANGE': '!',
+    };
+    return trend ? (map[trend] || trend) : '';
+}
+
 function PersonCgmChart({ person, readings, vibrationTs, unit, isDark }: {
     person: string; readings: CgmReading[]; vibrationTs: number[]; unit: string; isDark: boolean;
 }) {
@@ -807,6 +816,12 @@ function PersonCgmChart({ person, readings, vibrationTs, unit, isDark }: {
                         sx={{ bgcolor: '#f4433625', color: '#f44336', fontSize: '0.68rem', fontWeight: 'bold' }} />
                 )}
                 <Typography variant="caption" color="text.secondary">{wReadings.length} Messwerte</Typography>
+                {wReadings.length > 0 && wReadings[wReadings.length - 1].trend && (
+                    <Chip size="small"
+                        label={`Trend: ${mapTrend(wReadings[wReadings.length - 1].trend)}`}
+                        sx={{ bgcolor: '#9e9e9e18', color: 'text.secondary', fontSize: '0.68rem', border: '1px solid #9e9e9e30' }}
+                    />
+                )}
             </Box>
 
             {/* SVG-Timeline */}
@@ -882,7 +897,7 @@ function PersonCgmChart({ person, readings, vibrationTs, unit, isDark }: {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Box sx={{ width: 2, height: 14, bgcolor: '#f44336' }} />
                         <Typography variant="caption" sx={{ color: '#f44336', fontWeight: 'bold' }}>
-                            Vibration bei Hypo (\u00b115 min)
+                            {'Vibration bei Hypo (\u00b115 min)'}
                         </Typography>
                     </Box>
                 )}
@@ -903,7 +918,7 @@ function PersonCgmChart({ person, readings, vibrationTs, unit, isDark }: {
             )}
             {hypoReadings.length === 0 && wReadings.length > 0 && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, pl: 0.5 }}>
-                    Keine Hypoglyk\u00e4mie in diesem Zeitfenster. Bett-Bewegungen: {wVibs.length}.
+                    {'Keine Hypoglykämie in diesem Zeitfenster. Bett-Bewegungen: '}{wVibs.length}{'.'}
                 </Typography>
             )}
         </Box>
@@ -930,13 +945,16 @@ function CgmCorrelationPanel({ socket, adapterName, instance, native, isDark }: 
         Promise.all([
             socket.sendTo(`${adapterName}.${instance}`, 'getHistoryData', { date: todayStr,  _t: Date.now() }).catch(() => null),
             socket.sendTo(`${adapterName}.${instance}`, 'getHistoryData', { date: yestStr,   _t: Date.now() }).catch(() => null),
-        ]).then(([todayData, yestData]: [any, any]) => {
+        ]).then(([todayRes, yestRes]: [any, any]) => {
+            // Antwort auspacken: { success: true, data: { ...history... } }
+            const todayData = (todayRes?.success && todayRes?.data) ? todayRes.data : null;
+            const yestData  = (yestRes?.success  && yestRes?.data)  ? yestRes.data  : null;
             // CGM-Readings zusammenfuehren (gestern 20:00+ + heute)
             const merged: Record<string, CgmReading[]> = {};
             const cutoff = new Date().setHours(0,0,0,0) - 4 * 3600000; // 20:00 Vortag
-            for (const data of [yestData, todayData]) {
-                if (!data?.cgmReadings) continue;
-                for (const [p, rList] of Object.entries(data.cgmReadings as Record<string, CgmReading[]>)) {
+            for (const rawData of [yestData, todayData]) {
+                if (!rawData?.cgmReadings) continue;
+                for (const [p, rList] of Object.entries(rawData.cgmReadings as Record<string, CgmReading[]>)) {
                     if (!merged[p]) merged[p] = [];
                     merged[p].push(...(rList as CgmReading[]).filter(r => r.ts >= cutoff));
                 }
@@ -969,12 +987,12 @@ function CgmCorrelationPanel({ socket, adapterName, instance, native, isDark }: 
             {/* Header */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
                 <MonitorHeartIcon sx={{ color: '#f44336', fontSize: 20 }} />
-                <Typography variant="subtitle1" fontWeight="bold">CGM \u2194 Bett-Vibration Korrelation</Typography>
+                <Typography variant="subtitle1" fontWeight="bold">{'CGM ↔ Bett-Vibration Korrelation'}</Typography>
                 <Chip size="small" label="Forschungstool" sx={{ bgcolor: '#9c27b018', color: '#9c27b0', border: '1px solid #9c27b030', fontSize: '0.65rem' }} />
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
                 Ziel: Nachweis einer Korrelation zwischen Blutglukoseverlauf und Bett-Bewegung.
-                Gr\u00fcne Linie = Glukose \u00b7 Blaue Balken = Vibrations-Events \u00b7 Rote Balken = Vibration bei Hypo-Zeitfenster.
+                {'Grüne Linie = Glukose · Blaue Balken = Vibrations-Events · Rote Balken = Vibration bei Hypo-Zeitfenster.'}
             </Typography>
 
             {loading ? (
@@ -996,7 +1014,7 @@ function CgmCorrelationPanel({ socket, adapterName, instance, native, isDark }: 
             )}
 
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, fontStyle: 'italic', fontSize: '0.65rem' }}>
-                Kein klinisches Diagnose-System. Die Korrelationsanalyse dient ausschlie\u00dflich Forschungszwecken.
+                {'Kein klinisches Diagnose-System. Die Korrelationsanalyse dient ausschließlich Forschungszwecken.'}
                 Daten-Basis: Nightscout CGM-Integration + AURA Vibrationssensor (personTag-Zuweisung).
             </Typography>
         </Paper>
