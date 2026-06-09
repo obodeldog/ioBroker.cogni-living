@@ -1208,6 +1208,31 @@ class CogniLiving extends utils.Adapter {
             }
         }
 
+        // [CGM] Buffer beim Adapter-Start aus heutigem History-JSON wiederherstellen (verhindert Datenverlust bei Neustart)
+        try {
+            var _cgmRd = new Date();
+            var _cgmRdStr = _cgmRd.getFullYear() + '-' + String(_cgmRd.getMonth()+1).padStart(2,'0') + '-' + String(_cgmRd.getDate()).padStart(2,'0');
+            var _cgmRdPath = require('path').join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history', _cgmRdStr + '.json');
+            if (require('fs').existsSync(_cgmRdPath)) {
+                var _cgmRdData = JSON.parse(require('fs').readFileSync(_cgmRdPath, 'utf8'));
+                if (_cgmRdData && _cgmRdData.cgmReadings && typeof _cgmRdData.cgmReadings === 'object') {
+                    var _cgmRdPersons = Object.keys(_cgmRdData.cgmReadings);
+                    for (var _crpi = 0; _crpi < _cgmRdPersons.length; _crpi++) {
+                        var _crp = _cgmRdPersons[_crpi];
+                        var _crArr = _cgmRdData.cgmReadings[_crp];
+                        if (!Array.isArray(_crArr) || _crArr.length === 0) continue;
+                        if (!this.cgmBuffer[_crp]) this.cgmBuffer[_crp] = [];
+                        var _crExist = new Set(this.cgmBuffer[_crp].map(function(r){ return r.ts; }));
+                        var _crNew = _crArr.filter(function(r){ return !_crExist.has(r.ts); });
+                        this.cgmBuffer[_crp] = this.cgmBuffer[_crp].concat(_crNew).sort(function(a,b){ return a.ts-b.ts; });
+                        this.log.info('[CGM] Buffer restored: ' + _crp + ' +' + _crNew.length + ' readings from ' + _cgmRdStr + '.json');
+                    }
+                }
+            }
+        } catch(_cgmRdErr) {
+            this.log.warn('[CGM] Buffer-Restore fehlgeschlagen: ' + (_cgmRdErr.message || _cgmRdErr));
+        }
+
         // system.config.sensorList: Sensor-Konfiguration bei Start schreiben (Kontroll-Objekt)
         try {
             const _sensorListData = (this.config.devices || []).map(function(d) {
