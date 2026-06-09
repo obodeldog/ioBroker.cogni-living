@@ -58,6 +58,7 @@ function computePersonSleep(p) {
     var bedroomLocations = p.bedroomLocations  || [];
     var hopDistFn        = p.hopDistFn         || null;
     var noisySensorIds   = p.noisySensorIds    || new Set();
+    var adaptiveVib      = p.adaptiveVib !== false; // OC-VIB-CAL: true=adaptive thresholds (default), false=fixed 28/12
     var log          = p.log;
     var logPfx       = personTag ? ('[cPS:' + personTag + '] ') : '[cPS:global] ';
 
@@ -685,6 +686,20 @@ function computePersonSleep(p) {
         var vibStrEvts = allEvents.filter(function(e) {
             return isMine(e) && e.isVibrationStrength && (e.timestamp || 0) >= stagesWinStart && (e.timestamp || 0) <= stagesWinEnd;
         });
+        // OC-VIB-CAL: Adaptive thresholds from current night's vibration distribution
+        var _vibStrRaw = vibStrEvts.map(function(e) { return typeof e.value==='number' ? e.value : parseFloat(e.value)||0; }).filter(function(v) { return v>0; });
+        var _wakeThr=28, _remUp=28, _remLow=12, _vibCalibAdapt=false;
+        if (adaptiveVib && _vibStrRaw.length >= 10) {
+            var _vibSorted = _vibStrRaw.slice().sort(function(a,b){return a-b;});
+            var _p90 = _vibSorted[Math.floor(_vibSorted.length * 0.9)];
+            if (_p90 >= 6) {
+                _wakeThr = Math.max(12, Math.round(_p90 * 1.15));
+                _remUp   = Math.max(6,  Math.round(_wakeThr * 0.82));
+                _remLow  = Math.max(3,  Math.round(_wakeThr * 0.38));
+                _vibCalibAdapt = true;
+                if (log) log.info(logPfx + '[OC-VIB-CAL] adaptiv: p90=' + _p90 + ' wake>' + _wakeThr + ' rem ' + _remLow + '-' + _remUp + ' (n=' + _vibStrRaw.length + ')');
+            }
+        }
         var consQuiet = 0; var deepSec = 0; var lightSec = 0; var remSec = 0; var wakeSec2 = 0;
         for (var si = 0; si < slotCount; si++) {
             var slotS = stagesWinStart + si * SLOT_MS; var slotE = slotS + SLOT_MS;
@@ -693,10 +708,10 @@ function computePersonSleep(p) {
                 .map(function(e) { return typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0; });
             var slotStrMax = slotStrArr.length > 0 ? Math.max.apply(null, slotStrArr) : 0;
             var hoursIn = (slotS - stagesWinStart) / 3600000; var stage;
-            if (slotDet === 0)                                                                { consQuiet++; stage = consQuiet >= 5 ? 'deep' : 'light'; }
-            else if (slotDet >= 5 || slotStrMax > 28)                                         { consQuiet = 0; stage = 'wake'; }
-            else if (slotDet >= 2 && hoursIn >= 2.5 && slotStrMax >= 12 && slotStrMax <= 28)  { consQuiet = 0; stage = 'rem'; }
-            else                                                                               { consQuiet = 0; stage = 'light'; }
+            if (slotDet === 0)                                                                              { consQuiet++; stage = consQuiet >= 5 ? 'deep' : 'light'; }
+            else if (slotDet >= 5 || slotStrMax > _wakeThr)                                                 { consQuiet = 0; stage = 'wake'; }
+            else if (slotDet >= 2 && hoursIn >= 2.5 && slotStrMax >= _remLow && slotStrMax <= _remUp)       { consQuiet = 0; stage = 'rem'; }
+            else                                                                                              { consQuiet = 0; stage = 'light'; }
             sleepStages.push({ t: si * 5, s: stage });
             if (stage === 'deep') deepSec += 300; else if (stage === 'light') lightSec += 300;
             else if (stage === 'rem') remSec += 300; else wakeSec2 += 300;
@@ -1013,7 +1028,9 @@ function computePersonSleep(p) {
         nachtAufstehenEvents: _nachtAufstehenWindows.filter(function(w){ return !sleepStart || w.departureTs >= sleepStart; }), // [OC-45b] nur Post-Sleep
         bedEntryTs:          bedEntryTs,
         smWakePhases:        _smWakePhases,
-        bedAbsenceEvents:    _bedAbsenceEvents
+        bedAbsenceEvents:    _bedAbsenceEvents,
+        vibCalibAdaptive:    _vibCalibAdapt || false,
+        vibCalibThresholds:  _vibCalibAdapt ? { wake: _wakeThr, remUpper: _remUp, remLower: _remLow } : { wake: 28, remUpper: 28, remLower: 12 }
     };
 }
 
@@ -2240,6 +2257,7 @@ class CogniLiving extends utils.Adapter {
                 bedroomLocations: (this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed'||d.isBedroomMotion||d.isFP2Bed||d.isVibrationBed;}).map(function(d){return d.location;}).filter(function(l){return !!l;}).filter(function(v,i,a){return a.indexOf(v)===i;}),
                 hopDistFn:    this._roomHopDistance.bind(this),
                 noisySensorIds: this._noisySensorIds || new Set(),
+                adaptiveVib:  (this.config.adaptiveVibThresholds !== false),
                 log:          this.log
             });
 
@@ -3252,6 +3270,20 @@ class CogniLiving extends utils.Adapter {
                 var vibStrInWindow = sleepSearchEvents.filter(function(e) {
                     return e.isVibrationStrength && (e.timestamp||0) >= swStart && (e.timestamp||0) <= swEnd;
                 });
+                // OC-VIB-CAL: Adaptive thresholds (global computation)
+                var _gAdaptVib = (this.config.adaptiveVibThresholds !== false);
+                var _gVibRaw = vibStrInWindow.map(function(e){ return typeof e.value==='number'?e.value:parseFloat(e.value)||0; }).filter(function(v){return v>0;});
+                var _gWakeThr=28, _gRemUp=28, _gRemLow=12;
+                if (_gAdaptVib && _gVibRaw.length >= 10) {
+                    var _gVibSorted = _gVibRaw.slice().sort(function(a,b){return a-b;});
+                    var _gP90 = _gVibSorted[Math.floor(_gVibSorted.length*0.9)];
+                    if (_gP90 >= 6) {
+                        _gWakeThr = Math.max(12, Math.round(_gP90*1.15));
+                        _gRemUp   = Math.max(6,  Math.round(_gWakeThr*0.82));
+                        _gRemLow  = Math.max(3,  Math.round(_gWakeThr*0.38));
+                        this.log.info('[OC-VIB-CAL] global adaptiv: p90=' + _gP90 + ' wake>' + _gWakeThr + ' rem ' + _gRemLow + '-' + _gRemUp);
+                    }
+                }
                 var deepSec = 0, lightSec = 0, remSec = 0, wakeSec = 0;
                 var consecutiveQuiet = 0;
                 for (var _sl = 0; _sl < slotCount; _sl++) {
@@ -3266,10 +3298,10 @@ class CogniLiving extends utils.Adapter {
                     if (slotDet === 0) {
                         consecutiveQuiet++;
                         stage = consecutiveQuiet >= 5 ? 'deep' : 'light';
-                    } else if (slotDet >= 5 || slotStrMax > 28) {
+                    } else if (slotDet >= 5 || slotStrMax > _gWakeThr) {
                         consecutiveQuiet = 0;
                         stage = 'wake';
-                    } else if (slotDet >= 2 && hoursIn >= 2.5 && slotStrMax >= 12 && slotStrMax <= 28) {
+                    } else if (slotDet >= 2 && hoursIn >= 2.5 && slotStrMax >= _gRemLow && slotStrMax <= _gRemUp) {
                         consecutiveQuiet = 0;
                         stage = 'rem';
                     } else {
@@ -3597,6 +3629,7 @@ class CogniLiving extends utils.Adapter {
                         bedroomLocations: (_self.config.devices||[]).filter(function(d){return d.sensorFunction==='bed'||d.isBedroomMotion||d.isFP2Bed||d.isVibrationBed;}).map(function(d){return d.location;}).filter(function(l){return !!l;}).filter(function(v,i,a){return a.indexOf(v)===i;}),
                         hopDistFn:     _self._roomHopDistance.bind(_self),
                        noisySensorIds: (_self && _self._noisySensorIds) ? _self._noisySensorIds : new Set(),
+                        adaptiveVib:   (_self && _self.config && _self.config.adaptiveVibThresholds !== false),
                         log:           _self.log
                     });
                     // OC-38 Safety-valve: wenn per-Person alle echten Einschlafquellen null sind,

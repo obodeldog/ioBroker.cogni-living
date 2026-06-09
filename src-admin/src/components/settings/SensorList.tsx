@@ -1,10 +1,11 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Box, TableContainer, Paper, Table, TableHead, TableRow, TableCell, Tooltip, TableBody,
     TextField, IconButton, Autocomplete, FormControl, Select, MenuItem, Checkbox, Button, Chip,
-    Collapse, CircularProgress, Alert, Typography
+    Collapse, CircularProgress, Alert, Typography, Switch, FormControlLabel
 } from "@mui/material";
 import BatteryAlertIcon from "@mui/icons-material/BatteryAlert";
+import TuneIcon from "@mui/icons-material/Tune";
 import Battery20Icon from "@mui/icons-material/Battery20";
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import WbSunnyIcon from "@mui/icons-material/WbSunny";
@@ -755,6 +756,39 @@ export default function SensorList(props) {
                         </Box>
                     </Box>
                 </Collapse>
+            </Box>
+
+            {/* ─── SCHLAFANALYSE-EINSTELLUNGEN ─── */}
+            <Box sx={{ mt: 2, border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)"}`, borderRadius: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 0.8, bgcolor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)", borderRadius: 1 }}>
+                    <TuneIcon sx={{ fontSize: 16, opacity: 0.7, color: "#7c4dff" }} />
+                    <Box sx={{ fontSize: "0.78rem", fontWeight: 600, flex: 1 }}>Schlafanalyse-Einstellungen</Box>
+                </Box>
+                <Box sx={{ px: 1.5, py: 1, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.1)"}` }}>
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                size="small"
+                                checked={native?.adaptiveVibThresholds !== false}
+                                onChange={e => onNativeChange && onNativeChange('adaptiveVibThresholds', e.target.checked)}
+                                color="secondary"
+                            />
+                        }
+                        label={
+                            <Box>
+                                <Typography variant="body2" sx={{ fontSize: "0.78rem", fontWeight: 600 }}>
+                                    Adaptive Vibrations-Schwellen (OC-VIB-CAL)
+                                </Typography>
+                                <Typography variant="caption" sx={{ fontSize: "0.68rem", color: "text.secondary", display: "block" }}>
+                                    Schlafphasen-Erkennung passt sich automatisch an Sensor-Montage und Matratze an.
+                                    Wake/REM-Schwellen aus p90 der Vibrationsstärke der aktuellen Nacht (statt fester 28/12).
+                                    <strong> Deaktivieren</strong> nur wenn Schlafphasen unplausibel wirken.
+                                </Typography>
+                            </Box>
+                        }
+                        sx={{ alignItems: "flex-start", mt: 0.5 }}
+                    />
+                </Box>
             </Box>
 
             {/* â”€â”€â”€ BATTERIE-KONFIGURATION (OC-15) â”€â”€â”€ */}
