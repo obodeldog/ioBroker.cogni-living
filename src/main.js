@@ -608,6 +608,14 @@ function computePersonSleep(p) {
             var ts = e.timestamp || 0;
             if (ts < obeWinS || ts > obeWinE) return false;
             if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion) return false;
+            // OC-OBE-HOP: Sensoren > 2 Hops vom Schlafzimmer ignorieren (z.B. OG-Bad bei EG-Schlafen)
+            if (hopDistFn && bedroomLocations && bedroomLocations.length > 0 && e.location) {
+                var _obeHop = bedroomLocations.reduce(function(m, bl) {
+                    var h = hopDistFn(e.location, bl);
+                    return (h >= 0 && h < m) ? h : m;
+                }, 999);
+                if (_obeHop > 2) return false;
+            }
             return (e.type === 'motion' || (e.type === 'presence_radar_bool' || e.type === 'presence_radar_count')) && isActiveValue(e.value);
         }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
         var obeCluster = null; var obeCGap = 5 * 60 * 1000; var obeCAfter = 3 * 60 * 1000;
@@ -3417,16 +3425,16 @@ class CogniLiving extends utils.Adapter {
             // Alle drei Kriterien muessen erfuellt sein:
             // 1. nightVibrationCount === 0 (kein Vibrationssensor)
             // 2. Keine FP2-Bed-Events im Schlaffenster
-            // 3. Alle lokalen sleepStart-Quellen null (fp2, fp2_vib, haus_still, motion_vib)
+            // 3. Persoenliche sleepStart-Quellen null (fp2, fp2_vib, motion_vib) - KEIN haus_still!
             // ============================================================
             var _fp2InWindow = (sleepWindowOC7.start && sleepWindowOC7.end)
                 ? sleepSearchEvents.filter(function(e) {
                     return e.isFP2Bed && (e.timestamp||0) >= sleepWindowOC7.start && (e.timestamp||0) <= sleepWindowOC7.end;
                 }).length : 0;
             var _localSourcesNull = !allSleepStartSources.some(function(s) {
-                return (s.source === 'fp2' || s.source === 'fp2_vib' || s.source === 'haus_still' || s.source === 'motion_vib') && s.ts;
+                return (s.source === 'fp2' || s.source === 'fp2_vib' || s.source === 'motion_vib') && s.ts;
             });
-            var bedWasEmpty = nightVibrationCount === 0 && _fp2InWindow === 0 && _localSourcesNull;
+            var bedWasEmpty = (nightVibrationCount === 0 || nightVibrationCount === null) && _fp2InWindow === 0 && _localSourcesNull;
             if (bedWasEmpty) {
                 sleepScore    = null;
                 sleepScoreRaw = null;
