@@ -4417,7 +4417,7 @@ class CogniLiving extends utils.Adapter {
                     }
                     return _bet;
                 })(),
-                cgmReadings: (function(_cgmBufSelf, _cgmSodTs) {
+                                cgmReadings: (function(_cgmBufSelf, _cgmSodTs, _cgmExistSnap) {
                     var _cgmR = {};
                     var _cgmAsgn = (_cgmBufSelf.config && _cgmBufSelf.config.cgmPersonAssignment && typeof _cgmBufSelf.config.cgmPersonAssignment === 'object') ? _cgmBufSelf.config.cgmPersonAssignment : {};
                     var _cgmPersonKeys = Object.keys(_cgmAsgn);
@@ -4426,10 +4426,15 @@ class CogniLiving extends utils.Adapter {
                         if (!_cgmAsgn[_cgmP] || !_cgmAsgn[_cgmP].glucoseStateId) continue;
                         var _cpBuf = (_cgmBufSelf.cgmBuffer && _cgmBufSelf.cgmBuffer[_cgmP]) ? _cgmBufSelf.cgmBuffer[_cgmP] : [];
                         var _cpToday = _cpBuf.filter(function(r) { return r.ts >= _cgmSodTs; });
-                        if (_cpToday.length > 0) _cgmR[_cgmP] = _cpToday;
+                        var _cpExist = (_cgmExistSnap && _cgmExistSnap.cgmReadings && Array.isArray(_cgmExistSnap.cgmReadings[_cgmP])) ? _cgmExistSnap.cgmReadings[_cgmP] : [];
+                        var _cpAll = _cpExist.concat(_cpToday);
+                        var _cpSeen = new Set(); var _cpDedup = [];
+                        _cpAll.forEach(function(r){ if(!_cpSeen.has(r.ts)){_cpSeen.add(r.ts);_cpDedup.push(r);} });
+                        _cpDedup.sort(function(a,b){return a.ts-b.ts;});
+                        if (_cpDedup.length > 0) _cgmR[_cgmP] = _cpDedup;
                     }
                     return Object.keys(_cgmR).length > 0 ? _cgmR : null;
-                })(_self, startOfDayTimestamp),
+                })(_self, startOfDayTimestamp, _existingSnap),
                 smWakePhases: (_gR && _gR.smWakePhases) ? _gR.smWakePhases : []
             };
 
