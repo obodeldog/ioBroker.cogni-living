@@ -714,7 +714,7 @@ function computePersonSleep(p) {
                 .map(function(e) { return typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0; });
             var slotStrMax = slotStrArr.length > 0 ? Math.max.apply(null, slotStrArr) : 0;
             var hoursIn = (slotS - stagesWinStart) / 3600000; var stage;
-            if (slotDet === 0)                                                                              { consQuiet++; stage = consQuiet >= 5 ? 'deep' : 'light'; }
+            if (slotDet <= adaptiveTrigThr)                                                                 { consQuiet++; stage = consQuiet >= 5 ? 'deep' : 'light'; }
             else if (slotDet >= 5 || slotStrMax > _wakeThr)                                                 { consQuiet = 0; stage = 'wake'; }
             else if (slotDet >= 2 && hoursIn >= 2.5 && slotStrMax >= _remLow && slotStrMax <= _remUp)       { consQuiet = 0; stage = 'rem'; }
             else                                                                                              { consQuiet = 0; stage = 'light'; }
@@ -2245,6 +2245,13 @@ class CogniLiving extends utils.Adapter {
                 }
             } catch(_gse) { this.log.debug('[SleepStart] Garmin nicht lesbar: ' + _gse.message); }
 
+            // OC-VIB-CAL: Rolling-Kalibrierung aus Vornacht lesen (fuer stabile Schwellen)
+            var _vcRollingCache = null;
+            try {
+                var _vcRS = await this.getStateAsync('analysis.health.vibCalibData');
+                if (_vcRS && _vcRS.val) { var _vcRD = JSON.parse(_vcRS.val); _vcRollingCache = (_vcRD && _vcRD.rolling) ? _vcRD.rolling : null; }
+            } catch(_vcReadErr) {}
+
             // Alle Einschlafzeit-Kandidaten via computePersonSleep (Single-Source-of-Truth)
             var _gR = computePersonSleep({
                 allEvents:    sleepSearchEvents,
@@ -2264,6 +2271,8 @@ class CogniLiving extends utils.Adapter {
                 hopDistFn:    this._roomHopDistance.bind(this),
                 noisySensorIds: this._noisySensorIds || new Set(),
                 adaptiveVib:  (this.config.adaptiveVibThresholds !== false),
+                adaptiveTrigThr: (_vcRollingCache && _vcRollingCache.global && this.config.adaptiveVibThresholds !== false) ? (_vcRollingCache.global.trigThr || 0) : 0,
+                vibCalibRolling: (_vcRollingCache && _vcRollingCache.global && this.config.adaptiveVibThresholds !== false && (_vcRollingCache.global.status === 'calibrating' || _vcRollingCache.global.status === 'calibrated')) ? _vcRollingCache.global : null,
                 log:          this.log
             });
 
@@ -3290,6 +3299,16 @@ class CogniLiving extends utils.Adapter {
                         this.log.info('[OC-VIB-CAL] global adaptiv: p90=' + _gP90 + ' wake>' + _gWakeThr + ' rem ' + _gRemLow + '-' + _gRemUp);
                     }
                 }
+                // OC-VIB-CAL: Trigger-Schwelle fuer Tiefschlaf aus Rolling-Cache
+                var _gTrigThr = (_vcRollingCache && _vcRollingCache.global && this.config.adaptiveVibThresholds !== false) ? (_vcRollingCache.global.trigThr || 0) : 0;
+                // Rolling Wake/REM override fuer globale Stage-Berechnung
+                if (_vcRollingCache && _vcRollingCache.global && this.config.adaptiveVibThresholds !== false &&
+                    (_vcRollingCache.global.status === 'calibrating' || _vcRollingCache.global.status === 'calibrated') &&
+                    _vcRollingCache.global.wakeThresh) {
+                    _gWakeThr = _vcRollingCache.global.wakeThresh;
+                    _gRemUp   = _vcRollingCache.global.remUp   || _gRemUp;
+                    _gRemLow  = _vcRollingCache.global.remLow  || _gRemLow;
+                }
                 var deepSec = 0, lightSec = 0, remSec = 0, wakeSec = 0;
                 var consecutiveQuiet = 0;
                 for (var _sl = 0; _sl < slotCount; _sl++) {
@@ -3301,7 +3320,7 @@ class CogniLiving extends utils.Adapter {
                     var slotStrMax = slotStrArr.length > 0 ? Math.max.apply(null, slotStrArr) : 0;
                     var hoursIn = (slotS - swStart) / 3600000;
                     var stage;
-                    if (slotDet === 0) {
+                    if (slotDet <= _gTrigThr) {
                         consecutiveQuiet++;
                         stage = consecutiveQuiet >= 5 ? 'deep' : 'light';
                     } else if (slotDet >= 5 || slotStrMax > _gWakeThr) {
