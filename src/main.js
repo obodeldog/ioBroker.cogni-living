@@ -3707,6 +3707,10 @@ class CogniLiving extends utils.Adapter {
                                 && (e.timestamp||0) >= _fbStart && (e.timestamp||0) <= _fbEnd
                                 && (isActiveValue(e.value) || toPersonCount(e.value) > 0);
                         });
+                        // [OC-44 Guard] Kein Vib-Nachweis → Person war nicht im Bett → bedWasEmpty bleibt true
+                        if (_pFbVibDet.length === 0) {
+                            _self.log.info('[OC-44] ' + person + ': kein Vib-Nachweis im globalen Fenster → bedWasEmpty bleibt true (Bett war leer)');
+                        } else {
                         var _pFbVibStr = sleepSearchEvents.filter(function(e) {
                             return (!e.personTag || e.personTag === person)
                                 && e.isVibrationStrength
@@ -3753,7 +3757,8 @@ class CogniLiving extends utils.Adapter {
                         _self.log.info('[OC-44] ' + person + ': Stages-Fallback ? globales Fenster '
                             + new Date(_fbStart).toLocaleTimeString() + '-' + new Date(_fbEnd).toLocaleTimeString()
                             + ', ' + _fbStages.length + ' Slots, Score=' + _pResult.sleepScore
-                            + ((_pFbVibDet.length > 0) ? ', VibDet=' + _pFbVibDet.length : ' (kein Vibsensor)'));
+                            + ', VibDet=' + _pFbVibDet.length);
+                        } // end else (_pFbVibDet.length > 0)
                     }
 
                     // [OC-42p] Per-Person bedExitTs: physisches Aufstehen nach sleepWindowEnd
