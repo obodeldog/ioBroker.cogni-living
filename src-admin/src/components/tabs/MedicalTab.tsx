@@ -924,9 +924,9 @@ function StatsPanel({ stats, isDark, title }: { stats: CorrStats; isDark: boolea
 }
 
 // --- PersonCgmChart (SVG-Timeline) ---
-function PersonCgmChart({ person, readings, vibEvents, sleepStart, sleepEnd, unit, isDark }: {
+function PersonCgmChart({ person, readings, vibEvents, sleepStart, sleepEnd, unit, isDark, bedWasEmpty }: {
     person: string; readings: CgmReading[]; vibEvents: VibEvent[];
-    sleepStart: number|null; sleepEnd: number|null; unit: string; isDark: boolean;
+    sleepStart: number|null; sleepEnd: number|null; unit: string; isDark: boolean; bedWasEmpty?: boolean;
 }) {
     const unitLabel = unit === 'mmoll' ? 'mmol/l' : 'mg/dl';
     const hypoThr  = unit === 'mmoll' ? 3.9  : 70;
@@ -948,6 +948,18 @@ function PersonCgmChart({ person, readings, vibEvents, sleepStart, sleepEnd, uni
                 <Typography variant="body2" fontWeight="bold" sx={{ mb:0.5 }}>{person}</Typography>
                 <Alert severity="info" icon={<MonitorHeartIcon />} sx={{ py:0.5, fontSize:'0.8rem' }}>
                     {'Noch keine CGM-Daten für diese Nacht vorhanden. Nach Adapter-Update werden neue Nächte korrekt gespeichert.'}
+                </Alert>
+            </Box>
+        );
+    }
+
+    if (bedWasEmpty) {
+        return (
+            <Box sx={{ mt:1, mb:2 }}>
+                <Typography variant="body2" fontWeight="bold" sx={{ mb:0.5 }}>{person}</Typography>
+                <Alert severity="warning" sx={{ py:0.5, fontSize:'0.8rem' }}>
+                    <strong>Bett war leer diese Nacht</strong> — Kein Sensor hat Bett-Anwesenheit bestätigt.
+                    Diese Nacht wird auch aus der kumulativen Korrelationsanalyse ausgeschlossen.
                 </Alert>
             </Box>
         );
@@ -1113,6 +1125,8 @@ function CumulativePanel({ socket, adapterName, instance, native, isDark }: {
                 const data = (r?.success && r?.data) ? r.data : null;
                 if (!data) continue;
                 const person = cfgPersons[0];
+                // Bett war leer → Nacht aus Korrelationsanalyse ausschließen
+                if (data.personData?.[person]?.bedWasEmpty === true) continue;
                 const readings: CgmReading[] = data.cgmReadings?.[person] || [];
                 if (readings.length < 3) continue;
                 // Vibration: vibration_trigger==true aus eventHistory, nur Person-eigene oder ungetaggte Events
@@ -1205,10 +1219,11 @@ function CgmCorrelationPanel({ socket, adapterName, instance, native, isDark }: 
     const today = fmt(new Date());
 
     const [selDate, setSelDate]   = useState<string>(today);
-    const [cgmData, setCgmData]   = useState<Record<string,CgmReading[]>>({});
-    const [vibData, setVibData]   = useState<Record<string,VibEvent[]>>({});
-    const [sleepWin, setSleepWin] = useState<{start:number|null;end:number|null}>({start:null,end:null});
-    const [loading, setLoading]   = useState(true);
+    const [cgmData, setCgmData]       = useState<Record<string,CgmReading[]>>({});
+    const [vibData, setVibData]       = useState<Record<string,VibEvent[]>>({});
+    const [bedEmpty, setBedEmpty]     = useState<Record<string,boolean>>({});
+    const [sleepWin, setSleepWin]     = useState<{start:number|null;end:number|null}>({start:null,end:null});
+    const [loading, setLoading]       = useState(true);
 
     const prevDate = (d: string) => { const x=new Date(d); x.setDate(x.getDate()-1); return fmt(x); };
     const nextDate = (d: string) => { const x=new Date(d); x.setDate(x.getDate()+1); return fmt(x); };
@@ -1266,7 +1281,13 @@ function CgmCorrelationPanel({ socket, adapterName, instance, native, isDark }: 
             }
 
             const sw = { start: d1?.sleepWindowStart ?? d2?.sleepWindowStart ?? null, end: d1?.sleepWindowEnd ?? d2?.sleepWindowEnd ?? null };
-            setCgmData(merged); setVibData(vibMerged); setSleepWin(sw); setLoading(false);
+            // bedWasEmpty pro Person aus personData (primär d1, Fallback d2)
+            const bedEmptyMap: Record<string,boolean> = {};
+            for (const person of cfgPersons) {
+                const bwe = d1?.personData?.[person]?.bedWasEmpty ?? d2?.personData?.[person]?.bedWasEmpty;
+                bedEmptyMap[person] = bwe === true;
+            }
+            setCgmData(merged); setVibData(vibMerged); setBedEmpty(bedEmptyMap); setSleepWin(sw); setLoading(false);
         });
     }, [selDate, socket, adapterName, instance]);
 
@@ -1310,6 +1331,7 @@ function CgmCorrelationPanel({ socket, adapterName, instance, native, isDark }: 
                         sleepStart={sleepWin.start} sleepEnd={sleepWin.end}
                         unit={cgmAssign[person]?.unit||'mgdl'}
                         isDark={isDark}
+                        bedWasEmpty={bedEmpty[person] === true}
                     />
                 ))
             )}
