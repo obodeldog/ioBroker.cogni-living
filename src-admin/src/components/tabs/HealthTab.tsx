@@ -158,6 +158,8 @@ export default function HealthTab(props: any) {
     const [meals, setMeals] = useState({ breakfast: false, lunch: false, dinner: false });
     const [badStatus, setBadStatus] = useState({ status: 'FREI', last: '-', duration: 0 });
     const [dmRoom, setDmRoom] = useState<string | null>(null);
+    // [OC-56] Neustart-Detektor: letzter Adapter-(Neu)start { ts, lastHeartbeat, gapSec }
+    const [lastRestartInfo, setLastRestartInfo] = useState<{ ts: number; lastHeartbeat: number | null; gapSec: number | null } | null>(null);
     const [dmState, setDmState] = useState<string>('ok');
     const [dmIgnored, setDmIgnored] = useState<{ room: string, reason: string, timestamp: number } | null>(null);
     const [dmSmartSleep, setDmSmartSleep] = useState(false);
@@ -664,6 +666,10 @@ export default function HealthTab(props: any) {
 
         socket.getState(`${namespace}.analysis.health.gaitSpeed`).then((s:any) => setGaitTrend(s?.val !== undefined ? Number(s.val) : null));
         socket.getState(`${namespace}.analysis.safety.deadMan.currentRoom`).then((s:any) => setDmRoom(s?.val || null));
+        // [OC-56] Letzten Adapter-Neustart laden (Warnung in Schlafkachel wenn in letzter Nacht)
+        socket.getState(`${namespace}.system.lastRestart`).then((s:any) => {
+            if (s && s.val) { try { setLastRestartInfo(JSON.parse(s.val)); } catch(e) { setLastRestartInfo(null); } }
+        });
         socket.getState(`${namespace}.analysis.health.geminiNight`).then((s:any) => { setGeminiNight(s?.val || 'Warte auf Analyse...'); if (s?.ts) setGeminiNightTs(s.ts); });
         socket.getState(`${namespace}.analysis.health.geminiDay`).then((s:any) => { setGeminiDay(s?.val || 'Warte auf Analyse...'); if (s?.ts) setGeminiDayTs(s.ts); });
         socket.getState(`${namespace}.analysis.activity.roomHistory`).then((s:any) => {
@@ -2605,6 +2611,34 @@ export default function HealthTab(props: any) {
                                 </div>
                             </div>
                         )}
+
+                        {/* [OC-56] Neustart-Warnung: Adapter-Neustart waehrend der letzten Nacht (18:00 Vortag - 12:00 heute) */}
+                        {(() => {
+                            if (!lastRestartInfo || !lastRestartInfo.ts) return null;
+                            const nightStart = new Date(); nightStart.setHours(18, 0, 0, 0); nightStart.setDate(nightStart.getDate() - 1);
+                            const nightEnd = new Date(); nightEnd.setHours(12, 0, 0, 0);
+                            if (lastRestartInfo.ts < nightStart.getTime() || lastRestartInfo.ts > nightEnd.getTime()) return null;
+                            const restartTime = new Date(lastRestartInfo.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                            const gapMin = lastRestartInfo.gapSec !== null ? Math.round(lastRestartInfo.gapSec / 60) : null;
+                            return (
+                                <div style={{
+                                    borderTop: `1px dashed ${isDark?'#444':'#ddd'}`,
+                                    paddingTop: '6px',
+                                    marginTop: '6px',
+                                    fontSize: '0.65rem',
+                                    color: '#ff9800'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <span>⚠️</span>
+                                        <span>
+                                            <b>Adapter-Neustart um {restartTime}</b>
+                                            {gapMin !== null && gapMin > 2 ? ` (Ausfall ca. ${gapMin} Min)` : ''}
+                                            {' — Events wurden aus dem Pufferlog wiederhergestellt'}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         {/* OC-15: Batterie-Warnung — nur schlaf-relevante Sensoren */}
                         {vibBatteryWarning && vibBatteryWarning.length > 0 && (

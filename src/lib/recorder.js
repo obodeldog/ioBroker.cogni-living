@@ -6,6 +6,8 @@
  * Version: 0.30.34 (Fix: Increased History Buffer to 2000)
  */
 
+const _walFs = require('fs');
+const _walPath = require('path');
 const HISTORY_MAX_SIZE = 2000;
 const RAW_LOG_MAX_SIZE = 2500;
 const THERMO_LOG_SIZE = 1000;
@@ -279,6 +281,23 @@ async function processSensorEvent(adapter, id, state, deviceConf) {
     };
     adapter.eventHistory.unshift(eventObj);
     if (adapter.eventHistory.length > HISTORY_MAX_SIZE) adapter.eventHistory.pop();
+
+    // [OC-56] Write-Ahead-Eventlog: jedes Event sofort auf Platte (restart-sicher).
+    // Grund (Forensik 11.06.2026): naechtlicher Prozess-Neustart leerte den In-Memory-Puffer,
+    // Abend-Events (bedEntryTs-Quelle) gingen fuer die Analyse verloren obwohl der Sensor lieferte.
+    try {
+        if (adapter._historyDir) {
+            if (!adapter._walDirReady) {
+                try { _walFs.mkdirSync(adapter._historyDir, { recursive: true }); } catch (mkE) {}
+                adapter._walDirReady = true;
+            }
+            const _wd = new Date(now);
+            const _wds = _wd.getFullYear() + '-' + String(_wd.getMonth() + 1).padStart(2, '0') + '-' + String(_wd.getDate()).padStart(2, '0');
+            _walFs.appendFileSync(_walPath.join(adapter._historyDir, 'buffer-' + _wds + '.jsonl'), JSON.stringify(eventObj) + '\n');
+        }
+    } catch (walE) {
+        if (!adapter._walWarned) { adapter._walWarned = true; adapter.log.warn('[OC-56] Write-Ahead-Eventlog fehlgeschlagen: ' + walE.message); }
+    }
 
     await adapter.setStateAsync('events.lastEvent', { val: JSON.stringify(eventObj), ack: true });
     await adapter.setStateAsync('events.history', { val: JSON.stringify(adapter.eventHistory), ack: true });

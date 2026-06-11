@@ -1705,3 +1705,32 @@ Jetzt:  Hover auf blauem Balken bei FP2-Dropout → "Leicht"                    
 - Dreieck-Marker (▲): zeigt immer "Radar-Aussetzer" mit Dauer — unabhängig vom Balken darüber
 
 > **Für Laien:** Der blaue Balken ist jetzt ehrlich. Wenn er blau ist und "Leicht" sagt, dann schliefst du. Das Dreieck darunter sagt dir zusätzlich: "Der Radar hatte hier einen Aussetzer — aber die Vibrationsdaten haben bestätigt, dass du im Bett warst."
+---
+
+## 💾 OC-56: WRITE-AHEAD-EVENTLOG - Restart-sicherer Event-Puffer *(ab v0.33.296)*
+
+### Problem (Forensik 11.06.2026)
+Der Schlafanalyse-Puffer (`eventHistory`) lebte nur im Arbeitsspeicher. Bei einem naechtlichen
+Adapter-Neustart (durch ioBroker, z.B. Crash oder Zeitplan - nicht vom Nutzer) ging der Puffer verloren.
+Folge: Abend-Events (Bettgeh-Vibrationen ~23:1x) fehlten morgens in der Analyse, obwohl der Sensor
+lieferte und die Events sogar in der Vortages-JSON gespeichert waren. `bedEntryTs` wurde null,
+der gelbe Wachliegen-Balken verschwand. Alle bisherigen Sicherheitsnetze versagten still.
+
+### Loesung: 4 Bausteine
+
+| Baustein | Was passiert | Wo |
+|---|---|---|
+| **Write-Ahead-Log (WAL)** | Jedes Event wird sofort beim Eintreffen zusaetzlich als JSON-Zeile in `history/buffer-YYYY-MM-DD.jsonl` geschrieben (append-only). | `recorder.js` |
+| **Deterministischer Merge** | `sleepSearchEvents` wird bei jedem Save IMMER aus 3 Quellen zusammengefuehrt und dedupliziert (Key: timestamp+id+type): Memory + WAL-Dateien (Vortag/heute) + Vortages-JSON. | `main.js saveDailyHistory()` |
+| **Restore-Fix** | Beim Adapter-Start werden WAL-Dateien (gestern+heute) in den Puffer gemergt. Fehler beim Restore loggen warn statt still zu schlucken. Cleanup: WAL > 3 Tage wird geloescht. | `main.js startSystem()` |
+| **Neustart-Detektor** | `system.heartbeat` wird alle 60s geschrieben. Beim Start wird die Heartbeat-Luecke ausgewertet und in `system.lastRestart` (JSON: ts, lastHeartbeat, gapSec) abgelegt. | `main.js` + HealthTab |
+
+### UI-Anzeige
+Liegt der letzte Adapter-Neustart in der vergangenen Nacht (18:00 Vortag bis 12:00 heute), zeigt die
+Schlafkachel im HealthTab eine orange Warnung: *"Adapter-Neustart um HH:MM (Ausfall ca. X Min) -
+Events wurden aus dem Pufferlog wiederhergestellt"*.
+
+### Sensor-Neutralitaet
+OC-56 ist quellen-neutral: Das WAL speichert ALLE Sensortypen (Vibration, FP2, PIR, Tuer, Temperatur...).
+Jede Kundenkonfiguration profitiert gleichermassen - die Analyse sieht nach einem Neustart exakt
+dieselben Events wie ohne Neustart.

@@ -1,5 +1,450 @@
 ﻿# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 08.06.2026 | **Version:** 0.33.277
+**Letzte Aktualisierung:** 11.06.2026 | **Version:** 0.33.296
+
+---
+
+## Sitzung 11.06.2026 (Abend) — Version 0.33.296 — OC-56: Write-Ahead-Eventlog, restart-sicherer Event-Puffer
+
+### ✅ Abgeschlossen
+
+#### Forensik: Warum `bedEntryTs` für Marc fast jede Nacht fehlte (gelber "Wachliegen"-Balken weg)
+- **Beweiskette aus Rohdaten (CSV) + JSON-Dateien 10./11.06.:**
+  1. Vibrationssensor lieferte Bettgeh-Events 23:13–23:44 (Trigger + Stärke 43/40) — Sensor OK
+  2. Adapter hat sie korrekt erfasst und mit `personTag=Marc` in `2026-06-10.json` gespeichert — Erfassung OK
+  3. Puffer-Überlauf widerlegt: nur ~767 Events seit 23:13, Cap ist 2000
+  4. Ältestes Event im Puffer am Morgen: 00:08 Uhr → **Puffer wurde zwischen 23:58 und 00:08 geleert**
+  5. Einzige Code-Stellen, die den Puffer leeren = Prozess-Start → **nächtlicher Adapter-Neustart durch ioBroker** (nicht vom Nutzer; Ursache noch offen: Crash/Watchdog/Zeitplan)
+  6. Alle 3 Sicherheitsnetze versagten still: `events.history`-Restore (catch ohne Log), Buffer-Gap-Heuristik (nur debug-Log), OC-38 (deckt `bedEntryTs` nicht ab)
+- **Konsequenz**: per-Person `bedEntryTs=null` → kein gelbes Wachliegen-Segment, obwohl global FP2 23:17 lieferte
+
+#### v0.33.296 — OC-56 Fixes (4 Bausteine)
+1. **Write-Ahead-Eventlog** (`src/lib/recorder.js`): Jedes Event wird sofort beim Eintreffen zusätzlich in `history/buffer-YYYY-MM-DD.jsonl` geschrieben (append-only, eine JSON-Zeile pro Event). Kein Event geht mehr verloren, egal ob Crash/Neustart/Stromausfall.
+2. **Deterministischer Event-Merge** (`src/main.js`, `saveDailyHistory`): `sleepSearchEvents` wird IMMER aus 3 Quellen zusammengeführt + dedupliziert (Key: timestamp|id|type): In-Memory-Puffer + Pufferdateien (Vortag/heute) + Vortages-JSON. Alte "nur bei Lücke"-Heuristik ersetzt. Log: `[OC-56] sleepSearch-Merge: X Memory + Y Pufferdatei + Z Vortages-JSON`.
+3. **Restore-Fix beim Start** (`src/main.js` + `src/lib/setup.js`): WAL-Pufferdateien (gestern+heute) werden beim Start in den Speicher gemergt; Silent-Catches (`catch → eventHistory=[]`) loggen jetzt **warn**; Cleanup: Pufferdateien > 3 Tage werden gelöscht.
+4. **Neustart-Detektor**: `system.heartbeat` (alle 60s) + `system.lastRestart` (JSON: ts, lastHeartbeat, gapSec) bei jedem Start. HealthTab zeigt orange Warnung in der Schlafkachel, wenn der Neustart in der letzten Nacht (18:00 Vortag–12:00) lag: "Adapter-Neustart um HH:MM — Events wurden aus dem Pufferlog wiederhergestellt".
+- Patch-Skripte: `scripts/_patch_oc56_wal.js`, `scripts/_patch_oc56_wal2.js`
+- Frontend: `HealthTab.tsx` (lastRestartInfo State + Warnungs-Block vor OC-15 Batterie-Warnung)
+
+### 🔧 Offen / Nächste Schritte
+- **Ursache des nächtlichen Neustarts finden**: ioBroker-Log 23:50–00:15 prüfen; Instanz-Einstellungen auf Neustart-Zeitplan (`restartSchedule`) prüfen. Der Neustart-Detektor liefert ab jetzt die Daten dazu.
+- **Validierung nächste Nacht**: `bedEntryTs` für Marc muss aus dem Vibrationsmuster (~23:1x-Cluster) kommen, gelber Wachliegen-Balken zurück
+- **Dropdowns für Quellen** bei "Ins Bett gegangen" + "Aufgewacht" (besprochen, noch nicht umgesetzt; braucht `allBedEntrySources` im Backend + per-Person `allWakeSources`)
+
+---
+
+## Sitzung 11.06.2026 — Version 0.33.292–0.33.295 — CGM-Fix, Bett-leer-Erkennung, Plausibilitäts-Check
+
+### ✅ Abgeschlossen
+
+#### v0.33.292 — SensorList VIB-CAL Toggle entfernt
+- Doppelter Toggle "Adaptive Vibrations-Schwellen" war in `SensorList.tsx` UND `SystemTab.tsx`
+- `SensorList.tsx`-Block komplett entfernt (Toggle + Box + Imports `Switch`, `FormControlLabel`, `TuneIcon`)
+- Einzige Anlaufstelle: SystemTab → Vibrations-Kalibrierung Akkordeon
+
+#### v0.33.293 — CGM Korrelationsdiagramm: personTag-Filter
+- **Root Cause**: CGM-Chart für Jana zeigte 48 Vibrationsereignisse obwohl `bedWasEmpty=true` und `nightVibrationCount=null`
+- **Ursache**: eventHistory hatte 109 `isVibrationBed=true` Events: Marc=99, Anni=10, Jana=0 — aber Chart filterte NICHT nach `personTag`
+- **Fix in `MedicalTab.tsx`** an 2 Stellen: Filter `(!e.personTag || e.personTag === person)` hinzugefügt
+- Gilt für Tages-Chart UND kumulative Statistik-Berechnung
+
+#### v0.33.294 — CGM: Bett-leer-Warnung + Ausschluss aus Korrelationsanalyse
+- **Warnung im Tages-Chart**: Wenn `bedWasEmpty=true` erscheint statt Diagramm: "Bett war leer diese Nacht — Kein Sensor hat Bett-Anwesenheit bestätigt. Diese Nacht wird aus kumulativer Analyse ausgeschlossen."
+- **Kumulative Statistik**: Nächte mit `bedWasEmpty=true` (per Person) werden übersprungen → Nächte-Zähler korrekt
+- Neues State-Feld `bedEmpty` in `CgmCorrelationPanel`, wird aus `d1.personData[person].bedWasEmpty` befüllt
+
+#### v0.33.295 — OC-PLAUS: Plausibilitäts-Check für Schlafphasen
+- **Problem**: Anni nicht im Bett, aber 1 Vibrations-Event → OC-44 feuert → 89 Stages berechnet → fast 100% Tiefschlaf, 0% REM
+- **Diskutiert und beschlossen**: AND-Verknüpfung zweier Checks als sicherste Variante
+- **Bedingung 1 (Dichte)**: Fenster ≥ 2h aber `nightVibrationCount < 5` → Sensor kaum ausgelöst
+- **Bedingung 2 (Verteilung)**: > 70% Tiefschlaf UND 0% REM → physiologisch unmöglich (echter Schlaf hat immer REM nach ~90min)
+- **Beide müssen zutreffen** → false-positive-Schutz (Marc mit 1,5h außerhalb hat trotzdem ≥5 Events vom Rest der Nacht)
+- Bei Auslösung: `bedWasEmpty=true`, Stages/Score werden gelöscht, Log-Meldung `[OC-PLAUS]`
+- Eingefügt direkt vor `result[person] = {...}` in `saveDailyHistory()`
+- **Implementiert in** `src/main.js`, Patch-Script: `scripts/_patch_oc_plaus.js`
+
+### 🔧 Offen / Nächste Schritte
+- **`bedEntryTs` für Marc**: Einschlafzeit-Erkennung ("Ins Bett gegangen") zeigt "kein plausibler Wert" — separates Problem, bewusst vertagt auf nächsten Chat
+- **Validierung OC-PLAUS**: Morgen früh prüfen ob Anni nun `bedWasEmpty=true` bekommt wenn sie wirklich nicht da war
+
+### 📝 Beobachtungen aus den JSON-Daten (11.06.2026)
+- `2026-06-11.json` (Nacht 10./11.06.): Marc 77 Vib-Events, Anni 1, Julia/Jana 0
+- Anni hatte `bedWasEmpty=false` durch OC-44-Fallback mit nur 1 Event → OC-PLAUS hätte das jetzt geblockt
+- Marc: `bedEntryTs=null` trotz 27 eigener Events → getrennte Untersuchung nötig
+- Jana/Julia: korrekt `bedWasEmpty=true`
+
+---
+
+## Sitzung 10.06.2026 (spätabend) — Version 0.33.291 — Versionsdisplay-Bug Root Cause gefunden und behoben
+
+### ✅ Abgeschlossen
+- **Root Cause Versionsnummer-Bug**: `io-package.json` hat ZWEI Versions-Felder:
+  - `version` (root-Feld, von npm gelesen) — wurde immer korrekt gebumpt
+  - `common.version` (von ioBroker Admin-UI gelesen) — seit v0.33.288 NIE gebumpt!
+  - Deshalb: Adapter läuft korrekt (liest package.json), Admin-UI zeigt 0.33.287 (liest common.version)
+- **Fix**: io-package.json.common.version von 0.33.287 auf 0.33.291 korrigiert, BEIDE Felder jetzt immer gebumpt
+- **Deployment-Regel** in `.cursor/rules/deployment-versionbump.mdc` aktualisiert (lokal)
+
+### 🎯 Was nach Installation zu sehen sein sollte
+- Admin-UI → Adapter → cogni-living: zeigt v0.33.291
+- Log: "starting. Version 0.33.291"
+- Einstellungen-Header: "cogni-living.0 v0.33.291"
+
+---
+
+## Sitzung 10.06.2026 (abend) — Version 0.33.289–290 — Hotfix + OC-44 bedWasEmpty-Guard
+
+### ✅ Abgeschlossen
+- **v0.33.289 Hotfix**: Patches C3/C5/C6/C7/C8 waren in v0.33.288 nicht eingefügt worden →
+  `_vcRollingCache is not defined` → Adapter crashte bei saveDailyHistory() → Nachtdaten der Nacht 09./10.06. verloren.
+  Alle fehlenden Patches nachgetragen und korrekt gepusht.
+- **v0.33.290 OC-44 Fix**: bedWasEmpty-Guard — Fallback feuert jetzt nur wenn Person ≥1 Vibrationsevent
+  im globalen Schlaffenster hat. Verhindert Anni (nicht im Bett) → fälschlich bedWasEmpty=false.
+  Log: `[OC-44] Anni: kein Vib-Nachweis im globalen Fenster → bedWasEmpty bleibt true`
+
+### 🔧 Offene Baustellen
+- UI-Konsolidierung: redundanter VIB-CAL Toggle in SensorList.tsx noch nicht entfernt
+- Nacht 09./10.06. irreversibel verloren (Crash-Nacht)
+- Ab Nacht 10./11.06. läuft v0.33.290 korrekt — erste Validierung der OC-44-Fix + VIB-CAL möglich
+
+### 🎯 Nächster logischer Schritt
+- Nächste Nachtdaten abwarten, JSON prüfen: Anni `bedWasEmpty=true` wenn nicht im Bett?
+- VIB-CAL Rolling Buffer: nach 3+ Nächten Status "Kalibriert" im SystemTab sichtbar?
+
+---
+
+## Sitzung 09.06.2026 (abend3) — Version 0.33.288 — OC-VIB-CAL v2 Rolling Buffer + Deep/Light Kalibrierung
+
+### Kontext
+Nutzer wollte die single-night OC-VIB-CAL (v0.33.287) um History-basierte Rolling-Kalibrierung erweitern,
+Deep/Light-Phasen-Kalibrierung einbauen, und eine Anzeige im Admin-SystemTab mit Status + Zahlen.
+
+### ✅ Abgeschlossen
+
+**Rolling-Kalibrierungs-Buffer (`src/main.js`)**
+- Neuer ioBroker-State `analysis.health.vibCalibData` (JSON): rollender Puffer bis 14 Nächte
+- Pro Nacht gespeichert: `date`, `global.trigRatePerSlot`, `global.vibStrMax`, `persons[P].trigRatePerSlot`, `persons[P].vibStrMax`
+- Rolling-Thresholds berechnet: p90(vibStrMax) → Wake/REM; avg(trigRatePerSlot)×0.2 → Trigger-Threshold
+- Status pro Person: `uncalibrated` (0-2 Nächte) / `calibrating` (3-6) / `calibrated` (7+)
+- Wake/REM-Rolling erst ab 3+ Nächten aktiv (vorher: current-night p90, wie v0.33.287)
+
+**Deep/Light-Kalibrierung (`computePersonSleep` + globaler Stage-Loop)**
+- Neuer Parameter `adaptiveTrigThr` für `computePersonSleep()`: ersetzt `slotDet === 0` durch `slotDet <= adaptiveTrigThr`
+- Gleiche Änderung im globalen Stage-Loop mit `_gTrigThr` (aus rolling cache)
+- Bei sehr rauschigem Sensor (avg 5 Trigger/5min-Slot): Thr=1 → ein einzelner Trigger gilt noch als "Ruhe-Slot"
+- Rolling-Wake/REM-Override: wenn `vibCalibRolling.status` = calibrating/calibrated → überschreibt current-night p90
+
+**SystemTab Kalibrierungs-Panel (`src-admin/src/components/tabs/SystemTab.tsx`)**
+- Neues Akkordeon "Vibrations-Kalibrierung (OC-VIB-CAL)" mit Status-Chip im Header
+- Toggle `adaptiveVibThresholds` direkt im Panel (onChange via props)
+- Status-Tabelle: Person | Nächte | Wake-Schwelle | REM-Fenster | Tief-Trigger | Fortschrittsbalken | Status
+- Liest `analysis.health.vibCalibData` alle 5 Minuten
+- Fallback-Text wenn noch keine Kalibrierungsdaten
+
+### Geänderte Dateien
+- `src/main.js`: C1-C10 Patches (Params + State-Create + Cache-Read + Rolling-Write + Stage-Conditions)
+- `src-admin/src/components/tabs/SystemTab.tsx`: Switch/FormControlLabel/LinearProgress + TuneIcon + Panel
+- `package.json`, `io-package.json`: 0.33.288
+
+### Architektur
+- Rolling-Cache wird jede Nacht NACH der Analyse geschrieben → gilt ab der nächsten Nacht
+- Erste Nacht: immer current-night p90 (kein Cache) / zweite Nacht: cache enthält Nacht 1 (1 Datenpunkt)
+- Ab Nacht 3: "calibrating" → ab Nacht 7: "calibrated" (stabile Schwellen)
+
+---
+
+## Sitzung 09.06.2026 (abend2) — Version 0.33.287 — OC-VIB-CAL Adaptive Vibrations-Schwellen
+
+### Kontext
+Nutzer wollte adaptive Vibrationsintensitäts-Kalibrierung sofort umsetzen (nicht erst in späterem Sprint).
+Ansatz: single-night p90-Baseline (kein History-Scan nötig), toggle für sicheres Deaktivieren.
+
+### ✅ Abgeschlossen
+
+**OC-VIB-CAL implementiert (`src/main.js`, `SensorList.tsx`, `io-package.json`)**
+
+Algorithmus:
+1. Alle `vibration_strength` Werte der aktuellen Nacht sammeln (`vibStrEvts`/`vibStrInWindow`)
+2. Sortieren, p90 berechnen
+3. Wenn p90 ≥ 6 UND mindestens 10 Mess-Events: adaptive Schwellen setzen:
+   - `wakeThreshold = max(12, round(p90 × 1.15))`  — statt fester 28
+   - `remUpper = max(6, round(wakeThreshold × 0.82))` — statt fester 28
+   - `remLower = max(3, round(wakeThreshold × 0.38))` — statt fester 12
+4. Sonst: Fallback auf feste Defaults (28/12) — immer graceful
+
+Beispiel: Sensor mit p90=14 → wakeThreshold=16, remUpper=13, remLower=5
+Ergebnis: schwache Sensoren/weiche Matratzen klassifizieren Wake-Phasen korrekt; starke Sensoren werden nicht über-klassifiziert
+
+**Toggle**: `config.adaptiveVibThresholds !== false` (default: true)
+Admin-UI: neuer Block "Schlafanalyse-Einstellungen" in SensorList.tsx vor Batterie-Konfiguration
+`io-package.json`: `adaptiveVibThresholds: true` als native default
+
+**Logging**: bei adaptivem Modus: `[OC-VIB-CAL] adaptiv: p90=X wake>Y rem Z-W (n=N)` im Adapter-Log
+
+**Rückgabe in computePersonSleep**: `vibCalibAdaptive: true/false`, `vibCalibThresholds: { wake, remUpper, remLower }` für Debugging
+
+### 📁 Dateien geändert
+- `src/main.js` (adaptiveVib param + threshold calc in computePersonSleep + global stage block + beide call-sites)
+- `src-admin/src/components/settings/SensorList.tsx` (neuer Toggle-Block + Switch/FormControlLabel imports + TuneIcon)
+- `io-package.json` (adaptiveVibThresholds: true native default)
+- `admin/assets/index-F2Mibegt.js` (React build)
+
+---
+
+## Sitzung 09.06.2026 (abend) — Version 0.33.286 — bedWasEmpty + per-Person OBE Hop-Filter
+
+### Kontext
+Analyse der Nacht 09.06.2026 mit Marc+Anni (Szenario 3: gleicher Raum, verschiedene Matratzen).
+Drei Auffälligkeiten: Annis Tile zeigte `bedWasEmpty=false` obwohl sie abwesend war; OG-Bad/OG-Flur-Events als OBE-Dreiecke bei EG-Bewohnern; Diskussion über globale vs. per-Person Engine-Struktur.
+
+### ✅ Abgeschlossen
+
+**Fix 1: `haus_still` aus `bedWasEmpty`-Prüfung entfernt (`src/main.js` Zeile ~3427)**
+- `haus_still` ist kein personenspezifischer Präsenzbeweis (Rauschen des Hauses, kein Nachweis wer im Bett liegt)
+- Entfernt aus `_localSourcesNull`-Check: nur noch `fp2`, `fp2_vib`, `motion_vib` zählen
+- Zusätzlich: `nightVibrationCount === null` wird jetzt wie `=== 0` behandelt (kein Sensor = kein Beweis)
+
+**Fix 2: OC-OBE-HOP — Hop-Filter in per-Person OBE (`computePersonSleep` Zeile ~607)**
+- Per-Person OBE in `computePersonSleep()` hatte bislang keinen Topologie-Hop-Filter
+- Globaler OBE-Engine (Zeile ~2766) hatte den Filter schon (BFS, max. 2 Hops), per-Person nicht → OG-Sensoren erschienen bei EG-Bewohnern
+- Fix: `hopDistFn` + `bedroomLocations` (bereits als Parameter vorhanden) werden jetzt im OBE-Filter genutzt
+- Sensoren > 2 Hops vom Schlafzimmer werden ignoriert (z.B. OG Bad = Hop 3-4 bei EG-Schlafen)
+- Graceful: ohne `hopDistFn` / ohne Topologie-Config → kein Eingriff (alle Events bleiben sichtbar)
+
+**Konzept OC-VIB-CAL in BRAINSTORMING.md dokumentiert**
+- Per-Person Vibrationsintensitäts-Kalibrierung (adaptive Thresholds statt fester 28/12-Grenzen)
+- Basis: bereits gesammelte `nightVibrationStrengthMax/Avg` pro Person
+- 3 Stufen: p75-Skalierung → Rolling-Baseline → Garmin-Feedback
+- Priorisierung: nach Stabilisierung der aktuellen Fixes, im "Schlafanalyse-Qualitäts-Sprint"
+
+### 🔍 Analysen & Erkenntnisse (kein Code)
+
+**EG Bad ist 1 Hop von EG Schlafen** (direkte Verbindung in Topologie-Matrix) — nicht 2 Hops wie zunächst behauptet.
+Mein Fehler war ein Lesefehler der Matrix, kein Code-Bug.
+
+**Zwei OBE-Engines sind strukturell notwendig (vorerst)**:
+Der globale OBE-Engine (Zeilen 2766–2921) ist feature-reicher (FP2-Solo-Dropout-Filter, komplexe Cluster-Logik).
+Architektonische Vereinigung wäre ein geplanter Refactor-Sprint, nicht ein kurzfristiger Fix.
+
+**Radar-Sensor ohne personTag für Szenario 3**:
+Empfehlung: Shelly-Radar (Raumebene) ohne personTag belassen → globales Signal.
+Per-Person-`bedEntryTs` kommt aus dem jeweils personTag-zugewiesenen Vibrationssensor der Matratze.
+Vibration = Matratzenebene (persönlich), Radar = Raumebene (geteilt).
+Marcs `bedEntryTs=null` wird durch `personTag="Marc"` am Vibrationssensor lösbar (keine Code-Änderung nötig).
+
+### 🔧 Offene Baustellen
+
+- **Personennamen bei blauen "Andere Person aktiv"-Dreiecken** (nach Hop-Fix validieren, dann umsetzen)
+- **bedEntryTs Override-Dropdown** (erst prüfen ob personTag-Fix für Marc + Anni ausreicht)
+- **OC-VIB-CAL** (Vibrationsintensitäts-Kalibrierung, BRAINSTORMING.md, nach Datensammlung ≥14 Nächte)
+
+### 📁 Dateien geändert
+- `src/main.js` (Fix 1 Zeile ~3427; Fix 2 Zeile ~607)
+- `main.js` (Build-Ergebnis, obfuskiert)
+- `lib/` (Build-Ergebnis)
+- `package.json` / `io-package.json` (Version 0.33.286)
+- `_internal/BRAINSTORMING.md` (OC-VIB-CAL Konzept hinzugefügt)
+
+---
+
+## Sitzung 09.06.2026 - Version 0.33.281 bis 0.33.285 -- CGM Korrelations-Panel (Bugfixes + Paper-Statistik)
+
+### Kontext
+Fortsetzung CGM-Forschungstool (Phase 3). Nutzer testet Nacht 08./09.06.2026 mit Nightscout-CGM + Bett-Vibrationssensor (personTag Jana). Ziel: Korrelation Hypo/Hyper ↔ Bett-Bewegung für Paper-Nachweis.
+
+### v0.33.281 -- Phase-3-Bugfixes (Timeline zeigte keine Daten)
+- **Frontend `MedicalTab.tsx`**: `getHistoryData`-Response korrekt entpacken (`response.data.cgmReadings`, nicht `response.cgmReadings`)
+- Unicode-Escapes in JSX (`\u2194` etc.) durch echte Zeichen ersetzt
+- `mapTrend()`: Nightscout-Strings ("Flat", "SingleUp") → Pfeile (→, ↑)
+
+### v0.33.282 -- CGM-Timeline v2
+- Schlaffenster dynamisch aus `sleepWindowStart`/`sleepWindowEnd` (statt fix 20:00–12:00)
+- Datum-Navigation (‹ Datum ›) wie Aura Monitor
+- `PersonCgmChart`: SVG mit Glukose-Linie + Vibrations-Balken (Höhe = Stärke)
+- Statistik: Spearman r, Odds Ratio Hypo + Hyper (5-min-Bins)
+- **Fehler**: Vibrations-Quelle `nightVibrationTimestamps` (87 Events, True+False gemischt, Phantom-Events)
+
+### v0.33.283 -- Kumulatives Panel + Buffer-Restore
+- **Backend `src/main.js`**: `cgmBuffer` beim Adapter-Start aus heutigem History-JSON wiederherstellen
+- **Frontend**: `StatsPanel` mit Erklärungstexten; `CumulativePanel` (letzte 60 Nächte aggregiert); `PaperBox` (Literatur)
+- Paper-Qualitätsgrenzen: ≥14 Nächte Feasibility, ≥30 Nächte Paper-Qualität (Bonnefond 2020: 12 Wochen)
+- **Fehler**: Weiterhin `nightVibrationTimestamps` als Vibrations-Basis → zu viele/falsche Balken
+
+### v0.33.284 -- Korrekte Vibrations-Quelle + CGM-Merge beim Save
+- **Frontend**: Statt `nightVibrationTimestamps` → `eventHistory.filter(type==='vibration_trigger' && isVibrationBed && value===true)` (~42 Events/Nacht, nur echte Detektionen). Stärke via `vibration_strength` + `mergeVibEvents()` (3-min-Fenster)
+- **Backend `saveDailyHistory()`**: `cgmReadings` mit `_existingSnap.cgmReadings` mergen (dedup nach `ts`) — verhindert Überschreiben nach Neustart
+- **Versionsbump-Fix**: Commits 283/284 hatten fälschlich noch 0.33.282 in package.json/io-package.json (PowerShell `-replace` + BOM). Separater Commit `187b374` setzt 0.33.284 korrekt
+
+### v0.33.285 -- Zigbee-Keepalive-Filter (90s Mindestabstand)
+- **Problem**: Zigbee-Adapter sendet periodische State-Refreshes; wenn Sensor `true` ist, landen Duplikate in `eventHistory` (Gaps 28–82s). CSV/SQL speichert nur echte false→true-Übergänge (~14/Nacht), Chart zeigte ~93 Balken
+- **Fix `mergeVibEvents()`**: Events mit Abstand < 90s zum vorherigen verwerfen → ~20–25 echte Bewegungs-Events/Nacht
+
+### Datenquellen-Vibrations-Hierarchie (gelernt, für Paper-Doku)
+| Quelle | Events/Nacht | Vertrauen | Verwendung |
+|---|---|---|---|
+| CSV/SQL `vibration_trigger` | ~14 | Referenz (nur echte Übergänge) | Ground truth für Paper |
+| `eventHistory` trigger==true | ~42 | Gut (alle onStateChange) | Basis für Chart nach 90s-Dedup |
+| `nightVibrationTimestamps` | ~87 | **Schlecht** (True+False+Phantome) | **Nicht mehr verwenden** |
+| `vibration_strength` | ~14 | Stärke-Wert pro Messung | Balkenhöhe im Chart |
+
+### CGM-Datenverlust Nacht 08./09.06 (bekannt, nicht wiederherstellbar)
+- Ursache: Adapter-Neustart(e) → `cgmBuffer` geleert → `saveDailyHistory()` schrieb leere/minimale `cgmReadings` über bestehende 19 Readings
+- Chart zeigt Glukose nur bis ~23:30 (aus June-8-JSON); June-9-JSON hatte nach Verlust nur Nachmittags-Readings (17:27+)
+- Ab v0.33.284: Buffer-Restore + Merge-on-Save — **heute Nacht** sollte vollständige CGM-Zeitreihe persistieren
+
+### Statistik-Modell
+- **Pro Nacht**: `computeStats()` auf 5-min-Bins einer Nacht (aktuell im Chart)
+- **Kumulativ**: `CumulativePanel` lädt bis 60 History-JSONs, aggregiert alle Bins → Paper-Ergebnis (Spearman r, OR Hypo/Hyper)
+- Literatur: Bonnefond et al. Sensors 2020; PMC11873899 (OR 1.11/1000 Schritte); PMC11418455 (Review NH+Actigraphy)
+
+### Offene Baustellen
+- Erste vollständige Nacht mit CGM+Vibration ab heute Nacht validieren
+- Kumulatives Panel: erst ab ≥14 Nächten aussagekräftig
+- Optional: Backend-seitig `nightVibrationTimestamps`-Berechnung bereinigen (True-only speichern) — aktuell nur Frontend-Fix
+
+### Nächster logischer Schritt
+- Morgen: JSON prüfen ob `cgmReadings` ganze Nacht enthält; Chart + kumulative Stats bewerten
+
+---
+
+## Sitzung 08.06.2026 (abend-6) - Version 0.33.279 -- CGM Phase 2: Backend Datenpipeline
+
+### Strategischer Kontext: CGM ist ein Forschungswerkzeug, kein Produkt-Feature
+
+**Langfristiger AURA-Grundsatz:** Der Adapter soll ausschließlich mit fest verbauten Haus-Sensoren
+arbeiten (Vibration, Radar/FP2, PIR, Fenster/Tür, Temperatur etc.). Ein CGM-Gerät (Blutzucker) ist
+ein externes Wearable und gehört konzeptionell NICHT zum Produktkern.
+
+**Warum CGM trotzdem eingebaut wurde:**
+Ziel ist ein **wissenschaftlicher Nachweis ("Paper")**, dass Blutzucker-Verläufe mit nächtlichen
+Bett-Bewegungsmustern korrelieren. Die CGM-Integration ist **temporär / Forschungszweck**.
+Sobald die Korrelation belegt und visualisiert ist, kann CGM entfernt oder als optionale
+"Research-Sonderoption" deaktivierbar bleiben.
+
+**Sensoren für den Nachweis:**
+- Pflicht: Vibrationssensor im Bett (personTag-verknüpft) — bereits vorhanden
+- Optional: Radar-Sensor im Schlafzimmer (z.B. FP2 oder Hi-Link) — könnte noch angeschafft werden,
+  liefert Atemfrequenz + Mikrobewegungen als dritte Datenquelle
+- Extern (Forschung): CGM über Nightscout/ioBroker-Adapter (z.B. alias.0.nuukanni.cgm.jana.mgdl)
+
+**Was der Beweis zeigen soll:**
+- Hypoglykämien (Glukose < 70 mg/dl) → erhöhte Bett-Unruhe (Vibrations-Events häufiger/stärker)
+- Nächtliche Glukose-Peaks → veränderte Schlafarchitektur (Wachphasen, Schlafstadien)
+- Visualisierung: Dual-Achsen-Timeline (Glukose + Vibration) + Korrelationskennzahlen
+
+**Implikation für zukünftige Entwicklung:**
+- CGM-Code wenn nötig durch Feature-Flag (`cgmResearchMode: true`) absicherbar
+- Kein Aufbau produktiver CGM-Auswertung (kein Score, kein Alert, keine Kundenpflicht)
+- Radar-Sensor im Schlafzimmer ist sinnvoll für den Beweis (Atemfrequenz als Zusatzkanal)
+
+### Kontext
+Phase 1 (Config-UI in SensorList.tsx + cgmPersonAssignment in io-package.json) war bereits in v0.33.278 gepusht.
+Nutzer fragte ob `nightscout.0.data.mgdlDirection` (Pfeilwert wie `↓`) als Trend-Feld geeignet ist → Ja, als text-basierter
+Anzeigeindikator OK; numerische Analyse läuft über den Glukosewert selbst (mgdl/mmol/l).
+Direktauftrag: Phase 2 starten damit heute Nacht Daten gesammelt werden und morgen erste Korrelation möglich ist.
+
+### Was wurde implementiert
+
+#### `src/main.js` → Build → `main.js` (obfuskiert, `node --check` OK)
+
+1. **Konstruktor** (neu):
+   ```js
+   this.cgmBuffer = {}; this._cgmStateMap = {};
+   ```
+
+2. **startSystem() — CGM-Subscriptions** (nach Garmin-OC55-Block):
+   ```js
+   // [CGM] Glukose-States pro Person abonnieren
+   for (var _cgmStartPerson of Object.keys(_cgmAssign0)) {
+     subscribeForeignStatesAsync(glucoseStateId) → _cgmStateMap[id] = { person, type:'glucose', unit }
+     subscribeForeignStatesAsync(trendStateId)   → _cgmStateMap[id] = { person, type:'trend' }
+   }
+   ```
+
+3. **onStateChange() — CGM-Handler** (vor `state.ack pulse`-Guard):
+   - Wenn `id` in `_cgmStateMap`: type='glucose' → push `{ts, val, unit}` in Buffer
+   - Doppel-Update-Schutz: wenn letzter Eintrag < 2 Min alt → `val` aktualisieren statt neuen Eintrag
+   - Buffer max. 600 Einträge (≈ 50h Aufzeichnung bei 5-min-Intervall)
+   - type='trend' → `trend`-Feld des letzten Eintrags aktualisieren
+
+4. **saveDailyHistory() — Snapshot-Erweiterung**:
+   ```js
+   cgmReadings: { "Jana": [{ts, val, unit, trend?}, ...] }  // alle Readings seit 0:00 Uhr
+   ```
+
+### Daten-Schema
+```json
+{
+  "cgmReadings": {
+    "Jana": [
+      { "ts": 1749413400000, "val": 95, "unit": "mgdl", "trend": "↓" },
+      { "ts": 1749413700000, "val": 92, "unit": "mgdl", "trend": "↓↓" }
+    ]
+  }
+}
+```
+
+### Nächste Schritte (Phase 3)
+- Nach erster Nacht mit Daten: Korrelationsanalyse (Hypo-Events < 70 mg/dl ↔ Vibrations-Spitzen ±15 min)
+- Admin Diabetes-Kachel (MedicalTab.tsx): Timeline-Overlay CGM + Vibration
+- diseaseProfiles.ts: CGM-Check für diabetes1-Readiness
+- Python-Scoring: `diabetes1`
+
+### Versionsbump
+`0.33.278` → `0.33.279` (package.json + io-package.json)
+
+### Files
+- `src/main.js` (4 Änderungen)
+- `main.js` (obfuskiertes Build)
+- `package.json`, `io-package.json` (Version)
+
+---
+
+## Sitzung 08.06.2026 (abend-5) - Version 0.33.278 -- CGM Phase 1: Wearable-Block + Datenmodell
+
+### Hintergrund
+Nutzer möchte Blutzuckerwerte (CGM: Continuous Glucose Monitoring) mit Matratzen-Vibration (betroffene Person mit
+Diabetes Typ 1) korrelieren. Screenshots: Diabetes-Kachel im Medizinisch-Tab mit 90% Sensor-Readiness, und die
+Systemtab-Sensorliste.
+
+### Architektur-Entscheidung (diskutiert vor Umsetzung)
+CGM NICHT als Eintrag in der Raum-Sensorliste — kein Ortsbezug, CGM ist personengebunden.
+Entscheidung: Analoges Modell zu Garmin-Integration. Neuer Block `cgmPersonAssignment` im Wearable-Bereich.
+- Person-Zuordnung über `personTag` (bereits im System vorhanden)
+- Vibrationssensor (personTag=X) + CGM (cgmPersonAssignment[X]) werden in Phase 2 korreliert
+
+### Was Phase 1 umsetzt
+
+#### io-package.json
+- `"cgmPersonAssignment": {}` als native-Default hinzugefügt (nach garminPersonAssignment)
+
+#### SensorList.tsx
+- Import `MonitorHeartIcon from "@mui/icons-material/MonitorHeart"` hinzugefügt
+- State `const [cgmOpen, setCgmOpen] = useState(false)` hinzugefügt
+- Neuer aufklappbarer Block "Vitaldaten / CGM (Blutzucker pro Person)":
+  - Position: zwischen Wearable-Datenquellen und Batterie-Konfiguration
+  - Iteriert über `uniquePersonTags` (alle Personen mit konfiguriertem personTag)
+  - Pro Person: Blutzucker-State-ID (mit FreshnessChip), Trend/Rate (optional), Einheit (mg/dl / mmol/l Select)
+  - updateCgmPerson() speichert in `native.cgmPersonAssignment[person]`
+  - Falls keine PersonTags: Alert mit Hinweis
+  - Hinweistext: Korrelation mit personTag-Vibrationssensor
+
+#### React-Build
+- `npm run build:react` → `admin/assets/index-CL6NtZ2p.js` — erfolgreich, keine Fehler
+- `node --check main.js` OK, `ReadLints` clean
+
+### Canvas-Skizze
+- `diabetes-cgm-sketch.canvas.tsx` erstellt mit: CGM+Vibrations-Nacht-Timeline (interaktiv, 7-Nächte-auswählbar),
+  Korrelations-Kennzahlen, Dead-in-Bed-Screening-Tabelle, Config-Skizze Wearable-Block, Implementierungsplan Phase 1-3.
+
+### Was bewusst NICHT gebaut wurde (Phase 2+3)
+- Backend: CGM-State abonnieren + Zeitreihe in Nachtfenster buffern (main.js)
+- `diseaseProfiles.ts`: CGM-Check in diabetes1-Readiness (check() nimmt nur devices[], nicht native)
+- Medizinisch-Tab: Timeline-Overlay CGM+Vibration (Admin-Ansicht)
+- Python health.py `diabetes1`-Block mit Scoring-Faktoren
+- PWA-Ansicht
+
+### Build/Deploy
+- Erfolgreich gebaut. Version 0.33.278 committed + gepusht.
 
 ---
 
@@ -6398,10 +6843,15 @@ Neuer Python-Befehl: `ANALYZE_DISEASE_SCORES` in service.py dispatch-table.
 
 ---
 
-## ðŸ—ï¸ Funktionierende Basis (Stand v0.31.3)
+## ðŸ—ï¸ Funktionierende Basis (Stand v0.33.285)
 
 | Feature | Status | Version |
 |---|---|---|
+| CGM Korrelations-Panel (Forschung, Diabetes-Tab) | ✅ | v0.33.285 |
+| CGM Buffer-Restore + Merge-on-Save | ✅ | v0.33.284 |
+| Vibrations-Chart (trigger==true + 90s-Dedup + Stärke) | ✅ | v0.33.285 |
+| Kumulatives CGM-Statistik-Panel (60 Nächte) | ✅ | v0.33.283 |
+| CGM Wearable-Config (cgmPersonAssignment) | ✅ | v0.33.278 |
 | Sensor-Typ-System (`type: "door"`) | âœ… | recorder.js |
 | Frischluft-ZÃ¤hlung (Ã–ffnungen heute) | âœ… | v0.31.2 |
 | StoÃŸlÃ¼ftung â‰¥5 Min ZÃ¤hler | âœ… | v0.31.1 |
@@ -6424,6 +6874,14 @@ Neuer Python-Befehl: `ANALYZE_DISEASE_SCORES` in service.py dispatch-table.
 
 | Version | Datum | HauptÃ¤nderung |
 |---|---|---|
+| **0.33.285** | 09.06.2026 | **fix(cgm)**: 90s-Mindestabstand Vibrations-Events (Zigbee-Keepalive-Dedup) |
+| **0.33.284** | 09.06.2026 | **fix(cgm)**: vibration_trigger==true als Chart-Basis; cgmReadings Merge-on-Save |
+| **0.33.283** | 09.06.2026 | **feat(cgm)**: Buffer-Restore, kumulatives Panel, Paper-Referenzen, StatsPanel |
+| **0.33.282** | 09.06.2026 | **feat(cgm)**: Timeline v2 (Schlaffenster, Navigation, Spearman/OR) |
+| **0.33.281** | 09.06.2026 | **fix(cgm)**: getHistoryData-Parsing, Unicode, mapTrend |
+| **0.33.280** | 08.06.2026 | **feat(cgm)**: Phase 3 CGM-Vibration Timeline im MedicalTab |
+| **0.33.279** | 08.06.2026 | **feat(cgm)**: Phase 2 Backend cgmBuffer + saveDailyHistory |
+| **0.33.278** | 08.06.2026 | **feat(cgm)**: Phase 1 cgmPersonAssignment + SensorList UI |
 | **0.33.226** | 02.05.2026 | **feat**: PWA — **bedAbsence** schraffiert + Legacy smWake; **Tipp-Tooltip** auf Balken (floating, Priorität Absence→Legacy→Phase) |
 | **0.33.225** | 02.05.2026 | **feat**: PWA — Dreiecks-Marker (Bad/Außerhalb/Radar) + preSleep; **Zeitachse** unter Balken (Admin-Logik, Sensoren in Tooltips) |
 | **0.33.224** | 02.05.2026 | **feat**: PWA Schlaf-Kachel an Admin angeglichen — `pwa_sleep_tile_build` + eingebetteter Client-Renderer, Phasen-Balken, lokales History-Datum |

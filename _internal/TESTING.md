@@ -6,6 +6,17 @@
 
 ---
 
+## 🧪 v0.33.296 - OC-56 Write-Ahead-Eventlog + Neustart-Detektor (11.06.2026)
+
+| ID | Testfall | Erwartetes Ergebnis | Geprüft am | ✅/❌ |
+|---|---|---|---|---|
+| T-K296a | Normale Nacht, Adapter laeuft durch | `history/buffer-YYYY-MM-DD.jsonl` waechst mit jedem Event; Log `[OC-56] sleepSearch-Merge` zeigt 0 oder wenige Ergaenzungen (Memory deckt alles ab). | | |
+| T-K296b | Adapter-Neustart um Mitternacht simulieren (Instanz neu starten ~00:05), morgens Analyse pruefen | Abend-Events (z.B. Bettgeh-Vibration 23:1x) sind in der Analyse vorhanden; `bedEntryTs` gesetzt; gelber Wachliegen-Balken sichtbar. Log: `[OC-56] N Events aus Write-Ahead-Pufferdatei wiederhergestellt`. | | |
+| T-K296c | Nach Neustart in der Nacht: HealthTab oeffnen | Orange Warnung in Schlafkachel: "Adapter-Neustart um HH:MM ... Events wurden aus dem Pufferlog wiederhergestellt". | | |
+| T-K296d | Neustart tagsueber (z.B. 15:00), HealthTab am Abend | KEINE Warnung in Schlafkachel (nur Nacht-Fenster 18:00 Vortag - 12:00 relevant). | | |
+| T-K296e | Pufferdateien aelter als 3 Tage | Werden beim Adapter-Start automatisch geloescht. | | |
+| T-K296f | `system.heartbeat` State | Aktualisiert sich alle 60s (ms-Timestamp). | | |
+
 ## 🧪 v0.33.277 — E: Schlafkachel-Header Neugestaltung (08.06.2026)
 
 | ID | Testfall | Erwartetes Ergebnis | Geprüft am | ✅/❌ |
