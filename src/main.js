@@ -3886,6 +3886,29 @@ class CogniLiving extends utils.Adapter {
                             return _myLastVib >= _partnerLastVib;
                         }).length;
                     }
+                    // [OC-PLAUS] Plausibilitaets-Check: Stages trotz sparsamster Vib-Daten → wahrsch. nicht im Bett
+                    // Bedingung 1 (Dichte): Fenster >= 2h aber < 5 Trigger-Events → Sensor kaum ausgeloest
+                    // Bedingung 2 (Verteilung): > 70% Tiefschlaf + 0% REM → physiologisch unplausibel
+                    // Beide muessen zutreffen (AND) → false-positive-Schutz fuer ruhige Schlaefernaechte
+                    if (!_pResult.bedWasEmpty && (_pResult.sleepStages||[]).length >= 20) {
+                        var _pPlausWinH = (_pResult.stagesWindowEnd && _pResult.stagesWindowStart)
+                            ? (_pResult.stagesWindowEnd - _pResult.stagesWindowStart) / 3600000 : 0;
+                        var _pPlausDensityFail = _pPlausWinH >= 2 && _pVibCount < 5;
+                        var _pPlausStages = _pResult.sleepStages || [];
+                        var _pPlausDeep = _pPlausStages.filter(function(s) { return (s.s||s) === 'deep'; }).length;
+                        var _pPlausRem  = _pPlausStages.filter(function(s) { return (s.s||s) === 'rem';  }).length;
+                        var _pPlausDistFail = (_pPlausDeep / _pPlausStages.length > 0.70) && _pPlausRem === 0;
+                        if (_pPlausDensityFail && _pPlausDistFail) {
+                            _self.log.info('[OC-PLAUS] ' + person + ': Stages widerrufen – zu wenige Events (' + _pVibCount + ' in ' + Math.round(_pPlausWinH*10)/10 + 'h) + ' + Math.round(_pPlausDeep/_pPlausStages.length*100) + '% Tief 0% REM → bedWasEmpty=true');
+                            _pResult.bedWasEmpty    = true;
+                            _pResult.sleepStages    = [];
+                            _pResult.stagesWindowStart = null;
+                            _pResult.stagesWindowEnd   = null;
+                            _pResult.sleepScore     = null;
+                            _pResult.sleepScoreRaw  = null;
+                        }
+                    }
+
                     result[person] = {
                         nightActivityCount:        nightActivityCount,
                         wakeTimeMin:               wakeTimeMin,
