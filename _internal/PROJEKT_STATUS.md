@@ -3,6 +3,30 @@
 
 ---
 
+## Sitzung 12.06.2026 — Version 0.33.297 — OC-PLAUS v2: Near-Zero-Guard + REM < 2%
+
+### ✅ Abgeschlossen
+
+#### Forensik: Anni-Falsch-Analyse (Nacht 11./12.06.)
+- **Problem**: Anni war nicht im Haus, aber AURA zeigte Schlafanalyse mit Score 82, 7h46min
+- **Ursache (forensisch belegt)**:
+  - Anni's Matratze hatte Stärke-Events 22:59 (18), 23:04 (15), 23:09 (16) → vib_refined → sleepWindowStart 23:09
+  - Alle diese Events korrelieren zeitlich mit Marc's Einschlafen (22:55) → **Übertragungsvibration** durch Boden/Rahmen
+  - Marc: 24 Trigger-Events; Anni: **nur 1 einziger Trigger-Event** in 7h46min (02:29)
+  - OC-PLAUS feuerte nicht, weil 10min "REM" im Ergebnis (1,1% > 0% Schwelle) → Rauschen erzeugte Schein-REM
+- **OC-56 Nebeneffekt**: Stärke-Events 22:59-23:09 waren nach Adapter-Neustart (22:49) durch WAL-Merge verfügbar → positiver Effekt (keine Datenlücke), aber Anni's bedEntryTs wurde dadurch erst möglich
+
+#### v0.33.297 — OC-PLAUS v2: Near-Zero-Guard + REM-Schwelle (Patch: `scripts/_patch_oc_plaus2.js`)
+1. **OC-PLAUS-NZ (Near-Zero-Guard)**: Wenn `nightVibrationCount < 2 UND sleepWindowDuration > 3h` → `bedWasEmpty = true`. Unabhängige Bedingung VOR OC-PLAUS. Physikalisch: ein echter Schläfer dreht sich immer mehrmals um. 1 Trigger in 7h ist eindeutig kein echter Schlaf.
+2. **OC-PLAUS v2**: Bedingung 2 von `0% REM` auf `< 2% REM` gesenkt (`_pPlausRemPct < 0.02`). Fängt Nächte wo Rauschen eine kurze Schein-REM-Phase erzeugt (Anni: 1,1% = 10min aus Noise).
+3. Log-Ausgaben: `[OC-PLAUS-NZ] Anni: nur 1 Trigger in 7.8h → Bett war leer` / `[OC-PLAUS] ... X% Tief Y% REM → bedWasEmpty=true`
+
+### 🔧 Offen
+- Quellen-Dropdowns für "Ins Bett gegangen" + "Aufgewacht" (diskutiert, noch nicht umgesetzt)
+- Ursache des nächtlichen Adapter-Neustarts noch offen (ioBroker-Log 22:40-23:00 prüfen, restartSchedule in Instanz-Einstellungen)
+
+---
+
 ## Sitzung 11.06.2026 (Abend) — Version 0.33.296 — OC-56: Write-Ahead-Eventlog, restart-sicherer Event-Puffer
 
 ### ✅ Abgeschlossen
