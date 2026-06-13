@@ -5921,28 +5921,48 @@ class CogniLiving extends utils.Adapter {
             // nach 18:00 Uhr) und verschiebt den Analyse-Kontext auf die gestrige Nacht.
             try {
                 const _frNow = new Date();
-                // Neue Nacht aktiv? -> frische Bett-Events nach heute 18:00 in eventHistory
-                const _frTonight18 = (_frNow.getHours() >= 18)
-                    ? new Date(_frNow.getFullYear(), _frNow.getMonth(), _frNow.getDate(), 18, 0, 0, 0).getTime()
-                    : null;
-                const _newNightActive = !!(_frTonight18 && Array.isArray(this.eventHistory) && this.eventHistory.some(function(e) {
-                    return (e.timestamp || 0) >= _frTonight18 && (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion);
-                }));
+                const _frHour = _frNow.getHours();
+                // [OC-FORCE-DATE v3] Korrekte Nacht-Erkennung:
+                // Abend (18-23): Bett-Events nach 18:00 ? neue Nacht begonnen ? GESTRIGE Nacht zeigen
+                // Mitternacht (0-5): KEINE Bett-Events seit gestern 18:00 ? Marc noch nicht im Bett ? GESTRIGE Nacht
+                //                   MIT Bett-Events seit gestern 18:00 ? Marc schlaeft ? aktuelle Nacht normal
+                // Tag (6-17): immer normale Analyse (letzte Nacht vollstaendig)
+                const _isBedEvtFR = function(e) { return !!(e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion); };
+                let _newNightActive = false;
+                if (_frHour >= 18) {
+                    const _tonight18 = new Date(_frNow.getFullYear(), _frNow.getMonth(), _frNow.getDate(), 18, 0, 0, 0).getTime();
+                    _newNightActive = !!(Array.isArray(this.eventHistory) && this.eventHistory.some(function(e) {
+                        return (e.timestamp || 0) >= _tonight18 && _isBedEvtFR(e);
+                    }));
+                } else if (_frHour < 6) {
+                    const _lastEvening18 = new Date(_frNow.getFullYear(), _frNow.getMonth(), _frNow.getDate() - 1, 18, 0, 0, 0).getTime();
+                    const _hasBedEventsTonight = !!(Array.isArray(this.eventHistory) && this.eventHistory.some(function(e) {
+                        return (e.timestamp || 0) >= _lastEvening18 && _isBedEvtFR(e);
+                    }));
+                    _newNightActive = !_hasBedEventsTonight; // kein Bett-Event seit 18:00 ? gestrige Nacht zeigen
+                }
                 if (_newNightActive) {
                     this._forceRecomputeYesterday = true;
-                    // Obere Zeitgrenze: heute 14:00 Uhr (schliesst heutige Abend-Events der neuen Nacht aus)
-                    this._forceRecomputeMaxTs = new Date(_frNow.getFullYear(), _frNow.getMonth(), _frNow.getDate(), 14, 0, 0, 0).getTime();
-                    this.log.info('[OC-FORCE] Neue Nacht aktiv - Neuberechnung fuer gestrige Nacht (Merge-Fenster bis ' + new Date(this._forceRecomputeMaxTs).toLocaleTimeString('de-DE') + ')');
+                    // maxTs wird in saveDailyHistory als _sleepSearchBase + 20h berechnet
+                    this.log.info('[OC-FORCE] Neue Nacht aktiv (h=' + _frHour + ') - Neuberechnung fuer gestrige Nacht');
                 }
                 this._forceRecompute = true;
                 await this.saveDailyHistory();
-                // _frDate: immer heutiges dateStr (saveDailyHistory schreibt immer in dateStr = heute)
                 const _frDate = (obj.message && obj.message.date) ? obj.message.date : (
                     _frNow.getFullYear() + '-' + String(_frNow.getMonth()+1).padStart(2,'0') + '-' + String(_frNow.getDate()).padStart(2,'0')
                 );
                 const _frPath = require('path').join(require('@iobroker/adapter-core').getAbsoluteDefaultDataDir(), 'cogni-living', 'history', _frDate + '.json');
                 let _frData = null;
                 try { if (require('fs').existsSync(_frPath)) _frData = JSON.parse(require('fs').readFileSync(_frPath, 'utf8')); } catch(_) {}
+                // [OC-FORCE-DATE v3] Zwei-Pass-Fallback: wenn Pass 1 kein sleepWindowStart hat
+                // (Marc noch nicht im Bett, Abend-Analyse ohne Schlafdaten) ? Vornacht nachholen.
+                if (!_newNightActive && (!_frData || !_frData.sleepWindowStart)) {
+                    this.log.info('[OC-FORCE] Kein sleepWindowStart in Pass 1 - Zwei-Pass-Fallback fuer gestrige Nacht');
+                    this._forceRecomputeYesterday = true;
+                    this._forceRecompute = true;
+                    await this.saveDailyHistory();
+                    try { if (require('fs').existsSync(_frPath)) _frData = JSON.parse(require('fs').readFileSync(_frPath, 'utf8')); } catch(_) {}
+                }
                 this.log.info('[OC-FORCE] forceRecompute abgeschlossen fuer ' + _frDate + (_newNightActive ? ' (gestrige Nacht)' : ''));
                 this.sendTo(obj.from, obj.command, { success: true, date: _frDate, newNightWasActive: _newNightActive, data: _frData }, obj.callback);
             } catch(_frE) {

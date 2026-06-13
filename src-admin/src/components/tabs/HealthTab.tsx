@@ -951,7 +951,9 @@ export default function HealthTab(props: any) {
         // und verschiebt den Kontext auf gestrige Nacht (OC-FORCE-DATE).
         try {
             const _r: any = await socket.sendTo(adapterName + '.' + instance, 'forceRecompute', {});
-            if (_r?.success && _r?.data) { setAuraSleepData({ ..._r.data }); }
+            // Nur aktualisieren wenn echte Schlafdaten vorhanden (sleepWindowStart != null)
+            // Verhindert dass leere Analyse (Marc noch nicht im Bett) die gute angezeigte Nacht überschreibt
+            if (_r?.success && _r?.data && _r.data.sleepWindowStart != null) { setAuraSleepData({ ..._r.data }); }
         } catch(_) {}
         // 2. Health-Analyse triggern (Training / Aktivitätsstatistik)
         socket.setState(`${namespace}.analysis.training.triggerHealth`, { val: true, ack: false });
