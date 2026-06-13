@@ -2205,10 +2205,11 @@ class CogniLiving extends utils.Adapter {
             // Quelle: this.eventHistory (2000 Events, zeitlich unbegrenzt - breiter als sleepSearchEvents).
             // Schwelle: PIR/Bewegung = 90 Min (physikalisch nie laenger true ohne false).
             // Forensik 13.06.2026: Zigbee KG Werkstatt seit 14:00 true = 589 Min in todayRoomMinutes.
-            (function(_self, _hist, _todayMin, _noisy) {
+            (function(_self, _hist, _todayMin, _noisy, _walDir) {
                 var _stuckThresh = 90 * 60000;
                 var _stuckNow    = Date.now();
                 var _sMap = {};
+                // Quelle 1: In-Memory eventHistory
                 (_hist || []).forEach(function(e) {
                     if (!e || e.isFP2Bed || e.isFP2Living || e.isVibrationBed || e.isVibrationStrength) return;
                     if (e.type !== 'motion' && e.type !== 'presence_radar_bool' && e.type !== 'presence_radar_count') return;
@@ -2217,6 +2218,38 @@ class CogniLiving extends utils.Adapter {
                     if (!_sMap[sid]) _sMap[sid] = { loc: e.location || '', evts: [] };
                     _sMap[sid].evts.push({ ts: t, on: !!(e.value===true||e.value==='true'||e.value===1||e.value==='1'||Number(e.value)>0) });
                 });
+                // Quelle 2: WAL-Pufferdateien (gestern + heute) - fuer aeltere Events ausserhalb der 2000-Event-Grenze
+                if (_walDir) {
+                    try {
+                        var _wNow = new Date(_stuckNow);
+                        var _wDays = [
+                            _wNow.getFullYear()+'-'+String(_wNow.getMonth()+1).padStart(2,'0')+'-'+String(_wNow.getDate()).padStart(2,'0'),
+                            (function(){ var _yd=new Date(_stuckNow-86400000); return _yd.getFullYear()+'-'+String(_yd.getMonth()+1).padStart(2,'0')+'-'+String(_yd.getDate()).padStart(2,'0'); })()
+                        ];
+                        _wDays.forEach(function(_wDs) {
+                            var _wBp = require('path').join(_walDir, 'buffer-' + _wDs + '.jsonl');
+                            if (!require('fs').existsSync(_wBp)) return;
+                            var _wLines = require('fs').readFileSync(_wBp, 'utf8').split(/\r?\n/);
+                            _wLines.forEach(function(_wLn) {
+                                if (!_wLn.trim()) return;
+                                try {
+                                    var _we = JSON.parse(_wLn);
+                                    if (!_we || _we.isFP2Bed || _we.isFP2Living || _we.isVibrationBed || _we.isVibrationStrength) return;
+                                    if (_we.type !== 'motion' && _we.type !== 'presence_radar_bool' && _we.type !== 'presence_radar_count') return;
+                                    var _wsid = _we.id || _we.name; if (!_wsid) return;
+                                    var _wt = _we.timestamp || 0; if (!_wt) return;
+                                    if (!_sMap[_wsid]) _sMap[_wsid] = { loc: _we.location || '', evts: [] };
+                                    // Nur hinzufügen wenn noch nicht vorhanden (dedup via timestamp)
+                                    var _wKey = _wt + '|' + _wsid;
+                                    if (!_sMap[_wsid]._keys) _sMap[_wsid]._keys = new Set();
+                                    if (_sMap[_wsid]._keys.has(_wKey)) return;
+                                    _sMap[_wsid]._keys.add(_wKey);
+                                    _sMap[_wsid].evts.push({ ts: _wt, on: !!(_we.value===true||_we.value==='true'||_we.value===1||_we.value==='1'||Number(_we.value)>0) });
+                                } catch(_wpe) {}
+                            });
+                        });
+                    } catch(_walStuckE) {}
+                }
                 Object.keys(_sMap).forEach(function(sid) {
                     var info = _sMap[sid];
                     var evts = info.evts.sort(function(a,b){ return a.ts-b.ts; });
@@ -2240,7 +2273,16 @@ class CogniLiving extends utils.Adapter {
                         _self.log.warn('[OC-STUCK] Raum ' + info.loc + ': ' + before + 'min → ' + _todayMin[info.loc] + 'min (Stuck-Korrektur -' + excess + 'min)');
                     }
                 });
-            })(this, this.eventHistory, todayRoomMinutes, noisySensors);
+            })(this, this.eventHistory, todayRoomMinutes, noisySensors, this._historyDir || null);
+
+            // [OC-STUCK-V2] roomStats nach OC-STUCK-Korrektur neu speichern
+            // (roomStats wurde VOR OC-STUCK gespeichert → UI zeigte noch falschen Wert)
+            try {
+                const _rsFixed = await this.getStateAsync('analysis.activity.roomStats');
+                const _rsObj2 = (_rsFixed && _rsFixed.val) ? JSON.parse(_rsFixed.val) : { today: {}, yesterday: {}, date: '' };
+                _rsObj2.today = todayRoomMinutes;
+                await this.setStateAsync('analysis.activity.roomStats', { val: JSON.stringify(_rsObj2), ack: true });
+            } catch(_rsE2) {}
 
             // R?umliche Heuristik: max. Personen die heute gleichzeitig erkannt wurden
             var _cfgSize = this.config.householdSize || 'single';
