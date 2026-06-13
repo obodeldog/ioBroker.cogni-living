@@ -175,6 +175,8 @@ export default function HealthTab(props: any) {
     const [overrideWakeLoading, setOverrideWakeLoading] = useState(false);
     const [personOverrideWakePanelOpen, setPersonOverrideWakePanelOpen] = useState<string|null>(null);
     const [personOverrideWakeLoading, setPersonOverrideWakeLoading] = useState(false);
+    const [bedEntryPanelOpen, setBedEntryPanelOpen] = useState(false);
+    const [personBedEntryPanelOpen, setPersonBedEntryPanelOpen] = useState<string|null>(null);
     const [personHistoryData, setPersonHistoryData] = useState<Record<string, any>>({});
     const [sensorBatteryStatus, setSensorBatteryStatus] = useState<{sensors: {id:string, level:number|null, isLow:boolean, isCritical:boolean, source:string}[]} | null>(null);
     const [noisySensors, setNoisySensors] = useState<{id:string, name:string, location:string, count:number, threshold:number}[]>([]);
@@ -1594,6 +1596,14 @@ export default function HealthTab(props: any) {
             ? stagesWindowStart - swStart : 0;
         // [OC-42b] totalWindowMs: nutzt _barRightTs (oben definiert, vor renderedStages)
         const totalWindowMs = (swStart && _barRightTs) ? _barRightTs - swStart : null;
+        // [OC-BED-SOURCES] allBedEntrySources — welche Sensoren lieferten wann "Ins Bett gegangen"
+        const allBedEntrySourcesArr: {source:string, ts:number|null}[] = (sd as any)?.allBedEntrySources ?? [];
+        const bedEntrySourceActive: string | null = (sd as any)?.bedEntrySource ?? null;
+        const isBedEntryPanelOpen = personLabel ? (personBedEntryPanelOpen === personLabel) : bedEntryPanelOpen;
+        const setIsBedEntryPanelOpen = personLabel
+            ? (v: boolean) => setPersonBedEntryPanelOpen(v ? personLabel : null)
+            : (v: boolean) => setBedEntryPanelOpen(v);
+
         // bedEntryTs: Ins-Bett-Zeit (vor Einschlafzeit) aus Snapshot
         const _bedEntryRaw: number | null = (sd as any)?.bedEntryTs ?? null;
         const bedEntryTsVal: number | null = (_bedEntryRaw && swStart && _bedEntryRaw < swStart - 5*60000) ? _bedEntryRaw : null;
@@ -1770,6 +1780,46 @@ export default function HealthTab(props: any) {
                                                 <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', fontStyle:'italic', marginBottom:'3px'}}>kein plausibler Wert gefunden</div>
                                             </>
                                         )}
+                                        {/* [OC-BED-SOURCES] "Ins Bett gegangen" Quellen-Toggle */}
+                                        {allBedEntrySourcesArr.length > 0 && (
+                                            <div style={{fontSize:'0.5rem', color:'#64b5f6', marginTop:'1px', marginBottom:'2px', cursor:'pointer', opacity:0.8,
+                                                         display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
+                                                title='Quellen für "Ins Bett gegangen" anzeigen'
+                                                onClick={() => setIsBedEntryPanelOpen(!isBedEntryPanelOpen)}>
+                                                🛏 Quellen {isBedEntryPanelOpen ? '▲' : '▼'}
+                                            </div>
+                                        )}
+                                        {isBedEntryPanelOpen && allBedEntrySourcesArr.length > 0 && (
+                                            <div style={{marginTop:'2px', background: isDark?'#1a1a2e':'#e3f2fd',
+                                                         border:'1px solid ' + (isDark?'#1565c0':'#90caf9'),
+                                                         borderRadius:'6px', padding:'6px 8px', minWidth:'200px',
+                                                         boxShadow:'0 4px 12px rgba(0,0,0,0.3)', marginBottom:'4px'}}>
+                                                <div style={{fontSize:'0.55rem', color: isDark?'#aaa':'#555', marginBottom:'4px', fontWeight:'bold'}}>
+                                                    Erkannte Zeitpunkte — Ins Bett gegangen:
+                                                </div>
+                                                {allBedEntrySourcesArr.map((bs: {source:string, ts:number|null}) => {
+                                                    const bInfo = srcInfo[bs.source] ?? { icon: '🛏', label: bs.source };
+                                                    const bIsActive = bs.source === bedEntrySourceActive;
+                                                    const bHasTs = !!bs.ts;
+                                                    return (
+                                                        <div key={bs.source} style={{
+                                                            display:'flex', alignItems:'center', justifyContent:'space-between',
+                                                            padding:'2px 4px', marginBottom:'2px', borderRadius:'3px',
+                                                            opacity: bHasTs ? 1 : 0.4,
+                                                            background: bIsActive ? (isDark?'#0d2a4a':'#bbdefb') : 'transparent'
+                                                        }}>
+                                                            <span style={{fontSize:'0.6rem', color: isDark?'#ddd':'#333'}}>
+                                                                {bInfo.icon} {bInfo.label}: {bHasTs ? fmtTime(bs.ts) : '—'}
+                                                                {bIsActive ? ' ✓' : ''}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                                <div style={{fontSize:'0.5rem', color: isDark?'#666':'#aaa', marginTop:'4px', borderTop:'1px solid '+(isDark?'#333':'#e0e0e0'), paddingTop:'4px'}}>
+                                                    ℹ Reine Anzeige — kein Override möglich
+                                                </div>
+                                            </div>
+                                        )}
                                         <div style={{fontSize:'1.4rem', fontWeight:'bold', color: isDark?'#eee':'#222', lineHeight:'1.1'}}>{fmtTime(swStart)}</div>
                                         <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Eingeschlafen</div>
                                         <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
@@ -1803,18 +1853,20 @@ export default function HealthTab(props: any) {
                                                         ((ss.source === 'motion_vib') && !hasMotionBed && !hasRadarBed) ||
                                                         ((ss.source === 'vib_refined' || ss.source === 'motion_vib') && !hasVibBed)
                                                     );
+                                                    // [OC-BED-SOURCES] Quelle vor "Ins Bett gegangen" ist implausibel
+                                                    const isBeforeBedEntry = hasTs && !!_bedEntryRaw && (ss.ts! < _bedEntryRaw - 5 * 60000);
                                                     return (
                                                         <div key={ss.source} style={{
                                                             display:'flex', alignItems:'center', justifyContent:'space-between',
                                                             padding:'2px 4px', marginBottom:'2px', borderRadius:'3px',
-                                                            opacity: hasTs ? 1 : (noSensor ? 0.25 : 0.4),
+                                                            opacity: isBeforeBedEntry ? 0.3 : (hasTs ? 1 : (noSensor ? 0.25 : 0.4)),
                                                             background: isActive ? (isDark?'#1b5e20':'#c8e6c9') : 'transparent'
                                                         }}>
-                                                            <span style={{fontSize:'0.6rem', color: isDark?'#ddd':'#333'}}>
+                                                            <span style={{fontSize:'0.6rem', color: isBeforeBedEntry ? '#f44336' : (isDark?'#ddd':'#333'), textDecoration: isBeforeBedEntry ? 'line-through' : 'none'}}>
                                                                 {info.icon} {info.label}: {hasTs ? fmtTime(ss.ts) : (noSensor ? '⚠️ kein Sensor' : '—')}
-                                                                {isActive ? ' ✓' : ''}
+                                                                {isActive ? ' ✓' : ''}{isBeforeBedEntry ? ' ⚠️ vor Ins-Bett-Zeit' : ''}
                                                             </span>
-                                                            {hasTs && !isActive && sleepDateStr && (
+                                                            {hasTs && !isActive && !isBeforeBedEntry && sleepDateStr && (
                                                                 <button
                                                                     onClick={() => handleSetOverride(ss.source, ss.ts!)}
                                                                     style={{fontSize:'0.5rem', padding:'1px 6px', cursor:'pointer',
@@ -1872,7 +1924,7 @@ export default function HealthTab(props: any) {
                                         {allWakeSourcesArr.length > 0 && (
                                             <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: isOverrideWakeLoading ? 'wait' : 'pointer', opacity:0.8,
                                                          display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
-                                                title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufstehzeit-Quelle manuell wählen'}
+                                                title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufwachzeit-Quelle manuell wählen'}
                                                 onClick={() => { if (!isOverrideWakeLoading) setIsOverrideWakePanelOpen(!isOverrideWakePanelOpen); }}>
                                                 {isOverrideWakeLoading ? '⏳' : '⚙'} Quellen {isOverrideWakePanelOpen ? '▲' : '▼'}
                                             </div>
@@ -1883,7 +1935,7 @@ export default function HealthTab(props: any) {
                                                          borderRadius:'6px', padding:'6px 8px', minWidth:'200px',
                                                          boxShadow:'0 4px 12px rgba(0,0,0,0.3)', textAlign:'left'}}>
                                                 <div style={{fontSize:'0.55rem', color: isDark?'#aaa':'#555', marginBottom:'4px', fontWeight:'bold'}}>
-                                                    Aufstehzeit-Quelle wählen:
+                                                    Aufwachzeit-Quelle wählen:
                                                 </div>
                                                 {allWakeSourcesArr.map(ws => {
                                                     const wInfo = srcInfo[ws.source] ?? { icon: '?', label: ws.source };
@@ -2069,6 +2121,46 @@ export default function HealthTab(props: any) {
                                         <div style={{fontSize:'0.58rem', color: isDark?'#888':'#999', fontStyle:'italic', marginBottom:'3px'}}>kein plausibler Wert gefunden</div>
                                     </>
                                 )}
+                                {/* [OC-BED-SOURCES] "Ins Bett gegangen" Quellen-Toggle (Karte 2) */}
+                                {allBedEntrySourcesArr.length > 0 && (
+                                    <div style={{fontSize:'0.5rem', color:'#64b5f6', marginTop:'1px', marginBottom:'2px', cursor:'pointer', opacity:0.8,
+                                                 display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
+                                        title='Quellen für "Ins Bett gegangen" anzeigen'
+                                        onClick={() => setIsBedEntryPanelOpen(!isBedEntryPanelOpen)}>
+                                        🛏 Quellen {isBedEntryPanelOpen ? '▲' : '▼'}
+                                    </div>
+                                )}
+                                {isBedEntryPanelOpen && allBedEntrySourcesArr.length > 0 && (
+                                    <div style={{marginTop:'2px', background: isDark?'#1a1a2e':'#e3f2fd',
+                                                 border:'1px solid ' + (isDark?'#1565c0':'#90caf9'),
+                                                 borderRadius:'6px', padding:'6px 8px', minWidth:'200px',
+                                                 boxShadow:'0 4px 12px rgba(0,0,0,0.3)', marginBottom:'4px'}}>
+                                        <div style={{fontSize:'0.55rem', color: isDark?'#aaa':'#555', marginBottom:'4px', fontWeight:'bold'}}>
+                                            Erkannte Zeitpunkte — Ins Bett gegangen:
+                                        </div>
+                                        {allBedEntrySourcesArr.map((bs: {source:string, ts:number|null}) => {
+                                            const bInfo = srcInfo[bs.source] ?? { icon: '🛏', label: bs.source };
+                                            const bIsActive = bs.source === bedEntrySourceActive;
+                                            const bHasTs = !!bs.ts;
+                                            return (
+                                                <div key={bs.source} style={{
+                                                    display:'flex', alignItems:'center',
+                                                    padding:'2px 4px', marginBottom:'2px', borderRadius:'3px',
+                                                    opacity: bHasTs ? 1 : 0.4,
+                                                    background: bIsActive ? (isDark?'#0d2a4a':'#bbdefb') : 'transparent'
+                                                }}>
+                                                    <span style={{fontSize:'0.6rem', color: isDark?'#ddd':'#333'}}>
+                                                        {bInfo.icon} {bInfo.label}: {bHasTs ? fmtTime(bs.ts) : '—'}
+                                                        {bIsActive ? ' ✓' : ''}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                        <div style={{fontSize:'0.5rem', color: isDark?'#666':'#aaa', marginTop:'4px', borderTop:'1px solid '+(isDark?'#333':'#e0e0e0'), paddingTop:'4px'}}>
+                                            ℹ Reine Anzeige — kein Override möglich
+                                        </div>
+                                    </div>
+                                )}
                                 <div style={{fontSize:'1.4rem', fontWeight:'bold', color: isDark?'#eee':'#222', lineHeight:'1.1'}}>{fmtTime(swStart)}</div>
                                 <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Eingeschlafen</div>
                                 <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}} title={'Erkennungsmethode: ' + srcDisplay.label}>
@@ -2098,18 +2190,20 @@ export default function HealthTab(props: any) {
                                             const info = srcInfo[ss.source] ?? { icon: '?', label: ss.source };
                                             const isActive = ss.source === sleepStartSource;
                                             const hasTs = !!ss.ts;
+                                            // [OC-BED-SOURCES] Quelle vor "Ins Bett gegangen" ist implausibel
+                                            const isBeforeBedEntry = hasTs && !!_bedEntryRaw && (ss.ts! < _bedEntryRaw - 5 * 60000);
                                             return (
                                                 <div key={ss.source} style={{
                                                     display:'flex', alignItems:'center', justifyContent:'space-between',
                                                     padding:'2px 4px', marginBottom:'2px', borderRadius:'3px',
-                                                    opacity: hasTs ? 1 : 0.4,
+                                                    opacity: isBeforeBedEntry ? 0.3 : (hasTs ? 1 : 0.4),
                                                     background: isActive ? (isDark?'#1b5e20':'#c8e6c9') : 'transparent'
                                                 }}>
-                                                    <span style={{fontSize:'0.6rem', color: isDark?'#ddd':'#333'}}>
+                                                    <span style={{fontSize:'0.6rem', color: isBeforeBedEntry ? '#f44336' : (isDark?'#ddd':'#333'), textDecoration: isBeforeBedEntry ? 'line-through' : 'none'}}>
                                                         {info.icon} {info.label}: {ss.ts ? fmtTime(ss.ts) : '—'}
-                                                        {isActive ? ' ✓' : ''}
+                                                        {isActive ? ' ✓' : ''}{isBeforeBedEntry ? ' ⚠️ vor Ins-Bett-Zeit' : ''}
                                                     </span>
-                                                    {hasTs && !isActive && sleepDateStr && (
+                                                    {hasTs && !isActive && !isBeforeBedEntry && sleepDateStr && (
                                                         <button
                                                             onClick={() => handleSetOverride(ss.source, ss.ts!)}
                                                             style={{fontSize:'0.5rem', padding:'1px 6px', cursor:'pointer',
@@ -2228,7 +2322,7 @@ export default function HealthTab(props: any) {
                                 {allWakeSourcesArr.length > 0 && (
                                     <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: isOverrideWakeLoading ? 'wait' : 'pointer', opacity:0.8,
                                                  display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
-                                        title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufstehzeit-Quelle manuell wählen'}
+                                        title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufwachzeit-Quelle manuell wählen'}
                                         onClick={() => { if (!isOverrideWakeLoading) setIsOverrideWakePanelOpen(!isOverrideWakePanelOpen); }}>
                                         {isOverrideWakeLoading ? '⏳' : '⚙'} Quellen {isOverrideWakePanelOpen ? '▲' : '▼'}
                                     </div>
@@ -3733,6 +3827,8 @@ export default function HealthTab(props: any) {
                                         wakeOverridden:         pd.wakeOverridden         ?? false,
                                         bedWasEmpty:            pd.bedWasEmpty            ?? false,
                                         bedEntryTs:             (pd as any).bedEntryTs    ?? null,
+                                        bedEntrySource:         (pd as any).bedEntrySource ?? null,
+                                        allBedEntrySources:     (pd as any).allBedEntrySources ?? [],
                                         bedExitTs:              (pd as any).bedExitTs     ?? null,
                                         nightVibrationCount:    (pd as any).nightVibrationCount ?? null,
                                     };
