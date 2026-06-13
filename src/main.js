@@ -2171,9 +2171,14 @@ class CogniLiving extends utils.Adapter {
             const sleepSearchEvents = (() => {
                 const _mrgMap = new Map();
                 const _mrgBase = _sleepSearchBase.getTime();
+                // [OC-FORCE-DATE] Obere Zeitgrenze: wenn Force-Recompute fuer gestrige Nacht aktiv,
+                // Events ab heute 14:00 Uhr ausschliessen (neue Nacht kontaminiert sonst den Merge).
+                const _mrgMaxTs = this._forceRecomputeMaxTs || null;
+                if (_mrgMaxTs) { this._forceRecomputeMaxTs = null; }
                 const _mrgKey = (e) => (e.timestamp || 0) + '|' + (e.id || '') + '|' + (e.type || '');
                 const _mrgAdd = (e) => {
                     if (!e || (e.timestamp || 0) < _mrgBase) return false;
+                    if (_mrgMaxTs && (e.timestamp || 0) > _mrgMaxTs) return false;
                     const k = _mrgKey(e);
                     if (_mrgMap.has(k)) return false;
                     _mrgMap.set(k, e);
@@ -5922,7 +5927,9 @@ class CogniLiving extends utils.Adapter {
                 }));
                 if (_newNightActive) {
                     this._forceRecomputeYesterday = true;
-                    this.log.info('[OC-FORCE] Neue Nacht aktiv seit 18:00 - Neuberechnung fuer gestrige Nacht');
+                    // Obere Zeitgrenze: heute 14:00 Uhr (schliesst heutige Abend-Events der neuen Nacht aus)
+                    this._forceRecomputeMaxTs = new Date(_frNow.getFullYear(), _frNow.getMonth(), _frNow.getDate(), 14, 0, 0, 0).getTime();
+                    this.log.info('[OC-FORCE] Neue Nacht aktiv - Neuberechnung fuer gestrige Nacht (Merge-Fenster bis ' + new Date(this._forceRecomputeMaxTs).toLocaleTimeString('de-DE') + ')');
                 }
                 this._forceRecompute = true;
                 await this.saveDailyHistory();
@@ -5938,6 +5945,7 @@ class CogniLiving extends utils.Adapter {
             } catch(_frE) {
                 this._forceRecompute = false;
                 this._forceRecomputeYesterday = false;
+                this._forceRecomputeMaxTs = null;
                 this.log.warn('[OC-FORCE] forceRecompute Fehler: ' + _frE.message);
                 this.sendTo(obj.from, obj.command, { success: false, error: _frE.message }, obj.callback);
             }
