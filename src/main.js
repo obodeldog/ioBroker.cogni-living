@@ -2154,6 +2154,12 @@ class CogniLiving extends utils.Adapter {
             const _sleepSearchBase = new Date();
             _sleepSearchBase.setHours(18, 0, 0, 0);
             if (new Date().getHours() < 18) { _sleepSearchBase.setDate(_sleepSearchBase.getDate() - 1); }
+            // [OC-FORCE-DATE] Neuberechnung gestrige Nacht: sleepSearchBase einen Tag zurueck wenn neue Nacht schon aktiv.
+            if (this._forceRecomputeYesterday) {
+                _sleepSearchBase.setDate(_sleepSearchBase.getDate() - 1);
+                this._forceRecomputeYesterday = false;
+                this.log.info('[OC-FORCE] Neuberechnung gestrige Nacht: sleepSearchBase ' + _sleepSearchBase.toISOString().slice(0,10));
+            }
             const sleepDate = _sleepSearchBase.getFullYear() + '-' + String(_sleepSearchBase.getMonth()+1).padStart(2,'0') + '-' + String(_sleepSearchBase.getDate()).padStart(2,'0');
             var _excludedNightsRaw = (await this.getStateAsync('analysis.sleep.excludedNights'))?.val;
             var _excludedNightsList = (_excludedNightsRaw && _excludedNightsRaw !== 'null') ? JSON.parse(_excludedNightsRaw) : [];
@@ -5903,23 +5909,35 @@ class CogniLiving extends utils.Adapter {
         // removeSingleIntimacyEvent: Entfernt EINE Session per Start-Timestamp (Session-Level Nullnummer)
         else if (obj.command === 'forceRecompute') {
             // [OC-FORCE] Erzwungene Neuberechnung der letzten Nacht (Freeze umgehen)
-            // Datum optional: obj.message?.date (YYYY-MM-DD). Default: aktuelle sleepDate-Logik.
+            // [OC-FORCE-DATE] Erkennt automatisch ob neue Nacht bereits begonnen hat (frische Bett-Events
+            // nach 18:00 Uhr) und verschiebt den Analyse-Kontext auf die gestrige Nacht.
             try {
+                const _frNow = new Date();
+                // Neue Nacht aktiv? -> frische Bett-Events nach heute 18:00 in eventHistory
+                const _frTonight18 = (_frNow.getHours() >= 18)
+                    ? new Date(_frNow.getFullYear(), _frNow.getMonth(), _frNow.getDate(), 18, 0, 0, 0).getTime()
+                    : null;
+                const _newNightActive = !!(_frTonight18 && Array.isArray(this.eventHistory) && this.eventHistory.some(function(e) {
+                    return (e.timestamp || 0) >= _frTonight18 && (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion);
+                }));
+                if (_newNightActive) {
+                    this._forceRecomputeYesterday = true;
+                    this.log.info('[OC-FORCE] Neue Nacht aktiv seit 18:00 - Neuberechnung fuer gestrige Nacht');
+                }
                 this._forceRecompute = true;
                 await this.saveDailyHistory();
-                // Frisches JSON lesen und zurueckgeben
-                const _frDate = (obj.message && obj.message.date) ? obj.message.date : (() => {
-                    const _d = new Date(); const _h = _d.getHours();
-                    if (_h < 13) { const _yd = new Date(_d); _yd.setDate(_d.getDate()-1); return _yd.toISOString().slice(0,10); }
-                    return _d.toISOString().slice(0,10);
-                })();
+                // _frDate: immer heutiges dateStr (saveDailyHistory schreibt immer in dateStr = heute)
+                const _frDate = (obj.message && obj.message.date) ? obj.message.date : (
+                    _frNow.getFullYear() + '-' + String(_frNow.getMonth()+1).padStart(2,'0') + '-' + String(_frNow.getDate()).padStart(2,'0')
+                );
                 const _frPath = require('path').join(require('@iobroker/adapter-core').getAbsoluteDefaultDataDir(), 'cogni-living', 'history', _frDate + '.json');
                 let _frData = null;
                 try { if (require('fs').existsSync(_frPath)) _frData = JSON.parse(require('fs').readFileSync(_frPath, 'utf8')); } catch(_) {}
-                this.log.info('[OC-FORCE] forceRecompute abgeschlossen fuer ' + _frDate);
-                this.sendTo(obj.from, obj.command, { success: true, date: _frDate, data: _frData }, obj.callback);
+                this.log.info('[OC-FORCE] forceRecompute abgeschlossen fuer ' + _frDate + (_newNightActive ? ' (gestrige Nacht)' : ''));
+                this.sendTo(obj.from, obj.command, { success: true, date: _frDate, newNightWasActive: _newNightActive, data: _frData }, obj.callback);
             } catch(_frE) {
                 this._forceRecompute = false;
+                this._forceRecomputeYesterday = false;
                 this.log.warn('[OC-FORCE] forceRecompute Fehler: ' + _frE.message);
                 this.sendTo(obj.from, obj.command, { success: false, error: _frE.message }, obj.callback);
             }
