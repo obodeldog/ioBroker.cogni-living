@@ -187,8 +187,6 @@ export default function HealthTab(props: any) {
     const [smWakePhases, setSmWakePhases] = useState<{type:string,start:number,end:number,durationMin:number,source:string}[]>([]);
     const [nativeDevices, setNativeDevices] = useState<any[]>([]);
     const [topoData, setTopoData] = useState<{rooms:string[], matrix:number[][]} | null>(null);
-const [forceRecomputeLoading, setForceRecomputeLoading] = useState(false);
-const [forceRecomputeResult, setForceRecomputeResult] = useState<'ok' | 'err' | null>(null);
 
     // MASTER-RAUMNAMEN aus System-Tab laden
     const loadMasterRooms = async () => {
@@ -942,8 +940,19 @@ const [forceRecomputeResult, setForceRecomputeResult] = useState<'ok' | 'err' | 
         setRecentEvents(top5);
     };
 
-    const triggerAnalysis = () => {
+    const triggerAnalysis = async () => {
         setLoading(true);
+        // 1. Schlafanalyse neu berechnen (umgeht Freeze-Schutz, nutzt WAL-Puffer)
+        try {
+            const _sleepD = auraSleepData?.sleepDate || (() => {
+                const _d = new Date(); const _h = _d.getHours();
+                if (_h < 13) { const _yd = new Date(_d); _yd.setDate(_d.getDate()-1); return _yd.toISOString().slice(0,10); }
+                return _d.toISOString().slice(0,10);
+            })();
+            const _r: any = await socket.sendTo(adapterName + '.' + instance, 'forceRecompute', { date: _sleepD });
+            if (_r?.success && _r?.data) { setAuraSleepData({ ..._r.data }); }
+        } catch(_) {}
+        // 2. Health-Analyse triggern (Training / Aktivitätsstatistik)
         socket.setState(`${namespace}.analysis.training.triggerHealth`, { val: true, ack: false });
         setTimeout(() => { setLoading(false); fetchData(); }, 4000);
     };
@@ -1343,26 +1352,6 @@ const [forceRecomputeResult, setForceRecomputeResult] = useState<'ok' | 'err' | 
                 const result: any = await socket.sendTo(adapterName + '.' + instance, cmd, { date: sleepDateStr });
                 if (result?.data) setAuraSleepData({ ...result.data });
             } catch(_) {}
-        };
-
-        const handleForceRecompute = async () => {
-            setForceRecomputeLoading(true);
-            setForceRecomputeResult(null);
-            try {
-                const result: any = await socket.sendTo(adapterName + '.' + instance, 'forceRecompute',
-                    sleepDateStr ? { date: sleepDateStr } : {});
-                if (result?.success && result?.data) {
-                    setAuraSleepData({ ...result.data });
-                    setForceRecomputeResult('ok');
-                } else {
-                    setForceRecomputeResult('err');
-                }
-            } catch(_) {
-                setForceRecomputeResult('err');
-            } finally {
-                setForceRecomputeLoading(false);
-                setTimeout(() => setForceRecomputeResult(null), 3000);
-            }
         };
 
         const isOverrideLoading = personLabel ? personOverrideLoading : overrideLoading;
@@ -2773,41 +2762,6 @@ const [forceRecomputeResult, setForceRecomputeResult] = useState<'ok' | 'err' | 
                             </div>
                         )}
 
-                        {/* Nacht neu berechnen (Force Recompute) */}
-                        {sleepDateStr && (
-                            <div style={{
-                                borderTop: `1px dashed ${isDark?'#333':'#ddd'}`,
-                                paddingTop: '6px',
-                                marginTop: '6px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: '8px'
-                            }}>
-                                <span style={{fontSize:'0.6rem', color: isDark?'#555':'#aaa'}}>
-                                    {forceRecomputeResult === 'ok'
-                                        ? <span style={{color:'#4caf50'}}>✓ Neu berechnet</span>
-                                        : forceRecomputeResult === 'err'
-                                        ? <span style={{color:'#f44336'}}>✗ Fehler beim Neuberechnen</span>
-                                        : 'Analyse mit aktuellen Daten neu berechnen'}
-                                </span>
-                                <button
-                                    onClick={handleForceRecompute}
-                                    disabled={forceRecomputeLoading}
-                                    title="Schlafanalyse dieser Nacht vollständig neu berechnen (umgeht den Freeze-Schutz)"
-                                    style={{
-                                        fontSize: '0.5rem', padding: '2px 7px', cursor: forceRecomputeLoading ? 'wait' : 'pointer', flexShrink: 0,
-                                        background: forceRecomputeResult === 'ok' ? '#1b5e20' : (isDark ? '#0a1929' : '#e3f2fd'),
-                                        color: forceRecomputeResult === 'ok' ? '#a5d6a7' : '#1976d2',
-                                        border: `1px solid ${forceRecomputeResult === 'ok' ? '#388e3c' : '#1976d2'}`,
-                                        borderRadius: '3px',
-                                        opacity: forceRecomputeLoading ? 0.6 : 1
-                                    }}>
-                                    {forceRecomputeLoading ? '⏳ Berechne...' : '🔄 Neu berechnen'}
-                                </button>
-                            </div>
-                        )}
-
                         <div style={{fontSize:'0.6rem', color: isDark?'#555':'#aaa', marginTop:'8px', borderTop:`1px dashed ${isDark?'#222':'#eee'}`, paddingTop:'6px'}}>
                             ⓘ Geschätzte Schlafstadien (Vibrationssensor) · Kein Medizinprodukt
                         </div>
@@ -3926,7 +3880,7 @@ const [forceRecomputeResult, setForceRecomputeResult] = useState<'ok' | 'err' | 
 
                 {viewMode === 'DAY' && (
                     <div style={{marginTop:'40px', display:'flex', gap:'10px', opacity: 0.7}}>
-                        <Button size="small" variant="outlined" sx={{color:'#888', borderColor:'#888'}} onClick={triggerAnalysis} disabled={loading}>{loading ? '[ LÄDT... ]' : '[ SYSTEM PRÜFEN ]'}</Button>
+                        <Button size="small" variant="outlined" sx={{color:'#888', borderColor:'#888'}} onClick={triggerAnalysis} disabled={loading} title="Schlafanalyse neu berechnen + Aktivitätsstatistik aktualisieren">{loading ? '[ LÄDT... ]' : '[ SYSTEM PRÜFEN + NEU BERECHNEN ]'}</Button>
                     </div>
                 )}
                 </>)}

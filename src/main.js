@@ -2200,91 +2200,50 @@ class CogniLiving extends utils.Adapter {
                 await this.setStateAsync('analysis.activity.roomStats', { val: JSON.stringify(existingStats), ack: true });
             } catch(e) {}
 
-            // [OC-STUCK] Feststeckende Sensoren erkennen und todayRoomMinutes korrigieren.
-            // Ausschluss: FP2 (schlaeft legal 8h), Vibrationssensoren.
-            // Quelle: this.eventHistory (2000 Events, zeitlich unbegrenzt - breiter als sleepSearchEvents).
-            // Schwelle: PIR/Bewegung = 90 Min (physikalisch nie laenger true ohne false).
-            // Forensik 13.06.2026: Zigbee KG Werkstatt seit 14:00 true = 589 Min in todayRoomMinutes.
-            (function(_self, _hist, _todayMin, _noisy, _walDir) {
-                var _stuckThresh = 90 * 60000;
-                var _stuckNow    = Date.now();
-                var _sMap = {};
-                // Quelle 1: In-Memory eventHistory
-                (_hist || []).forEach(function(e) {
-                    if (!e || e.isFP2Bed || e.isFP2Living || e.isVibrationBed || e.isVibrationStrength) return;
-                    if (e.type !== 'motion' && e.type !== 'presence_radar_bool' && e.type !== 'presence_radar_count') return;
-                    var sid = e.id || e.name; if (!sid) return;
-                    var t = e.timestamp || 0; if (!t) return;
-                    if (!_sMap[sid]) _sMap[sid] = { loc: e.location || '', evts: [] };
-                    _sMap[sid].evts.push({ ts: t, on: !!(e.value===true||e.value==='true'||e.value===1||e.value==='1'||Number(e.value)>0) });
-                });
-                // Quelle 2: WAL-Pufferdateien (gestern + heute) - fuer aeltere Events ausserhalb der 2000-Event-Grenze
-                if (_walDir) {
+            // [OC-STUCK-V3] Feststeckende Sensoren via ioBroker state.lc erkennen.
+            // Methode: state.lc = "last changed" Timestamp (direkt, keine eventHistory noetig).
+            // Logik: val=true && (jetzt - lc) > 90min → Sensor haengt physikalisch.
+            // Aktion: todayRoomMinutes[raum] = 0 (nicht beschraenken, sondern komplett entfernen).
+            // Ausschluss: FP2 (schlaeft legal 8h+), Vibrationssensoren.
+            // Forensik 13.06.2026: Werkstatt-PIR stuck seit 14:00 = 639min.
+            {
+                const _stDevs = (this.config && this.config.devices) ? this.config.devices : [];
+                const _stNow  = Date.now();
+                const _stThr  = 90 * 60000;
+                for (const _stD of _stDevs) {
+                    if (!_stD || !_stD.id) continue;
+                    if (_stD.isFP2Bed || _stD.isFP2Living || _stD.isVibrationBed) continue;
+                    const _stT = (_stD.type || '').toLowerCase();
+                    if (_stT !== 'motion' && _stT !== 'presence_radar_bool' && _stT !== 'presence_radar_count') continue;
                     try {
-                        var _wNow = new Date(_stuckNow);
-                        var _wDays = [
-                            _wNow.getFullYear()+'-'+String(_wNow.getMonth()+1).padStart(2,'0')+'-'+String(_wNow.getDate()).padStart(2,'0'),
-                            (function(){ var _yd=new Date(_stuckNow-86400000); return _yd.getFullYear()+'-'+String(_yd.getMonth()+1).padStart(2,'0')+'-'+String(_yd.getDate()).padStart(2,'0'); })()
-                        ];
-                        _wDays.forEach(function(_wDs) {
-                            var _wBp = require('path').join(_walDir, 'buffer-' + _wDs + '.jsonl');
-                            if (!require('fs').existsSync(_wBp)) return;
-                            var _wLines = require('fs').readFileSync(_wBp, 'utf8').split(/\r?\n/);
-                            _wLines.forEach(function(_wLn) {
-                                if (!_wLn.trim()) return;
-                                try {
-                                    var _we = JSON.parse(_wLn);
-                                    if (!_we || _we.isFP2Bed || _we.isFP2Living || _we.isVibrationBed || _we.isVibrationStrength) return;
-                                    if (_we.type !== 'motion' && _we.type !== 'presence_radar_bool' && _we.type !== 'presence_radar_count') return;
-                                    var _wsid = _we.id || _we.name; if (!_wsid) return;
-                                    var _wt = _we.timestamp || 0; if (!_wt) return;
-                                    if (!_sMap[_wsid]) _sMap[_wsid] = { loc: _we.location || '', evts: [] };
-                                    // Nur hinzufügen wenn noch nicht vorhanden (dedup via timestamp)
-                                    var _wKey = _wt + '|' + _wsid;
-                                    if (!_sMap[_wsid]._keys) _sMap[_wsid]._keys = new Set();
-                                    if (_sMap[_wsid]._keys.has(_wKey)) return;
-                                    _sMap[_wsid]._keys.add(_wKey);
-                                    _sMap[_wsid].evts.push({ ts: _wt, on: !!(_we.value===true||_we.value==='true'||_we.value===1||_we.value==='1'||Number(_we.value)>0) });
-                                } catch(_wpe) {}
-                            });
-                        });
-                    } catch(_walStuckE) {}
+                        const _stS = await this.getStateAsync(_stD.id);
+                        if (!_stS) continue;
+                        const _stVal = _stS.val === true || _stS.val === 1 || _stS.val === 'true' || _stS.val === '1';
+                        if (!_stVal) continue;
+                        const _stLc = _stS.lc || 0;
+                        if (!_stLc || (_stNow - _stLc) < _stThr) continue;
+                        const _stMin = Math.round((_stNow - _stLc) / 60000);
+                        const _stLoc = _stD.location || '';
+                        this.log.warn('[OC-STUCK-V3] ' + _stD.id + ' (' + _stLoc + '): ' + _stMin + 'min stuck seit ' + new Date(_stLc).toLocaleTimeString() + ' → aus Statistik entfernt');
+                        if (!noisySensors.find(function(n){ return n.id === _stD.id; })) {
+                            noisySensors.push({ id: _stD.id, location: _stLoc, reason: 'stuck_sensor', stuckMinutes: _stMin });
+                        }
+                        if (_stLoc && typeof todayRoomMinutes[_stLoc] !== 'undefined') {
+                            todayRoomMinutes[_stLoc] = 0;
+                            this.log.warn('[OC-STUCK-V3] Raum ' + _stLoc + ': komplett aus Statistik (PIR hängt seit ' + _stMin + 'min)');
+                        }
+                    } catch(_stE) {}
                 }
-                Object.keys(_sMap).forEach(function(sid) {
-                    var info = _sMap[sid];
-                    var evts = info.evts.sort(function(a,b){ return a.ts-b.ts; });
-                    var last = evts[evts.length-1];
-                    if (!last || !last.on) return; // zuletzt false => ok
-                    var lastFalseIdx = -1;
-                    for (var si = evts.length-2; si >= 0; si--) { if (!evts[si].on) { lastFalseIdx = si; break; } }
-                    var trueStart = lastFalseIdx >= 0 ? evts[lastFalseIdx+1].ts : evts[0].ts;
-                    var durMs = _stuckNow - trueStart;
-                    if (durMs < _stuckThresh) return;
-                    var durMin  = Math.round(durMs / 60000);
-                    var legitMin = Math.round(_stuckThresh / 60000);
-                    var excess   = durMin - legitMin;
-                    _self.log.warn('[OC-STUCK] ' + sid + ' (' + info.loc + '): ' + durMin + 'min true ohne False (Schwelle: ' + legitMin + 'min) → Sensor hängt');
-                    if (!_noisy.find(function(n){ return n.id === sid; })) {
-                        _noisy.push({ id: sid, location: info.loc, reason: 'stuck_sensor', stuckMinutes: durMin });
-                    }
-                    if (info.loc && typeof _todayMin[info.loc] !== 'undefined' && excess > 0) {
-                        var before = _todayMin[info.loc];
-                        _todayMin[info.loc] = Math.max(0, before - excess);
-                        _self.log.warn('[OC-STUCK] Raum ' + info.loc + ': ' + before + 'min → ' + _todayMin[info.loc] + 'min (Stuck-Korrektur -' + excess + 'min)');
-                    }
-                });
-            })(this, this.eventHistory, todayRoomMinutes, noisySensors, this._historyDir || null);
+                // roomStats nach Korrektur neu speichern (UI liest daraus)
+                try {
+                    const _rsS = await this.getStateAsync('analysis.activity.roomStats');
+                    const _rsO = (_rsS && _rsS.val) ? JSON.parse(_rsS.val) : { today: {}, yesterday: {}, date: '' };
+                    _rsO.today = todayRoomMinutes;
+                    await this.setStateAsync('analysis.activity.roomStats', { val: JSON.stringify(_rsO), ack: true });
+                } catch(_rsE) {}
+            }
 
-            // [OC-STUCK-V2] roomStats nach OC-STUCK-Korrektur neu speichern
-            // (roomStats wurde VOR OC-STUCK gespeichert → UI zeigte noch falschen Wert)
-            try {
-                const _rsFixed = await this.getStateAsync('analysis.activity.roomStats');
-                const _rsObj2 = (_rsFixed && _rsFixed.val) ? JSON.parse(_rsFixed.val) : { today: {}, yesterday: {}, date: '' };
-                _rsObj2.today = todayRoomMinutes;
-                await this.setStateAsync('analysis.activity.roomStats', { val: JSON.stringify(_rsObj2), ack: true });
-            } catch(_rsE2) {}
-
-            // R?umliche Heuristik: max. Personen die heute gleichzeitig erkannt wurden
+            // R            // R?umliche Heuristik: max. Personen die heute gleichzeitig erkannt wurden
             var _cfgSize = this.config.householdSize || 'single';
             var _cfgBaseline = _cfgSize === 'single' ? 1 : _cfgSize === 'couple' ? 2 : 3;
             const maxPersonsDetected = this._maxPersonsToday || _cfgBaseline;
