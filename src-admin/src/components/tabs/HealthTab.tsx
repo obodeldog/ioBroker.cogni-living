@@ -2774,7 +2774,7 @@ const [forceRecomputeResult, setForceRecomputeResult] = useState<'ok' | 'err' | 
                         )}
 
                         {/* Nacht neu berechnen (Force Recompute) */}
-                        {sleepDateStr && !personLabel && (
+                        {sleepDateStr && (
                             <div style={{
                                 borderTop: `1px dashed ${isDark?'#333':'#ddd'}`,
                                 paddingTop: '6px',
