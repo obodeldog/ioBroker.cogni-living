@@ -2064,6 +2064,24 @@ class CogniLiving extends utils.Adapter {
             const _filePath0 = path.join(_dataDir0, 'cogni-living', 'history', dateStr + '.json');
             let _existingSnap = null;
             try { if (fs.existsSync(_filePath0)) _existingSnap = JSON.parse(fs.readFileSync(_filePath0, 'utf8')); } catch(_fe) {}
+            // [OC-FORCE] Force-Recompute: Freeze umgehen wenn explizit angefordert
+            // Setzt sleepStages=[] und wakeConfirmed=false damit _sleepFrozen=false wird.
+            // Metadaten (Garmin, bedEntryTs etc.) bleiben erhalten fuer korrekte Analyse.
+            if (this._forceRecompute === true) {
+                this._forceRecompute = false;
+                if (_existingSnap) {
+                    _existingSnap = Object.assign({}, _existingSnap, {
+                        sleepStages: [],
+                        personData: _existingSnap.personData
+                            ? Object.keys(_existingSnap.personData).reduce(function(acc, k) {
+                                acc[k] = Object.assign({}, _existingSnap.personData[k], { wakeConfirmed: false, sleepStages: [] });
+                                return acc;
+                            }, {})
+                            : {}
+                    });
+                }
+                this.log.info('[OC-FORCE] Erzwungene Neuberechnung: Freeze deaktiviert');
+            }
             // Eingefroren wenn: Aufwachzeit vorhanden + vor 14:00 Uhr (= echte Nacht) + mind. 3h Bettzeit
             const _sleepFrozenMotionOnly = !!(
                 _existingSnap && _existingSnap.personData &&
@@ -5772,6 +5790,29 @@ class CogniLiving extends utils.Adapter {
             }
         }
         // removeSingleIntimacyEvent: Entfernt EINE Session per Start-Timestamp (Session-Level Nullnummer)
+        else if (obj.command === 'forceRecompute') {
+            // [OC-FORCE] Erzwungene Neuberechnung der letzten Nacht (Freeze umgehen)
+            // Datum optional: obj.message?.date (YYYY-MM-DD). Default: aktuelle sleepDate-Logik.
+            try {
+                this._forceRecompute = true;
+                await this.saveDailyHistory();
+                // Frisches JSON lesen und zurueckgeben
+                const _frDate = (obj.message && obj.message.date) ? obj.message.date : (() => {
+                    const _d = new Date(); const _h = _d.getHours();
+                    if (_h < 13) { const _yd = new Date(_d); _yd.setDate(_d.getDate()-1); return _yd.toISOString().slice(0,10); }
+                    return _d.toISOString().slice(0,10);
+                })();
+                const _frPath = require('path').join(require('@iobroker/adapter-core').getAbsoluteDefaultDataDir(), 'cogni-living', 'history', _frDate + '.json');
+                let _frData = null;
+                try { if (require('fs').existsSync(_frPath)) _frData = JSON.parse(require('fs').readFileSync(_frPath, 'utf8')); } catch(_) {}
+                this.log.info('[OC-FORCE] forceRecompute abgeschlossen fuer ' + _frDate);
+                this.sendTo(obj.from, obj.command, { success: true, date: _frDate, data: _frData }, obj.callback);
+            } catch(_frE) {
+                this._forceRecompute = false;
+                this.log.warn('[OC-FORCE] forceRecompute Fehler: ' + _frE.message);
+                this.sendTo(obj.from, obj.command, { success: false, error: _frE.message }, obj.callback);
+            }
+        }
         else if (obj.command === 'removeSingleIntimacyEvent') {
             try {
                 var _rsDate = obj.message && obj.message.date;
