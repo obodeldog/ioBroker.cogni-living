@@ -1906,6 +1906,73 @@ export default function HealthTab(props: any) {
                                                 {/* [E] Primär: Aufgewacht (groß); Sekundär unten: Aufstehen + Latenz-Badge */}
                                                 <div style={{fontSize:'1.4rem', fontWeight:'bold', color: isDark?'#eee':'#222', lineHeight:'1.1'}}>{fmtTime(swEnd)}</div>
                                                 <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Aufgewacht</div>
+                                                <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
+                                                    {wakeDisplay.icon} {wakeDisplay.label}
+                                                </div>
+                                                {wakeOverridden && (
+                                                    <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
+                                                )}
+                                                {/* [OC-BED-SOURCES] Aufwachzeit-Quellen-Toggle — direkt unter Aufgewacht */}
+                                                {allWakeSourcesArr.length > 0 && (
+                                                    <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: isOverrideWakeLoading ? 'wait' : 'pointer', opacity:0.8,
+                                                                 display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
+                                                        title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufwachzeit-Quelle manuell wählen'}
+                                                        onClick={() => { if (!isOverrideWakeLoading) setIsOverrideWakePanelOpen(!isOverrideWakePanelOpen); }}>
+                                                        {isOverrideWakeLoading ? '⏳' : '⚙'} Quellen {isOverrideWakePanelOpen ? '▲' : '▼'}
+                                                    </div>
+                                                )}
+                                                {isOverrideWakePanelOpen && !isOverrideWakeLoading && allWakeSourcesArr.length > 0 && (
+                                                    <div style={{marginTop:'4px', background: isDark?'#1a2a2a':'#e0f7fa',
+                                                                 border:'1px solid ' + (isDark?'#00838f':'#80deea'),
+                                                                 borderRadius:'6px', padding:'6px 8px', minWidth:'200px',
+                                                                 boxShadow:'0 4px 12px rgba(0,0,0,0.3)', textAlign:'left'}}>
+                                                        <div style={{fontSize:'0.55rem', color: isDark?'#aaa':'#555', marginBottom:'4px', fontWeight:'bold'}}>
+                                                            Aufwachzeit-Quelle wählen:
+                                                        </div>
+                                                        {allWakeSourcesArr.map(ws => {
+                                                            const wInfo = srcInfo[ws.source] ?? { icon: '?', label: ws.source };
+                                                            const wIsActive = ws.source === wakeSource;
+                                                            const wHasTs = !!ws.ts;
+                                                            // [OC-BED-SOURCES] Quelle nach Aufstehen/bedExitTs ist implausibel
+                                                            const wIsAfterExit = wHasTs && !!(bedExitTs) && (ws.ts! > (bedExitTs as number) + 5 * 60000);
+                                                            const wIsAfterCap  = !wIsAfterExit && wHasTs && !!(swEnd) && (ws.ts! > (swEnd as number) + 60 * 60000);
+                                                            const wImplausible = wIsAfterExit || wIsAfterCap;
+                                                            return (
+                                                                <div key={ws.source} style={{
+                                                                    display:'flex', alignItems:'center', justifyContent:'space-between',
+                                                                    padding:'2px 4px', marginBottom:'2px', borderRadius:'3px',
+                                                                    opacity: wImplausible ? 0.3 : (wHasTs ? 1 : 0.4),
+                                                                    background: wIsActive ? (isDark?'#004d5e':'#b2ebf2') : 'transparent'
+                                                                }}>
+                                                                    <span style={{fontSize:'0.6rem', color: wImplausible ? '#f44336' : (isDark?'#ddd':'#333'), textDecoration: wImplausible ? 'line-through' : 'none'}}>
+                                                                        {wInfo.icon} {wInfo.label}: {ws.ts ? fmtTime(ws.ts) : '—'}
+                                                                        {wIsActive ? ' ✓' : ''}{wImplausible ? ' ⚠️ nach Aufstehen' : ''}
+                                                                    </span>
+                                                                    {wHasTs && !wIsActive && !wImplausible && sleepDateStr && (
+                                                                        <button
+                                                                            onClick={() => handleSetWakeOverride(ws.source, ws.ts!)}
+                                                                            style={{fontSize:'0.5rem', padding:'1px 6px', cursor:'pointer',
+                                                                                   background:'#1565c0', color:'#fff', border:'none',
+                                                                                   borderRadius:'3px', marginLeft:'6px', flexShrink:0}}>
+                                                                            Wählen
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        {wakeOverridden && (
+                                                            <div style={{marginTop:'4px', borderTop:'1px solid ' + (isDark?'#444':'#ccc'), paddingTop:'4px'}}>
+                                                                <button onClick={handleClearWakeOverride}
+                                                                    style={{fontSize:'0.5rem', padding:'2px 8px', cursor:'pointer',
+                                                                           background:'#b71c1c', color:'#fff', border:'none',
+                                                                           borderRadius:'3px', width:'100%'}}>
+                                                                    ✏ Override zurücksetzen
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {/* Aufstehen: physisches Bett-Verlassen (nach Aufgewacht) */}
                                                 {_hasPhysicalExit && (
                                                     <>
                                                         <div style={{fontSize:'0.6rem', color:'#ff9800', border:'1px solid rgba(255,152,0,0.4)', borderRadius:'4px', padding:'1px 5px', display:'inline-block', margin:'3px 0'}}>↓ {_fmtDur((bedExitTs as number) - (swEnd as number))}</div>
@@ -1913,69 +1980,8 @@ export default function HealthTab(props: any) {
                                                         <div style={{fontSize:'0.9rem', fontWeight:600, color: isDark?'#eee':'#222'}}>{fmtTime(bedExitTs)}</div>
                                                     </>
                                                 )}
-                                                <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
-                                                    {wakeDisplay.icon} {wakeDisplay.label}
-                                                </div>
                                             </>);
                                         })()}
-                                        {wakeOverridden && (
-                                            <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
-                                        )}
-                                        {allWakeSourcesArr.length > 0 && (
-                                            <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: isOverrideWakeLoading ? 'wait' : 'pointer', opacity:0.8,
-                                                         display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
-                                                title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufwachzeit-Quelle manuell wählen'}
-                                                onClick={() => { if (!isOverrideWakeLoading) setIsOverrideWakePanelOpen(!isOverrideWakePanelOpen); }}>
-                                                {isOverrideWakeLoading ? '⏳' : '⚙'} Quellen {isOverrideWakePanelOpen ? '▲' : '▼'}
-                                            </div>
-                                        )}
-                                        {isOverrideWakePanelOpen && !isOverrideWakeLoading && allWakeSourcesArr.length > 0 && (
-                                            <div style={{marginTop:'4px', background: isDark?'#1a2a2a':'#e0f7fa',
-                                                         border:'1px solid ' + (isDark?'#00838f':'#80deea'),
-                                                         borderRadius:'6px', padding:'6px 8px', minWidth:'200px',
-                                                         boxShadow:'0 4px 12px rgba(0,0,0,0.3)', textAlign:'left'}}>
-                                                <div style={{fontSize:'0.55rem', color: isDark?'#aaa':'#555', marginBottom:'4px', fontWeight:'bold'}}>
-                                                    Aufwachzeit-Quelle wählen:
-                                                </div>
-                                                {allWakeSourcesArr.map(ws => {
-                                                    const wInfo = srcInfo[ws.source] ?? { icon: '?', label: ws.source };
-                                                    const wIsActive = ws.source === wakeSource;
-                                                    const wHasTs = !!ws.ts;
-                                                    return (
-                                                        <div key={ws.source} style={{
-                                                            display:'flex', alignItems:'center', justifyContent:'space-between',
-                                                            padding:'2px 4px', marginBottom:'2px', borderRadius:'3px',
-                                                            opacity: wHasTs ? 1 : 0.4,
-                                                            background: wIsActive ? (isDark?'#004d5e':'#b2ebf2') : 'transparent'
-                                                        }}>
-                                                            <span style={{fontSize:'0.6rem', color: isDark?'#ddd':'#333'}}>
-                                                                {wInfo.icon} {wInfo.label}: {ws.ts ? fmtTime(ws.ts) : '—'}
-                                                                {wIsActive ? ' ✓' : ''}
-                                                            </span>
-                                                            {wHasTs && !wIsActive && sleepDateStr && (
-                                                                <button
-                                                                    onClick={() => handleSetWakeOverride(ws.source, ws.ts!)}
-                                                                    style={{fontSize:'0.5rem', padding:'1px 6px', cursor:'pointer',
-                                                                           background:'#1565c0', color:'#fff', border:'none',
-                                                                           borderRadius:'3px', marginLeft:'6px', flexShrink:0}}>
-                                                                    Wählen
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
-                                                {wakeOverridden && (
-                                                    <div style={{marginTop:'4px', borderTop:'1px solid ' + (isDark?'#444':'#ccc'), paddingTop:'4px'}}>
-                                                        <button onClick={handleClearWakeOverride}
-                                                            style={{fontSize:'0.5rem', padding:'2px 8px', cursor:'pointer',
-                                                                   background:'#b71c1c', color:'#fff', border:'none',
-                                                                   borderRadius:'3px', width:'100%'}}>
-                                                            ✏ Override zurücksetzen
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                                 {/* Schlafbalken mit OBE-Dreiecken (auch ohne Schlafphasen) */}
@@ -2285,6 +2291,92 @@ export default function HealthTab(props: any) {
                                             {wakeConfirmed ? '✓' : '⟳'} {fmtTime(swEnd)}
                                         </div>
                                         <div style={{fontSize:'0.7rem', color: isDark?'#aaa':'#666'}}>Aufgewacht</div>
+                                        <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
+                                            {wakeDisplay.icon} {wakeDisplay.label}
+                                        </div>
+                                        {/* [OC-42] vorläufig prominenter wenn noch nicht bestätigt */}
+                                        {!wakeConfirmed ? (
+                                            <div style={{
+                                                display:'inline-flex', alignItems:'center', gap:'3px',
+                                                fontSize:'0.62rem', fontWeight:'bold',
+                                                color:'#ff6d00',
+                                                background: isDark?'rgba(255,109,0,0.15)':'rgba(255,109,0,0.1)',
+                                                border:'1px solid rgba(255,109,0,0.4)',
+                                                borderRadius:'4px', padding:'1px 5px', marginTop:'2px',
+                                            }}
+                                                title={`Vorläufig via ${wakeDisplay.label}: Wird bestätigt wenn nach 10:00 Uhr ≥1h kein Bett belegt`}>
+                                                ⟳ vorläufig
+                                            </div>
+                                        ) : (
+                                            <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}
+                                                title={`Bestätigt via ${wakeDisplay.label}: Bett ≥1h leer nach 10:00 Uhr`}>
+                                                bestätigt
+                                            </div>
+                                        )}
+                                        {wakeOverridden && (
+                                            <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
+                                        )}
+                                        {/* [OC-BED-SOURCES] Aufwachzeit-Quellen-Toggle — direkt unter Aufgewacht */}
+                                        {allWakeSourcesArr.length > 0 && (
+                                            <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: isOverrideWakeLoading ? 'wait' : 'pointer', opacity:0.8,
+                                                         display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
+                                                title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufwachzeit-Quelle manuell wählen'}
+                                                onClick={() => { if (!isOverrideWakeLoading) setIsOverrideWakePanelOpen(!isOverrideWakePanelOpen); }}>
+                                                {isOverrideWakeLoading ? '⏳' : '⚙'} Quellen {isOverrideWakePanelOpen ? '▲' : '▼'}
+                                            </div>
+                                        )}
+                                        {isOverrideWakePanelOpen && !isOverrideWakeLoading && allWakeSourcesArr.length > 0 && (
+                                            <div style={{marginTop:'4px', background: isDark?'#1a2a2a':'#e0f7fa',
+                                                         border:'1px solid ' + (isDark?'#00838f':'#80deea'),
+                                                         borderRadius:'6px', padding:'6px 8px', minWidth:'200px',
+                                                         boxShadow:'0 4px 12px rgba(0,0,0,0.3)', textAlign:'left'}}>
+                                                <div style={{fontSize:'0.55rem', color: isDark?'#aaa':'#555', marginBottom:'4px', fontWeight:'bold'}}>
+                                                    Aufwachzeit-Quelle wählen:
+                                                </div>
+                                                {allWakeSourcesArr.map(ws => {
+                                                    const wInfo = srcInfo[ws.source] ?? { icon: '?', label: ws.source };
+                                                    const wIsActive = ws.source === wakeSource;
+                                                    const wHasTs = !!ws.ts;
+                                                    // [OC-BED-SOURCES] Quelle nach Aufstehen/bedExitTs ist implausibel
+                                                    const wIsAfterExit = wHasTs && !!(bedExitTs) && (ws.ts! > (bedExitTs as number) + 5 * 60000);
+                                                    const wIsAfterCap  = !wIsAfterExit && wHasTs && !!(swEnd) && (ws.ts! > (swEnd as number) + 60 * 60000);
+                                                    const wImplausible = wIsAfterExit || wIsAfterCap;
+                                                    return (
+                                                        <div key={ws.source} style={{
+                                                            display:'flex', alignItems:'center', justifyContent:'space-between',
+                                                            padding:'2px 4px', marginBottom:'2px', borderRadius:'3px',
+                                                            opacity: wImplausible ? 0.3 : (wHasTs ? 1 : 0.4),
+                                                            background: wIsActive ? (isDark?'#004d5e':'#b2ebf2') : 'transparent'
+                                                        }}>
+                                                            <span style={{fontSize:'0.6rem', color: wImplausible ? '#f44336' : (isDark?'#ddd':'#333'), textDecoration: wImplausible ? 'line-through' : 'none'}}>
+                                                                {wInfo.icon} {wInfo.label}: {ws.ts ? fmtTime(ws.ts) : '—'}
+                                                                {wIsActive ? ' ✓' : ''}{wImplausible ? ' ⚠️ nach Aufstehen' : ''}
+                                                            </span>
+                                                            {wHasTs && !wIsActive && !wImplausible && sleepDateStr && (
+                                                                <button
+                                                                    onClick={() => handleSetWakeOverride(ws.source, ws.ts!)}
+                                                                    style={{fontSize:'0.5rem', padding:'1px 6px', cursor:'pointer',
+                                                                           background:'#1565c0', color:'#fff', border:'none',
+                                                                           borderRadius:'3px', marginLeft:'6px', flexShrink:0}}>
+                                                                    Wählen
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                                {wakeOverridden && (
+                                                    <div style={{marginTop:'4px', borderTop:'1px solid ' + (isDark?'#444':'#ccc'), paddingTop:'4px'}}>
+                                                        <button onClick={handleClearWakeOverride}
+                                                            style={{fontSize:'0.5rem', padding:'2px 8px', cursor:'pointer',
+                                                                   background:'#b71c1c', color:'#fff', border:'none',
+                                                                   borderRadius:'3px', width:'100%'}}>
+                                                            ✏ Override zurücksetzen
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {/* Aufstehen: physisches Bett-Verlassen (nach Aufgewacht) */}
                                         {_hasPhysicalExit && (
                                             <>
                                                 <div style={{fontSize:'0.6rem', color:'#ff9800', border:'1px solid rgba(255,152,0,0.4)', borderRadius:'4px', padding:'1px 5px', display:'inline-block', margin:'3px 0'}}>↓ {_fmtDur((bedExitTs as number) - (swEnd as number))}</div>
@@ -2292,88 +2384,8 @@ export default function HealthTab(props: any) {
                                                 <div style={{fontSize:'0.9rem', fontWeight:600, color: isDark?'#eee':'#222'}}>{fmtTime(bedExitTs)}</div>
                                             </>
                                         )}
-                                        <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
-                                            {wakeDisplay.icon} {wakeDisplay.label}
-                                        </div>
                                     </>);
                                 })()}
-                                {/* [OC-42] vorläufig prominenter wenn noch nicht bestätigt */}
-                                {!wakeConfirmed ? (
-                                    <div style={{
-                                        display:'inline-flex', alignItems:'center', gap:'3px',
-                                        fontSize:'0.62rem', fontWeight:'bold',
-                                        color:'#ff6d00',
-                                        background: isDark?'rgba(255,109,0,0.15)':'rgba(255,109,0,0.1)',
-                                        border:'1px solid rgba(255,109,0,0.4)',
-                                        borderRadius:'4px', padding:'1px 5px', marginTop:'2px',
-                                    }}
-                                        title={`Vorläufig via ${wakeDisplay.label}: Wird bestätigt wenn nach 10:00 Uhr ≥1h kein Bett belegt`}>
-                                        ⟳ vorläufig
-                                    </div>
-                                ) : (
-                                    <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}
-                                        title={`Bestätigt via ${wakeDisplay.label}: Bett ≥1h leer nach 10:00 Uhr`}>
-                                        bestätigt
-                                    </div>
-                                )}
-                                {wakeOverridden && (
-                                    <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
-                                )}
-                                {allWakeSourcesArr.length > 0 && (
-                                    <div style={{fontSize:'0.5rem', color:'#ff9800', marginTop:'2px', cursor: isOverrideWakeLoading ? 'wait' : 'pointer', opacity:0.8,
-                                                 display:'inline-flex', alignItems:'center', gap:'3px', userSelect:'none'}}
-                                        title={isOverrideWakeLoading ? 'Wird neu berechnet...' : 'Aufwachzeit-Quelle manuell wählen'}
-                                        onClick={() => { if (!isOverrideWakeLoading) setIsOverrideWakePanelOpen(!isOverrideWakePanelOpen); }}>
-                                        {isOverrideWakeLoading ? '⏳' : '⚙'} Quellen {isOverrideWakePanelOpen ? '▲' : '▼'}
-                                    </div>
-                                )}
-                                {isOverrideWakePanelOpen && !isOverrideWakeLoading && allWakeSourcesArr.length > 0 && (
-                                    <div style={{marginTop:'4px', background: isDark?'#1a2a2a':'#e0f7fa',
-                                                 border:'1px solid ' + (isDark?'#00838f':'#80deea'),
-                                                 borderRadius:'6px', padding:'6px 8px', minWidth:'200px',
-                                                 boxShadow:'0 4px 12px rgba(0,0,0,0.3)', textAlign:'left'}}>
-                                        <div style={{fontSize:'0.55rem', color: isDark?'#aaa':'#555', marginBottom:'4px', fontWeight:'bold'}}>
-                                            Aufwachzeit-Quelle wählen:
-                                        </div>
-                                        {allWakeSourcesArr.map(ws => {
-                                            const wInfo = srcInfo[ws.source] ?? { icon: '?', label: ws.source };
-                                            const wIsActive = ws.source === wakeSource;
-                                            const wHasTs = !!ws.ts;
-                                            return (
-                                                <div key={ws.source} style={{
-                                                    display:'flex', alignItems:'center', justifyContent:'space-between',
-                                                    padding:'2px 4px', marginBottom:'2px', borderRadius:'3px',
-                                                    opacity: wHasTs ? 1 : 0.4,
-                                                    background: wIsActive ? (isDark?'#004d5e':'#b2ebf2') : 'transparent'
-                                                }}>
-                                                    <span style={{fontSize:'0.6rem', color: isDark?'#ddd':'#333'}}>
-                                                        {wInfo.icon} {wInfo.label}: {ws.ts ? fmtTime(ws.ts) : '—'}
-                                                        {wIsActive ? ' ✓' : ''}
-                                                    </span>
-                                                    {wHasTs && !wIsActive && sleepDateStr && (
-                                                        <button
-                                                            onClick={() => handleSetWakeOverride(ws.source, ws.ts!)}
-                                                            style={{fontSize:'0.5rem', padding:'1px 6px', cursor:'pointer',
-                                                                   background:'#1565c0', color:'#fff', border:'none',
-                                                                   borderRadius:'3px', marginLeft:'6px', flexShrink:0}}>
-                                                            Wählen
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                        {wakeOverridden && (
-                                            <div style={{marginTop:'4px', borderTop:'1px solid ' + (isDark?'#444':'#ccc'), paddingTop:'4px'}}>
-                                                <button onClick={handleClearWakeOverride}
-                                                    style={{fontSize:'0.5rem', padding:'2px 8px', cursor:'pointer',
-                                                           background:'#b71c1c', color:'#fff', border:'none',
-                                                           borderRadius:'3px', width:'100%'}}>
-                                                    ✏ Override zurücksetzen
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
                             </div>
                         </div>
 
@@ -3806,7 +3818,10 @@ export default function HealthTab(props: any) {
                                         sleepScoreCalNights: pd.sleepScoreCalNights ?? 0,
                                         sleepScoreCalStatus: pd.sleepScoreCalStatus || 'uncalibrated',
                                         sleepStages: pd.sleepStages ?? [],
-                                        garminScore: null, garminDeepMin: null, garminLightMin: null, garminRemMin: null,
+                                        garminScore: auraSleepData?.garminScore ?? null,
+                                        garminDeepMin: auraSleepData?.garminDeepMin ?? null,
+                                        garminLightMin: auraSleepData?.garminLightMin ?? null,
+                                        garminRemMin: auraSleepData?.garminRemMin ?? null,
                                         // [OC-51] swStart-Guard
                                         sleepWindowStart:    (pd.sleepWindowStart && (pd as any).bedEntryTs && pd.sleepWindowStart < (pd as any).bedEntryTs) ? null : (pd.sleepWindowStart ?? null),
                                         stagesWindowStart:   pd.stagesWindowStart   ?? pd.sleepWindowStart ?? null,
