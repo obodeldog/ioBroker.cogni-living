@@ -3,6 +3,39 @@
 
 ---
 
+## Sitzung 13.06.2026 — Version 0.33.298 — OC-42p v2 + OC-STUCK
+
+### ✅ Abgeschlossen
+
+#### Forensik: Aufstehzeit 08:51 statt 08:41 (Marc, Nacht 12./13.06.)
+- **Ursache 1**: Per-Person `bedExitTs` (OC-42p) schaute nur auf `vibration_alone` = letzter Matratzen-Kontakt. Der war 08:51 CEST (Bettmachen).
+- **Ursache 2**: `allWakeSources.motion = null` war kein Bug — das bezieht sich auf Aufwachzeit, nicht Aufstehzeit.
+- **Echter Bug**: OC-42p ignorierte das bereits existierende globale OC-45a-Ergebnis (08:39 CEST), das PIR-Bad + FP2 nutzt. Das globale Ergebnis war schon korrekt — es wurde aber nie für die Personen-Kachel verwendet.
+- **Motion Events**: eventHistory speichert korrekt mit `e.timestamp` (nicht `e.ts`). Der OC-45a SM nutzt `e.timestamp||0` korrekt. Kein Feldnamen-Bug vorhanden.
+
+#### v0.33.298 — OC-42p v2: Per-Person bedExitTs nutzt globales OC-45a
+- **Patch**: `scripts/_patch_oc42p_v2_stuck.js`
+- **Fix**: Nach `vibration_alone`-Check: globales `bedExitTs` (OC-45a) als weitere Quelle. Wenn global früher als `vibration_alone` → nimm global.
+- **Priorisierung**: `min(vibration_alone, global_oc45a)` → frühestes valides Signal gewinnt
+- **Ergebnis**: Marc 08:39 (oc45_global) statt 08:51 (vibration_alone)
+
+#### v0.33.298 — OC-STUCK: Feststeckende Sensoren erkennen und korrigieren
+- **Problem**: Werkstatt-Zigbee-PIR seit 14:00 (589 Min) true → `todayRoomMinutes[KG Werkstatt]=589`
+- **Fix**: Nach `todayRoomMinutes`-Berechnung läuft IIFE über `this.eventHistory` (2000 Events, zeitlich unbegrenzt):
+  - Ausschluss: `isFP2Bed`, `isFP2Living`, `isVibrationBed`, `isVibrationStrength`
+  - Für alle PIR/motion-Sensoren: Wenn letztes bekanntes Ereignis `true` UND Dauer > 90 Min → hängend
+  - Schreibt in `noisySensors[]` (bereits im JSON) mit `reason: 'stuck_sensor'`
+  - Korrigiert `todayRoomMinutes[raum]` um Überschuss-Minuten
+- **Log-Output**: `[OC-STUCK] zigbee.0.xxx (KG Werkstatt): 589min true ohne False → Sensor hängt`
+- **Sensor-Neutralität**: FP2-Bett darf 8h true bleiben (schlaeft), nur PIR/Allgemein-Presence wird geprüft
+
+### 🔧 Offen
+- Ansatz C (7-Tage-Statistik pro Raum) für OC-STUCK: noch nicht implementiert
+- Quellen-Dropdowns für "Ins Bett gegangen" + "Aufgewacht" (diskutiert, nicht umgesetzt)
+- Ursache des nächtlichen Adapter-Neustarts klären
+
+---
+
 ## Sitzung 12.06.2026 — Version 0.33.297 — OC-PLAUS v2: Near-Zero-Guard + REM < 2%
 
 ### ✅ Abgeschlossen

@@ -2182,6 +2182,48 @@ class CogniLiving extends utils.Adapter {
                 await this.setStateAsync('analysis.activity.roomStats', { val: JSON.stringify(existingStats), ack: true });
             } catch(e) {}
 
+            // [OC-STUCK] Feststeckende Sensoren erkennen und todayRoomMinutes korrigieren.
+            // Ausschluss: FP2 (schlaeft legal 8h), Vibrationssensoren.
+            // Quelle: this.eventHistory (2000 Events, zeitlich unbegrenzt - breiter als sleepSearchEvents).
+            // Schwelle: PIR/Bewegung = 90 Min (physikalisch nie laenger true ohne false).
+            // Forensik 13.06.2026: Zigbee KG Werkstatt seit 14:00 true = 589 Min in todayRoomMinutes.
+            (function(_self, _hist, _todayMin, _noisy) {
+                var _stuckThresh = 90 * 60000;
+                var _stuckNow    = Date.now();
+                var _sMap = {};
+                (_hist || []).forEach(function(e) {
+                    if (!e || e.isFP2Bed || e.isFP2Living || e.isVibrationBed || e.isVibrationStrength) return;
+                    if (e.type !== 'motion' && e.type !== 'presence_radar_bool' && e.type !== 'presence_radar_count') return;
+                    var sid = e.id || e.name; if (!sid) return;
+                    var t = e.timestamp || 0; if (!t) return;
+                    if (!_sMap[sid]) _sMap[sid] = { loc: e.location || '', evts: [] };
+                    _sMap[sid].evts.push({ ts: t, on: !!(e.value===true||e.value==='true'||e.value===1||e.value==='1'||Number(e.value)>0) });
+                });
+                Object.keys(_sMap).forEach(function(sid) {
+                    var info = _sMap[sid];
+                    var evts = info.evts.sort(function(a,b){ return a.ts-b.ts; });
+                    var last = evts[evts.length-1];
+                    if (!last || !last.on) return; // zuletzt false => ok
+                    var lastFalseIdx = -1;
+                    for (var si = evts.length-2; si >= 0; si--) { if (!evts[si].on) { lastFalseIdx = si; break; } }
+                    var trueStart = lastFalseIdx >= 0 ? evts[lastFalseIdx+1].ts : evts[0].ts;
+                    var durMs = _stuckNow - trueStart;
+                    if (durMs < _stuckThresh) return;
+                    var durMin  = Math.round(durMs / 60000);
+                    var legitMin = Math.round(_stuckThresh / 60000);
+                    var excess   = durMin - legitMin;
+                    _self.log.warn('[OC-STUCK] ' + sid + ' (' + info.loc + '): ' + durMin + 'min true ohne False (Schwelle: ' + legitMin + 'min) → Sensor hängt');
+                    if (!_noisy.find(function(n){ return n.id === sid; })) {
+                        _noisy.push({ id: sid, location: info.loc, reason: 'stuck_sensor', stuckMinutes: durMin });
+                    }
+                    if (info.loc && typeof _todayMin[info.loc] !== 'undefined' && excess > 0) {
+                        var before = _todayMin[info.loc];
+                        _todayMin[info.loc] = Math.max(0, before - excess);
+                        _self.log.warn('[OC-STUCK] Raum ' + info.loc + ': ' + before + 'min → ' + _todayMin[info.loc] + 'min (Stuck-Korrektur -' + excess + 'min)');
+                    }
+                });
+            })(this, this.eventHistory, todayRoomMinutes, noisySensors);
+
             // R?umliche Heuristik: max. Personen die heute gleichzeitig erkannt wurden
             var _cfgSize = this.config.householdSize || 'single';
             var _cfgBaseline = _cfgSize === 'single' ? 1 : _cfgSize === 'couple' ? 2 : 3;
@@ -3854,6 +3896,16 @@ class CogniLiving extends utils.Adapter {
                             return s.source === 'vibration_alone' && s.ts && s.ts > _pBeAnchor && s.ts <= _pBeMax;
                         });
                         if (_pBeVa) { _pBedExitTs = _pBeVa.ts; _pBedExitSrc = 'vibration_alone'; }
+                        // [OC-42p v2] Global OC-45a bedExitTs als frueheres Signal bevorzugen.
+                        // OC-45a nutzt Bad-/Zimmer-Sensor + FP2 und ist daher genauer als vibration_alone
+                        // (vibration_alone = letzter Matratzen-Kontakt, z.B. beim Bettmachen nach dem Aufstehen).
+                        // Forensik 13.06.2026: Marc vibration_alone=08:51 vs OC-45a=08:39 (Bad 08:41 CEST).
+                        if (typeof bedExitTs !== 'undefined' && bedExitTs && bedExitTs > _pBeAnchor && bedExitTs <= _pBeMax) {
+                            if (!_pBedExitTs || bedExitTs < _pBedExitTs) {
+                                _pBedExitTs = bedExitTs;
+                                _pBedExitSrc = (typeof _bedExitSrc !== 'undefined' && _bedExitSrc) ? _bedExitSrc : 'oc45_global';
+                            }
+                        }
                         if (!_pBedExitTs) {
                             var _pSnapBedExit = (_existingSnap&&_existingSnap.personData&&_existingSnap.personData[person]) ? _existingSnap.personData[person].bedExitTs : null;
                             if (_pSnapBedExit && _pSnapBedExit > _pBeAnchor && _pSnapBedExit <= _pBeMax) {
