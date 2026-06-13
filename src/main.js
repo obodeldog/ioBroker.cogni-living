@@ -2158,7 +2158,10 @@ class CogniLiving extends utils.Adapter {
             if (this._forceRecomputeYesterday) {
                 _sleepSearchBase.setDate(_sleepSearchBase.getDate() - 1);
                 this._forceRecomputeYesterday = false;
-                this.log.info('[OC-FORCE] Neuberechnung gestrige Nacht: sleepSearchBase ' + _sleepSearchBase.toISOString().slice(0,10));
+                // maxTs = sleepSearchBase + 20h: z.B. Jun 12 18:00 + 20h = Jun 13 14:00
+                // Schliesst Events der neuen Nacht (ab ca. 18:00 naechster Tag) zuverlaessig aus.
+                this._forceRecomputeMaxTs = _sleepSearchBase.getTime() + 20 * 3600 * 1000;
+                this.log.info('[OC-FORCE] Neuberechnung gestrige Nacht: Fenster ' + _sleepSearchBase.toISOString().slice(0,10) + ' bis ' + new Date(this._forceRecomputeMaxTs).toISOString().slice(0,16));
             }
             const sleepDate = _sleepSearchBase.getFullYear() + '-' + String(_sleepSearchBase.getMonth()+1).padStart(2,'0') + '-' + String(_sleepSearchBase.getDate()).padStart(2,'0');
             var _excludedNightsRaw = (await this.getStateAsync('analysis.sleep.excludedNights'))?.val;
