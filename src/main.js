@@ -4022,6 +4022,23 @@ class CogniLiving extends utils.Adapter {
                         }
                         if (_pBedExitTs) _self.log.info('[OC-42p] ' + person + ' bedExitTs: ' + new Date(_pBedExitTs).toLocaleTimeString() + ' (' + _pBedExitSrc + ')');
                     }
+                    // [OC-BED-SOURCES] allBedExitSources: Quellen-Array fuer Aufstehen-Zeit
+                    var _pAllBedExitSources = null;
+                    (function() {
+                        var _arr = []; var _seen = {};
+                        var _push = function(source, ts) { if (!ts || _seen[source]) return; _seen[source] = true; _arr.push({ source: source, ts: ts }); };
+                        var _vibA = (_pResult.allWakeSources||[]).find(function(s){ return s.source==='vibration_alone' && !!s.ts; });
+                        if (_vibA) _push('vibration_alone', _vibA.ts);
+                        if (typeof bedExitTs !== 'undefined' && bedExitTs) {
+                            var _src45 = (typeof _bedExitSrc !== 'undefined' && _bedExitSrc) ? _bedExitSrc : 'oc45_global';
+                            _push(_src45, bedExitTs);
+                        }
+                        var _fp2W = (_pResult.allWakeSources||[]).find(function(s){ return (s.source==='fp2'||s.source==='fp2_vib') && !!s.ts; });
+                        if (_fp2W) _push(_fp2W.source + '_exit', _fp2W.ts);
+                        if (_arr.length === 0) return;
+                        _arr.sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+                        _pAllBedExitSources = _arr;
+                    })();
                     var sleepOnsetMin = null;
                     if (_pResult.sleepWindowStart) {
                         sleepOnsetMin = Math.round((_pResult.sleepWindowStart - new Date(_pResult.sleepWindowStart).setHours(0,0,0,0)) / 60000);
@@ -4205,7 +4222,9 @@ class CogniLiving extends utils.Adapter {
                         bedEntryTs:                _pResult.bedEntryTs || null,
                         bedEntrySource:            _pResult.bedEntrySource || null,
                         allBedEntrySources:        _pResult.allBedEntrySources || null,
-                        bedExitTs:                 _pBedExitTs || null
+                        bedExitTs:                 _pBedExitTs || null,
+                        bedExitSource:             _pBedExitSrc || null,
+                        allBedExitSources:         _pAllBedExitSources || null
                     };
                 });
                 return result;
