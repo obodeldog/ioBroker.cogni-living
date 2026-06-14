@@ -4341,6 +4341,39 @@ class CogniLiving extends utils.Adapter {
                     var pSt=pRts.length>=7?"calibrated":pRts.length>=3?"calibrating":"uncalibrated";
                     _vcRoll2.persons[pName]={trigThr:pThrR,avgTrigRate:pAvgRt,wakeThresh:pWkR,remUp:pRuR,remLow:pRlR,nightCount:pRts.length,status:pSt};
                 });
+                // OC-VIB-CAL: Drift-Erkennung — Sensor-Position geaendert?
+                // Wenn die letzten 2 Naechte beide stark vom historischen Mittel abweichen
+                // (>2.5x oder <0.35x), flaggen wir einen Sensor-Drift-Verdacht.
+                var _vcDriftGlobal = false;
+                if (_vcN2 >= 5) {
+                    var _vcRefNs = _vcData2.nights.slice(0, -2);
+                    var _vcLast2 = _vcData2.nights.slice(-2);
+                    var _vcRefMxs = _vcRefNs.map(function(n){return n.global&&n.global.vibStrMax;}).filter(function(v){return typeof v==='number'&&v>0;});
+                    if (_vcRefMxs.length >= 3) {
+                        var _vcRefMean = _vcRefMxs.reduce(function(a,b){return a+b;},0)/_vcRefMxs.length;
+                        if (_vcRefMean > 0) {
+                            var _vcOutliers = _vcLast2.filter(function(n){var v=n.global&&n.global.vibStrMax;return typeof v==='number'&&v>0&&(v>_vcRefMean*2.5||v<_vcRefMean*0.35);});
+                            if (_vcOutliers.length >= 2) {
+                                _vcDriftGlobal = true;
+                                this.log.warn('[OC-VIB-CAL] Sensor-Drift erkannt! letzte 2 Naechte weichen stark ab (Sensor verschoben?)');
+                            }
+                        }
+                    }
+                }
+                if (_vcRoll2.global) _vcRoll2.global.driftWarning = _vcDriftGlobal;
+                // Per-Person Drift
+                _allPNames.forEach(function(pName) {
+                    if (!_vcRoll2.persons[pName]) return;
+                    var _pdNights = _vcData2.nights.filter(function(n){return n.persons&&n.persons[pName]&&typeof n.persons[pName].vibStrMax==='number';});
+                    if (_pdNights.length < 5) { _vcRoll2.persons[pName].driftWarning = false; return; }
+                    var _pdRef = _pdNights.slice(0,-2);
+                    var _pdL2  = _pdNights.slice(-2);
+                    var _pdRefMxs = _pdRef.map(function(n){return n.persons[pName].vibStrMax;}).filter(function(v){return typeof v==='number'&&v>0;});
+                    if (_pdRefMxs.length < 3) { _vcRoll2.persons[pName].driftWarning = false; return; }
+                    var _pdRefMean = _pdRefMxs.reduce(function(a,b){return a+b;},0)/_pdRefMxs.length;
+                    var _pdOut = _pdL2.filter(function(n){var v=n.persons[pName].vibStrMax;return typeof v==='number'&&v>0&&(v>_pdRefMean*2.5||v<_pdRefMean*0.35);});
+                    _vcRoll2.persons[pName].driftWarning = (_pdOut.length >= 2);
+                });
                 _vcData2.rolling=_vcRoll2; _vcData2.updatedAt=Date.now();
                 await this.setStateAsync('analysis.health.vibCalibData', { val: JSON.stringify(_vcData2), ack: true });
                 this.log.info('[OC-VIB-CAL] Rolling buffer: ' + _vcN2 + ' Naechte | global-Status: ' + _gcStat2);
@@ -5912,6 +5945,17 @@ class CogniLiving extends utils.Adapter {
             } catch(_clE) {
                 this.log.warn('[OC-SEX] clearIntimacyEventsForDay Fehler: ' + _clE.message);
                 this.sendTo(obj.from, obj.command, { success: false, error: _clE.message }, obj.callback);
+            }
+        }
+        // OC-VIB-CAL: Kalibrierung manuell zuruecksetzen (Sensor verschoben etc.)
+        else if (obj.command === 'resetVibCalib') {
+            try {
+                await this.setStateAsync('analysis.health.vibCalibData', { val: '{}', ack: true });
+                this.log.info('[OC-VIB-CAL] Kalibrierung manuell zurueckgesetzt');
+                this.sendTo(obj.from, obj.command, { success: true }, obj.callback);
+            } catch(_rvE) {
+                this.log.warn('[OC-VIB-CAL] Reset-Fehler: ' + _rvE.message);
+                this.sendTo(obj.from, obj.command, { success: false, error: _rvE.message }, obj.callback);
             }
         }
         // removeSingleIntimacyEvent: Entfernt EINE Session per Start-Timestamp (Session-Level Nullnummer)
