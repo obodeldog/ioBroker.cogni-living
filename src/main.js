@@ -407,6 +407,7 @@ function computePersonSleep(p) {
     // Aktivitaetsblock >= 30 Min ausserhalb des Schlafzimmers liegt = Person war nachweislich nicht im Bett.
     // Unterscheidet kurzen Toiletten-/Kuechen-Gang (kurzer Block) von stundenlangem Wachsein.
     // Sensor-neutral; OC-46 (ruhiges Wachliegen) bleibt geschuetzt (keine Far-Aktivitaet).
+    var _preSleepAbsence = [];
     if (bedEntryTs && sleepStart && bedEntryTs < sleepStart) {
         var _oc48cFar = allEvents.filter(function(e) {
             var _ts = e.timestamp || 0;
@@ -421,17 +422,43 @@ function computePersonSleep(p) {
             }
             return true;
         }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
-        var _oc48cMax = 0, _oc48cBs = null, _oc48cBe = null;
+        var _oc48cMax = 0, _oc48cBs = null, _oc48cBe = null, _oc48cMaxBs = null, _oc48cMaxBe = null;
         for (var _oc48ci = 0; _oc48ci < _oc48cFar.length; _oc48ci++) {
             var _ets = _oc48cFar[_oc48ci].timestamp || 0;
             if (_oc48cBs === null) { _oc48cBs = _ets; _oc48cBe = _ets; }
             else if (_ets - _oc48cBe <= 12 * 60000) { _oc48cBe = _ets; }
-            else { if (_oc48cBe - _oc48cBs > _oc48cMax) _oc48cMax = _oc48cBe - _oc48cBs; _oc48cBs = _ets; _oc48cBe = _ets; }
+            else { if (_oc48cBe - _oc48cBs > _oc48cMax) { _oc48cMax = _oc48cBe - _oc48cBs; _oc48cMaxBs = _oc48cBs; _oc48cMaxBe = _oc48cBe; } _oc48cBs = _ets; _oc48cBe = _ets; }
         }
-        if (_oc48cBs !== null && (_oc48cBe - _oc48cBs) > _oc48cMax) _oc48cMax = _oc48cBe - _oc48cBs;
+        if (_oc48cBs !== null && (_oc48cBe - _oc48cBs) > _oc48cMax) { _oc48cMax = _oc48cBe - _oc48cBs; _oc48cMaxBs = _oc48cBs; _oc48cMaxBe = _oc48cBe; }
         if (_oc48cMax >= 30 * 60000) {
-            if (log) log.info(logPfx + '[OC-48c] bedEntryTs ' + new Date(bedEntryTs).toLocaleTimeString() + ' verworfen: anhaltende Ausserhalb-Aktivitaet (laengster Block ' + Math.round(_oc48cMax / 60000) + ' Min, ' + _oc48cFar.length + ' Events) -> bedEntry = sleepStart');
-            bedEntryTs = null;
+            // [OC-48c v2 / OC-56 Fix B] bedEntryTs wird NICHT mehr verworfen (kein null mehr).
+            // FP2-bewusste Entscheidung ueber den laengsten Aussen-Block:
+            //  (1) FP2 zeigt das Bett DURCHGEHEND belegt -> andere Person aktiv -> bedEntryTs behalten, keine Abwesenheit.
+            //  (2) FP2 leer ODER kein FP2 -> Person war draussen -> bedEntryTs behalten + Block als preSleepAbsence markieren.
+            var _psaFp2Occ = (function(_t0, _t1) {
+                if (_t0 == null || _t1 == null) return null;
+                var _f = allEvents.filter(function(e) { return isMine(e) && e.isFP2Bed; })
+                    .sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+                if (_f.length === 0) return null;
+                var _st = false, _seen = false;
+                for (var _fi = 0; _fi < _f.length; _fi++) {
+                    var _fts = _f[_fi].timestamp || 0;
+                    if (_fts <= _t0) { _st = isActiveValue(_f[_fi].value); _seen = true; } else break;
+                }
+                if (!_seen) return null;
+                if (!_st) return false;
+                for (var _fj = 0; _fj < _f.length; _fj++) {
+                    var _fts2 = _f[_fj].timestamp || 0;
+                    if (_fts2 > _t0 && _fts2 <= _t1 && !isActiveValue(_f[_fj].value)) return false;
+                }
+                return true;
+            })(_oc48cMaxBs, _oc48cMaxBe);
+            if (_psaFp2Occ === true) {
+                if (log) log.info(logPfx + '[OC-48c v2] Aussen-Aktivitaet (Block ' + Math.round(_oc48cMax / 60000) + ' Min) bei FP2-belegtem Bett -> andere Person, bedEntryTs ' + new Date(bedEntryTs).toLocaleTimeString() + ' behalten');
+            } else if (_oc48cMaxBs != null && _oc48cMaxBe != null) {
+                _preSleepAbsence.push({ start: _oc48cMaxBs, end: _oc48cMaxBe, durationMin: Math.max(1, Math.round((_oc48cMaxBe - _oc48cMaxBs) / 60000)), source: (_psaFp2Occ === false) ? 'fp2_empty' : 'pir_far' });
+                if (log) log.info(logPfx + '[OC-48c v2] Vor-Schlaf-Abwesenheit ' + new Date(_oc48cMaxBs).toLocaleTimeString() + '-' + new Date(_oc48cMaxBe).toLocaleTimeString() + ' markiert; bedEntryTs ' + new Date(bedEntryTs).toLocaleTimeString() + ' behalten');
+            }
         }
     }
 
@@ -501,6 +528,26 @@ function computePersonSleep(p) {
         if (_pvBefore.length > 0) _vibWakeTs = _pvBefore[_pvBefore.length-1].timestamp||null;
     }
 
+    // vib_wake_cluster: erste dichte Vib-Häufung in den letzten 90 Min (Aufwach-Muster-Erkennung)
+    // Mindestens 3 Vib-Events in einem 15-Min-Fenster = Person beginnt sich zu bewegen
+    var _vibWakeClusterTs = null;
+    (function() {
+        var _vwcStart = wakeHardCap - 90 * 60 * 1000;
+        var _vwcEvts = _vibEvtsWk.filter(function(e) { return (e.timestamp||0) >= _vwcStart; });
+        if (_vwcEvts.length < 3) return;
+        var VWC_WIN_MS = 15 * 60 * 1000;
+        var VWC_MIN    = 3;
+        for (var _vci = 0; _vci < _vwcEvts.length; _vci++) {
+            var _vct = _vwcEvts[_vci].timestamp || 0;
+            var _vcCnt = 1;
+            for (var _vcj = _vci + 1; _vcj < _vwcEvts.length; _vcj++) {
+                if ((_vwcEvts[_vcj].timestamp||0) - _vct <= VWC_WIN_MS) _vcCnt++;
+                else break;
+            }
+            if (_vcCnt >= VWC_MIN) { _vibWakeClusterTs = _vct; break; }
+        }
+    })();
+
     // fp2OtherWakeTs: erste andere-Raum-Bewegung nach fp2WakeTs (max. +60 Min)
     var _fp2OtherWakeTs = null;
     if (fp2WakeTs) {
@@ -561,6 +608,7 @@ function computePersonSleep(p) {
         }
     }
     if (!wakeTs && _motionVibWakeTs) { wakeTs = _motionVibWakeTs; wakeSrc = 'motion_vib'; }
+    if (!wakeTs && _vibWakeClusterTs) { wakeTs = _vibWakeClusterTs; wakeSrc = 'vib_wake_cluster'; }
     if (!wakeTs && _vibAloneWakeTs) { wakeTs = _vibAloneWakeTs; wakeSrc = 'vibration_alone'; }
     if (wakeTs === null && bedRet.length > 0) { wakeTs = bedRet[bedRet.length - 1].timestamp || null; wakeSrc = 'motion'; }
 
@@ -584,8 +632,9 @@ function computePersonSleep(p) {
         { source: 'fp2',             ts: fp2WakeTs          || null },
         { source: 'fp2_other',       ts: _fp2OtherWakeTs    || null },
         { source: 'other',           ts: _otherRoomWakeTs   || null },
-        { source: 'motion_vib',       ts: _motionVibWakeTs   || null },
-        { source: 'vibration_alone', ts: _vibAloneWakeTs    || null },
+        { source: 'motion_vib',       ts: _motionVibWakeTs    || null },
+        { source: 'vib_wake_cluster', ts: _vibWakeClusterTs  || null },
+        { source: 'vibration_alone', ts: _vibAloneWakeTs     || null },
         { source: 'vibration',       ts: _vibWakeTs         || null },
         { source: 'motion',          ts: wakeSrc === 'motion' ? wakeTs : null },
         { source: 'override',        ts: wakeOverrideApplied  ? wakeTs : null }
@@ -1020,7 +1069,18 @@ function computePersonSleep(p) {
     (function() {
         var _beExcl = ['garmin', 'fixed', 'haus_still', 'gap60', 'last_outside'];
         var _beSrcs = (allSleepStartSources || []).filter(function(s) {
-            return !!s.ts && _beExcl.indexOf(s.source) < 0;
+            if (!s.ts || _beExcl.indexOf(s.source) >= 0) return false;
+            // [Fix-3] vib_refined: nur gültig wenn Radar/FP2 innerhalb ±10 Min bestätigt.
+            // Verhindert kurze Radar-Blitzer (Sekunden) + Vibration = falsche frühe Bett-Eintrag-Zeit.
+            if (s.source === 'vib_refined') {
+                var _vrTs = s.ts;
+                var _vrOk = allEvents.some(function(e) {
+                    return isMine(e) && e.isFP2Bed && isActiveValue(e.value)
+                        && Math.abs((e.timestamp||0) - _vrTs) <= 10 * 60 * 1000;
+                });
+                if (!_vrOk) return false;
+            }
+            return true;
         });
         if (_beSrcs.length === 0) return;
         // Nächste Quelle zu bedEntryTs (kleinster Abstand)
@@ -1060,6 +1120,7 @@ function computePersonSleep(p) {
         _hausStillTs:         hausStillTs,
         nachtAufstehenEvents: _nachtAufstehenWindows.filter(function(w){ return !sleepStart || w.departureTs >= sleepStart; }), // [OC-45b] nur Post-Sleep
         bedEntryTs:          bedEntryTs,
+        preSleepAbsenceEvents: _preSleepAbsence,
         bedEntrySource:      _bedEntrySourceInner || null,
         allBedEntrySources:  _allBedEntrySourcesInner || null,
         smWakePhases:        _smWakePhases,
@@ -2672,6 +2733,7 @@ class CogniLiving extends utils.Adapter {
             // in entfernten Raeumen (Hop >= 2 vom Schlafzimmer) stattfanden = Pre-Sleep-Touch.
             // OC-46 (lange Einschlaf-Latenz, Person liegt ruhig) bleibt korrekt: kein Gegenbeleg -> frueh behalten.
             // Funktioniert ohne FP2, ohne Topologie, mit allen Sensor-Konfigurationen.
+            var _preSleepAbsenceGlobal = [];
             var _oc48BedLocs = (this.config.devices || [])
                 .filter(function(d) { return d.sensorFunction === 'bed' || d.isBedroomMotion || d.isFP2Bed || d.isVibrationBed; })
                 .map(function(d) { return d.location; })
@@ -2804,17 +2866,40 @@ class CogniLiving extends utils.Adapter {
                     var _ts = e.timestamp || 0;
                     return _ts > _bedEntryTsFinal && _ts < sleepWindowOC7.start && _oc48cFarFn(e);
                 }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
-                var _oc48cMaxBlock = 0; var _oc48cBlkStart = null; var _oc48cBlkEnd = null;
+                var _oc48cMaxBlock = 0; var _oc48cBlkStart = null; var _oc48cBlkEnd = null; var _oc48cMaxBlkStart = null; var _oc48cMaxBlkEnd = null;
                 for (var _oc48ci = 0; _oc48ci < _oc48cFar.length; _oc48ci++) {
                     var _ets = _oc48cFar[_oc48ci].timestamp || 0;
                     if (_oc48cBlkStart === null) { _oc48cBlkStart = _ets; _oc48cBlkEnd = _ets; }
                     else if (_ets - _oc48cBlkEnd <= 12 * 60000) { _oc48cBlkEnd = _ets; }
-                    else { if (_oc48cBlkEnd - _oc48cBlkStart > _oc48cMaxBlock) _oc48cMaxBlock = _oc48cBlkEnd - _oc48cBlkStart; _oc48cBlkStart = _ets; _oc48cBlkEnd = _ets; }
+                    else { if (_oc48cBlkEnd - _oc48cBlkStart > _oc48cMaxBlock) { _oc48cMaxBlock = _oc48cBlkEnd - _oc48cBlkStart; _oc48cMaxBlkStart = _oc48cBlkStart; _oc48cMaxBlkEnd = _oc48cBlkEnd; } _oc48cBlkStart = _ets; _oc48cBlkEnd = _ets; }
                 }
-                if (_oc48cBlkStart !== null && (_oc48cBlkEnd - _oc48cBlkStart) > _oc48cMaxBlock) _oc48cMaxBlock = _oc48cBlkEnd - _oc48cBlkStart;
+                if (_oc48cBlkStart !== null && (_oc48cBlkEnd - _oc48cBlkStart) > _oc48cMaxBlock) { _oc48cMaxBlock = _oc48cBlkEnd - _oc48cBlkStart; _oc48cMaxBlkStart = _oc48cBlkStart; _oc48cMaxBlkEnd = _oc48cBlkEnd; }
                 if (_oc48cMaxBlock >= 30 * 60000) {
-                    if (_oc48Log) _oc48Log['info']('[OC-48c] bedEntryTs ' + new Date(_bedEntryTsFinal).toLocaleTimeString() + ' verworfen: anhaltende Ausserhalb-Aktivitaet (laengster Block ' + Math.round(_oc48cMaxBlock / 60000) + ' Min, ' + _oc48cFar.length + ' Events) -> bedEntry = sleepStart (kein Phantom-Wachliegen)');
-                    _bedEntryTsFinal = null;
+                    // [OC-48c v2 / OC-56 Fix B] _bedEntryTsFinal wird NICHT mehr verworfen.
+                    var _psaFp2OccG = (function(_t0, _t1) {
+                        if (_t0 == null || _t1 == null) return null;
+                        var _f = sleepSearchEvents.filter(function(e) { return e.isFP2Bed; })
+                            .sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+                        if (_f.length === 0) return null;
+                        var _st = false, _seen = false;
+                        for (var _fi = 0; _fi < _f.length; _fi++) {
+                            var _fts = _f[_fi].timestamp || 0;
+                            if (_fts <= _t0) { _st = isActiveValue(_f[_fi].value); _seen = true; } else break;
+                        }
+                        if (!_seen) return null;
+                        if (!_st) return false;
+                        for (var _fj = 0; _fj < _f.length; _fj++) {
+                            var _fts2 = _f[_fj].timestamp || 0;
+                            if (_fts2 > _t0 && _fts2 <= _t1 && !isActiveValue(_f[_fj].value)) return false;
+                        }
+                        return true;
+                    })(_oc48cMaxBlkStart, _oc48cMaxBlkEnd);
+                    if (_psaFp2OccG === true) {
+                        if (_oc48Log) _oc48Log['info']('[OC-48c v2] Aussen-Aktivitaet (Block ' + Math.round(_oc48cMaxBlock / 60000) + ' Min) bei FP2-belegtem Bett -> andere Person, bedEntryTs ' + new Date(_bedEntryTsFinal).toLocaleTimeString() + ' behalten');
+                    } else if (_oc48cMaxBlkStart != null && _oc48cMaxBlkEnd != null) {
+                        _preSleepAbsenceGlobal.push({ start: _oc48cMaxBlkStart, end: _oc48cMaxBlkEnd, durationMin: Math.max(1, Math.round((_oc48cMaxBlkEnd - _oc48cMaxBlkStart) / 60000)), source: (_psaFp2OccG === false) ? 'fp2_empty' : 'pir_far' });
+                        if (_oc48Log) _oc48Log['info']('[OC-48c v2] Vor-Schlaf-Abwesenheit ' + new Date(_oc48cMaxBlkStart).toLocaleTimeString() + '-' + new Date(_oc48cMaxBlkEnd).toLocaleTimeString() + ' markiert; bedEntryTs ' + new Date(_bedEntryTsFinal).toLocaleTimeString() + ' behalten');
+                    }
                 }
             }
             // [OC-45d] Shared SM-Context fuer saveDailyHistory-Scope (PRE_SLEEP, POST_WAKE, DAY)
@@ -3936,6 +4021,22 @@ class CogniLiving extends utils.Adapter {
                         });
                         if (_changed) {
                             _pResult.allSleepStartSources = _pSrc;
+                            // [OC-BED-SOURCES P2] allBedEntrySources neu bauen (fp2/fp2_vib jetzt befüllt)
+                            var _beExcl2 = ['garmin', 'fixed', 'haus_still', 'gap60', 'last_outside'];
+                            var _beSrcs2 = _pSrc.filter(function(s) { return !!s.ts && _beExcl2.indexOf(s.source) < 0; });
+                            if (_beSrcs2.length > 0) {
+                                if (_pResult.bedEntryTs) {
+                                    var _beBest2 = null, _beBestD2 = Infinity;
+                                    _beSrcs2.forEach(function(s) {
+                                        var _d = Math.abs((s.ts||0) - _pResult.bedEntryTs);
+                                        if (_d < _beBestD2) { _beBestD2 = _d; _beBest2 = s.source; }
+                                    });
+                                    _pResult.bedEntrySource = _beBest2;
+                                }
+                                _pResult.allBedEntrySources = _beSrcs2
+                                    .sort(function(a, b) { return (a.ts||0) - (b.ts||0); })
+                                    .map(function(s) { return { source: s.source, ts: s.ts }; });
+                            }
                             _self.log.debug('[OC-BED-SOURCES] ' + person + ': fp2-Quellen aus globalem Array nachgefuellt');
                         }
                     })();
@@ -4234,6 +4335,7 @@ class CogniLiving extends utils.Adapter {
                         nightVibrationStrengthMax: _pVibStrCnt > 0 ? _pVibStrMax : null,
                         vibrationTimestamps:       _pVibCount > 0 ? _pVibTrigEvts.map(function(e) { return e.timestamp||0; }) : null,
                         bedEntryTs:                _pResult.bedEntryTs || null,
+                        preSleepAbsenceEvents:     _pResult.preSleepAbsenceEvents || [],
                         bedEntrySource:            _pResult.bedEntrySource || null,
                         allBedEntrySources:        _pResult.allBedEntrySources || null,
                         bedExitTs:                 _pBedExitTs || null,
@@ -4890,6 +4992,7 @@ class CogniLiving extends utils.Adapter {
                     }
                     return _bae;
                 })(),
+                preSleepAbsenceEvents: (typeof _preSleepAbsenceGlobal !== 'undefined' ? _preSleepAbsenceGlobal : []),
                 bedEntryTs: (function() {
                     // [OC-48c] _bedEntryTsFinal === null ist eine BEWUSSTE Ablehnung (OC-48b/OC-48c).
                     // NICHT auf den Rohwert _gR.bedEntryTs zurueckfallen - sonst lebt das Phantom-Wachliegen wieder auf.
@@ -5498,7 +5601,7 @@ class CogniLiving extends utils.Adapter {
         else if (obj.command === 'setPersonWakeOverride') {
             try {
                 var _pwovMsg = obj.message || {};
-                var _pwovAllowed = ['garmin','fp2_vib','fp2','fp2_other','motion_vib','motion_vib_wake','vib_refined','gap60','last_outside','haus_still','vibration_alone','vibration','other','fixed','override'];
+                var _pwovAllowed = ['garmin','fp2_vib','fp2','fp2_other','motion_vib','motion_vib_wake','vib_wake_cluster','vib_refined','gap60','last_outside','haus_still','vibration_alone','vibration','other','fixed','override'];
                 if (!_pwovMsg.person || !_pwovMsg.date || !_pwovMsg.source || !_pwovMsg.ts || _pwovAllowed.indexOf(_pwovMsg.source) < 0) {
                     this.sendTo(obj.from, obj.command, { success: false, error: 'Ungueltige Per-Person Wake-Override-Daten' }, obj.callback); return;
                 }
@@ -5949,9 +6052,26 @@ class CogniLiving extends utils.Adapter {
         }
         // OC-VIB-CAL: Kalibrierung manuell zuruecksetzen (Sensor verschoben etc.)
         else if (obj.command === 'resetVibCalib') {
+            // OC-VIB-CAL Per-Person-Reset: target='global'|'all'|personName
             try {
-                await this.setStateAsync('analysis.health.vibCalibData', { val: '{}', ack: true });
-                this.log.info('[OC-VIB-CAL] Kalibrierung manuell zurueckgesetzt');
+                var _rvTarget = (obj.message && obj.message.target) ? obj.message.target : 'all';
+                var _rvState = await this.getStateAsync('analysis.health.vibCalibData');
+                var _rvData = { nights: [], rolling: {} };
+                if (_rvState && _rvState.val) { try { _rvData = JSON.parse(_rvState.val); } catch(_){} }
+                if (!Array.isArray(_rvData.nights)) _rvData.nights = [];
+                if (!_rvData.rolling) _rvData.rolling = {};
+                if (_rvTarget === 'all') {
+                    _rvData = { nights: [], rolling: {} };
+                } else if (_rvTarget === 'global') {
+                    _rvData.nights.forEach(function(n) { n.global = null; });
+                    _rvData.rolling.global = { nightCount: 0, status: 'uncalibrated', driftWarning: false };
+                } else {
+                    // Einzelne Person zuruecksetzen
+                    _rvData.nights.forEach(function(n) { if (n.persons) delete n.persons[_rvTarget]; });
+                    if (_rvData.rolling.persons) delete _rvData.rolling.persons[_rvTarget];
+                }
+                await this.setStateAsync('analysis.health.vibCalibData', { val: JSON.stringify(_rvData), ack: true });
+                this.log.info('[OC-VIB-CAL] Reset: target=' + _rvTarget);
                 this.sendTo(obj.from, obj.command, { success: true }, obj.callback);
             } catch(_rvE) {
                 this.log.warn('[OC-VIB-CAL] Reset-Fehler: ' + _rvE.message);

@@ -576,6 +576,23 @@ function buildSleepTilePayload(raw) {
         });
     }
 
+    // [OC-48c v2 / Fix B] Vor-Schlaf-Abwesenheit: Ausflug zwischen Ins-Bett-Zeit und Einschlafen
+    var preSleepAbsenceOverlays = [];
+    var _psaArr = Array.isArray(sd.preSleepAbsenceEvents) ? sd.preSleepAbsenceEvents : [];
+    if (bedEntryTsVal != null && newBarTotalMs && _psaArr.length > 0) {
+        _psaArr.forEach(function (ev) {
+            if (!ev || ev.start == null || ev.end == null || ev.end <= ev.start) return;
+            var leftPct = Math.max(0, Math.min(100, ((ev.start - bedEntryTsVal) / newBarTotalMs) * 100));
+            var widthPct = Math.max(0.5, Math.min(100 - leftPct, ((ev.end - ev.start) / newBarTotalMs) * 100));
+            var durMin = ev.durationMin != null ? ev.durationMin : Math.max(1, Math.round((ev.end - ev.start) / 60000));
+            preSleepAbsenceOverlays.push({
+                leftPct: leftPct,
+                widthPct: widthPct,
+                title: '\uD83D\uDEB6 Vor dem Einschlafen ausser Bett: ' + fmtTime(ev.start) + ' \u2013 ' + fmtTime(ev.end) + ' (' + durMin + ' Min)'
+            });
+        });
+    }
+
     const segments = [];
     if (newBarTotalMs && newBarTotalMs > 0) {
         if (bedEntryTsVal && bedEntrySegMs > 0) {
@@ -660,7 +677,8 @@ function buildSleepTilePayload(raw) {
         bedAbsenceOverlays: bedAbsenceOverlays,
         smWakeOverlays: smWakeOverlays,
         wachliegenOverlay: wachliegenOverlay,
-        sharedBedOverlays: sharedBedOverlays
+        sharedBedOverlays: sharedBedOverlays,
+        preSleepAbsenceOverlays: preSleepAbsenceOverlays
     };
 }
 

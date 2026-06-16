@@ -7,11 +7,88 @@ Neue offene Konzepte immer OBEN in den Abschnitt "🚧 OFFENE KONZEPTE" einfüge
 
 ---
 
+## ✅ OC-VIB-CAL: Per-Person Vibrationsintensitäts-Kalibrierung (09.06.2026) — implementiert in v0.33.287
+
+> **Status:** Stufe 1 (single-night p90) IMPLEMENTIERT in v0.33.287.
+> Stufe 2 (Rolling-Baseline 14 Nächte) und Stufe 3 (Garmin-Feedback) bleiben für spätere Session.
+> Priorität: mittel-hoch (direkte Auswirkung auf Schlafphasen-Qualität).
+> **Auslöser:** Diskussion 09.06.2026 — Schlafphasen-Schwellwerte sind hardcodiert, passen sich nicht an Sensormontage/Matratze an.
+
+### Problem
+
+Die Schlafphasen-Erkennung (global und per-Person identisch, `computePersonSleep` + `saveDailyHistory`) nutzt **feste Schwellwerte**:
+
+```
+slotStrMax > 28         → Wake
+slotStrMax 12–28 + 2.5h+ → REM
+slotDet === 0 × 5 Slots  → Deep (25 min still = Tiefschlaf)
+Rest                    → Light
+```
+
+Das Problem in der Praxis:
+- **Sensor locker / weiche Matratze**: Werte 3–15 → `> 28` wird **nie** erreicht → Wake-Phasen niemals erkannt
+- **Sensor fest / harte Matratze**: Werte 20–60 → normales Umdrehen als Wake fehlklassifiziert
+- **Verschiedene Personen, gleicher Schwellwert**: Anni (leichteres Gewicht) vs. Marc → gleiche Schwelle ist falsch
+
+### Was bereits existiert (ungenutzte Daten!)
+
+`nightVibrationStrengthAvg` und `nightVibrationStrengthMax` werden **jede Nacht** pro Person gespeichert (in `personData[].nightVibrationStrengthAvg/Max` und global). Diese Daten werden aber NICHT zur Threshold-Adaption verwendet — sie schlummern ungenutzt.
+
+Es gibt bereits einen Score-Kalibrier-Mechanismus (`sleepScoreCalStatus`: `uncalibrated` → `calibrating` → `calibrated` nach 14 Nächten), der Score vs. Garmin vergleicht. Diesen Mechanismus könnte man analog für Vibrations-Thresholds erweitern.
+
+### Lösungskonzept
+
+**Stufe 1 — Minimal-Fix (niedrig riskant):**
+Nach N≥7 Nächten: gleitenden **p75-Wert** von `nightVibrationStrengthMax` pro Person berechnen.
+Wenn der p75-Wert deutlich < 20 (vermutlich schwacher Sensor), Thresholds skalieren:
+```
+wakeThreshold     = max(8,  p75Max × 0.85)    // statt fest 28
+remUpperBound     = max(6,  p75Max × 0.80)    // statt fest 28
+remLowerBound     = max(3,  p75Max × 0.35)    // statt fest 12
+```
+Neue Felder in History-JSON: `vibCalibStatus: 'uncalibrated'|'calibrating'|'calibrated'`, `vibCalibThresholds: { wake, remUpper, remLower }`.
+
+**Stufe 2 — Rolling-Baseline:**
+Pro Person und Schlafnacht: `vibStrengthHistory[]` (max. 14 Einträge, rolling). Wenn >= 7 Einträge: `vibCalibStatus = 'calibrating'`. Ab 14: `calibrated`.
+Beim Stage-Berechnen: falls `calibrated`, eigene Thresholds nutzen; sonst globale Defaults.
+
+**Stufe 3 — Feedback-Loop (Garmin-Assisted):**
+Wenn Garmin-Daten vorliegen: Garmin-Stage vs. Vib-Stage pro Nacht vergleichen.
+Wenn dauerhaft Abweichung: Thresholds anpassen (analog zu Score-Kalibrierung).
+Datenpunkt: `sleepCalibrationLog` enthält `deepPct`, `remPct` → kann mit Garmin `deepMin`, `remMin` verglichen werden.
+
+### Betroffene Code-Stellen
+
+| Datei | Zeile(n) | Was |
+|---|---|---|
+| `src/main.js` | ~688–691 | Stage-Klassifizierung in `computePersonSleep` → Thresholds variabel machen |
+| `src/main.js` | ~3258–3270 | Stage-Klassifizierung global → gleiche Variabilisierung |
+| `src/main.js` | ~3835–3843 | `personData[]` Ausgabe → `vibCalibStatus`, `vibCalibThresholds` hinzufügen |
+| `src/main.js` | ~4466–4510 | `calibrationLog` Befüllung → Vib-Thresholds mitloggen |
+
+### Risiken / Nebenwirkungen
+
+- **Positiv**: Kein Breaking Change für Kunden ohne Vibrationssensor (`vibCalibStatus='uncalibrated'` → Defaults bleiben)
+- **Risiko**: Falsch-Kalibrierung in ersten 7 Nächten (Sensor-Ausreißer → schlechter p75). Fix: Ausreißer-Filter (Nächte mit `nightVibrationCount < 10` ignorieren)
+- **Risiko**: Zwei Personen in einem Bett (Szenario 3) → gegenseitige Vibrationen verfälschen Baseline. Fix: Kalibrierung nur für personTagged Nächte (personTag-spezifisch)
+- **Garmin-Feedback**: Optional, nicht verpflichtend. Kunden ohne Garmin profitieren trotzdem von Stufe 1+2.
+
+### Priorisierung
+
+Zusammen mit OC-56 (bedEntryTs-Erkennung) als "Schlafanalyse-Qualitäts-Sprint" bündeln.
+Empfehlung: Stufe 1 nach ~14 Nächten Datensammlung (ab sofort läuft die Datenerhebung schon).
+
+---
+
 ## 🚧 OC-56: "Ins Bett gegangen" (erster Bettkontakt) + Vor-Schlaf-Abwesenheit im Balken (08.06.2026)
 
-> **Status:** KONZEPT — noch NICHT implementiert. Bewusst zurückgestellt (Hochrisiko, berührt
-> Kandidatenlogik UND Balken-Rendering gleichzeitig). Erst nach expliziter Freigabe umsetzen.
-> **Auslöser:** Nacht 08.06.2026 — `bedEntryTs=null`, Nutzer wollte "Ins Bett gegangen ~23:00" sehen.
+> **Status:** Stufe 2 IMPLEMENTIERT in v0.33.317 (16.06.2026) — siehe PROJEKT_STATUS.md.
+> OC-48c verwirft `bedEntryTs` nicht mehr (never-null), FP2-bewusster Cross-Check (Fremd-Aktivität
+> bei belegtem Bett wird ignoriert) und `preSleepAbsenceEvents` werden als schraffiertes Overlay
+> gerendert (PWA + Admin). Stufe 1 (separater `bed_first_contact`-Kandidat) wurde NICHT separat
+> gebaut — die bestehende `bedEntryTs`-Kandidatenlogik liefert den Erstkontakt bereits.
+> **Offen bleibt:** feineres Stufe-3-Rendering (Tooltip-Texte/Legende), Mehrfach-Ausflüge pro Nacht.
+> **Auslöser:** Nacht 08.06.2026 / 15.06.2026 — `bedEntryTs=null`, Nutzer wollte "Ins Bett gegangen" sehen.
 
 ### 0. Worum geht es (in einem Satz)
 Heute erkennt das System nur Varianten von "**ging still / eingeschlafen**". Es gibt KEINEN Kandidaten
@@ -379,6 +456,64 @@ Alternativ: freie State-ID-Eingabe pro Feld (Graceful Degradation wenn Adapter f
 - **EU / BMBF Digital Health** — nur bei klarer Kooperation mit Forschungspartner (Validierungsstudie)
 
 **Entscheidung:** Forschungsgelder jetzt **nicht** priorisieren — erst Pilot-Kunden und Care-Story. GO-Bio/PearNet als **Markt- und Trendbeleg** in Vertrieb/Marketing nutzen, nicht als sofortigen Antragsfahrplan.
+
+**Literatur:** Vollständige Paper-Liste → `_internal/LITERATUR.md`
+
+---
+
+### OC-58: Akute Verwirrtheit / Delir + Push an Angehörige (13.06.2026)
+
+**Auslöser:** Angehörigen-Szenario (Sohn, Papa allein zuhause, Hirnblutung/Verwirrtheit). Nutzer wünscht: *„Das Haus soll mir schreiben, wenn es Papa nicht gut geht — auch wenn wir keine Diagnose stellen können."*
+
+**Status:** Konzept — **nicht** in `health.py`, **nicht** in UI. Diskutiert 13.06.2026.
+
+**Problem heute:**
+- Krankheitsprofile (Demenz, Frailty, …) = **schleichend** (Wochen/Monate).
+- **Tages-Anomalie** („heute ungewöhnlich") existiert, landet in PWA/Admin — **kein standardisierter Push** an Angehörige.
+- **Totmann/Lebenszeichen** → Pushover/Telegram ✅ — aber nur bei **Stille**, nicht bei „wach aber verwirrt/chaotisch".
+
+**Zielbild (zwei Bausteine):**
+
+#### Baustein A — Profil `acuteDelirium` (Algorithmus)
+
+| Signal | Quelle | Schwellwert-Idee |
+|---|---|---|
+| Tagesablauf weicht stark von 14-Tage-Baseline ab | STB / IsolationForest | Kombiniert mit anderen Signalen, nicht allein |
+| Nacht deutlich unruhiger (PIR + optional Vibration) | nightEvents, Nykturie | >2× persönliche Baseline |
+| Raumfolge „planlos" (Activity Entropy) | Raum-Sequenz aus eventHistory | NEU — noch nicht implementiert |
+| Tagsüber wenig strukturierte Aktivität | uniqueRooms, heatmap | Entropie hoch bei niedriger Gesamtaktivität |
+
+- **Kein Label** „Schlaganfall" oder „Hirnblutung" — nur: **`ACUTE_PATTERN`** / „Heute deutlich untypisch".
+- Onset: **Stunden bis wenige Tage** (Akut-Ebene HANDBUCH Phase 2).
+- Literatur: `LITERATUR.md` §2 (JMIR Smart-Home Delir POC, Frontiers Actigraphie ICH).
+
+#### Baustein B — Care-Push an Angehörige (Produkt)
+
+Pushover / Telegram / PWA-Badge wenn:
+
+1. `analysis.health.anomalyScore` > konfigurierbar (z. B. 0.6) **UND** Lernphase vorbei  
+2. Oder: OC-58 Profil `acuteDelirium` Confidence > Schwellwert  
+3. Oder: Nacht-Anomalie + Tages-Anomalie **am selben Tag** (Verstärker)
+
+**Beispiel-Push-Text (Angehörigen-Sprache):**
+> „AURA: Bei [Papa] war heute der Tagesablauf ungewöhnlich (mehr Bewegung nachts, weniger Struktur tagsüber). Das kann harmlos sein — bitte einmal anrufen oder vorbeischauen. Kein automatischer Notruf."
+
+**Eskalation:**
+- Stufe 1 (Info): gelber Push, kein Sound nachts  
+- Stufe 2 (Auffällig): orange, Sound tagsüber  
+- Stufe 3: nur Totmann → bestehende Notfall-Priorität (rot)
+
+**Config-Idee:** `carePushEnabled`, `carePushRecipients[]`, `carePushMinScore`, `carePushQuietHours`
+
+**Abhängigkeiten:**
+- Build-Sync Disease-Scores (3→7 Profile)  
+- Optional: Activity Entropy in dailyDigest  
+- Disclaimer-Template in jeder Nachricht (kein Medizinprodukt)
+
+**Priorität:** **Hoch** für Care-Vertrieb (Angehörigen-Story stärker als reine Admin-Kachel).  
+**Aufwand:** Baustein B (Push bei bestehender Anomalie) = **klein–mittel**. Baustein A (Entropy + Profil) = **mittel**.
+
+**Dokumentation:** Master-Tabelle → `_internal/KRANKHEITSBILD-MATRIX.md` · Quellen → `_internal/LITERATUR.md`
 
 ---
 
@@ -1110,6 +1245,15 @@ NICHT fuer MVP â€” erst wenn konkreter Kundenbedarf.
 ### Phase 9+ â€” Personenprofile (Multi-Person Monitoring)
 - Separate Analyse pro "Person"-Tag
 - Erfordert: Occupancy Tracker (Phase 7) als Basis
+
+---
+
+## Krankheitsbild-Matrix (offizielle Referenz)
+
+> **Vollständige Tabelle** (Entwicklungsstand, Angehörigen-Push, alle 14+ Profile):  
+> **`_internal/KRANKHEITSBILD-MATRIX.md`**  
+> Wissenschaftliche Quellen: **`_internal/LITERATUR.md`**  
+> Benutzer-Bedienung (App, Push einrichten): **`HANDBUCH.md`** → Gesundheitsüberwachung für Angehörige
 
 ---
 

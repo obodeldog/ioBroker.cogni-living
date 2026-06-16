@@ -1,5 +1,300 @@
-﻿# PROJEKT STATUS - ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 11.06.2026 | **Version:** 0.33.296
+﻿# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
+**Letzte Aktualisierung:** 16.06.2026 | **Version:** 0.33.317
+
+---
+
+## 🗓️ Sitzung 16.06.2026 — Version 0.33.317 — OC-48c v2 / Fix B (bedEntryTs never-null + FP2-aware + Vor-Schlaf-Abwesenheit)
+
+### Auslöser
+Forensik Nacht 15./16.06.2026 (Marc, v0.33.314): `bedEntryTs = null` ("kein plausibler Wert") obwohl FP2/Radar um 22:26 einen klaren Bett-Eintritt zeigte. OC-48c (Sustained-Absence-Guard) hatte den frühen Eintritt verworfen, weil zwischen 22:26 und Einschlafen (22:58, nur 32-Min-Fenster) ≥30 Min Aktivität ausserhalb des Schlafzimmers lag. Diese Aktivität stammte aber von einer ANDEREN Person (Anni lief durchs Wohnzimmer/Diele über ungetaggte PIR-Sensoren) — Marc lag laut FP2 durchgehend im Bett.
+
+Diskussion mit Nutzer: Topologie-Hops + personTag schützen nur die OG-Kinder (getaggt). Ungetaggte gemeinsame Sensoren (EG Wohnen/Flur, Hop ≥ 2) zählt OC-48c als "Marc draussen". Das 30-Min-Fenster wird in einem belebten Haushalt fast immer überschritten → bedEntryTs ständig `null`. Entscheidung: OC-56 Stufe 2 ("Fix B") jetzt umsetzen, weil es mehrere wiederkehrende Probleme gleichzeitig löst.
+
+### ✅ Abgeschlossen
+
+#### Fix B Kern: OC-48c verwirft `bedEntryTs` NIE mehr (v0.33.317)
+- **Vorher:** OC-48c setzte `bedEntryTs = null` bei ≥30-Min-Aussen-Block (Phantom-Wachliegen-Schutz). v0.33.316 hatte nur einen `candFp2Anchor`-Fallback ergänzt (griff nicht zuverlässig).
+- **Jetzt:** `bedEntryTs` bleibt in JEDEM Fall erhalten. Stattdessen FP2-bewusste Entscheidung über den längsten Aussen-Block.
+- **Betrifft BEIDE OC-48c-Implementierungen:** per-Person (`computePersonSleep`, ~Z413) UND global (`saveDailyHistory`, ~Z2854). Beide bekamen Block-Fenster-Tracking (`_oc48cMaxBs/_oc48cMaxBe` bzw. `_oc48cMaxBlkStart/_oc48cMaxBlkEnd`).
+
+#### Fix B FP2-Awareness: Fremd-Aktivität bei belegtem Bett ignorieren (v0.33.317)
+- Neuer Helfer `fp2OccThroughout(t0,t1)`: prüft, ob FP2/Radar das Bett während des gesamten Aussen-Blocks DURCHGEHEND belegt zeigt (Zustand bei t0 aktiv UND kein Leer-Event im Fenster).
+- **FP2 belegt durchgehend** → Aktivität stammt von ANDERER Person → `bedEntryTs` behalten, KEINE Abwesenheit markieren. (Genau der Anni-Fall: Marc im Bett, Anni läuft herum → bedEntryTs korrekt erhalten, kein Phantom-Balken, weil Marc real im Bett lag.)
+- **FP2 leer ODER kein FP2** → Person war wirklich draussen → `bedEntryTs` behalten + Block als `preSleepAbsenceEvents` markieren (Quelle `fp2_empty` bzw. `pir_far`).
+
+#### Fix B Vor-Schlaf-Abwesenheit (`preSleepAbsenceEvents`) — Backend + Frontend (v0.33.317)
+- Neues Datenfeld `preSleepAbsenceEvents: [{start, end, durationMin, source}]` im per-Person-Result, in `result[person]` und im globalen Snapshot.
+- **Frontend-Rendering** (PWA `pwa_sleep_tile_build.js` + `pwa_sleep_tile_client.js`, Admin `HealthTab.tsx`): der Block wird als grau-schraffiertes Overlay über dem gelben "Ins Bett / Wachliegen"-Segment gezeichnet (Position relativ zu `bedEntryTsVal`). Verhindert, dass ein echter Ausflug als Phantom-Wachliegen erscheint. Tooltip: "🚶 Vor dem Einschlafen ausser Bett: HH:MM – HH:MM (N Min)".
+
+### Welche wiederkehrenden Probleme Fix B löst
+| Problem | gelöst |
+|---|---|
+| Andere Person (Anni/Kinder) aktiv, Marc liegt laut FP2 im Bett → `bedEntryTs=null` | ✅ FP2-belegt → behalten, keine Abwesenheit |
+| Marc selbst steht abends nochmal auf (echter Ausflug) → `bedEntryTs=null` | ✅ behalten + als Abwesenheit gerendert (kein Phantom) |
+| Kurzes Fenster (bedEntry→sleep < 60 Min) reicht für 30-Min-Schwelle fast nie | ✅ kein Verwerfen mehr |
+| `candFp2Anchor`-Fallback (v0.33.316) griff manchmal nicht | ✅ nicht mehr nötig |
+
+### Risiko / Nebenwirkungen
+- **OC-48c ist Hochrisiko-Shared-Variable** (`bedEntryTs`). Geprüft: bedEntryTs beeinflusst NICHT Schlafdauer/Score (das ist `sleepWindowStart..End`). OC-51-Guard (`sleepWindowStart` nie vor `bedEntryTs`) bleibt aktiv.
+- **Phantom-Schutz bleibt gewahrt:** Für den FP2-belegt-Fall ist die gelbe "Ins Bett / Wachliegen"-Anzeige korrekt (Marc lag real im Bett). Für echte Abwesenheit maskiert das schraffierte Overlay den Block.
+- **Graceful Degradation:** Ohne FP2 → `fp2OccThroughout` liefert `null` → Block wird als Abwesenheit markiert (vorher: bedEntryTs verworfen). Verhalten verbessert sich, bricht nichts.
+
+### 🔧 Offene Baustellen
+- Fix 5: `bedExitTs` bei Rückkehr-ins-Bett nach frühem Aufwachen (120-Min-Fenster zu eng — Marc 04:51 auf, zurück bis 07:30 → bedExitTs=null)
+- Shelly PresenceZone Alias-Korrektur (Config): `JSON.parse(val).value ? num_objects : 0` + separater Anwesenheits-Boolean
+- `personTag="Marc"` am Vibrationssensor (Config, kein Code)
+- „Ins Bett gegangen" Override-Funktionalität (derzeit read-only)
+- Nächtlicher Adapter-Neustart (Ursache noch unklar)
+
+### 🎯 Nächster logischer Schritt
+- Adapter auf **0.33.317** updaten → Nacht abwarten → prüfen: `bedEntryTs` (Karte 1) jetzt gesetzt (22:26) statt "kein plausibler Wert"; bei echtem Ausflug schraffiertes Vor-Schlaf-Overlay sichtbar.
+
+---
+
+## 🗓️ Sitzung 15.06.2026 — Version 0.33.316 — Bed-Entry + Wake-Cluster Fixes
+
+### ✅ Abgeschlossen
+
+#### Fix 1: bedEntryTs OC-48c Fallback auf candFp2Anchor (v0.33.316)
+- **Problem:** `bedEntryTs = null` obwohl Person um 23:12 nachweislich ins Bett kam.
+- **Ursache:** OC-48c-Filter hat den frühen Eintritt (21:49) korrekt abgelehnt (41 Min Wohnzimmer-Aktivität 22:02–22:43), aber dann ohne Fallback aufgegeben.
+- **Fix:** Nach OC-48c-Ablehnung wird `candFp2Anchor` (letzter stabiler FP2-Eintritt vor Einschlafen) als Fallback geprüft. Für diesen wird dieselbe OC-48c-Logik angewendet. Kein Gegenbeleg ab 23:12 → `bedEntryTs = 23:12`.
+- **Sensor-neutral:** Greift nur wenn FP2/Radar vorhanden. Ohne FP2: unverändert.
+
+#### Fix 1b: allBedEntrySources nach fp2-Fallback neu aufbauen (v0.33.316)
+- **Problem:** `allBedEntrySources` enthielt nur `motion: 18:42` und `vib_refined: 21:53`, NICHT `fp2: 23:12` und `fp2_vib: 23:59`.
+- **Ursache:** `allBedEntrySources` wird in `computePersonSleep()` aus `allSleepStartSources` berechnet. Der fp2/fp2_vib-Fallback (OC-BED-SOURCES P1) läuft aber NACH dem Return aus `computePersonSleep()`. Zu diesem Zeitpunkt waren fp2/fp2_vib noch null.
+- **Fix:** Nach dem fp2-Fallback (OC-BED-SOURCES P1) wird `allBedEntrySources` aus dem aktualisierten `allSleepStartSources` neu aufgebaut (OC-BED-SOURCES P2). fp2 und fp2_vib erscheinen jetzt korrekt im UI-Dropdown.
+
+#### Fix 2: vib_wake_cluster — neue Aufwach-Wake-Quelle (v0.33.316)
+- **Problem:** Ohne Garmin gibt `vibration_alone` (letzter Vib-Burst + 45 Min Stille) oft eine zu späte Aufwachzeit an. Im Testfall: echtes Aufwachen 06:38, `vibration_alone` würde ~07:11 liefern.
+- **Ursache:** `vibration_alone` sucht das letzte Signal vor einer langen Stille, nicht das erste Aufwach-Muster.
+- **Fix:** Neue Wake-Quelle `vib_wake_cluster`: sucht in den letzten 90 Minuten vor `wakeHardCap` nach der ersten dichten Vibrations-Häufung (≥3 Events in einem 15-Min-Fenster). Dieses Muster entspricht dem typischen Aufwach-Bewegungsmuster (Person dreht sich häufiger, bevor sie aufsteht).
+- **Priorität:** Nach `motion_vib`, vor `vibration_alone`. Liefert erste Aufwach-Bewegung statt letzter.
+- **allWakeSources:** `vib_wake_cluster` ist im Dropdown sichtbar mit eigenem Zeitstempel.
+
+#### Fix 3: vib_refined Radar-Bestätigungs-Filter (v0.33.316)
+- **Problem:** `vib_refined: 21:53` erschien in `allBedEntrySources` obwohl Marc zu diesem Zeitpunkt im Wohnzimmer war. Der Radar im Schlafzimmer hatte nur 7 Sekunden gezuckt (Rauschen).
+- **Ursache:** `candVibRefined` prüft nur Vibrations-Gap (≥20 Min Stille nach dem Event). Kurze Radar-Blitzer (< 1 Min) werden als valid gewertet.
+- **Fix:** In `allBedEntrySources`-Konstruktion: `vib_refined`-Einträge werden nur akzeptiert, wenn Radar/FP2 (`isFP2Bed = true`, aktiver Wert) innerhalb ±10 Min den Bett-Aufenthalt bestätigt. Kein Radar → kein `vib_refined` als Bett-Eintrag.
+- **Sicher:** Kunden ohne Radar: `vib_refined` bleibt gültig (Filter greift gar nicht).
+
+### 🔧 Offene Baustellen
+- `personTag="Marc"` am Vibrationssensor (Config, kein Code) → verbessert weitere Zuordnung
+- „Ins Bett gegangen" Override-Funktionalität (derzeit read-only)
+- Nächtlicher Adapter-Neustart (Ursache noch unklar)
+
+### 🎯 Nächster logischer Schritt
+- Adapter auf 0.33.316 updaten → nächste Nacht abwarten → `bedEntryTs` und `vib_wake_cluster` in der Kachel prüfen (Nacht 15./16.06.)
+
+---
+
+## 🗓️ Sitzung 14.06.2026 — Version 0.33.315 — OC-VIB-CAL Per-Person-Reset
+
+### ✅ Abgeschlossen
+
+#### Per-Person-Reset in der Kalibrierungstabelle (v0.33.315)
+- Jede Zeile (Global Haushalt + jede Person) hat nun einen eigenen ↺-Reset-Button direkt in der Zeile
+- Backend `resetVibCalib` akzeptiert jetzt `{ target }`: `'global'` (nur globale Daten löschen, per-Person bleibt), Personname (nur diese Person), `'all'` (alles)
+- Drift-⚠-Icon erscheint in der Status-Spalte der betroffenen Zeile (pro Person, nicht nur global)
+- Confirm-Dialog ist target-spezifisch: erklärt was gelöscht wird
+- Nach Reset wird `vibCalibData` sofort neu geladen (kein kompletter State-Clear mehr)
+- Globaler Reset-Button unten entfernt (redundant durch per-Zeile-Buttons)
+
+### 🎯 Nächster logischer Schritt
+- Adapter auf **0.33.315** updaten → nächste Nacht abwarten → Per-Person-Reset in Praxis testen
+
+---
+
+## 🗓️ Sitzung 14.06.2026 — Version 0.33.314 — OC-VIB-CAL Drift-Erkennung + Reset
+
+### ✅ Abgeschlossen
+
+#### OC-VIB-CAL: Sensor-Drift-Erkennung + Reset-Button (v0.33.314)
+- **Ausgangspunkt:** Diskussion wie AURA erkennt, wenn der Vibrationssensor verschoben wurde. Der 14-Nächte-Rolling-Buffer adaptiert sich organisch, aber ein Reset wäre wünschenswert wenn sich das Muster fundamental ändert.
+- **Entscheidung:** Automatische Erkennung (gelbe Warnung) + manueller Reset-Button. Kein automatischer Reset (False Positive = 7 Nächte Training verloren).
+
+**Backend D1 — Drift-Erkennung:**
+- Nach jeder Nacht: wenn ≥ 5 Nächte im Buffer, wird geprüft ob die **letzten 2 Nächte** beide stark vom Mittelwert der anderen Nächte abweichen (> 2,5× oder < 0,35× von `vibStrMax`)
+- Wenn ja → `driftWarning: true` im `rolling.global` und `rolling.persons[name]` gesetzt
+- Log-Warnung: `[OC-VIB-CAL] Sensor-Drift erkannt!`
+
+**Backend D2 — resetVibCalib Handler:**
+- Neuer `onMessage`-Befehl `resetVibCalib` → leert `analysis.health.vibCalibData` auf `{}`
+- Kalibrierung startet danach sofort neu (nach nächster Nacht)
+
+**Frontend D3 — State + Handler:**
+- `vibCalibResetting` State + `handleResetVibCalib` Funktion in SystemTab
+- `window.confirm` bevor der Reset ausgelöst wird
+- `socket.sendTo` → Backend resetVibCalib
+
+**Frontend D4 — UI:**
+- Gelbes Drift-Warn-Alert unter der Kalibrierungstabelle (nur wenn `driftWarning=true`)
+- „Kalibrierung zurücksetzen"-Button (immer sichtbar wenn Daten vorhanden, mit Loading-State)
+- `ClearIcon` aus bestehendem MUI-Import verwendet
+
+**Dokumentation:**
+- `HANDBUCH.md`: Neuer Abschnitt `### 🎛️ Vibrations-Kalibrierung (OC-VIB-CAL)` unter System-Tab
+- `HANDBUCH.md`: Kalibrierungsphase-Abschnitt um Hinweis auf Drift-Warnung + Reset erweitert
+
+### 🎯 Nächster logischer Schritt
+- Adapter auf **0.33.314** updaten → nächste Nacht abwarten → Drift-Warnung in Praxis testen
+
+---
+
+## 🗓️ Sitzung 13.06.2026 — Version 0.33.306 — Wake-Dropdown-Fix + Garmin-Stages
+
+### ✅ Abgeschlossen
+
+#### Aufwachzeit-Dropdown an falscher Position (war unter „Aufstehen")
+- **Problem**: Das `⚙ Quellen`-Toggle für Aufwachzeit erschien unterhalb von „Aufstehen 08:39" statt direkt unter „Aufgewacht 08:15".
+- **Ursache**: JSX-Struktur: Toggle war außerhalb des IIFE-Blocks, der Aufgewacht + Aufstehen rendert. Dadurch wurde es nach dem gesamten Block angehängt.
+- **Fix**: Toggle + Panel + `wakeOverridden`-Badge in den IIFE-Block integriert, direkt nach dem wakeDisplay-Label und VOR dem `{_hasPhysicalExit && ...}`-Block.
+- Gilt für beide Karten (Karte 1 + Karte 2). Karte 2 hatte zusätzlich den „vorläufig/bestätigt"-Badge außerhalb — ebenfalls in den Block integriert.
+
+#### Wake-Quellen-Filter: Quellen nach bedExitTs deaktiviert
+- Quellen deren Timestamp nach `bedExitTs + 5 Min` liegt → rot durchgestrichen, Opacity 0.3, „⚠️ nach Aufstehen", kein „Wählen"-Button.
+- Fallback: Falls kein `bedExitTs`: Quellen > 60 Min nach `swEnd` ebenfalls deaktiviert.
+- Beispiel: Radar 08:47 und Vibrationssensor 11:15 bei Aufstehen 08:39 → deaktiviert.
+
+#### Garmin-Stages in Per-Person-Karte
+- **Problem**: Per-Person-Karte zeigte keine Garmin-Phasen-Zeile (Tief/Leicht/REM), weil `garminDeepMin/LightMin/RemMin` hardcoded auf `null` standen.
+- **Fix**: Werte aus `auraSleepData` (globaler Snapshot) befüllt — Garmin-Daten sind immer global (pro Nacht, nicht pro Person).
+
+### 🎯 Nächster logischer Schritt
+- Adapter auf 0.33.306 updaten → Dropdowns + Garmin-Stages validieren.
+
+---
+
+## 🗓️ Sitzung 13.06.2026 — Version 0.33.305 — Quellen-Dropdowns Ins Bett + Aufgewacht
+
+### ✅ Abgeschlossen
+
+#### Backend: fp2/fp2_vib Fallback in per-Person allSleepStartSources
+- **Problem**: Für Marc zeigte das Eingeschlafen-Dropdown `fp2_vib` und `fp2` als `null`, obwohl im globalen `allSleepStartSources` gültige Zeitstempel standen.
+- **Ursache**: `computePersonSleep()` baut per-Person-`allSleepStartSources` nur aus Events mit `personTag=Marc`. FP2/Radar haben oft kein personTag → Wert bleibt null.
+- **Fix**: Nach `computePersonSleep()` werden fehlende fp2/fp2_vib/fp2_other-Werte aus globalem `allSleepStartSources` nachgefüllt (falls global vorhanden).
+
+#### Backend: allBedEntrySources + bedEntrySource
+- Neues Rückgabefeld in `computePersonSleep()`: `allBedEntrySources` = Array aller Sensor-Kandidaten mit Timestamp (aus allSleepStartSources, ohne garmin/fixed/haus_still/gap60/last_outside), sortiert nach Zeit.
+- `bedEntrySource` = Quelle mit kleinstem Abstand zu `bedEntryTs`.
+- Beide Felder werden in `personData` ausgegeben und vom Frontend gelesen.
+
+#### Frontend: Eingeschlafen-Dropdown Filter
+- Quellen deren Timestamp VOR `bedEntryTs - 5 min` liegt → rot durchgestrichen, Opacity 0.3, Hinweis „⚠️ vor Ins-Bett-Zeit", kein „Wählen"-Button.
+- Gilt für beide Karten (Karte 1 mit `noSensor`-Logik + Karte 2 ohne).
+
+#### Frontend: Dropdown „Ins Bett gegangen" (Read-only)
+- Neues blaues „🛏 Quellen"-Toggle direkt unterhalb der `bedEntryTs`-Anzeige.
+- Öffnet Panel mit `allBedEntrySources`: Quelle + Uhrzeit, aktive Quelle grün hinterlegt, kein Override-Button.
+- Hinweis „ℹ Reine Anzeige — kein Override möglich" (Backend-Mechanismus noch nicht implementiert).
+- Vorhanden in beiden Karten (Karte 1 + Karte 2).
+
+#### Frontend: Label-Korrektur Aufgewacht-Dropdown
+- `title` und Panel-Header: „Aufstehzeit-Quelle" → „Aufwachzeit-Quelle" (korrekte Semantik: allWakeSources = wann aufgewacht, nicht wann aufgestanden).
+
+### 🔧 Offene Baustellen
+- Werkstatt OC-STUCK v5 in Praxis validieren
+- Ursache nächtlicher Adapter-Neustart ungeklärt
+- `personTag="Marc"` am Vibrationssensor (Config)
+- „Ins Bett gegangen" Override-Funktionalität (derzeit read-only)
+- `_fixedSleepStartTs is not defined` Warnung
+
+### 🎯 Nächster logischer Schritt
+- Adapter auf 0.33.305 updaten → Dropdowns prüfen → „Ins Bett gegangen" Quellen-Panel validieren.
+
+---
+
+## 🗓️ Sitzung 13.06.2026 — Version 0.33.304 — OC-STUCK v5 + common.version Fix
+
+### ✅ Abgeschlossen
+
+#### Forensik: Werkstatt 640 min trotz OC-STUCK v3/v4
+- **Symptom**: KG Werkstatt zeigte 639–640 min in Raum-Nutzung; `[OC-STUCK-V3/V4]` fehlten im Log.
+- **CSV-Beweis** (`zigbee.0.c09b9efffe70069b.occupancy`): stuck 12.06 14:14 → 13.06 10:43 (20,5 h), dann kurz false, dann normale Pulse.
+- **roomHistory-Muster**: `[60,60,60,60,60,60,60,60,57,59,43,1,0,...]` = 640 min — Polling-Akkumulation ohne State-Change-Events in eventHistory/WAL.
+- **Warum v3 scheiterte**: `state.lc`-Check zum Klickzeitpunkt 11:27 — Sensor war bereits `false` seit 10:43.
+- **Warum v4 scheiterte**: historisches `true` vom 12.06 14:14 nie in eventHistory (nur 3 Events von heute); WAL ohne dieses Event (Adapter-Neustart / kein Event beim Polling).
+- **Nutzer-Korrektur**: PIR bleibt NIE 90+ min auf `true` (hold-time 1–3 min) — gilt für **alle** PIR-Räume inkl. Schlafzimmer. Nur FP2/Radar ausgeschlossen.
+
+#### v0.33.304 — OC-STUCK v5: roomHistory-Pattern-Erkennung
+- **Patch**: `scripts/_patch_oc_stuck_v5.js`
+- **Algorithmus**: Pro Raum mit PIR (`type=motion` in Config, kein FP2/Vib/Radar-nonbed): längste konsekutive Sequenz Stunden mit ≥55 min/h. Wenn ≥4 Stunden → stuck-Pattern.
+- **Korrektur**: Stuck-Stunden in `roomHistory` auf 0 setzen + `todayRoomMinutes[raum]` reduzieren (min. 0). `roomHistory`-State direkt speichern → kein Rückfall beim nächsten Auto-Run.
+- **Log**: `[OC-STUCK-V5] KG Werkstatt: 10 konsekutive Stunden ≥55min/h → …min stuck | 640→0min`
+
+#### v0.33.304 — common.version Bug (Versionsanzeige ioBroker)
+- **Problem**: Bump-Script setzte nur `io-package.json.version`, nicht `common.version` → Admin-UI zeigte seit v0.33.302 fälschlich 0.33.301 obwohl Code neuer war.
+- **Fix**: Bump setzt jetzt immer `common.version = version` synchron. Nachgeholt auf 0.33.303, dann 0.33.304.
+
+### 🔧 Offene Baustellen
+- OC-STUCK v5 in Praxis validieren (Werkstatt nach Update + Neu berechnen)
+- Quellen-Dropdowns „Ins Bett gegangen" + „Aufgewacht"
+- Nächtlicher Adapter-Neustart — Ursache offen
+- `_fixedSleepStartTs is not defined` in SleepCalibration-Log
+
+### 🎯 Nächster logischer Schritt
+- Update auf 0.33.304, System prüfen + Neu berechnen, Log auf `[OC-STUCK-V5]` prüfen.
+
+---
+
+## 🗓️ Sitzung 13.06.2026 — Version 0.33.303 — OC-STUCK v4 (eventHistory Gap-Analyse)
+
+### ✅ Abgeschlossen
+- **Patch**: `scripts/_patch_oc_stuck_v4.js`
+- Ersetzt v3: pro Sensor true/false-Events aus `eventHistory` + WAL (gestern/heute), längste true-Phase ohne false, Schwelle 90 min, Überschneidung mit „heute seit Mitternacht", `todayRoomMinutes -= stuckMinutes`.
+- **Ergebnis Werkstatt**: Scheiterte — historisches `true` fehlte in Event-Quellen (Polling ohne Events).
+
+---
+
+## 🗓️ Sitzung 13.06.2026 — Version 0.33.301 — OC-STUCK v2 (roomStats-Reihenfolge + WAL)
+
+### ✅ Abgeschlossen
+- **Patch**: `scripts/_patch_oc_stuck_v2.js`
+- `analysis.activity.roomStats` wurde **vor** OC-STUCK gespeichert → UI zeigte unkorrigierte Werte.
+- OC-STUCK las zusätzlich WAL-Buffer (`buffer-YYYY-MM-DD.jsonl`) für gestern/heute.
+
+---
+
+## 🗓️ Sitzung 13.06.2026 — Version 0.33.300 — „Neu berechnen" in Personen-Kacheln
+
+### ✅ Abgeschlossen
+- Button „Neu berechnen" war nur in globaler Kachel sichtbar (`!personLabel`-Bedingung entfernt).
+
+---
+
+## 🗓️ Sitzung 13.06.2026 — Version 0.33.299 — OC-FORCE (Nacht neu berechnen)
+
+### ✅ Abgeschlossen
+- **Backend**: `onMessage 'forceRecompute'` — `_forceRecompute=true`, `_sleepFrozen` umgangen, `saveDailyHistory()` vollständig neu.
+- **Frontend**: „Neu berechnen"-Button in Schlafkachel (später in v0.33.302 mit „System prüfen" konsolidiert).
+- **Patch**: `scripts/_patch_oc_force_backend.js`
+
+---
+
+## 🗓️ Sitzung 13.06.2026 — Version 0.33.302 — OC-STUCK v3 + Button-Konsolidierung
+
+### ✅ Abgeschlossen
+
+#### OC-STUCK v3: lc-basierte Stuck-Sensor-Erkennung
+- **Problem**: OC-STUCK v1/v2 nutzten `eventHistory` und WAL-Files für die Erkennung — fehleranfällig, limitiert auf 2000 Events.
+- **Lösung**: Direkte Abfrage von `getStateAsync(deviceId).lc` (ioBroker "last changed" Timestamp). Sensor gilt als stuck wenn `val=true` und `(now - lc) > 90min`.
+- **Korrektur**: `todayRoomMinutes[raum] = 0` (komplett entfernen, nicht auf 90min beschränken).
+- **roomStats-Resave** nach Korrektur bleibt erhalten.
+- **Patch**: `scripts/_patch_oc_stuck_v3.js`
+
+#### Frontend: Button-Konsolidierung
+- "Neu berechnen"-Button aus Schlafkacheln entfernt (war doppelt, verwirrend).
+- `triggerAnalysis` (= "System prüfen") führt jetzt zusätzlich `forceRecompute` via `sendTo` durch.
+- Button-Label: `[ SYSTEM PRÜFEN + NEU BERECHNEN ]`.
+
+### 🔧 Offene Baustellen
+- Quellen-Dropdown für "Ins Bett gegangen" + "Aufgewacht" (nur diskutiert).
+- Adapter-Neustart-Ursache nachts noch ungeklärt.
+
+### 🎯 Nächster logischer Schritt
+- OC-STUCK v3 in Praxis testen: Werkstatt-PIR sollte bei nächstem stuck-Ereignis korrekt auf 0 gesetzt werden.
+- Evtl. Quellen-Dropdowns umsetzen.
 
 ---
 
@@ -6900,37 +7195,38 @@ Neuer Python-Befehl: `ANALYZE_DISEASE_SCORES` in service.py dispatch-table.
 
 ---
 
-## ðŸ—ï¸ Funktionierende Basis (Stand v0.33.285)
+## 🏗️ Funktionierende Basis (Stand v0.33.304)
 
 | Feature | Status | Version |
 |---|---|---|
-| CGM Korrelations-Panel (Forschung, Diabetes-Tab) | ✅ | v0.33.285 |
-| CGM Buffer-Restore + Merge-on-Save | ✅ | v0.33.284 |
-| Vibrations-Chart (trigger==true + 90s-Dedup + Stärke) | ✅ | v0.33.285 |
-| Kumulatives CGM-Statistik-Panel (60 Nächte) | ✅ | v0.33.283 |
-| CGM Wearable-Config (cgmPersonAssignment) | ✅ | v0.33.278 |
-| Sensor-Typ-System (`type: "door"`) | âœ… | recorder.js |
-| Frischluft-ZÃ¤hlung (Ã–ffnungen heute) | âœ… | v0.31.2 |
-| StoÃŸlÃ¼ftung â‰¥5 Min ZÃ¤hler | âœ… | v0.31.1 |
-| Admin UI baut korrekt nach `admin/` | âœ… | v0.31.3 |
-| Obfuskierung (main.js + lib/) | âœ… | v0.31.4 |
-| Drift-Monitor mit Datumsachse | âœ… | v0.31.0 |
-| KI-Analyse Auto-Trigger (08:05 + 20:00) | âœ… | v0.31.0 |
-| Tages/Nacht Anomalie-Score | âœ… | v0.30.x |
-| Ganggeschwindigkeit (Flur-Transit) | âœ… | v0.28.0 |
-| Raum-MobilitÃ¤t Kachel | âœ… | v0.30.x |
-| Nacht-Unruhe Kachel | âœ… | v0.30.x |
-| Bad-Nutzung Kachel | âœ… | v0.28.0 |
-| Feature-Module-Status Tab | âœ… | v0.30.74 |
-| Garmin-Style Drift-Monitor | âœ… | v0.30.74 |
-| Pushover Briefing (08:00 + 20:00) | âœ… | v0.31.4 â€” subscribeStates fehlte (Root-Cause gefunden) |
+| OC-STUCK v5 (roomHistory-Pattern, alle PIR-Räume) | ✅ | v0.33.304 |
+| OC-FORCE / System prüfen + Neu berechnen | ✅ | v0.33.299–302 |
+| OC-56 WAL + Event-Merge + Neustart-Detektor | ✅ | v0.33.296 |
+| OC-PLAUS v2 + Near-Zero-Guard (bedWasEmpty) | ✅ | v0.33.297 |
+| OC-42p v2 (Per-Person bedExitTs + OC-45a) | ✅ | v0.33.298 |
+| OC-45d Unified Sleep-Cycle SM (_scCtx) | ✅ | v0.33.260 |
+| OC-VIB-CAL Adaptive Vibrations-Schwellen | ✅ | v0.33.287+ |
+| CGM Korrelations-Panel (Forschung) | ✅ | v0.33.285 |
+| Versions-Bump: package.json + io-package (root + common.version) | ✅ | v0.33.304 |
+| Sensor-Typ-System (`type: "door"`) | ✅ | recorder.js |
+| Admin UI baut nach `admin/` | ✅ | v0.31.3 |
+| Obfuskierung Backend (main.js + lib/) | ✅ | build:backend:prod |
 
 ---
 
-## ðŸ“¦ Versionshistorie
+## 📦 Versionshistorie
 
-| Version | Datum | HauptÃ¤nderung |
+| Version | Datum | Hauptänderung |
 |---|---|---|
+| **0.33.304** | 13.06.2026 | **fix(OC-STUCK v5)**: roomHistory-Pattern-Erkennung (PIR stuck); **fix**: common.version Bump synchron |
+| **0.33.303** | 13.06.2026 | **fix(OC-STUCK v4)**: eventHistory-Gap-Analyse (rückwirkend, scheiterte am Werkstatt-Polling-Fall) |
+| **0.33.302** | 13.06.2026 | **fix(OC-STUCK v3)**: lc-basiert; **feat**: System prüfen + Neu berechnen kombiniert |
+| **0.33.301** | 13.06.2026 | **fix(OC-STUCK v2)**: roomStats nach Korrektur; WAL als Event-Quelle |
+| **0.33.300** | 13.06.2026 | **fix**: Neu-berechnen-Button in Personen-Kacheln sichtbar |
+| **0.33.299** | 13.06.2026 | **feat(OC-FORCE)**: forceRecompute — Schlafanalyse ohne Freeze neu berechnen |
+| **0.33.298** | 13.06.2026 | **fix(OC-42p v2)**: bedExitTs nutzt OC-45a; **feat(OC-STUCK v1)**: eventHistory stuck |
+| **0.33.297** | 12.06.2026 | **fix(OC-PLAUS v2)**: Near-Zero-Guard + REM <2% |
+| **0.33.296** | 11.06.2026 | **feat(OC-56)**: WAL, Event-Merge, Neustart-Detektor |
 | **0.33.285** | 09.06.2026 | **fix(cgm)**: 90s-Mindestabstand Vibrations-Events (Zigbee-Keepalive-Dedup) |
 | **0.33.284** | 09.06.2026 | **fix(cgm)**: vibration_trigger==true als Chart-Basis; cgmReadings Merge-on-Save |
 | **0.33.283** | 09.06.2026 | **feat(cgm)**: Buffer-Restore, kumulatives Panel, Paper-Referenzen, StatsPanel |

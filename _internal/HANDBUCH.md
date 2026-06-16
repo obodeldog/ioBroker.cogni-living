@@ -1,7 +1,7 @@
 ﻿# HANDBUCH — ioBroker Cogni-Living (AURA)
-**Zweck:** Algorithmus-Dokumentation, wissenschaftliche Grundlagen, Bedienungsanleitung-Basis.
-**Regel:** Neue Features hier dokumentieren, Tooltips im Frontend als Kurzfassung.
-**Nicht hier:** Deploy-Schritte, Bugfixes → PROJEKT_STATUS.md | Ideen → BRAINSTORMING.md
+**Zweck:** Algorithmus-Dokumentation, wissenschaftliche Grundlagen, Bedienungsanleitung-Basis.  
+**Regel:** Neue Features hier dokumentieren, Tooltips im Frontend als Kurzfassung.  
+**Nicht hier:** Deploy-Schritte, Bugfixes → PROJEKT_STATUS.md | Ideen → BRAINSTORMING.md | Krankheits-Matrix → KRANKHEITSBILD-MATRIX.md | Paper → LITERATUR.md
 
 ---
 
@@ -32,6 +32,56 @@ Diese Software ist **KEIN Medizinprodukt** gemäß der Verordnung (EU) 2017/745 
 - **Zweckbestimmung:** Cogni-Living dient ausschließlich der Unterstützung der allgemeinen Lebensführung (Ambient Assisted Living), dem Komfort und reinen Informationszwecken.
 - **Keine Diagnose/Therapie:** Die bereitgestellten Daten, Analysen, Gesundheits-Scores und Alarme sind nicht dazu geeignet, Krankheiten zu diagnostizieren, zu behandeln, zu heilen oder zu verhindern. Sie ersetzen keinesfalls die fachliche Beratung, Diagnose oder Behandlung durch einen Arzt.
 - **Haftungsausschluss:** Verlassen Sie sich in gesundheitlichen Notfällen nicht auf diese Software.
+
+---
+
+## 👨‍👩‍👧 Gesundheitsüberwachung für Angehörige (NUUKANNI / Care)
+
+> **Stand:** 13.06.2026 · Dieser Abschnitt beschreibt, **was Sie als Nutzer oder Angehöriger** mit dem System tun können.  
+> Technische Profil-Matrix und Literatur: `_internal/KRANKHEITSBILD-MATRIX.md`, `_internal/LITERATUR.md`
+
+### Was AURA für Sie tut (einfach erklärt)
+
+Das Haus beobachtet **diskret** den normalen Tagesablauf: Wann ist jemand unterwegs? Wie war die Nacht? Wird langsamer gelaufen?  
+Wenn etwas **ungewöhnlich** ist, sehen Sie das in der App — **ohne** dass Papa eine Uhr tragen oder etwas bedienen muss.
+
+**Wichtig:** Das ist **kein Arzt** und **kein Notrufdienst**. Es ist ein **Hinweis**, dass Sie vielleicht anrufen oder vorbeischauen sollten.
+
+### Was Sie heute schon nutzen können
+
+| Wo | Was Sie sehen |
+|---|---|
+| **NUUKANNI Familien-App (PWA)** | Tages-Status (unauffällig / leicht auffällig / auffällig), Schlaf der letzten Nacht, Aktivität, Bad-Nutzung |
+| **Admin → Medizinisch** | Krankheitsprofile aktivieren, Sensor-Bereitschaft prüfen, Screening-Hinweise (wenn Daten da sind) |
+| **Admin → System** | Sensor-Ampel, ob alle Melder erreichbar sind |
+
+### Wann bekommen Sie eine Nachricht aufs Handy?
+
+| Alarm | Wann | Push möglich? |
+|---|---|---|
+| **Lebenszeichen / Totmann** | Lange keine Bewegung, obwohl normalerweise jemand aktiv wäre | **Ja** — Pushover oder Telegram in den Einstellungen aktivieren |
+| **Sicherheits-Alarm** | Urlaubsmodus, Einbruch-Verdacht | **Ja** — je nach Konfiguration |
+| **„Heute ungewöhnlicher Tag"** (Tages-Anomalie) | Der Tagesablauf weicht stark vom Normalzustand ab | **In der App sichtbar** — automatischer Push an Angehörige ist **Roadmap** (siehe unten) |
+| **„Schleichende Verschlechterung"** über Wochen | Trends, Krankheits-Scores | In App/Admin — **kein** Standard-Push |
+
+**Einrichtung Push (Lebenszeichen & Sicherheit):**  
+Einstellungen → Benachrichtigungen → Pushover-Instanz und/oder Telegram aktivieren. Testnachricht senden.
+
+### Typisches Szenario: Papa lebt allein
+
+- **Das Haus kann merken:** Heute läuft alles anders als sonst; die Nacht war unruhig; seit Stunden keine Bewegung.
+- **Das Haus kann nicht sicher sagen:** „Papa hat eine Hirnblutung" oder „Papa ist verwirrt" — dafür gibt es **kein** eigenes Profil.
+- **Was Sie tun sollten:** Bei **plötzlicher Verwirrtheit oder Notfall immer 112 / Arzt** — die App ist eine **Ergänzung**, kein Ersatz.
+- **Was kommt (geplant):** Push an Angehörige bei auffälligem Tag: *„Bei Papa war heute der Ablauf ungewöhnlich — bitte einmal nachfragen."* → Konzept **OC-58** in `BRAINSTORMING.md`.
+
+### Krankheitsprofile im Medizinisch-Tab
+
+1. Profil aktivieren (z. B. Sturzrisiko, Demenz, Schlaf).
+2. **Sensor-Bereitschaft** prüfen (grün = Sensoren da; **nicht** „Krankheit sicher erkannt").
+3. Nach mindestens **5–14 Tagen** Lernphase Trends und Hinweise lesen.
+4. Bei auffälligen Werten: **Arzt oder Pflegedienst** — nicht nur App.
+
+Details aller Profile (Entwicklungsstand, Marketing-Formulierungen): `_internal/KRANKHEITSBILD-MATRIX.md` (intern).
 
 ---
 
@@ -297,7 +347,7 @@ AURA kombiniert mehrere Sensordatenquellen nach einem **Prioritätsprinzip (Grac
 | 📡 | `fp2_vib` | **Radar + Vibration** | Radar-Bett belegt · **Forward-Scan**: erstes Vib-Event mit =20 Min Stille danach (innerhalb 3h nach FP2-Anker) | Sehr hoch | ✅ aktiv (ab v0.33.58, Forward-Scan ab v0.33.150) |
 | 📡 | `fp2` | **Radar (Präsenz-Sensor)** | Letzter Radar-Bett-Event vor =60 Min Lücke (18–03 Uhr) | Hoch | ✅ aktiv |
 | 📡 | `motion_vib` | **Bewegungsmelder + Vibration** | PIR-Motion-Fenster als Anker ? **Forward-Scan**: erstes Vib-Event mit =20 Min Stille (innerhalb 3h) | Mittel-Hoch | ✅ aktiv (ab v0.33.80, Forward-Scan ab v0.33.150) |
-| 📡 | `vib_refined` | **Letzte Bettbewegung (Vibration)** | Beliebiger Bett-Event als Anker ? **Forward-Scan**: erstes Vib-Event mit =20 Min Stille | Mittel | ✅ aktiv (per-Person ab v0.33.139, Forward-Scan ab v0.33.150) |
+| 📡 | `vib_refined` | **Letzte Bettbewegung (Vibration)** | Beliebiger Bett-Event als Anker → **Forward-Scan**: erstes Vib-Event mit ≥20 Min Stille; **nur als Bett-Eintrag wenn Radar/FP2 innerhalb ±10 Min bestätigt** (ab v0.33.316) | Mittel | ✅ aktiv (per-Person ab v0.33.139, Radar-Filter ab v0.33.316) |
 | ⚠️ | `gap60` | **Schlafzimmer-Aktivitätspause** | Erstes Vib/FP2-Bett-Event vor =60 Min Stille (Forward-Scan, kein Bewegungsmelder) | Mittel | ✅ aktiv (Forward-Scan + isBedroomMotion entfernt ab v0.33.152) |
 | 📡 | `last_outside` | **Letzte Außenaktiv.** | Letztes Außen-Event ohne 30-Min-Folgeaktivität → erster Bett-Event danach | Niedrig | ✅ aktiv (global ab v0.33.141) |
 | 📡 | `haus_still` | **Haus-wird-still** | **Forward-Scan** auf Nicht-Schlafzimmer-Events: erstes Event vor =60 Min Stille in anderen Räumen (funktioniert für Single & Multi) | Niedrig | ✅ aktiv (Forward-Scan ab v0.33.153) |
@@ -324,6 +374,7 @@ AURA kombiniert mehrere Sensordatenquellen nach einem **Prioritätsprinzip (Grac
 | 📡 | `other` | **Anderer Raum** | **Erste** Bewegung außerhalb Schlafzimmer/Bad nach 04:00 + =3h Schlaf (Forward-Scan; vorher: letzte Abfahrt ohne Rückkehr) | Mittel | ✅ aktiv (Forward-Scan ab v0.33.155) |
 | 📡 | `motion` | **Schlafzimmer-Bewegungsmelder** | Erste Bewegung nach 04:00 + =3h Schlaf | Mittel | ✅ aktiv |
 | 📡 | `vibration` | **Vibrationssensor (? Konfidenz)** | Letztes Vib-Event in den 30 Min **vor** dem FP2-Abgang ? Konfidenz-Booster, **kein eigenständiger Zeitpunkt** | Konfidenz-Booster | ✅ aktiv (Fenster vor Abgang ab v0.33.155) |
+| 📡 | `vib_wake_cluster` | **Vibrations-Cluster (Aufwachmuster)** | Erste dichte Vib-Häufung (≥3 Events in 15 Min) in den letzten 90 Min der Nacht — erkennt Aufwach-Bewegungsmuster ohne Radar/FP2 | Niedrig | ✅ aktiv (ab v0.33.316) |
 | 📡 | `vibration_alone` | **Vibrationssensor allein** | Letztes Vib-Event + danach =45 Min Stille | Sehr niedrig | ✅ aktiv |
 | ? | `fixed` | **Fallback 20:00 Uhr** | Fixwert 09:00 Uhr | — | ✅ aktiv (Fallback) |
 | 📡 | `override` | **Manuell überschrieben** | Manuell per Dropdown gesetzt (zurücksetzbar) | — | ✅ aktiv (ab v0.33.141) |
@@ -426,14 +477,23 @@ flowchart TD
 
 Der OC-48 Counterevidence-Filter schaut nur **60 Min** voraus. Bei kurzem Abend-Bettkontakt (Kuscheln, kurz hinsetzen) gefolgt von **stundenlanger** Wohnzimmer-Aktivitaet, die erst spaeter als 60 Min beginnt, wurde der fruehe Kandidat faelschlich akzeptiert -> langer Phantom-"Wachliegen"-Balken.
 
-**OC-48c (laeuft nach OC-48/OC-45c):** Pruefe das **gesamte** Fenster zwischen `bedEntryTs` und `sleepWindowStart`. Alle Bewegungen ausserhalb des Schlafzimmers (Bad ausgenommen; mit Topologie: Hop >= 2) werden zu Bloecken zusammengefasst (Luecke <= 12 Min = selber Block). Ist der **laengste zusammenhaengende Block >= 30 Min**, war die Person nachweislich nicht im Bett -> `bedEntryTs = null`, der Balken startet bei der Einschlafzeit, kein Phantom-Wachliegen.
+**OC-48c (laeuft nach OC-48/OC-45c):** Pruefe das **gesamte** Fenster zwischen `bedEntryTs` und `sleepWindowStart`. Alle Bewegungen ausserhalb des Schlafzimmers (Bad ausgenommen; mit Topologie: Hop >= 2) werden zu Bloecken zusammengefasst (Luecke <= 12 Min = selber Block). Massgeblich ist der **laengste zusammenhaengende Block >= 30 Min**.
 
 - **Kurzer Toiletten-/Kuechengang** (kurzer Block) -> bleibt erhalten, fruehes `bedEntryTs` korrekt.
 - **OC-46 (ruhiges Wachliegen)** -> keine Aussen-Bewegung, kein Block -> fruehes `bedEntryTs` bleibt korrekt.
-- **L4121-Fix:** Eine bewusste Ablehnung (`bedEntryTs = null` durch OC-48b/OC-48c) faellt **nicht** mehr auf den Garmin/computePersonSleep-Rohwert zurueck.
-- **Mehrpersonenhaushalt (ab v0.33.268):** OC-48c laeuft in `computePersonSleep()` (Single-Source-of-Truth) und wirkt damit fuer den globalen Haushalt UND jede Einzelperson. Der Gegenbeleg-Filter schliesst nur Bewegungen der **anderen** Person aus; gemeinsame Raeume (Wohnzimmer, Diele) zaehlen weiterhin.
 
-> Log: `[OC-48c] bedEntryTs 21:23 verworfen: anhaltende Ausserhalb-Aktivitaet (laengster Block 116 Min, 49 Events) -> bedEntry = sleepStart`.
+##### OC-48c v2 — bedEntryTs never-null + FP2-Awareness + Vor-Schlaf-Abwesenheit (ab v0.33.317)
+
+**Problem (Mehrpersonenhaushalt):** Im belebten Haushalt sind die >= 30-Min-Aussen-Bloecke fast unvermeidbar — sie stammen aber oft von einer **anderen Person** (z.B. jemand laeuft durchs Wohnzimmer ueber ungetaggte gemeinsame PIR-Sensoren), waehrend die ueberwachte Person laut FP2 durchgehend im Bett liegt. OC-48c hat dann `bedEntryTs` faelschlich verworfen ("kein plausibler Wert"). Auch ein kurzes Einschlaf-Fenster (z.B. 22:26 ins Bett -> 22:58 eingeschlafen = 32 Min) ueberschritt die 30-Min-Schwelle praktisch immer.
+
+**Neues Verhalten ab v0.33.317:** `bedEntryTs` wird **nie mehr verworfen** (kein `null`). Stattdessen entscheidet ein FP2-Cross-Check ueber den laengsten Aussen-Block:
+
+- **FP2 zeigt das Bett waehrend des Blocks DURCHGEHEND belegt** -> die Aktivitaet stammt von einer **anderen Person** -> `bedEntryTs` bleibt erhalten, **keine** Abwesenheit (der gelbe "Ins Bett / Wachliegen"-Balken ist korrekt, denn die Person lag wirklich im Bett).
+- **FP2 leer ODER kein FP2 vorhanden** -> die Person war **wirklich draussen** -> `bedEntryTs` bleibt erhalten und der Block wird als **Vor-Schlaf-Abwesenheit** (`preSleepAbsenceEvents`) markiert. Im Balken erscheint dort ein **grau-schraffiertes Segment** ("🚶 Vor dem Einschlafen ausser Bett: HH:MM – HH:MM") statt eines durchgehenden Phantom-Wachliegens.
+
+- **Sensor-neutral / Graceful Degradation:** Ohne FP2/Radar wird der Block immer als Abwesenheit dargestellt (statt wie frueher `bedEntryTs` zu verwerfen). Beide OC-48c-Implementierungen (per-Person und global) verhalten sich identisch.
+
+> Log: `[OC-48c v2] Aussen-Aktivitaet (Block 32 Min) bei FP2-belegtem Bett -> andere Person, bedEntryTs 22:26 behalten` bzw. `[OC-48c v2] Vor-Schlaf-Abwesenheit 00:23-01:02 markiert; bedEntryTs 22:47 behalten`.
 
 #### OC-47b - Vibration-Extension-Abbruch am Morgen (ab v0.33.267)
 
@@ -777,6 +837,48 @@ Separater Dialog `openDeepDive` mit Kurzfassung, enthält:
 
 ?? Kein Tooltip in Sensor-Liste, Reporting oder anderen System-Bereichen.
 **TODO:** Spalten-Erklärungen (ID, Name, Raum, Typ, Funktion, Aktiviert) als Tooltips ergänzen.
+
+---
+
+### 🎛️ Vibrations-Kalibrierung (OC-VIB-CAL) — System-Tab
+
+*(ab v0.33.288 · Drift-Erkennung ab v0.33.314)*
+
+AURA lernt über mehrere Nächte das **persönliche Vibrationsmuster** deines Bettes und passt die Erkennungsschwellen für Wake, REM und Tiefschlaf automatisch an.
+
+#### Kalibrierungsstatus
+
+| Status | Bedeutung |
+|---|---|
+| **Unkalibriert** | Weniger als 3 auswertbare Nächte — feste Standardschwellen aktiv |
+| **Kalibrierung läuft…** | 3–6 Nächte — erste Anpassungen aktiv, noch nicht stabil |
+| **Kalibriert ✓** | 7+ Nächte — persönliche Schwellen stabil und verlässlich |
+
+Der Fortschrittsbalken zeigt `x/7` Nächte bis zur stabilen Kalibrierung.
+
+#### Wie funktioniert die adaptive Kalibrierung?
+
+AURA speichert einen **14-Nächte-Rolling-Buffer**. Jede neue Nacht ersetzt die älteste. Aus diesem Buffer berechnet AURA:
+
+- **Wake-Schwelle** — Vibrationsstärke ab der eine Bewegung als Aufwachen gilt
+- **REM-Fenster** — Bereich für leichte Schlafbewegungen (typisch für REM-Phasen)
+- **Tief-Trigger** — Wie viele ruhige 5-Minuten-Slots für Tiefschlaf nötig sind
+
+Die Kalibrierung läuft **dauerhaft weiter** — auch nach „Kalibriert ✓". Das bedeutet: Ändert sich das Schlafverhalten saisonal oder durch neue Bettwäsche, passt sich AURA organisch an.
+
+#### Sensor verschoben? — Drift-Erkennung & Reset
+
+Wenn der Vibrationssensor an eine **neue Position** gelegt wird, ändern sich die Vibrationsmuster grundlegend. AURA erkennt das automatisch:
+
+> **Drift-Warnung (gelb):** Erscheint wenn die letzten 2 Nächte beide mehr als das 2,5-fache oder weniger als 35 % des bisherigen Mittelwerts aufweisen. Das deutet stark darauf hin, dass sich der Sensor-Standort verändert hat.
+
+In diesem Fall empfiehlt sich ein **manueller Reset** über den Button „Kalibrierung zurücksetzen". Nach dem Reset startet die Kalibrierung sofort neu (0/7 Nächte).
+
+> **Hinweis:** Der Reset wird absichtlich nicht automatisch ausgelöst — eine unruhige Nacht oder eine Erkältung kann kurzfristig ähnlich aussehen wie ein Sensor-Drift. Ein falscher automatischer Reset würde 7 Nächte Training verlieren. Der Nutzer entscheidet selbst wann ein Reset sinnvoll ist.
+
+#### Toggle: Adaptive Schwellen aktiv/inaktiv
+
+Der Schalter im VIB-CAL Panel deaktiviert die adaptive Kalibrierung. Dann gelten feste Standardschwellen (Wake > 28, REM 12–23, Tiefschlaf bei 0 Vibrationen pro Slot). Nur für Debugging oder wenn Kalibrierungsdaten fehlerhaft wirken.
 
 ---
 
@@ -1133,9 +1235,11 @@ Diese Tabelle beschreibt, welche Sensoren für jedes sichtbare Element der Schla
 
 Vibrationssensoren benötigen **keine Lernphase** — Schlafphasen werden ab der ersten Nacht berechnet. Voraussetzung: der Sensor muss während des Schlafs mindestens ~10–20 Vibrationen aufzeichnen (Mindestsensitivität prüfen, falls der Balken leer bleibt).
 
+**Adaptive Kalibrierung (OC-VIB-CAL, ab v0.33.288):** Ab der 3. Nacht passt AURA die Erkennungsschwellen automatisch an das persönliche Vibrationsmuster an. Ab der 7. Nacht sind die Schwellen stabil. Der aktuelle Kalibrierungsfortschritt ist im **System-Tab → Vibrations-Kalibrierung** einsehbar. Wurde der Sensor an eine neue Position gelegt, erscheint dort eine Drift-Warnung mit einem Reset-Button (ab v0.33.314).
+
 **Typische Erstinbetriebnahme-Probleme:**
-- Balken leer trotz installiertem Vibrationssensor ? Adapter wurde tagsüber neugestartet ? Freeze-Schutzmechanismus hat eine leere Nacht eingefroren. Abhilfe: Adapter erneut starten oder bis zur nächsten Nacht warten.
-- Wenige Ereignisse (< 5) ? Sensor ist zu weit vom Körper entfernt oder Empfindlichkeit zu niedrig.
+- Balken leer trotz installiertem Vibrationssensor → Adapter wurde tagsüber neugestartet → Freeze-Schutzmechanismus hat eine leere Nacht eingefroren. Abhilfe: Adapter erneut starten oder bis zur nächsten Nacht warten.
+- Wenige Ereignisse (< 5) → Sensor ist zu weit vom Körper entfernt oder Empfindlichkeit zu niedrig.
 
 ---
 

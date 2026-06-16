@@ -1652,6 +1652,10 @@ export default function HealthTab(props: any) {
                 swEnd ? ev.start < swEnd && ev.end > (swStart ?? 0) : true
             );
         const _hasBedAbsenceEngine = _bedAbsenceEvts.length > 0;
+        // [OC-48c v2 / Fix B] Vor-Schlaf-Abwesenheit (Ausflug vor dem Einschlafen)
+        const _preSleepAbsenceEvts: {start:number,end:number,durationMin?:number,source?:string}[] =
+            (((sd as any)?.preSleepAbsenceEvents ?? []) as {start:number,end:number,durationMin?:number,source?:string}[])
+                .filter((ev) => ev && ev.start != null && ev.end != null && ev.end > ev.start);
         // [OC-SB] Shared-Bed-Perioden (2+ Personen im Bett erkannt via presence_radar_count)
         const _sharedBedPeriods: {start:number,end:number}[] = ((sd as any)?.sharedBedPeriods ?? [])
             .filter((p: {start:number,end:number}) => p.start && p.end && p.end > p.start);
@@ -2663,6 +2667,25 @@ export default function HealthTab(props: any) {
                                         borderLeft: ev.confidence === 'low' ? '1px dashed ' + (isDark?'#888':'#666') : '1px solid ' + (isDark?'#666':'#aaa'),
                                         borderRight: ev.confidence === 'low' ? '1px dashed ' + (isDark?'#888':'#666') : '1px solid ' + (isDark?'#666':'#aaa')
                                     }} title={_title} />
+                                );
+                            })}
+                            {/* [OC-48c v2 / Fix B] Vor-Schlaf-Abwesenheit: Ausflug zwischen Ins-Bett-Zeit und Einschlafen (grau schraffiert ueber gelbem Segment) */}
+                            {bedEntryTsVal && newBarTotalMs && _preSleepAbsenceEvts.map((ev, i) => {
+                                const _left = Math.max(0, Math.min(100, ((ev.start - bedEntryTsVal) / newBarTotalMs!) * 100));
+                                const _width = Math.max(0.5, Math.min(100 - _left, ((ev.end - ev.start) / newBarTotalMs!) * 100));
+                                const _dur = ev.durationMin != null ? ev.durationMin : Math.max(1, Math.round((ev.end - ev.start) / 60000));
+                                const _bgColor = isDark ? '#4a4a4a' : '#d4d4d4';
+                                const _stripeColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.22)';
+                                const _stripe = 'repeating-linear-gradient(135deg, transparent 0px, transparent 5px, ' + _stripeColor + ' 5px, ' + _stripeColor + ' 8px)';
+                                return (
+                                    <div key={'psa'+i} style={{
+                                        position: 'absolute', top: 0,
+                                        left: _left + '%', width: _width + '%', height: '28px',
+                                        backgroundColor: _bgColor, backgroundImage: _stripe,
+                                        opacity: 1, pointerEvents: 'auto', zIndex: 3, cursor: 'help',
+                                        borderLeft: '1px solid ' + (isDark ? '#666' : '#aaa'),
+                                        borderRight: '1px solid ' + (isDark ? '#666' : '#aaa')
+                                    }} title={'\uD83D\uDEB6 Vor dem Einschlafen ausser Bett: ' + fmtTime(ev.start) + ' \u2013 ' + fmtTime(ev.end) + ' (' + _dur + ' Min)'} />
                                 );
                             })}
                             {/* OC-31 Stage 2 (LEGACY-Fallback): Gelbes Wake-Phasen-Overlay nur wenn keine bedAbsenceEvents vorhanden (alte JSON-Daten) */}
