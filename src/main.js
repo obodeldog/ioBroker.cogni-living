@@ -85,15 +85,51 @@ function computePersonSleep(p) {
             var _hr = new Date(e.timestamp || 0).getHours();
             return e.isFP2Bed && (_hr >= 18 || _hr < 3);
         });
-        if (_fp2.length > 0) return _fp2[0].timestamp || 0;
+        // [OC-BED-FP2-MIN] FP2-Mindestpräsenz ≥2 Min — verhindert Kurzflackern als bedEntryTs.
+        // Beispiel: FP2 flackert 52 Sek um 19:54 → kein gültiger Bett-Eintrag.
+        // Erst wenn FP2 durchgehend ≥2 Min aktiv ist → gültiges Segment.
+        var _fp2SegTs = null;
+        for (var _fi = 0; _fi < _fp2.length; _fi++) {
+            var _fActive = isActiveValue(_fp2[_fi].value);
+            if (!_fActive) { _fp2SegTs = null; continue; }
+            var _fts = _fp2[_fi].timestamp || 0;
+            if (_fp2SegTs === null) _fp2SegTs = _fts; // Segment-Start
+            // Nächstes val=0 suchen → Segment-Ende
+            var _fEnd = null;
+            for (var _fj = _fi + 1; _fj < _fp2.length; _fj++) {
+                if (!isActiveValue(_fp2[_fj].value)) { _fEnd = _fp2[_fj].timestamp || 0; break; }
+            }
+            if (_fEnd !== null) {
+                if (_fEnd - _fp2SegTs >= 2 * 60000) return _fp2SegTs; // ≥2 Min → gültig
+                _fp2SegTs = null; // zu kurz → Segment verwerfen, weitersuchen
+            } else {
+                return _fp2SegTs; // kein Ende gefunden → läuft noch → gültig
+            }
+        }
+        // Kein gültiges FP2-Segment → Vibrations-Fallback unten
         var _vib = bedEvts.filter(function(e) {
             var _hr = new Date(e.timestamp || 0).getHours();
             return (e.isVibrationBed && !e.isVibrationStrength) && (_hr >= 18 || _hr < 3);
         });
-        for (var _bi = 0; _bi < _vib.length - 1; _bi++) {
-            if ((_vib[_bi + 1].timestamp || 0) - (_vib[_bi].timestamp || 0) <= 5 * 60000)
-                return _vib[_bi].timestamp || 0;
+        // [OC-BED-VIB-MIN] VIB-Session ≥5 Min Gesamtdauer — filtert kurze Zufalls-Kontakte
+        // (Wäsche aufs Bett legen, kurze Berührung etc.). Session-Grenze = Lücke ≥20 Min.
+        // Gibt Start der ERSTEN Session zurück die ≥5 Min dauert.
+        var _vibLastValSess = null;
+        var _vibSessS = null;
+        for (var _bi = 0; _bi < _vib.length; _bi++) {
+            if (_vibSessS === null) _vibSessS = _vib[_bi].timestamp || 0;
+            var _vibNextTs = (_bi < _vib.length - 1) ? (_vib[_bi + 1].timestamp || 0) : null;
+            var _vibGapMs = _vibNextTs !== null ? (_vibNextTs - (_vib[_bi].timestamp || 0)) : Infinity;
+            if (_vibGapMs >= 20 * 60000 || _vibNextTs === null) {
+                // Session-Ende: prüfe Mindest-Dauer ≥5 Min
+                if ((_vib[_bi].timestamp || 0) - _vibSessS >= 5 * 60000) {
+                    _vibLastValSess = _vibSessS;
+                    break; // erste gültige Session gefunden → fertig
+                }
+                _vibSessS = null; // zu kurz → weitersuchen
+            }
         }
+        if (_vibLastValSess !== null) return _vibLastValSess;
         var _pir = bedEvts.filter(function(e) {
             var _hr = new Date(e.timestamp || 0).getHours();
             return e.isBedroomMotion && (_hr >= 18 || _hr < 3);
@@ -1070,6 +1106,8 @@ function computePersonSleep(p) {
         var _beExcl = ['garmin', 'fixed', 'haus_still', 'gap60', 'last_outside'];
         var _beSrcs = (allSleepStartSources || []).filter(function(s) {
             if (!s.ts || _beExcl.indexOf(s.source) >= 0) return false;
+            // [OC-BED-SOURCES-CUTOFF] Quellen NACH sleepStart sind keine Bett-Eintrag-Kandidaten
+            if (sleepStart && s.ts > sleepStart) return false;
             // [Fix-3] vib_refined: nur gültig wenn Radar/FP2 innerhalb ±10 Min bestätigt.
             // Verhindert kurze Radar-Blitzer (Sekunden) + Vibration = falsche frühe Bett-Eintrag-Zeit.
             if (s.source === 'vib_refined') {
@@ -1097,6 +1135,18 @@ function computePersonSleep(p) {
             .sort(function(a,b){ return (a.ts||0)-(b.ts||0); })
             .map(function(s){ return { source: s.source, ts: s.ts }; });
     })();
+
+    // [OC-BED-SYNC] bedEntryTs mit Gewinner-Quelle synchronisieren.
+    // Stellt sicher dass der angezeigte Wert exakt dem ✓-Eintrag in allBedEntrySources entspricht.
+    // OC-48c hat bereits mit dem IIFE-Wert (früher Anker) gearbeitet — das bleibt korrekt.
+    // Nur die angezeigte Zeit wird hier auf den verfeinerten Kandidaten gesetzt.
+    if (_bedEntrySourceInner && _allBedEntrySourcesInner) {
+        for (var _bssi = 0; _bssi < _allBedEntrySourcesInner.length; _bssi++) {
+            if (_allBedEntrySourcesInner[_bssi].source === _bedEntrySourceInner && _allBedEntrySourcesInner[_bssi].ts) {
+                bedEntryTs = _allBedEntrySourcesInner[_bssi].ts; break;
+            }
+        }
+    }
 
     return {
         sleepWindowStart:     sleepStart,
@@ -4023,21 +4073,51 @@ class CogniLiving extends utils.Adapter {
                             _pResult.allSleepStartSources = _pSrc;
                             // [OC-BED-SOURCES P2] allBedEntrySources neu bauen (fp2/fp2_vib jetzt befüllt)
                             var _beExcl2 = ['garmin', 'fixed', 'haus_still', 'gap60', 'last_outside'];
-                            var _beSrcs2 = _pSrc.filter(function(s) { return !!s.ts && _beExcl2.indexOf(s.source) < 0; });
-                            if (_beSrcs2.length > 0) {
-                                if (_pResult.bedEntryTs) {
-                                    var _beBest2 = null, _beBestD2 = Infinity;
-                                    _beSrcs2.forEach(function(s) {
-                                        var _d = Math.abs((s.ts||0) - _pResult.bedEntryTs);
-                                        if (_d < _beBestD2) { _beBestD2 = _d; _beBest2 = s.source; }
-                                    });
-                                    _pResult.bedEntrySource = _beBest2;
-                                }
-                                _pResult.allBedEntrySources = _beSrcs2
+                            var _beSrcs2 = _pSrc.filter(function(s) {
+                                if (!s.ts || _beExcl2.indexOf(s.source) >= 0) return false;
+                                // [OC-BED-SOURCES-CUTOFF] Quellen NACH sleepStart sind keine Bett-Eintrag-Kandidaten
+                                if (_pResult.sleepWindowStart && s.ts > _pResult.sleepWindowStart) return false;
+                                return true;
+                            });
+                            // [OC-BED-FP2-GUARD] Fix 2: Globale fp2-Quellen nur einfügen wenn Person
+                            // KEINE eigenen Non-FP2-Quellen in allBedEntrySources hat.
+                            // Verhindert: Personen ohne Radar (z.B. Julia) bekommen fremde FP2-Timestamps.
+                            var _ownBeSrcs = _pResult.allBedEntrySources || [];
+                            var _hasOwnNonFp2 = _ownBeSrcs.some(function(s) {
+                                return s.source !== 'fp2' && s.source !== 'fp2_vib' && s.source !== 'fp2_other';
+                            });
+                            var _fp2Srcs2 = _beSrcs2.filter(function(s) {
+                                return s.source === 'fp2' || s.source === 'fp2_vib' || s.source === 'fp2_other';
+                            });
+                            var _nonFp2Srcs2 = _beSrcs2.filter(function(s) {
+                                return s.source !== 'fp2' && s.source !== 'fp2_vib' && s.source !== 'fp2_other';
+                            });
+                            // Merged: immer Non-FP2, FP2 nur wenn keine eigenen Non-FP2 vorhanden
+                            var _mergedSrcs2 = _hasOwnNonFp2
+                                ? _ownBeSrcs.concat(_nonFp2Srcs2.filter(function(s) {
+                                    return !_ownBeSrcs.some(function(o){ return o.source===s.source; });
+                                  }))
+                                : _beSrcs2;
+                            if (_mergedSrcs2.length > 0) {
+                                var _mergedFinal = _mergedSrcs2
                                     .sort(function(a, b) { return (a.ts||0) - (b.ts||0); })
                                     .map(function(s) { return { source: s.source, ts: s.ts }; });
+                                _pResult.allBedEntrySources = _mergedFinal;
+                                // [OC-BED-SYNC P2] bedEntrySource + bedEntryTs auf besten Kandidaten setzen
+                                var _beBest2 = null, _beBestD2 = Infinity;
+                                var _beRef2 = _pResult.bedEntryTs || (_pResult.sleepWindowStart) || 0;
+                                _mergedFinal.forEach(function(s) {
+                                    var _d = Math.abs((s.ts||0) - _beRef2);
+                                    if (_d < _beBestD2) { _beBestD2 = _d; _beBest2 = s.source; }
+                                });
+                                if (_beBest2) {
+                                    _pResult.bedEntrySource = _beBest2;
+                                    // Sync: bedEntryTs auf Gewinner-Timestamp setzen
+                                    var _syncSrc2 = _mergedFinal.find(function(s){ return s.source===_beBest2; });
+                                    if (_syncSrc2 && _syncSrc2.ts) _pResult.bedEntryTs = _syncSrc2.ts;
+                                }
                             }
-                            _self.log.debug('[OC-BED-SOURCES] ' + person + ': fp2-Quellen aus globalem Array nachgefuellt');
+                            _self.log.debug('[OC-BED-SOURCES] ' + person + ': fp2-Quellen aus globalem Array nachgefuellt (FP2-Guard: hasOwnNonFp2=' + _hasOwnNonFp2 + ')');
                         }
                     })();
 
