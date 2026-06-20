@@ -54,7 +54,9 @@ function computePersonSleep(p) {
     var wakeOverride  = p.wakeOverride  || null;
     var existingSnap  = p.existingSnap  || null;
     var sleepDate    = p.sleepDate;
-    var bathroomIds      = p.bathroomIds      || new Set();
+    var bathroomIds         = p.bathroomIds         || new Set();
+    // [OC-BAD-PERSON] IDs der Badezimmer-Sensoren die explizit dieser Person gehören
+    var personBathroomIds  = p.personBathroomIds  || new Set();
     var bedroomLocations = p.bedroomLocations  || [];
     var hopDistFn        = p.hopDistFn         || null;
     var noisySensorIds   = p.noisySensorIds    || new Set();
@@ -696,6 +698,12 @@ function computePersonSleep(p) {
             var ts = e.timestamp || 0;
             if (ts < obeWinS || ts > obeWinE) return false;
             if (e.isFP2Bed || e.isVibrationBed || e.isBedroomMotion) return false;
+            // [OC-BAD-PERSON] Badezimmer-Sensor Priorität: Hat die Person ein eigenes Bad (personBathroomIds),
+            // dann zählen fremde/ungetaggte Bäder NICHT für diese Person.
+            // Beispiel: EG Bad = Marc → OG Bad (kein personTag) wird für Marc herausgefiltert.
+            if ((e.isBathroomSensor || bathroomIds.has(e.id || '')) && personBathroomIds.size > 0) {
+                if (!personBathroomIds.has(e.id || '')) return false;
+            }
             // OC-OBE-HOP: Sensoren > 2 Hops vom Schlafzimmer ignorieren (z.B. OG-Bad bei EG-Schlafen)
             if (hopDistFn && bedroomLocations && bedroomLocations.length > 0 && e.location) {
                 var _obeHop = bedroomLocations.reduce(function(m, bl) {
@@ -4012,6 +4020,10 @@ class CogniLiving extends utils.Adapter {
                         existingSnap:  (_existingSnap&&_existingSnap.personData&&_existingSnap.personData[person])?_existingSnap.personData[person]:null,
                         sleepDate:     sleepDate,
                         bathroomIds:   _bathroomDevIds,
+                        // [OC-BAD-PERSON] Nur Bad-Sensoren dieser Person (personTag-Match)
+                        personBathroomIds: new Set((_self.config.devices||[]).filter(function(d){
+                            return (d.isBathroomSensor || d.sensorFunction === 'bathroom') && d.personTag === person;
+                        }).map(function(d){ return d.id; })),
                         bedroomLocations: (function() {
                             // [OC-BED-LOC] Person-spezifische bedroomLocations:
                             // Nur Bett-Sensoren der aktuellen Person verwenden.
