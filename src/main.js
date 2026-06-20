@@ -4012,7 +4012,21 @@ class CogniLiving extends utils.Adapter {
                         existingSnap:  (_existingSnap&&_existingSnap.personData&&_existingSnap.personData[person])?_existingSnap.personData[person]:null,
                         sleepDate:     sleepDate,
                         bathroomIds:   _bathroomDevIds,
-                        bedroomLocations: (_self.config.devices||[]).filter(function(d){return d.sensorFunction==='bed'||d.isBedroomMotion||d.isFP2Bed||d.isVibrationBed;}).map(function(d){return d.location;}).filter(function(l){return !!l;}).filter(function(v,i,a){return a.indexOf(v)===i;}),
+                        bedroomLocations: (function() {
+                            // [OC-BED-LOC] Person-spezifische bedroomLocations:
+                            // Nur Bett-Sensoren der aktuellen Person verwenden.
+                            // Verhindert: OG-Bad (Hop 1 von OG Kind) gilt als "nahe genug" fuer
+                            // Marc's Hop-Filter, obwohl Marc in EG Schlafen schlaeft.
+                            // Logik: 1) Sensoren mit passendem personTag 2) Fallback: alle Bett-Sensoren
+                            var _allBedDev = (_self.config.devices||[]).filter(function(d){
+                                return d.sensorFunction==='bed'||d.isBedroomMotion||d.isFP2Bed||d.isVibrationBed;
+                            });
+                            var _personBedDev = _allBedDev.filter(function(d){ return d.personTag === person; });
+                            var _bedDev = _personBedDev.length > 0 ? _personBedDev : _allBedDev;
+                            return _bedDev.map(function(d){ return d.location; })
+                                .filter(function(l){ return !!l; })
+                                .filter(function(v,i,a){ return a.indexOf(v)===i; });
+                        })(),
                         hopDistFn:     _self._roomHopDistance.bind(_self),
                        noisySensorIds: (_self && _self._noisySensorIds) ? _self._noisySensorIds : new Set(),
                         adaptiveVib:   (_self && _self.config && _self.config.adaptiveVibThresholds !== false),
