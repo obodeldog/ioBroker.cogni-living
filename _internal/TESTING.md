@@ -6,6 +6,17 @@
 
 ---
 
+## 🧪 v0.33.322 — 6 Fixes: Aufwach-Guard, VIB-Artefakt, Bad-SM, fp2-Reorder, Garmin-Wach (24.06.2026)
+
+| ID | Testfall | Erwartetes Ergebnis | Geprüft am | ✅/❌ |
+|---|---|---|---|---|
+| T-K322a | VIB-Kalibrierungs-Tabelle (SystemTab) öffnen | Erste Zeile heißt „Haus-Basis (Ø alle Betten)" (nicht mehr „Global (Haushalt)"); Info-Kasten erklärt die Bedeutung. | | |
+| T-K322b | Nacht mit VIB-only-Person (Bett in anderem Raum als Radar), z.B. Jana/Julia im OG | Aufwachzeit ist NICHT identisch mit Marcs Radar-Zeit; Quelle ist nicht „Radar". Mitbewohner im selben Radar-Zimmer (Anni/EG) behalten Radar. | | |
+| T-K322c | VIB-Person mit isoliertem Stör-/Stärke-Event Stunden nach dem Aufwachen | `vibration_alone`/Aufwachzeit springt NICHT auf den Ausreißer (z.B. 11:46); echte letzte Bewegung gewinnt. | | |
+| T-K322d | Gemeinsam genutztes Bad ohne personTag, eine Person geht nachts ins Bad | Nur die Person mit eigenem Vib-Trigger (±6 Min ums Bad-Event) zeigt „Bad"; die schlafende Person nicht. | | |
+| T-K322e | VIB-only-Person ohne Radar, Abend-Bett-Eintritt | „Ins Bett gegangen" zeigt eigene Vib-Quelle (`vib_refined`), NICHT fremdes „Radar HH:MM". | | |
+| T-K322f | Garmin-Nutzer mit Wach-Phasen in der Nacht (awakeSleepSeconds vorhanden) | Smartwatch-Referenz zeigt zusätzlich „Wach Xmin" (oranger Punkt) neben Tief/Leicht/REM. | | |
+
 ## 🧪 v0.33.296 - OC-56 Write-Ahead-Eventlog + Neustart-Detektor (11.06.2026)
 
 | ID | Testfall | Erwartetes Ergebnis | Geprüft am | ✅/❌ |

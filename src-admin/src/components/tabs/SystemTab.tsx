@@ -102,6 +102,21 @@ export default function SystemTab(props: any) {
         const vcTimer = setInterval(loadVC, 5 * 60 * 1000);
         return () => clearInterval(vcTimer);
     }, [socket, namespace]);
+    const [vibCalibResettingTarget, setVibCalibResettingTarget] = useState<string | null>(null);
+    const handleResetVibCalibFor = async (target: string, displayName: string) => {
+        const isGlobal = target === 'global';
+        const msg = isGlobal
+            ? `Kalibrierung für "Haus-Basis (Ø alle Betten)" zurücksetzen? Nur der Haushalts-Mittelwert wird gelöscht — persönliche Schwellen bleiben erhalten.`
+            : `Kalibrierung für "${displayName}" zurücksetzen? AURA lernt für diese Person neu (3–7 Nächte).`;
+        if (!window.confirm(msg)) return;
+        setVibCalibResettingTarget(target);
+        try {
+            await socket.sendTo(`${adapterName}.${instance}`, 'resetVibCalib', { target });
+            const _rvS: any = await socket.getState(namespace + '.analysis.health.vibCalibData');
+            if (_rvS && _rvS.val) { try { setVibCalibData(JSON.parse(_rvS.val)); } catch(_e) {} } else { setVibCalibData(null); }
+        } catch(_rvcE) { /* ignore */ }
+        setVibCalibResettingTarget(null);
+    };
 
     // 1. Hole alle verfügbaren Räume aus der Config für das Dropdown
     const availableRooms = useMemo(() => {
@@ -687,6 +702,7 @@ export default function SystemTab(props: any) {
                 <Alert severity="info" sx={{ mb: 1.5, py: 0.4, fontSize: '0.72rem' }}>
                     AURA lernt über mehrere Nächte die <b>persönlichen Vibrationsmuster</b> für adaptive Wake/REM/Tief-Schlaf-Erkennung.
                     Nach <b>3 Nächten</b> beginnt die Kalibrierung, nach <b>7 Nächten</b> sind die Schwellen stabil.
+                    Die Zeile <b>„Haus-Basis (Ø alle Betten)"</b> ist kein eigenes Bett, sondern der Durchschnitt aller Vibrationssensoren — er dient nur als Start-Schwelle für neue Personen, die noch keine eigene Kalibrierung haben.
                 </Alert>
 
                 {/* Adaptive Toggle */}
@@ -712,10 +728,10 @@ export default function SystemTab(props: any) {
                 {/* Kalibrierungs-Tabelle */}
                 {vibCalibData?.rolling && (() => {
                     const roll = vibCalibData.rolling;
-                    const allEntries: Array<{name: string, data: any}> = [];
-                    if (roll.global) allEntries.push({ name: 'Global (Haushalt)', data: roll.global });
+                    const allEntries: Array<{name: string, target: string, data: any}> = [];
+                    if (roll.global) allEntries.push({ name: 'Haus-Basis (Ø alle Betten)', target: 'global', data: roll.global });
                     Object.entries(roll.persons || {}).forEach(([pName, pData]: [string, any]) => {
-                        allEntries.push({ name: pName, data: pData });
+                        allEntries.push({ name: pName, target: pName, data: pData });
                     });
                     if (allEntries.length === 0) return null;
                     return (
@@ -734,10 +750,11 @@ export default function SystemTab(props: any) {
                                             <TableCell align="center">Tief-Trigger ≤</TableCell>
                                             <TableCell align="center">Fortschritt</TableCell>
                                             <TableCell align="center">Status</TableCell>
+                                            <TableCell align="center" sx={{ width: 32, px: 0.5 }}></TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {allEntries.map(({ name, data }) => {
+                                        {allEntries.map(({ name, target, data }) => {
                                             const n = data.nightCount ?? 0;
                                             const pct = Math.min(100, Math.round((n / 7) * 100));
                                             const stat = data.status || 'uncalibrated';
@@ -768,7 +785,29 @@ export default function SystemTab(props: any) {
                                                         </Box>
                                                     </TableCell>
                                                     <TableCell align="center">
-                                                        <Chip label={statLabel} size="small" sx={{ fontSize: '0.68rem', height: 18, bgcolor: chipBg, color: chipColor }} />
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                                                            <Chip label={statLabel} size="small" sx={{ fontSize: '0.68rem', height: 18, bgcolor: chipBg, color: chipColor }} />
+                                                            {data.driftWarning && (
+                                                                <Tooltip title="Sensor-Drift erkannt — Vibrationsmuster stark verändert">
+                                                                    <WarningAmberIcon sx={{ fontSize: 13, color: '#f57c00' }} />
+                                                                </Tooltip>
+                                                            )}
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="center" sx={{ px: 0.5 }}>
+                                                        <Tooltip title={`Kalibrierung für "${name}" zurücksetzen`}>
+                                                            <span>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    color="warning"
+                                                                    disabled={vibCalibResettingTarget === target}
+                                                                    onClick={() => handleResetVibCalibFor(target, name)}
+                                                                    sx={{ p: 0.3 }}
+                                                                >
+                                                                    <ClearIcon sx={{ fontSize: 14 }} />
+                                                                </IconButton>
+                                                            </span>
+                                                        </Tooltip>
                                                     </TableCell>
                                                 </TableRow>
                                             );
@@ -787,6 +826,17 @@ export default function SystemTab(props: any) {
                                     Kalibrierung startet automatisch nach der ersten analysierten Nacht.
                                 </Typography>
                             )}
+                            {/* OC-VIB-CAL: Drift-Warnung (mindestens eine Zeile hat driftWarning) */}
+                            {vibCalibData?.rolling && (() => {
+                                const _anyDrift = [vibCalibData.rolling.global, ...Object.values(vibCalibData.rolling.persons || {})].some((d: any) => d?.driftWarning);
+                                if (!_anyDrift) return null;
+                                return (
+                                    <Alert severity="warning" icon={<WarningAmberIcon fontSize="small" />} sx={{ mt: 1, py: 0.4, fontSize: '0.72rem' }}>
+                                        <b>Sensor-Drift erkannt</b> — Vibrationsmuster hat sich stark verändert (⚠ in der Tabelle).
+                                        {' '}Wurde der Sensor verschoben? Dann ↺ in der Zeile klicken um neu zu kalibrieren.
+                                    </Alert>
+                                );
+                            })()}
                         </Box>
                     );
                 })()}

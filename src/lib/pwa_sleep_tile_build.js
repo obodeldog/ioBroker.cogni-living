@@ -80,6 +80,7 @@ function pickSd(raw) {
         garminDeepMin: raw.garminDeepMin != null ? Number(raw.garminDeepMin) : null,
         garminLightMin: raw.garminLightMin != null ? Number(raw.garminLightMin) : null,
         garminRemMin: raw.garminRemMin != null ? Number(raw.garminRemMin) : null,
+        garminWakeMin: raw.garminWakeMin != null ? Number(raw.garminWakeMin) : null,
         sleepWindowStart: raw.sleepWindowStart ?? null,
         sleepWindowEnd: raw.sleepWindowEnd ?? null,
         stagesWindowStart: raw.stagesWindowStart ?? null,
@@ -105,6 +106,8 @@ function pickSd(raw) {
         bedExitTs: raw.bedExitTs ?? null,
         smWakePhases: Array.isArray(raw.smWakePhases) ? raw.smWakePhases : [],
         bedAbsenceEvents: Array.isArray(raw.bedAbsenceEvents) ? raw.bedAbsenceEvents : [],
+        // [P-PSA-FIX] preSleepAbsenceEvents war nicht in pickSd() -> Overlay nie sichtbar
+        preSleepAbsenceEvents: Array.isArray(raw.preSleepAbsenceEvents) ? raw.preSleepAbsenceEvents : [],
         excluded: !!raw.excluded
     };
 }
@@ -654,11 +657,13 @@ function buildSleepTilePayload(raw) {
             sd.garminDeepMin != null ||
             sd.garminLightMin != null ||
             sd.garminRemMin != null ||
+            sd.garminWakeMin != null ||
             sd.garminScore != null
                 ? {
                       deep: sd.garminDeepMin,
                       light: sd.garminLightMin,
                       rem: sd.garminRemMin,
+                      wake: sd.garminWakeMin,
                       score: sd.garminScore
                   }
                 : null,

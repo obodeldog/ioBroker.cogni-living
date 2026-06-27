@@ -7,6 +7,194 @@ Neue offene Konzepte immer OBEN in den Abschnitt "🚧 OFFENE KONZEPTE" einfüge
 
 ---
 
+## 🚧 OC-WAKE-SM: Personenbezogene Aufwach-State-Machine (24.06.2026)
+
+> **Status:** Offen — Konzept dokumentiert. Kurzfristiger Guard (P2 = OC-WAKE-GUARD) ist in v0.33.322 implementiert; die vollständige State Machine ist die langfristige Lösung.
+
+### Problem (real beobachtet, Nacht 22./23.06.2026)
+
+Jana und Julia (beide nur Matratzen-Vibrationssensor, Bett im OG) bekamen **exakt dieselbe Aufwachzeit 05:14** mit Quelle „Radar". Beide haben gar keinen Radar. Ursache: Der einzige Radar (`Radar EG Schlafzimmer`, Marcs Zimmer) trägt **keinen personTag** → `isMine()` liefert für ALLE Personen `true` → die globale `firstEmpty` (Marc verlässt um 05:14 kurz das Bett für einen Toilettengang) wurde allen als Aufwachzeit zugeschrieben.
+
+### Kurzfristiger Fix (umgesetzt, P2 / OC-WAKE-GUARD)
+
+Beim per-Person-Aufruf von `computePersonSleep` wird `fp2WakeTs` nur noch übergeben, wenn:
+- die Person **keinen** eigenen Bett-Sensor hat (Fallback wie bisher), ODER
+- im **eigenen Schlafzimmer** der Person tatsächlich ein FP2/Radar steht.
+
+Hat die Person einen eigenen Sensor in einem anderen Raum (Jana/Julia im OG), wird die fremde Radar-Aufwachzeit nicht mehr geerbt → sie fällt auf eigene Signale (`vibration_alone` etc.) zurück. Mitbewohner im selben Radar-Zimmer (z.B. Anni in EG Schlafen) behalten den Radar korrekt.
+
+### Langfristige Lösung: echte State Machine pro Person
+
+Für Marc existiert bereits OC-45a/b/c (POST_WAKE / SLEEPING / PRE_SLEEP), die aber mit Marcs Zimmer-Sensoren gefüttert und global gespeichert wird. Es fehlt eine **äquivalente, personenbezogene** Aufwach-SM für VIB-only-Personen:
+
+```
+Zustände:  SCHLÄFT → UNRUHIG → WACH → AUF
+Übergänge: NUR mit eigenen Sensoren (VIB der Person, ggf. Hop-1 Flur/Bad)
+Fallback:  globaler FP2/Radar nur wenn Person keinerlei eigene Sensoren hat
+```
+
+- `SCHLÄFT → UNRUHIG`: dichte eigene Vib-Cluster gegen Morgen (Pendant zu `vib_wake_cluster`)
+- `UNRUHIG → WACH`: letzter Vib mit ≥45 Min Stille danach (Pendant zu `vibration_alone`, aber mit Artefakt-Guard P3)
+- `WACH → AUF`: Hop-1-Bewegung (Flur/Bad der Person) nach dem WACH-Zeitpunkt → liefert `bedExitTs` (heute fehlt dieser für VIB-only-Personen, siehe P3-Diskussion)
+
+### Nutzen
+- Korrekte, voneinander unabhängige Aufwachzeiten pro Person ohne fremde Radar-Kontamination
+- Liefert zusätzlich `bedExitTs` (Aufstehen) für VIB-only-Personen
+- Quellenneutral: funktioniert mit jeder Sensorkombination, Konfidenz-basiert
+
+---
+
+## 🚧 OC-BAD-ARBITER: Cross-Person-Schiedsrichter für gemeinsame Bäder (24.06.2026)
+
+> **Status:** Offen. Per-Person-Variante (P4 / OC-BAD-SM) ist in v0.33.322 implementiert; der zentrale Arbiter ist die robustere Erweiterung.
+
+### Problem
+Ein gemeinsam genutztes Bad ohne personTag (OG Bad für Jana+Julia) wurde **allen** Personen im Hop-Bereich zugeschrieben — beide sahen „Bad 04:42". Physikalisch kann nur eine Person gleichzeitig dort sein.
+
+### Umgesetzt (P4 / OC-BAD-SM, per Person)
+Jede Person prüft ihre **eigene Aufsteh-Signatur**: Gab es rund um das Bad-Event (±6 Min) einen eigenen Matratzen-Vib-Trigger (Gewichtsverlagerung beim Aufstehen)? Falls nicht → Person lag im Tiefschlaf → Bad-Event entfernen. Funktioniert für die Nacht 23.06.: Jana hat Trigger 04:40/04:44 → behält; Julia letzter Trigger 04:20 → Bad entfernt.
+
+### Erweiterung (offen): zentraler Arbiter
+Statt jede Person isoliert entscheiden zu lassen, ein **Scoring über alle Kandidaten** pro physischem Bad-Event:
+- `preActivity` (eigene Vib in [start-5min, start]) + `postActivity` (eigene Vib in [end, end+5min])
+- Person mit höchstem Score „gewinnt" das Bad-Event, alle anderen verlieren es.
+- Vorteil: auch wenn mehrere Personen eine schwache Signatur haben, wird eindeutig EINE zugeordnet.
+
+---
+
+## 🚧 OC-PIR-STUCK-NOCTURIA: PIR-Stuck-Erkennung für Nacht-Badbesuche (19.06.2026)
+
+> **Status:** Offen — Konzept dokumentiert, noch nicht implementiert.
+
+### Problem (real beobachtet, Nacht 18./19.06.2026)
+
+Der Bad-PIR (Zigbee EG Bad Bewegung) blieb nach dem Abend-Badezimmerbesuch um **22:46 Uhr** durchgehend auf `true` — ohne automatischen Reset. Erst um **03:02:49 Uhr** kam das erste `false`-Signal. Der eigentliche Nacht-Badezimmerbesuch um ~03:00 Uhr feuerte zwar nochmal `true` (03:00:31), aber:
+
+- ioBroker loggt nur **Zustandsänderungen** (Flanken)
+- `true → true` = keine Änderung = **kein Event** → AURA hat den 03:00-Besuch nie gesehen
+- Einziger sichtbarer Event war das `false` um 03:02:49 (Verlassen des Bad)
+
+Resultat: `nocturiaCount=1` wurde korrekt gezählt (via `false`-Flanke), aber kein Timestamp und kein visueller Marker in der Schlafkachel.
+
+### Ursache
+
+PIR-Sensoren sollten nach ~30–60 Sek Inaktivität automatisch auf `false` gehen (Occupancy-Timeout). Dieser Sensor hat das nicht getan — **PIR-Stuck-Bug** über 4h 16min.
+
+Normales PIR-Verhalten (korrekt):
+```
+22:46 → true (Betreten)
+22:47 → false (Timeout, kein Mensch mehr erkannt)
+03:00 → true (neue Flanke! Betreten erkannt)
+03:02 → false (Verlassen)
+```
+
+Tatsächliches Verhalten (defekt):
+```
+22:46 → true (Betreten)
+--- 4h 16min kein false! ---
+03:00 → true (kein neues Event in ioBroker, weil true=true)
+03:02 → false (Verlassen — einziger Event der ankommt)
+```
+
+### Lösungskonzept: OC-PIR-STUCK-GUARD für Non-Bedroom PIRs
+
+**Idee:** Für PIR-Sensoren die NICHT im Schlafzimmer/Bett-Bereich liegen (Bad, Diele, Flur, Wohnzimmer), gilt:
+- Haltezeit ≥ 30 Min auf `true` ohne neue Aktivität → **Soft-Reset**: intern als `false` behandeln
+- Bei nächstem echten `true`-Event: wieder gültige Flanke → wird korrekt als Betreten registriert
+
+**Vorteil gegenüber OC-STUCK (bestehend):**
+- OC-STUCK kümmert sich primär um Bedroom-PIRs die fälschlicherweise Aktivitätszeit aufblähen
+- OC-PIR-STUCK-GUARD kümmert sich um Non-Bedroom PIRs deren Stuck-Zustand die **Flanken-Erkennung für Nacht-Events kaputt macht**
+
+**Umsetzungsvorschlag:**
+```javascript
+// In scanner.js oder recorder.js:
+// Für jeden Non-Bedroom PIR (isBathroomSensor, isHallSensor etc.):
+// Wenn seit letztem true > 30 Min vergangen → virtuell als false markieren (lastKnownState reset)
+// Dann: nächstes true = echte Flanke = nachtAufstehenEvent kann korrekt feuern
+```
+
+### Downstream-Effekt: nocturia mit Zeitstempel
+
+Wenn die Flanken korrekt kommen (`true` beim Betreten, `false` beim Verlassen), kann `nachtAufstehenEvents` auch Nacht-Badbesuche INNERHALB der Schlafphase (nicht nur post-wake) als Einträge mit Start/Ende und Sensor-Namen speichern — was dann im Schlafbalken als Marker visualisierbar wäre.
+
+### Priorität: MITTEL
+- `nocturiaCount` funktioniert (über `false`-Flanke) — Zählung ist korrekt
+- Was fehlt: Zeitstempel + Visualisierung des Nacht-Badbesuchs im Schlafbalken
+- Vollständige Lösung = OC-PIR-STUCK-GUARD + nachtAufstehenEvents auf Schlafphase erweitern
+
+---
+
+## 🚧 OC-DAY-BED: Tageszeitliches Bett-Liegen vs. Nachtschlaf unterscheiden (17.06.2026)
+
+> **Status:** Offen — noch kein Lösungskonzept implementiert.
+> **Auslöser:** Diskussion 17.06.2026 — Jugendliche (Julia, Jana, Anni) nutzen ihr Bett tagsüber zum Herumliegen/Handy-Spielen, was die Sensordaten verfälscht.
+
+### Problem
+
+Vibrationssensoren und FP2-Radarsensoren in Kinderzimmern registrieren regelmäßige Bett-Aktivität auch **außerhalb typischer Schlafzeiten** (z.B. 15–19 Uhr). Das führt zu:
+- Falsche `bedEntryTs` (IIFE wählt frühesten stabilen VIB-Moment → 17:xx oder 18:xx statt echtem Schlafgehen)
+- Verfälschte Schlafdauern (Balken startet viel zu früh)
+- Rote „Außerhalb"-Segmente weil Abend-Familienleben zwischen frühem bedEntryTs und Einschlafen liegt
+- Potentiell falscher AURA-Score wenn Stages-Berechnung mit tagsüber-Daten kontaminiert wird
+
+### Lösungsrichtungen
+
+**A) Zeitfenster-Heuristik:** Für Jugendliche (nicht Marc/Julia-Erwachsene) bedEntryTs nur ab 21:00 Uhr erlauben — basierend auf personTag + Altersgruppe (Config).
+
+**B) Bewegungs-Korrelation:** Echtes Schlaf-Hinlegen hat typischerweise:
+- Lange Phase ohne Außerhalb-PIR-Events davor UND danach (Haus wird „still")
+- Gleichmäßige, niedrige VIB-Stärke (nicht gelegentliche Bewegungen beim Herumwälzen)
+- Zeitlich nach `haus_still`-Zeitpunkt
+
+Tagsüber-Liegen dagegen: Außerhalb-PIR-Events laufen weiter (Familienmitglieder bewegen sich), VIB-Muster unregelmäßig.
+
+**C) Zweistufige bedEntryTs-Erkennung:**
+- Stufe 1: Frühes `bedEntryTs` (erste Anwesenheit, wie jetzt)
+- Stufe 2: `bedEntryTs_sleep` = letzter Eintritt kurz vor echtem Einschlafen (aus Cluster mit sleepWindowStart)
+- Anzeige: nur Stufe 2 (`bedEntryTs_sleep`) — Stufe 1 intern für Wachliegen-Berechnung
+
+**D) Erwachsene (Marc, Julia):** Problem betrifft diese weniger, da Erwachsene seltener tagsüber schlafen. Für sie reicht die bestehende Logik mit verbessertem candFp2Anchor.
+
+### Betroffene Personen im Haushalt
+- Julia (Jugendliche, Vibrationssensor, kein Radar): direkt betroffen
+- Jana, Anni (Kinder/Jugendliche, OG): ebenfalls betroffen wenn VIB-Sensor aktiv
+- Marc: weniger betroffen (FP2 + klarere Schlafzeiten)
+
+### Nächster Schritt
+Lösungsrichtung C (Zweistufig) und B (Bewegungs-Korrelation) kombinieren. Erst wenn OC-BED-SOURCES-Sync (v0.33.318+) stabil ist.
+
+---
+
+## 🚧 OC-VIB-EXIT: Aufstehen für VIB-only Personen (17.06.2026)
+
+> **Status:** Offen — noch kein Code implementiert.
+> **Auslöser:** Julia hat keinen FP2/Radar → `bedExitTs` = null, keine Aufsteh-Zeit in der Analyse.
+
+### Problem
+
+`bedExitTs` (Aufgestanden) wird aktuell primär über FP2=0 erkannt (Bett leer). Für Personen **ohne Radar** (reine VIB-Sensor-Konfiguration) fehlt ein verlässlicher Exit-Detektor.
+
+VIB allein ist nicht eindeutig: kein Signal = schläft tief ODER liegt wach still ODER ist aufgestanden.
+
+### Lösungskonzept (PIR-Korrelation)
+
+```
+VIB geht still (letzte VIB-Aktivität + X Min Pause)
++
+PIR Hop≤2 (Flur, Bad) feuert innerhalb ~15 Min
+→ bedExitTs = VIB-quiet-Zeitpunkt (hohe Konfidenz)
+```
+
+Wichtig: im Mehrpersonen-Haushalt muss der PIR-Trigger **zeitlich korreliert** sein, nicht nur irgendwann. Wenn VIB still und PIR ≤15 Min danach → wahrscheinlich die gleiche Person.
+
+Konfidenz-Stufen:
+- VIB quiet ≥20 Min + PIR ≤15 Min danach: `high`
+- VIB quiet ≥10 Min + PIR ≤10 Min danach: `medium`
+- Nur VIB quiet (kein PIR): `low` (kein bedExitTs setzen)
+
+---
+
 ## ✅ OC-VIB-CAL: Per-Person Vibrationsintensitäts-Kalibrierung (09.06.2026) — implementiert in v0.33.287
 
 > **Status:** Stufe 1 (single-night p90) IMPLEMENTIERT in v0.33.287.

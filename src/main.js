@@ -557,7 +557,16 @@ function computePersonSleep(p) {
     for (var _vwi = 0; _vwi < _vibEvtsWk.length; _vwi++) {
         var _vwTs = _vibEvtsWk[_vwi].timestamp||0;
         var _vwNext = _vibEvtsWk[_vwi+1] ? (_vibEvtsWk[_vwi+1].timestamp||0) : null;
-        if (!_vwNext || _vwNext - _vwTs >= 45*60*1000) { _vibAloneWakeTs = _vwTs; }
+        if (!_vwNext || _vwNext - _vwTs >= 45*60*1000) {
+            // [OC-VIB-ARTIFACT] Fix P3: isoliertes Einzel-Event verwerfen.
+            // Ein echtes Aufsteh-/Bewegungssignal hat >=1 weiteres Vib-Event in den 10 Min davor.
+            // Ein isolierter Stoer-Ausreisser (z.B. Janas Phantom-Staerke 11:46 nach Stunden Stille)
+            // wird so nicht faelschlich zur Aufwachzeit. Events sind aufsteigend sortiert -> nur
+            // direkten Vorgaenger pruefen genuegt.
+            var _vwPrev = (_vwi > 0) ? (_vibEvtsWk[_vwi-1].timestamp||0) : null;
+            var _vwIsolated = (_vwPrev === null) || (_vwTs - _vwPrev > 10*60*1000);
+            if (!_vwIsolated) _vibAloneWakeTs = _vwTs;
+        }
     }
 
     // vibWakeTs: letztes Vib-Event VOR fp2WakeTs (Bestaetiger)
@@ -745,6 +754,37 @@ function computePersonSleep(p) {
             }
         });
         if (obeCluster) obePush(obeCluster);
+
+        // [OC-BAD-SM] Fix P4: VIB-basierte Bad-Zuordnung — State Machine "wer ist aufgestanden?".
+        // Problem: Ein gemeinsam genutztes Bad ohne personTag (z.B. OG Bad fuer Jana+Julia) wurde
+        // ALLEN Personen im Hop-Bereich zugeschrieben. Physikalisch kann aber nur EINE Person
+        // gleichzeitig im Bad sein.
+        // State-Machine-Kern (pro Person, nur wenn KEIN eigenes personTag-Bad vorhanden):
+        //   Zustand IM_BETT --(eigener Vib-Trigger kurz vor Bad-Event)--> AUFGESTANDEN --> IM_BAD.
+        // Wer ein eigenes Matratzen-Vibrationsbett hat, erzeugt beim Aufstehen IMMER einen
+        // Vib-Trigger (Gewichtsverlagerung). Fehlt diese Aufsteh-Signatur rund um das Bad-Event,
+        // lag die Person im Tiefschlaf und ist NICHT aufgestanden -> Bad-Event fuer sie entfernen.
+        // Beispiel 23.06.: Jana Vib 04:40/04:42 + Rueckkehr 04:44 -> Jana. Julia letzte Vib 04:22,
+        // naechste 04:49 -> kein Aufstehen -> Julias 04:42-Bad wird entfernt.
+        var _ownVibTrigSM = allEvents.filter(function(e){
+            return isMine(e) && e.isVibrationBed && !e.isVibrationStrength
+                && (isActiveValue(e.value) || toPersonCount(e.value) > 0);
+        });
+        if (_ownVibTrigSM.length > 0 && personBathroomIds.size === 0) {
+            obe = obe.filter(function(evt){
+                if (evt.type !== 'bathroom') return true;
+                var _preActive = _ownVibTrigSM.some(function(e){
+                    var t = e.timestamp||0; return t >= evt.start - 6*60000 && t <= evt.start + 60000;
+                });
+                var _postActive = _ownVibTrigSM.some(function(e){
+                    var t = e.timestamp||0; return t >= evt.end - 60000 && t <= evt.end + 6*60000;
+                });
+                if (_preActive || _postActive) return true;
+                if (log) log.debug(logPfx + 'OC-BAD-SM: Bad-Event ' + new Date(evt.start).toLocaleTimeString()
+                    + ' entfernt (keine eigene Aufsteh-Vibration -> andere Person war im Bad)');
+                return false;
+            });
+        }
 
         // OC-33 Teil A: returnSensor-Attribution
         // Wenn nachtAufstehenWindow-Rueckkehr in ein fremdes Schlafzimmer zeigt -> other_person
@@ -3728,7 +3768,7 @@ class CogniLiving extends utils.Adapter {
             // --- Garmin-Validierung (optional) --------------------------------------------
             // Liest den Garmin-Sleep-Score wenn konfiguriert ? graceful fallback
             var garminScore = null;
-            var garminDeepSec = null, garminLightSec = null, garminRemSec = null;
+            var garminDeepSec = null, garminLightSec = null, garminRemSec = null, garminAwakeSec = null;
             var garminStateId = (this.config.garminSleepScoreStateId || '').trim()
                 || 'garmin.0.dailysleep.dailySleepDTO.sleepScores.overall.value';
             try {
@@ -3743,13 +3783,18 @@ class CogniLiving extends utils.Adapter {
             var garminDeepId  = (this.config.garminDeepSleepStateId  || '').trim() || 'garmin.0.dailysleep.dailySleepDTO.deepSleepSeconds';
             var garminLightId = (this.config.garminLightSleepStateId || '').trim() || 'garmin.0.dailysleep.dailySleepDTO.lightSleepSeconds';
             var garminRemId   = (this.config.garminRemSleepStateId   || '').trim() || 'garmin.0.dailysleep.dailySleepDTO.remSleepSeconds';
+            // [P6] Garmin Wach-Phasen (awakeSleepSeconds). Default folgt dem dailySleepDTO-Pfad,
+            // ueberschreibbar via config.garminAwakeSleepStateId.
+            var garminAwakeId = (this.config.garminAwakeSleepStateId || '').trim() || 'garmin.0.dailysleep.dailySleepDTO.awakeSleepSeconds';
             try {
                 var gd = await this.getForeignStateAsync(garminDeepId);
                 var gl = await this.getForeignStateAsync(garminLightId);
                 var gr = await this.getForeignStateAsync(garminRemId);
+                var gw = await this.getForeignStateAsync(garminAwakeId);
                 if (gd && gd.val != null) garminDeepSec  = Number(gd.val) || null;
                 if (gl && gl.val != null) garminLightSec = Number(gl.val) || null;
                 if (gr && gr.val != null) garminRemSec   = Number(gr.val) || null;
+                if (gw && gw.val != null) garminAwakeSec = Number(gw.val) || null;
             } catch(e) {}
 
             // Sleep Validation State speichern (fuer SQL-Logging)
@@ -3763,6 +3808,7 @@ class CogniLiving extends utils.Adapter {
                     garminDeepMin:  garminDeepSec  ? Math.round(garminDeepSec  / 60) : null,
                     garminLightMin: garminLightSec ? Math.round(garminLightSec / 60) : null,
                     garminRemMin:   garminRemSec   ? Math.round(garminRemSec   / 60) : null,
+                    garminWakeMin:  garminAwakeSec ? Math.round(garminAwakeSec / 60) : null,
                     timestamp: Date.now()
                 };
                 try {
@@ -4005,6 +4051,27 @@ class CogniLiving extends utils.Adapter {
                             return;
                         }
                     }
+                    // [OC-WAKE-GUARD] Fix P2: VIB-only Personen erben NICHT die globale FP2/Radar-Aufwachzeit.
+                    // Problem: Der Radar (firstEmpty) hat keinen personTag -> isMine()=true fuer ALLE.
+                    // Dadurch bekamen Jana/Julia (Bett im OG, nur Vibration) Marc's Radar-Aufwachzeit (EG).
+                    // Regel (quellenneutral): Hat die Person einen EIGENEN Bett-Sensor (personTag), aber
+                    // steht KEIN FP2/Radar in IHREM Schlafzimmer -> globale firstEmpty ist physikalisch
+                    // nicht ihre Aufwachzeit -> fp2WakeTs=null (Person nutzt nur eigene Signale).
+                    // Mitbewohner im selben Radar-Zimmer (z.B. Anni in EG Schlafen) behalten den Radar.
+                    var _pWakeFp2 = (function() {
+                        var _gFirstEmpty = sleepWindowCalc.firstEmpty || null;
+                        if (!_gFirstEmpty) return null;
+                        var _devs = _self.config.devices || [];
+                        var _ownBedDev = _devs.filter(function(d){
+                            return (d.sensorFunction==='bed'||d.isBedroomMotion||d.isFP2Bed||d.isVibrationBed) && d.personTag === person;
+                        });
+                        if (_ownBedDev.length === 0) return _gFirstEmpty; // kein eigener Sensor -> wie bisher
+                        var _ownLocs = _ownBedDev.map(function(d){ return d.location; }).filter(function(l){ return !!l; });
+                        var _fp2InOwnRoom = _devs.some(function(d){
+                            return d.isFP2Bed && _ownLocs.indexOf(d.location) >= 0;
+                        });
+                        return _fp2InOwnRoom ? _gFirstEmpty : null;
+                    })();
                     // computePersonSleep: einheitlicher Algorithmus (Single-Source-of-Truth)
                     var _pResult = computePersonSleep({
                         allEvents:     sleepSearchEvents,
@@ -4012,7 +4079,7 @@ class CogniLiving extends utils.Adapter {
                         fp2RawStart:   null,
                         garminTs:      _pGarminTs,
                         garminWakeTs:  _pGarminWakeTs,
-                        fp2WakeTs:     sleepWindowCalc.firstEmpty || null,
+                        fp2WakeTs:     _pWakeFp2,
                         searchBase:    _sleepSearchBase,
                         wakeHardCap:   _wakeHardCapMs,
                         startOverride: (_personOverrides&&_personOverrides[person])?_personOverrides[person]:null,
@@ -4118,10 +4185,19 @@ class CogniLiving extends utils.Adapter {
                             var _nonFp2Srcs2 = _beSrcs2.filter(function(s) {
                                 return s.source !== 'fp2' && s.source !== 'fp2_vib' && s.source !== 'fp2_other';
                             });
+                            // [OC-BED-FP2-GUARD] Fix P5a (Reihenfolge): Hat die Person eigene Non-FP2-Quellen,
+                            // muessen auch BEREITS in _ownBeSrcs eingebackene fp2-Eintraege (vom personTag-losen
+                            // Radar, der via isMine()=true auch in computePersonSleep durchrutschte) entfernt
+                            // werden. Sonst behaelt z.B. Julia ihren fremden Radar-fp2=22:33 trotz Guard.
+                            var _ownBeClean = _hasOwnNonFp2
+                                ? _ownBeSrcs.filter(function(s) {
+                                    return s.source !== 'fp2' && s.source !== 'fp2_vib' && s.source !== 'fp2_other';
+                                  })
+                                : _ownBeSrcs;
                             // Merged: immer Non-FP2, FP2 nur wenn keine eigenen Non-FP2 vorhanden
                             var _mergedSrcs2 = _hasOwnNonFp2
-                                ? _ownBeSrcs.concat(_nonFp2Srcs2.filter(function(s) {
-                                    return !_ownBeSrcs.some(function(o){ return o.source===s.source; });
+                                ? _ownBeClean.concat(_nonFp2Srcs2.filter(function(s) {
+                                    return !_ownBeClean.some(function(o){ return o.source===s.source; });
                                   }))
                                 : _beSrcs2;
                             if (_mergedSrcs2.length > 0) {
@@ -5062,6 +5138,7 @@ class CogniLiving extends utils.Adapter {
                 garminDeepMin: garminDeepSec ? Math.round(garminDeepSec/60) : null,
                 garminLightMin: garminLightSec ? Math.round(garminLightSec/60) : null,
                 garminRemMin: garminRemSec ? Math.round(garminRemSec/60) : null,
+                garminWakeMin: garminAwakeSec ? Math.round(garminAwakeSec/60) : null,
                 sleepWindowSource: sleepWindowSource,
                 outsideBedEvents: outsideBedEvents,
                 sharedBedPeriods: _sharedBedPeriods,

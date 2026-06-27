@@ -890,15 +890,56 @@ Die OC-7-Kachel berechnet aus **Vibrationssensor-Daten** (Bett) geschätzte Schl
 
 ### Sensor-Konfigurationsebenen (Graceful Degradation)
 
-| Kombination | Sensor-Indikator | Einschlafzeit | Aufwachzeit | Phasen | Außerhalb-Events |
-|---|---|---|---|---|---|
-| **FP2 + Vibrationssensor** | ?? FP2-Sensor | ? Exakt | ? Exakt | ? Vollständig | ? Ja |
-| **Bewegungsmelder (Bett/Schlafzimmer) + Vibrationssensor** | ?? Bewegungsmelder + Vibration | ? Verfeinert via `motion_vib` (Vib + 20 Min Stille) | ?? Erste Bewegung >04:00 | ? Vollständig | ? Nein |
-| **Nur Vibrationssensor** | ? Schätzung | ? Fix 20:00 | ? Fix 09:00 | ? Vollständig | ? Nein |
-| **Nur FP2** | ?? FP2-Sensor | ? Exakt | ? Exakt | ? Keine | ? Ja |
-| **Keine Raumsensoren** | — | — | — | — | — |
+Die folgende Tabelle zeigt, welche der vier Kernzeiten und die Schlafphasen bei welcher Sensorkonfiguration erkennbar sind. **✅ = zuverlässig / ⚠️ = eingeschränkt / ❌ = nicht möglich**
 
-**Hinweis:** "Bewegungsmelder Schlafzimmer" = `type: motion` + `sensorFunction: bed` in der Sensor-Liste. Ohne `sensorFunction: bed` wird der Sensor ignoriert.
+| Sensor-Konfiguration | Ins Bett gegangen | Eingeschlafen | Schlafphasen | Aufgewacht | Aufgestanden |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **Nur Vibrationssensor** | ⚠️ | ⚠️ | ✅ | ⚠️ | ❌ |
+| **Nur FP2/Radar** | ✅ | ⚠️ | ⚠️ | ⚠️ | ✅ |
+| **VIB + FP2/Radar** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Nur PIR** (Schlafzimmer + Flur/Bad) | ❌ | ⚠️ | ❌ | ⚠️ | ⚠️ |
+| **VIB + PIR** (Flur/Bad Hop ≤ 2) | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ |
+| **FP2/Radar + PIR** | ✅ | ✅ | ⚠️ | ✅ | ✅ |
+| **VIB + FP2/Radar + PIR** (Vollkonfiguration) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **+ Garmin** (Ergänzung zu jeder Konfig) | ➕ | ✅+ | ✅+ | ✅+ | ➕ |
+| **Nur Garmin** (keine lokalen Sensoren) | ❌ | ✅ | ✅ | ✅ | ❌ |
+
+**➕** = verbessert die Konfidenz anderer Quellen, ergänzt aber keinen fehlenden Wert eigenständig.
+
+---
+
+#### Begründungen
+
+**Ins Bett gegangen:**
+- *Nur VIB* → ⚠️: VIB-Trigger löst auch beim Herumliegen am Abend aus (z. B. Jugendliche ab 17 Uhr). Frühe Falsch-Timestamps möglich.
+- *Nur PIR* → ❌: Letzter Schlafzimmer-PIR kein verlässliches Bett-Eintritts-Signal.
+- *Garmin* → ➕: Garmin kennt keine Bett-Eintrittszeit.
+
+**Eingeschlafen:**
+- *Nur VIB* → ⚠️: vib_refined (erste lange VIB-Ruhephase). Bei abendlichem Herumliegen oft kein klarer Übergang — sleepWindowStart kann null sein.
+- *Nur FP2* → ⚠️: candFp2Anchor ohne VIB-Refinement, weniger präzise. haus_still als Fallback.
+- *Nur PIR* → ⚠️: haus_still (alle Räume still) als grobe Schätzung.
+
+**Schlafphasen (tief / leicht / REM / wach):**
+- *Benötigt VIB*: Die Phasen-Berechnung basiert vollständig auf vibration_strength und vibration_trigger. Ohne VIB: alle Slots = "leicht" — kein Wake/Tief/REM erkennbar.
+- *Nur FP2* → ⚠️: FP2 erkennt Makrobewegungen, aber keine feingranularen Intensitäten. Ergebnis: einheitlicher "leicht"-Balken.
+- *Nur PIR* → ❌: Zu grob für Schlafphasen.
+- *+ Garmin* → ✅+: Garmin-Stages als Overlay und zur Score-Kalibrierung.
+
+**Aufgewacht:**
+- *Nur VIB* → ⚠️: vib_wake_cluster (erste dichte VIB-Häufung am Morgen). Niedrige Konfidenz ohne Bewegungsbestätigung.
+- *VIB + PIR* → ✅: motion_vib — VIB-Cluster + PIR-Bestätigung ist eine der zuverlässigsten Quellen.
+- *Nur PIR* → ⚠️: Im Mehrpersonen-Haushalt unzuverlässig (Familienangehörige können PIR auslösen).
+
+**Aufgestanden:**
+- *Nur VIB* → ❌: VIB-Stille allein nicht eindeutig. Die Post-Wake State Machine (OC-45a) braucht mindestens ein Außerhalb-Signal (FP2=leer, Bad-PIR oder Flur-PIR) um DEPARTED zu erkennen.
+- *PIR Flur/Bad* → ⚠️: Bad-PIR oder Flur-PIR geben +2 Punkte in OC-45a — DEPARTED erkennbar. Im Mehrpersonen-Haushalt unsicher (jede Person kann PIR auslösen).
+- *FP2* → ✅: FP2=leer gibt +3 Punkte — sofort DEPARTED. Eindeutigste Quelle.
+- *Garmin* → ➕: Garmin hat keinen Aufsteh-Zeitpunkt.
+
+**Hinweis:** "PIR Flur/Bad Hop ≤ 2" = Bewegungsmelder maximal 2 Räume vom Schlafzimmer entfernt (z. B. Flur, Bad). In AURA konfigurierbar über die Topologie-Tabelle im System-Tab.
+
+**Hinweis:** "Bewegungsmelder Schlafzimmer" = type: motion + sensorFunction: bed in der Sensor-Konfiguration. Ohne diese Zuweisung wird der Sensor für Bett-Erkennung ignoriert.
 
 **Algorithmus Bewegungsmelder-Fallback (ab v0.33.152):**
 - **Einschlafzeit ˜** letztes Bewegungs-Event (Schlafzimmer) zwischen 18:00–03:00 Uhr, das von mindestens **30 Minuten** Stille gefolgt wird (vorher: 45 Min; Fenster-Ende 04:00 als Fallback statt Date.now())

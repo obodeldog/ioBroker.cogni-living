@@ -1620,6 +1620,8 @@ export default function HealthTab(props: any) {
         const _allBedEntryRaw: {source:string, ts:number|null}[] = (sd as any)?.allBedEntrySources ?? [];
         const allBedEntrySourcesArr: {source:string, ts:number|null}[] = _allBedEntryRaw.filter(bs => {
             if (!bs.ts) return false; // ohne Timestamp nicht sinnvoll
+            // [OC-BED-SOURCES-CUTOFF] Quellen nach Einschlafzeit können kein Bett-Eintrag sein
+            if (swStart && bs.ts > swStart) return false;
             const _ref = _bedEntryRaw ?? swStart; // Referenz: bedEntryTs oder Einschlafzeit
             if (!_ref) return true;
             return bs.ts >= (_ref - 3 * 3600000); // nur Quellen max. 3h vor Referenz

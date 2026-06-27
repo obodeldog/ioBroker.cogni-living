@@ -1,5 +1,166 @@
 ﻿# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 16.06.2026 | **Version:** 0.33.317
+**Letzte Aktualisierung:** 27.06.2026 | **Version:** 0.33.323
+
+---
+
+## 🗓️ Sitzung 27.06.2026 — Version 0.33.323 — Bug: preSleepAbsenceOverlay nie sichtbar
+
+### Problem
+Das grau-schraffierte Overlay für Vor-Schlaf-Abwesenheit (eingeführt in OC-48c v2, v0.33.317) war noch nie sichtbar, obwohl `preSleepAbsenceEvents` korrekt berechnet und im JSON gespeichert wurde.
+
+### Ursache (Code-Analyse)
+In `src/lib/pwa_sleep_tile_build.js`, Funktion `pickSd()` (L71–111): `preSleepAbsenceEvents` fehlte komplett im `return`-Objekt. Die Build-Funktion las die Daten also nie aus `raw` → `sd.preSleepAbsenceEvents` war immer `[]` → Overlay wurde nie gerendert.
+
+### Fix
+Ein Feld in `pickSd()` ergänzt:
+```javascript
+preSleepAbsenceEvents: Array.isArray(raw.preSleepAbsenceEvents) ? raw.preSleepAbsenceEvents : [],
+```
+Ab sofort erscheint das grau-schraffierte Overlay korrekt über dem gelben Wachliegen-Segment, wenn jemand zwischen Ins-Bett-gehen und Einschlafen aufgestanden und in einen anderen Raum gegangen ist.
+
+### Analyse-Anlass (Nacht 26./27.06.2026)
+- 22:31 erstes Ins-Bett mit Partner (vib_refined)
+- 23:13–00:44: 91 Min. im Wohnzimmer (preSleepAbsenceEvents korrekt da)
+- 00:47: zurück ins Bett (fp2)
+- 01:03: eingeschlafen (Garmin)
+Das grau-schraffierte Overlay für 23:13–00:44 war aufgrund des Bugs nicht sichtbar.
+
+### Mitgeliefert: 6 Fixes aus v0.33.322 (24.06.2026) — jetzt erstmals committet
+Alle Fixes aus Sitzung 24.06.2026 (P1–P6, OC-WAKE-GUARD, OC-VIB-ARTIFACT, OC-BAD-SM, fp2-GUARD-Reorder, Garmin-Wach, UI-Umbenennung) wurden erst jetzt (27.06.) committet — fehlte nach der letzten Session. Ab diesem Commit sind beide Versionen 0.33.322 und 0.33.323 im Repo als einzelner Commit.
+
+---
+
+## 🗓️ Sitzung 24.06.2026 — Version 0.33.322 — 6 Fixes: Aufwach-Guard, VIB-Artefakt, Bad-SM, fp2-Reorder, Garmin-Wach, UI
+
+### Auslöser (Nacht 22./23.06.2026, JSON + vib_julia.csv + 2 Screenshots, Jana & Julia)
+Sechs Punkte vom Nutzer analysiert und nach Diskussion umgesetzt.
+
+### ✅ P1 — UI: „Global (Haushalt)" → „Haus-Basis (Ø alle Betten)" (`src-admin/.../SystemTab.tsx`)
+Verwirrender Name in der Vibrations-Kalibrierungs-Tabelle umbenannt + Erklärung im Info-Kasten ergänzt (Haus-Basis = Durchschnitt aller Vib-Sensoren, kein eigenes Bett, dient als Start-Schwelle für neue Personen). Reset-Dialogtext angepasst.
+
+### ✅ P2 — OC-WAKE-GUARD: VIB-only-Personen erben keine fremde Radar-Aufwachzeit (`src/main.js`, ~L4008)
+**Problem:** Jana & Julia (nur Matratzen-Vib, Bett im OG) bekamen exakt 05:14 „Radar" als Aufwachzeit. Der einzige Radar (`Radar EG Schlafzimmer`, Marcs Zimmer) hat **keinen personTag** → `isMine()`=true für alle → globale `firstEmpty` (Marc-Toilettengang 05:14) an alle vererbt.
+**Fix:** `fp2WakeTs` wird per Person nur übergeben, wenn die Person keinen eigenen Bett-Sensor hat ODER ein FP2/Radar in IHREM Schlafzimmer steht. Mitbewohner im selben Radar-Zimmer (Anni in EG Schlafen) behalten den Radar korrekt. Quellenneutral.
+
+### ✅ P3 — OC-VIB-ARTIFACT: isoliertes Einzel-Vib-Event verworfen (`src/main.js`, ~L557)
+**Problem:** Janas `vibration_alone` lag um 11:46 (Phantom-Stärkeänderung, Stunden nach dem Aufwachen, kein Mensch im Haus).
+**Fix:** Ein `vibration_alone`-Kandidat ist nur gültig, wenn ≥1 weiteres eigenes Vib-Event in den 10 Min davor liegt. Isolierte Ausreißer nach langer Stille werden ignoriert → Aufwachzeit fällt auf die echte letzte Bewegung zurück.
+
+### ✅ P4 — OC-BAD-SM: VIB-basierte Bad-Zuordnung „wer ist aufgestanden?" (`src/main.js`, ~L757)
+**Problem:** OG Bad (kein personTag) wurde Jana UND Julia gleichzeitig für 04:42 zugeschrieben.
+**Fix (State-Machine-Kern pro Person, nur wenn kein eigenes personTag-Bad):** Wer ein Matratzen-Vib-Bett hat, erzeugt beim Aufstehen einen Vib-Trigger. Fehlt die Aufsteh-Signatur (eigener Trigger in ±6 Min ums Bad-Event), lag die Person im Tiefschlaf → Bad-Event entfernen. Verifiziert: Jana Trigger 04:40/04:44 → behält; Julia letzter Trigger 04:20 (04:44/04:49 sind nur Stärke-Events, ausgeschlossen) → Bad entfernt.
+
+### ✅ P5a — OC-BED-FP2-GUARD Reihenfolgefehler behoben (`src/main.js`, ~L4111)
+**Problem:** Julia behielt fremdes Radar-`fp2=22:33` als „Ins Bett gegangen", obwohl der FP2-Guard greifen sollte. Ursache: fp2 war bereits in `computePersonSleep` (via isMine) in `allBedEntrySources` eingebacken; der Guard verhinderte nur NEUES Einfügen.
+**Fix:** Hat die Person eigene Non-FP2-Quellen, werden auch bereits vorhandene fp2-Einträge aus `_ownBeSrcs` entfernt. Julia → bedEntry = eigener `vib_refined` (23:09).
+
+### ✅ P6 — Garmin Wach-Phasen (`src/main.js` + `src/lib/pwa_sleep_tile_build.js` + `pwa_sleep_tile_client.js`)
+**Problem:** Smartwatch-Referenz zeigte Tief/Leicht/REM, aber keine Wach-Phasen.
+**Fix:** Backend liest `awakeSleepSeconds` (Default `garmin.0.dailysleep.dailySleepDTO.awakeSleepSeconds`, via `config.garminAwakeSleepStateId` überschreibbar) → `garminWakeMin` in globaler sleepData. Tile-Build + Client rendern „Wach"-Span (orange) in der Smartwatch-Referenzzeile.
+
+### 🔧 Begleitend dokumentiert (BRAINSTORMING.md)
+- **OC-WAKE-SM**: vollständige personenbezogene Aufwach-State-Machine (langfristig; P2 ist der Kurzfix).
+- **OC-BAD-ARBITER**: zentraler Cross-Person-Schiedsrichter für gemeinsame Bäder (Erweiterung von P4).
+
+### ⚠️ Akzeptierte Sensor-Limitierungen (keine Code-Änderung)
+- Jana: „Ins Bett gegangen" vs. „Eingeschlafen" sind mit reinem Vib-Sensor nicht trennbar (kein Präsenzsensor im Zimmer).
+- Julia: konnte mangels Bewegung zwischen 05:16 und ~07:00 nicht bis 07:00 detektiert werden — aber keine falsche Radar-Quelle mehr.
+
+---
+
+## 🗓️ Sitzung 20.06.2026 — Version 0.33.320 — OC-BED-LOC: bedroomLocations per-Person
+
+### Auslöser
+Marc's Schlafkachel zeigte ein orangefarbenes Dreieck für einen OG-Bad-Besuch von Jana um 02:09 Uhr — obwohl Marc im EG schläft und der OG Bad Sensor keinen Bezug zu Marc hat.
+
+### Ursache (diagnostiziert mit JSON + Code-Analyse)
+In `computePersonSleep()` wird der Parameter `bedroomLocations` aus ALLEN Bett-Sensoren aller Personen gebildet. Für Marc enthielt die Liste daher:
+- `EG Schlafen` (korrekt — Marc's Zimmer)
+- `OG Kind 1` (falsch — Julia's Zimmer)
+
+Der Hop-Filter in der `outsideBedEvents`-Berechnung prüft: „Ist der Sensor ≤2 Hops von IRGENDEINEM Schlafzimmer entfernt?" Da OG Bad direkt neben OG Kind liegt (Hop ≤ 2), bestand der Filter — für **alle** Personen inklusive Marc.
+
+### ✅ Fix — OC-BED-LOC (`src/main.js`, L4015)
+`bedroomLocations` wird jetzt per-Person berechnet:
+1. **Primär:** Bett-Sensoren mit `personTag === person` → für Marc: `EG Schlafen` only
+2. **Fallback:** Falls kein personTag-Match → alle Bett-Sensoren (unverändertes altes Verhalten)
+
+**Ergebnis:** Für Marc ist nur `EG Schlafen` die Referenz. OG Bad ist 3-4 Hops entfernt → korrekt gefiltert. Jana's Bad-Besuche erscheinen nicht mehr in Marcs Kachel.
+
+### 🔧 Begleitend dokumentiert
+- `OC-PIR-STUCK-NOCTURIA` in BRAINSTORMING.md: Bad-PIR stuck 22:46–03:02 (4h16min). Nachtbesuch um 03:00 unsichtbar weil `true → true` keine Flanke. `nocturiaCount` via `false`-Flanke trotzdem korrekt gezählt.
+
+---
+
+## 🗓️ Sitzung 17.06.2026 — Version 0.33.319 — bedEntryTs-Sync + FP2-Guard + VIB-Min
+
+### Auslöser
+Screenshot- und JSON-Analyse nach v0.33.318 (Nacht 2026-06-17):
+1. **Marc**: `bedEntryTs=20:00` wird angezeigt — existiert **nicht** in `allBedEntrySources`. Stattdessen hat `fp2=21:42` einen ✓-Haken. Klarer Widerspruch zwischen `bedEntryTs` (IIFE-Wert) und dem Gewinner aus `allBedEntrySources`.
+2. **Julia**: `allBedEntrySources` enthält `fp2=21:42` und `fp2_vib=21:52` — beides Marcs FP2-Timestamps. Julia hat **keinen Radarsensor**. Falsche Datenübernahme aus globalem Pool.
+3. **Julia**: `bedEntryTs=18:13` (VIB-IIFE) — zwei aufeinanderfolgende Events (18:13 true → 18:15 false) reichten als Nachweis. Zu permissiv für kurze Abend-Kontakte.
+
+### ✅ Abgeschlossen
+
+**Fix 1 — OC-BED-SYNC** (`src/main.js`, 2 Stellen)
+- **Ursache**: `bedEntryTs` wird von einem IIFE am Funktions-Anfang von `computePersonSleep()` berechnet (FP2-Segment-Check, VIB-Fallback). Die `allBedEntrySources`-Logik läuft *danach* und wählt einen potenziell anderen (besseren) Kandidaten als Gewinner — aber `bedEntryTs` blieb beim alten IIFE-Wert. Beide Algorithmen liefen getrennt ohne Synchronisation.
+- **Fix**: Nach dem `allBedEntrySources`-IIFE (L1122) wird `bedEntryTs` auf den Timestamp der Gewinner-Quelle (`_bedEntrySourceInner`) gesetzt. Gleiche Synchronisation auch in `OC-BED-SOURCES P2` (globaler Nachfüll-Block, L4047ff.).
+- **Ergebnis**: Was im UI angezeigt wird (bedEntryTs) entspricht exakt dem ✓-Eintrag in allBedEntrySources.
+
+**Fix 2 — OC-BED-FP2-GUARD** (`src/main.js`, OC-BED-SOURCES P2)
+- **Ursache**: `OC-BED-SOURCES P2` prüfte `!some(fp2||fp2_vib)` → true für Julia (kein FP2) → fügte globale fp2-Timestamps (= Marcs Radar) in Julias `allBedEntrySources` ein. Logik war für Einzel-FP2-Haushalt gedacht, nicht für Multi-Personen mit unterschiedlichen Sensoren.
+- **Fix**: Prüfung ob Person **eigene Non-FP2-Quellen** hat (`vib_refined`, `motion` etc.). Hat sie welche → FP2-Block wird NICHT ausgeführt; allBedEntrySources bleibt bei den eigenen Quellen. Hat sie keine → FP2-Fallback wie bisher (sichert Personen ohne eigene Quellen ab).
+- **Ergebnis**: Julia bekommt nur `[vib_refined=21:06]` in allBedEntrySources — kein Fremd-Radar mehr.
+
+**Fix 3 — OC-BED-VIB-MIN** (`src/main.js`, bedEntryTs IIFE)
+- **Ursache**: VIB-IIFE prüfte nur "zwei aufeinanderfolgende Events ≤5 Min apart" → ein einzelnes true+false Paar (1,5 Min) reichte für `bedEntryTs`. Zu permissiv für kurze Kontakte (Wäsche aufs Bett legen etc.).
+- **Fix**: VIB-IIFE berechnet jetzt Session-Cluster (Lücke ≥20 Min = neue Session). Erste Session mit **≥5 Min Gesamtdauer** → gültig. Einzelne kurze Paare werden übersprungen.
+- **Ergebnis**: Kurze Zufalls-Kontakte (<5 Min) setzen kein `bedEntryTs` mehr. Für Julia: deren Abend-Sessions sind lang genug (>60 Min), daher durch Fix 1 (Sync auf vib_refined=21:06) überdeckt.
+
+### 🔧 Offene Baustellen
+- **OC-DAY-BED** (Jugendliche liegen tagsüber im Bett) — komplexes Problem, Zeitfenster-Gate oder Kontext-Signale nötig. In BRAINSTORMING.md dokumentiert.
+- **OC-VIB-EXIT** (`bedExitTs` für VIB-only Personen) — `OC-45a` läuft nicht wenn `sleepWindowStart=null`. VIB-only Personen haben keine `Aufgestanden`-Zeit. Feature-Request in BRAINSTORMING.md.
+- **Adapter-Neustart** in der Nacht: ungeklärte Ursache, kein stabiles Muster.
+- **Config-Fix**: `personTag=Marc` auf Vibrationssensor fehlt noch.
+
+### 🎯 Nächster logischer Schritt
+- v0.33.319 deployen und Live-Nacht beobachten. Erwartete Verbesserungen: Marc zeigt 21:42, Julia zeigt vib_refined (ohne Fremd-Radar).
+
+---
+
+## 🗓️ Sitzung 16.06.2026 — Version 0.33.318 — bedEntryTs-Qualität (FP2-Mindestpräsenz + Quellen-Cutoff)
+
+### Auslöser
+Screenshot-Analyse nach v0.33.317-Deployment: "Ins Bett gegangen" zeigte **19:54** obwohl in den Quellen **22:26 ✓** stand (Widerspruch). Außerdem erschienen Quellen-Kandidaten (23:09, 00:05) **nach der Einschlafzeit** (22:58) in der Liste — logisch unmöglich.
+
+**Ursache 1 (bedEntryTs=19:54):** Um 19:54 gab es einen FP2-Flacker von nur **52 Sekunden** (FP2 val=1 → val=0 nach 52 Sek). Die `bedEntryTs`-IIFE in `computePersonSleep` gab beim ersten aktiven FP2-Event sofort zurück — ohne Mindest-Präsenz-Check. Durch das OC-48c-never-null von v0.33.317 wurde dieser Kurzflacker als `bedEntryTs=19:54` gesetzt statt verworfen.
+
+**Ursache 2 (Quellen nach Einschlafzeit):** `allBedEntrySources` enthielt Kandidaten aus `allSleepStartSources` ohne zeitliche Obergrenze → sleep-onset-Kandidaten (z.B. `vib_refined` = 23:09, `fp2_vib` = 00:05) wurden als Bett-Eintrag-Kandidaten angezeigt.
+
+### ✅ Abgeschlossen
+
+#### Fix A: OC-BED-FP2-MIN — Mindestpräsenz ≥2 Min für FP2-Bett-Eintrag
+- **Problem:** `bedEntryTs` IIFE gab sofort `_fp2[0].timestamp` zurück, egal wie kurz der Kontakt war.
+- **Fix:** Schleife durch FP2-Segmente. Segment-Start = erstes aktives FP2-Event nach Lücke. Segment-Ende = nächstes val=0. Wenn Dauer < 2 Min → verwerfen + nächstes Segment suchen. Wenn kein Ende gefunden (FP2 läuft noch) → gültig.
+- **Ergebnis:** 52-Sek-Flacker um 19:54 → verworfen. Stabile FP2-Präsenz ab 22:26 → bedEntryTs=22:26.
+
+#### Fix B: OC-BED-SOURCES-CUTOFF — Quellen nach sleepWindowStart ausblenden
+- **Problem:** `allBedEntrySources` hatte keine zeitliche Obergrenze → vib_refined=23:09, fp2_vib=00:05 (nach Einschlafzeit 22:58) erschienen in der Quellen-Liste.
+- **Fix (3 Stellen):**
+  - `computePersonSleep` `_beSrcs`-Filter: `if (sleepStart && s.ts > sleepStart) return false;`
+  - OC-BED-SOURCES P2 (fp2-Fallback) `_beSrcs2`-Filter: `if (_pResult.sleepWindowStart && s.ts > _pResult.sleepWindowStart) return false;`
+  - HealthTab.tsx `allBedEntrySourcesArr`-Filter: `if (swStart && bs.ts > swStart) return false;`
+- **Ergebnis:** Nur Kandidaten vor der Einschlafzeit erscheinen im Dropdown.
+
+### 🔧 Offene Baustellen
+- Fix 5: `bedExitTs` bei Rückkehr-ins-Bett (120-Min-Fenster zu eng)
+- Shelly PresenceZone Alias-Korrektur
+- `personTag="Marc"` am Vibrationssensor
+
+### 🎯 Nächster Schritt
+- Adapter auf **0.33.318** updaten → Nacht abwarten → "Ins Bett gegangen" prüfen (sollte 22:26 zeigen, nicht 19:54). Quellen-Dropdown prüfen (nur Kandidaten vor 22:58).
+
+---
 
 ---
 
