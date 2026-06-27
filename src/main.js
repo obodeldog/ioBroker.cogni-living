@@ -710,8 +710,13 @@ function computePersonSleep(p) {
             // [OC-BAD-PERSON] Badezimmer-Sensor Priorität: Hat die Person ein eigenes Bad (personBathroomIds),
             // dann zählen fremde/ungetaggte Bäder NICHT für diese Person.
             // Beispiel: EG Bad = Marc → OG Bad (kein personTag) wird für Marc herausgefiltert.
+            // [OC-BAD-PERSON-ROBUST] ID-Prefix-Match: config.devices speichert ggf. Geräte-Pfad (ohne Suffix),
+            // Event e.id enthält State-Pfad (mit .occupancy/.state-Suffix) → beide Varianten prüfen.
             if ((e.isBathroomSensor || bathroomIds.has(e.id || '')) && personBathroomIds.size > 0) {
-                if (!personBathroomIds.has(e.id || '')) return false;
+                var _eid = e.id || '';
+                var _inOwnBath = personBathroomIds.has(_eid) ||
+                    (function(){ for (var _pid of personBathroomIds) { if (_eid === _pid || _eid.startsWith(_pid + '.')) return true; } return false; })();
+                if (!_inOwnBath) return false;
             }
             // OC-OBE-HOP: Sensoren > 2 Hops vom Schlafzimmer ignorieren (z.B. OG-Bad bei EG-Schlafen)
             if (hopDistFn && bedroomLocations && bedroomLocations.length > 0 && e.location) {

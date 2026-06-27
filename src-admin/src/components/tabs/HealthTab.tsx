@@ -247,7 +247,7 @@ export default function HealthTab(props: any) {
                     if (d.roomHistory && d.roomHistory.history) setRoomHistory(d.roomHistory.history);
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
-                   setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, bedExitTs: d.bedExitTs ?? null, smWakePhases: d.smWakePhases ?? [], bedAbsenceEvents: d.bedAbsenceEvents ?? [], excluded: d.excluded ?? false });
+                   setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, garminWakeMin: d.garminWakeMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, bedExitTs: d.bedExitTs ?? null, smWakePhases: d.smWakePhases ?? [], bedAbsenceEvents: d.bedAbsenceEvents ?? [], excluded: d.excluded ?? false });
                    setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                    setGeminiNight(d.geminiNight || "Keine Daten");
                     setGeminiNightTs(d.geminiNightTs || null);
@@ -737,7 +737,7 @@ export default function HealthTab(props: any) {
             .then((histRes: any) => {
                 if (histRes && histRes.success && histRes.data) {
                     const d = histRes.data;
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, bedExitTs: d.bedExitTs ?? null, smWakePhases: d.smWakePhases ?? [], bedAbsenceEvents: d.bedAbsenceEvents ?? [], excluded: d.excluded ?? false });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, garminWakeMin: d.garminWakeMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, bedExitTs: d.bedExitTs ?? null, smWakePhases: d.smWakePhases ?? [], bedAbsenceEvents: d.bedAbsenceEvents ?? [], excluded: d.excluded ?? false });
                     setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                 }
             });
@@ -1223,6 +1223,7 @@ export default function HealthTab(props: any) {
         const garminDeepMin: number | null = sd?.garminDeepMin ?? null;
         const garminLightMin: number | null = sd?.garminLightMin ?? null;
         const garminRemMin: number | null = sd?.garminRemMin ?? null;
+                const garminWakeMin: number | null = sd?.garminWakeMin ?? null;
         const swStart: number | null = sd?.sleepWindowStart ?? null;
         const swEnd: number | null = sd?.sleepWindowEnd ?? null;
         // [OC-42] bedExitTs: physisches Aufstehen (kann nach garminWakeTs/swEnd liegen)
@@ -2853,13 +2854,14 @@ export default function HealthTab(props: any) {
                         )}
 
                         {/* Garmin-Vergleich wenn vorhanden */}
-                        {(garminDeepMin !== null || garminLightMin !== null || garminRemMin !== null) && (
+                        {(garminDeepMin !== null || garminLightMin !== null || garminRemMin !== null || garminWakeMin !== null) && (
                             <div style={{borderTop:`1px dashed ${isDark?'#333':'#ddd'}`, paddingTop:'8px', fontSize:'0.7rem'}}>
                                 <div style={{color:'#888', marginBottom:'4px'}}>⌚ Smartwatch-Referenz:</div>
                                 <div style={{display:'flex', gap:'16px'}}>
                                     {garminDeepMin  !== null && <span><span style={{color:'#1565c0'}}>■</span> Tief: {fmtDuration(garminDeepMin)}</span>}
                                     {garminLightMin !== null && <span><span style={{color:'#42a5f5'}}>■</span> Leicht: {fmtDuration(garminLightMin)}</span>}
                                     {garminRemMin   !== null && <span><span style={{color:'#ab47bc'}}>■</span> REM: {fmtDuration(garminRemMin)}</span>}
+                                    {garminWakeMin  !== null && <span><span style={{color:'#ffd54f'}}>■</span> Wach: {fmtDuration(garminWakeMin)}</span>}
                                 </div>
                             </div>
                         )}
@@ -3983,6 +3985,9 @@ export default function HealthTab(props: any) {
                                         bedExitSource:          (pd as any).bedExitSource  ?? null,
                                         allBedExitSources:      (pd as any).allBedExitSources ?? [],
                                         nightVibrationCount:    (pd as any).nightVibrationCount ?? null,
+                                        // [P-PSA-FIX2] fehlende Felder im overrideData -> Overlay + Garmin-Wach nie sichtbar
+                                        preSleepAbsenceEvents:  (pd as any).preSleepAbsenceEvents ?? [],
+                                        garminWakeMin:          auraSleepData?.garminWakeMin ?? null,
                                     };
                                     return <React.Fragment key={pName}>{renderSleepScoreCard(overrideData, pName)}</React.Fragment>;
                                 })}
