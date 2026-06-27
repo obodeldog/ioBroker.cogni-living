@@ -7,6 +7,46 @@ Neue offene Konzepte immer OBEN in den Abschnitt "🚧 OFFENE KONZEPTE" einfüge
 
 ---
 
+## 🚧 OC-BED-FINAL: Letzter finaler Betteintritt als bedEntryTs (27.06.2026)
+
+> **Status:** Offen — Konzept diskutiert. Kein Code geändert.
+
+### Problem (real beobachtet, Nacht 26./27.06.2026)
+
+- **22:31**: Erstes Ins-Bett mit Partner (Quelle: `vib_refined`)
+- **23:12–00:44**: 91 Minuten Abwesenheit im Wohnzimmer (korrekt als `preSleepAbsenceEvent` erfasst)
+- **00:47**: Zurück ins Bett (FP2-Bestätigung vorhanden in `allBedEntrySources`)
+- **01:03**: Eingeschlafen (Garmin)
+
+`bedEntryTs` war 22:31 — also 2,5 Stunden vor Einschlafen. In der UI sah das gut aus nur weil das Overlay (jetzt gefixt in v0.33.323) nie sichtbar war.
+
+### Zwei Philosophien
+
+**Philosophie A (aktuell):** `bedEntryTs` = erster Bettkontakt (22:31)
+- Vorteil: Zeigt wann man sich *wirklich* erstmals ins Bett gelegt hat
+- Nachteil: Das Intervall bis `sleepWindowStart` sieht nach 2,5h Wachliegen aus, obwohl man 91 Min. draußen war
+
+**Philosophie B (bevorzugt vom Nutzer):** `bedEntryTs` = letzter finaler Betteintritt nach langer Abwesenheit
+- `bedEntryTs` → 00:47 (letztes Bett-Entry vor dem Einschlafen)
+- Der frühere Aufenthalt (22:31–23:12) wird als grau-schraffiertes Pre-Segment im Balken sichtbar, das über `preSleepAbsenceEvents` gerendert wird
+- `sleepLatency` (Einschlafverzögerung) bezieht sich dann auf 00:47–01:03 = 16 Min. (korrekt)
+- Vorteil: Zahlen wirken korrekt, Visualisierung zeigt vollständiges Bild
+
+### Technisches Konzept für Philosophie B
+
+Wenn `preSleepAbsenceEvents` existieren UND das letzte Entry in `allBedEntrySources` nach der letzten Abwesenheit liegt:
+1. Filtere `allBedEntrySources` nach Einträgen **nach** dem Ende des letzten `preSleepAbsenceEvent`
+2. Wenn solche Einträge vorhanden → benutze den Besten davon als neues `bedEntryTs`
+3. Original-`bedEntryTs` bleibt als `firstBedEntryTs` erhalten (für das Pre-Segment)
+4. Im Build: Pre-Segment von `firstBedEntryTs` bis `preSleepAbsenceEvent.start` als helles Gelb rendern, Absenz als grau, dann normaler Balken ab finalem `bedEntryTs`
+
+### Wichtig
+- Das Dreieck-Symbol wird NICHT mehr benötigt (laut Nutzer 27.06.)
+- Der Schwellenwert für "signifikante Abwesenheit" könnte 45–60 Min. sein (aktuell sind keine kürzeren Abwesenheiten problematisch)
+- Aufwand: mittel — Änderungen in `computePersonSleep()` (Quellen-Filterung nach PSA) + `buildSleepTilePayload()` (Pre-Segment)
+
+---
+
 ## 🚧 OC-WAKE-SM: Personenbezogene Aufwach-State-Machine (24.06.2026)
 
 > **Status:** Offen — Konzept dokumentiert. Kurzfristiger Guard (P2 = OC-WAKE-GUARD) ist in v0.33.322 implementiert; die vollständige State Machine ist die langfristige Lösung.
