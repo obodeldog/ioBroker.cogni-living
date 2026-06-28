@@ -40,6 +40,63 @@ Score-Kalibrierung nutzbar. Kein Mischen von AURA-Balken mit Garmin-Daten.
 
 ---
 
+
+## 🚧 OC-VIB-CAL-PREWAKE: Kalibrierung nur aus echten Schlaf-Events (nicht Aufsteh-Bewegungen) (28.06.2026)
+
+**Hintergrund / Was bisher passiert:**
+Die Vibrations-Kalibrierung berechnet pro Nacht die Stärke-Metriken (`vibStrMax`, `vibStrP90`)
+aus ALLEN Events im Schlaffenster (stagesWinStart bis stagesWinEnd).
+Das Schlaffenster endet jedoch erst WENN die Person aufsteht (= bedExitTs / sleepWindowEnd).
+Aufsteh-Bewegungen (z.B. 06:43 Uhr, Stärke 71, 70, 69 drei Events hintereinander) liegen
+damit noch IM Schlaffenster und werden in die Kalibrierung einbezogen.
+
+**Warum das ein Problem ist:**
+Aufsteh-Bewegungen sind physikalisch viel stärker als Wach-im-Bett-liegen.
+Ergebnis: Die kalibrierten Schwellen ("Wake-Schwelle > X") orientieren sich an der Aufsteh-Intensität,
+nicht an der Wachliege-Intensität. Wake-Erkennung während des Schlafs wird damit praktisch unmöglich.
+
+**Konkretes Beispiel (Marc, 25./26.06.2026):**
+- Aufsteh-Events um 06:43: Stärke 71, 70, 69
+- Übriger Schlaf: max. 47
+- Ergebnis: vibStrMax dieser Nacht = 71 (wegen Aufstehen)
+- Kalibrierung (P90 über 14 Nächte) = ~63 → Wake-Schwelle = 72
+- Realistische Wake-Schwelle ohne Aufstehen wäre ~47 → Wake-Schwelle = ~54
+
+**Was v0.33.326 macht (Zwischenlösung):**
+`vibStrP90` (90. Perzentil statt Max) reduziert den Einfluss von Ausreißern statistisch.
+Bei wenigen Events (Marc: 23/Nacht) reicht das oft, da die 3 Aufsteh-Events im Top-10% landen
+und durch P90 herausfallen. Bei Kunden mit 100+ Events/Nacht ist der Effekt schwächer.
+
+**Echte Lösung (OC-VIB-CAL-PREWAKE):**
+`nightVibrationStrengthP90` und `nightVibrationStrengthMax` nur aus Events berechnen,
+deren Timestamp VOR dem erkannten `wakeTs` (Aufwachzeit) liegt.
+
+Implementierung:
+1. Im Berechnungsblock für per-Person VibStr (L4372ff in src/main.js):
+   Zusätzlichen Pre-Wake-Filter einführen:
+   ```javascript
+   var _preWakeCap = _pResult.sleepWindowEnd || null; // wakeTs ~ sleepWindowEnd
+   // In der personEvents.forEach Schleife:
+   if (_preWakeCap && ts > _preWakeCap - (30 * 60000)) return; // letzte 30 min = Aufsteh-Phase
+   ```
+2. Gesonderte Metriken `_pVibStrMaxPreWake` und `_pVibStrP90PreWake` speichern.
+3. In Kalibrierungsbuffer `vibStrP90PreWake` statt `vibStrP90` für Schwellen-Berechnung verwenden.
+
+**Achtung (Sequenz-Problem):**
+`wakeTs` muss bekannt sein bevor die VibStr-Berechnung läuft.
+In der aktuellen Architektur: wakeTs = `pd.sleepWindowEnd` ist nach Abschluss von
+`computePersonSleep()` verfügbar. Der VibStr-Per-Person-Block (L4372ff) läuft im
+globalen Per-Person-Loop NACH `computePersonSleep()`, hat also Zugriff auf `pd.sleepWindowEnd`.
+Das Sequenz-Problem ist damit LOESBAR ohne grosse Umstrukturierung.
+
+**Erwarteter Effekt nach Fix:**
+Marc: Wake-Schwelle sinkt von ~72 auf ~54 → Events mit Stärke >54 würden als Wake klassifiziert.
+Da Marcs Max im reinen Schlaf ~47 beträgt, könnten dann noch keine Wake-Events detektiert werden.
+Fazit: Der Sensor ist NICHT falsch kalibriert — er ist physikalisch zu leise für Wake-Erkennung.
+Der Sensor-Hinweis (OC-VIB-CAL-P90, v0.33.326) würde dann korrekt ausgelöst.
+
+---
+
 ## 🚧 OC-BED-FINAL: Letzter finaler Betteintritt als bedEntryTs (27.06.2026)
 
 > **Status:** Offen — Konzept diskutiert. Kein Code geändert.
