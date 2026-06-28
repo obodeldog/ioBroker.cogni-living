@@ -1,5 +1,5 @@
 ﻿# PROJEKT KURZSTATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 27.06.2026 | **Version:** 0.33.325
+**Letzte Aktualisierung:** 28.06.2026 | **Version:** 0.33.327
 
 ---
 
@@ -10,11 +10,18 @@
 ---
 
 ## 1) Aktuelle Version
-- **`0.33.326`** (ioBroker liest `io-package.json` → **`common.version`** — immer mitbumpen!)
+- **`0.33.327`** (ioBroker liest `io-package.json` → **`common.version`** — immer mitbumpen!)
 
 ---
 
 ## 2) Stand heute (28.06.2026)
+- **v0.33.327 — Dreieck-Race-Fix + P90-Patch nachgezogen (28.06.)**:
+  - **Dreieck weg nach Neustart (Hauptbug):** Per-Person-OBE nutzt `_roomHopDistance()` → liest `this._cachedTopoMatrix`. Dieser wurde NUR lazy beim ersten Live-Event gesetzt → nach Adapter-Neustart + sofortigem „neu berechnen" leer → `_roomHopDistance` gibt `-1` → `_obeHop=999` → **alle Bad-/Aussen-Events gefiltert**. Beweis: Top-Level `outsideBedEvents` (synchrone Topo) enthielt das EG-Bad-Event 02:16, Per-Person `personData.Marc.outsideBedEvents=[]`.
+    - **Fix A1 (OC-TOPO-WARM):** Topologie in `saveDailyHistory()` vorab synchron laden → Cache warm vor Per-Person-Schleife.
+    - **Fix A2 (OC-OBE-HOP-GRACE):** Hop-Filter nur bei GÜLTIGER Distanz > 2 filtern; `_obeHop===999` (keine Topo-Info) = NICHT filtern (graceful degradation, korrekt für Neukunden ohne Topologie).
+  - **Fix B (P90-Patch nachgezogen):** v0.33.326-Patch war NICHT in `src/main.js` gelandet (`nightVibrationStrengthP90`/`vibStrP90` fehlten komplett, nur `sensorHint` war drin) → Wake-Schwelle blieb >72. Jetzt korrekt appliziert: `_pVibStrArr` sammelt alle Stärkewerte, P90 statt MAX in Rolling-Kalibrierung. Bestätigt mit echten Daten: Marc-Nacht MAX=41 (Aufsteh-Stösse 40/41 um 02:19/02:24) vs P90=25.
+    - **Hinweis:** Schwelle sinkt GRADUELL über ~14 Nächte, da der Rolling-Buffer alte MAX-Nächte erst durch neue P90-Nächte ersetzen muss (historische Rohwerte nicht rekonstruierbar).
+  - **Offen (dokumentiert, kein Fix):** Grau-Balken ab 22:15 = OC-PSA-CLAMP (preSleepAbsence.start < bedEntryTs), war schon vor v0.33.326 so — braucht Umbau der Berechnungsreihenfolge.
 - **v0.33.326 — OC-VIB-CAL-P90-FIX + Terminologie B + Sensor-Hinweis (28.06.)**:
   - **Kalibrierungs-Bug:** `vibStrP90` (P90 der Nacht-Stärken) ersetzt `vibStrMax` in Rolling-Kalibrierung. Aufsteh-Bewegungen (Stärke 71 um 06:43) können P90 nicht mehr inflationieren → Wake-Schwelle sinkt von 72 auf realistisch ~51.
   - **Sensor-Hinweis:** Wenn über 5+ Nächte avgTrigRate < 0.5 UND vibStrP90 < 20 → blaues Warnsymbol in OC-VIB-CAL Tabelle mit Hinweis „Sensor Richtung Körpermitte schieben“.
@@ -27,16 +34,17 @@
 ---
 
 ## 3) Offene Baustellen (max. 5)
-1. Fix 5: `bedExitTs` bei Rückkehr-ins-Bett nach frühem Aufwachen (120-Min-Fenster zu eng)
-2. Shelly PresenceZone Alias-Korrektur (Config): `value ? num_objects : 0` + Anwesenheits-Boolean
-3. `personTag="Marc"` am Vibrationssensor (Config, kein Code)
+1. **OC-PSA-CLAMP:** Grau-Balken (preSleepAbsence) startet vor `bedEntryTs` — Berechnungsreihenfolge umbauen (BRAINSTORMING)
+2. **OC-BED-FINAL (Philosophie B):** „letztes finales Ins-Bett" als `bedEntryTs` nach langer Abwesenheit
+3. REM-Erkennung: auch nach P90-Fix evtl. zu wenig REM — Schwellen-Modell prüfen (sinkt erst über ~14 Nächte)
 4. „Ins Bett gegangen" Override-Funktionalität (derzeit read-only)
 5. Ursache nächtlicher Adapter-Neustart ungeklärt
 
 ---
 
 ## 4) Nächster Schritt
-- Adapter auf **0.33.318** updaten → Nacht abwarten → "Ins Bett gegangen" prüfen: soll 22:26 zeigen (nicht 19:54). Quellen-Dropdown: nur Kandidaten vor Einschlafzeit sichtbar.
+- **0.33.327** installieren → Adapter NICHT sofort nach Neustart „neu berechnen", oder einmal abwarten → Dreieck (Toilette) muss wieder erscheinen, Per-Person-OBE darf nicht mehr leer sein.
+- Wake-Schwelle in OC-VIB-CAL beobachten: sinkt über die nächsten Nächte schrittweise unter 72 (P90 ersetzt MAX im Rolling-Buffer).
 
 ---
 

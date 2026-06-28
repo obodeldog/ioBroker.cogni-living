@@ -724,7 +724,11 @@ function computePersonSleep(p) {
                     var h = hopDistFn(e.location, bl);
                     return (h >= 0 && h < m) ? h : m;
                 }, 999);
-                if (_obeHop > 2) return false;
+                // [OC-OBE-HOP-GRACE] _obeHop === 999 bedeutet "keine Topologie-Info" (Cache kalt oder
+                // kein Pfad bekannt) -> NICHT filtern (graceful degradation). Nur bei GUELTIGER
+                // Hop-Distanz > 2 das Event verwerfen. Verhindert dass nach Adapter-Neustart alle
+                // Bad-/Aussen-Events faelschlich rausfliegen wenn _cachedTopoMatrix noch leer ist.
+                if (_obeHop !== 999 && _obeHop > 2) return false;
             }
             return (e.type === 'motion' || (e.type === 'presence_radar_bool' || e.type === 'presence_radar_count')) && isActiveValue(e.value);
         }).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
@@ -2203,6 +2207,17 @@ class CogniLiving extends utils.Adapter {
             const _sq = await this.getStateAsync('LTM.trainingData.sequences');
             this._lastSeqState = (_sq && _sq.val) ? _sq.val : null;
         } catch(e) { this._lastSeqState = null; }
+        // [OC-TOPO-WARM] Topologie-Cache vor der Per-Person-Schlafberechnung sicher laden.
+        // _roomHopDistance() (Hop-Filter fuer Bad-/Aussen-Events) liest this._cachedTopoMatrix.
+        // Dieser wird sonst NUR lazy beim ersten Live-Event in _checkSpatialImpossibility gesetzt.
+        // Nach Adapter-Neustart + sofortigem "System pruefen und neu berechnen" ist er leer ->
+        // _roomHopDistance gibt -1 -> ALLE Bad-/Aussen-Events gefiltert -> keine Dreiecke.
+        if (!this._cachedTopoMatrix) {
+            try {
+                const _twTopo = await this.getStateAsync('analysis.topology.structure');
+                if (_twTopo && _twTopo.val) this._cachedTopoMatrix = JSON.parse(_twTopo.val);
+            } catch(_twErr) { this.log.debug('[OC-TOPO-WARM] Topo-Vorladen fehlgeschlagen: ' + (_twErr.message||_twErr)); }
+        }
         if (!this.activeModules.health) return;
         const _now = new Date();
         const dateStr = _now.getFullYear() + '-' + String(_now.getMonth()+1).padStart(2,'0') + '-' + String(_now.getDate()).padStart(2,'0'); // LOKAL, nicht UTC!
@@ -4369,7 +4384,7 @@ class CogniLiving extends utils.Adapter {
                     });
                     var _pVibCount = _pVibTrigEvts.length;
                     // Per-Person Vibrations-Staerke im Schlaffenster
-                    var _pVibStrSum = 0; var _pVibStrCnt = 0; var _pVibStrMax = 0;
+                    var _pVibStrSum = 0; var _pVibStrCnt = 0; var _pVibStrMax = 0; var _pVibStrArr = [];
                     personEvents.forEach(function(e) {
                         if (!e.isVibrationStrength) return;
                         var ts = e.timestamp || 0;
@@ -4379,8 +4394,12 @@ class CogniLiving extends utils.Adapter {
                         if (!inWin) return;
                         var s = typeof e.value === 'number' ? e.value : parseFloat(e.value);
                         if (isNaN(s) || s <= 0) return;
-                        _pVibStrSum += s; _pVibStrCnt++; if (s > _pVibStrMax) _pVibStrMax = s;
+                        _pVibStrSum += s; _pVibStrCnt++; if (s > _pVibStrMax) _pVibStrMax = s; _pVibStrArr.push(s);
                     });
+                    // [OC-VIB-CAL-P90] 90. Perzentil der Staerkewerte statt MAX: ein einzelner
+                    // starker Aufsteh-/Umdreh-Stoss verfaelscht sonst die Wake-Schwelle nach oben.
+                    var _pVibStrP90 = null;
+                    if (_pVibStrArr.length >= 3) { var _pVsSorted = _pVibStrArr.slice().sort(function(a,b){return a-b;}); _pVibStrP90 = _pVsSorted[Math.floor(_pVsSorted.length*0.9)]; }
                     // [nocturiaAttr-Fix2] Personen-spez. Schlaffenster (Fix1) + nur Rising Edges (Fix2)
                     // Fix1: Personen-spez. sleepWindowEnd statt globalem winEnd (kein Morgen-Overhang).
                     // Fix2: Nur val=True (nicht True+False) -> Jeder Besuch wurde sonst doppelt gezaehlt.
@@ -4520,6 +4539,7 @@ class CogniLiving extends utils.Adapter {
                         nightVibrationCount:       _pVibCount > 0 ? _pVibCount : null,
                         nightVibrationStrengthAvg: _pVibStrCnt > 0 ? Math.round(_pVibStrSum / _pVibStrCnt) : null,
                         nightVibrationStrengthMax: _pVibStrCnt > 0 ? _pVibStrMax : null,
+                        nightVibrationStrengthP90: _pVibStrP90,
                         vibrationTimestamps:       _pVibCount > 0 ? _pVibTrigEvts.map(function(e) { return e.timestamp||0; }) : null,
                         bedEntryTs:                _pResult.bedEntryTs || null,
                         preSleepAbsenceEvents:     _pResult.preSleepAbsenceEvents || [],
@@ -4599,7 +4619,7 @@ class CogniLiving extends utils.Adapter {
                     var pSlots2 = (swS && swE && swE > swS) ? Math.ceil((swE - swS) / (5*60*1000)) : 0;
                     var pVibCnt2 = pd.nightVibrationCount || 0;
                     var pTrigRate2 = (pSlots2 > 0 && pVibCnt2 > 0) ? Math.round((pVibCnt2 / pSlots2) * 100) / 100 : null;
-                    _vcNight.persons[pName] = { trigRatePerSlot: pTrigRate2, vibStrMax: pd.nightVibrationStrengthMax || null };
+                    _vcNight.persons[pName] = { trigRatePerSlot: pTrigRate2, vibStrMax: pd.nightVibrationStrengthMax || null, vibStrP90: (typeof pd.nightVibrationStrengthP90 === "number" ? pd.nightVibrationStrengthP90 : (pd.nightVibrationStrengthMax || null)) };
                 });
                 _vcData2.nights = _vcData2.nights.filter(function(n) { return n.date !== dateStr; });
                 _vcData2.nights.push(_vcNight);
@@ -4620,7 +4640,7 @@ class CogniLiving extends utils.Adapter {
                 var _allPNames=new Set(); _vcData2.nights.forEach(function(n){Object.keys(n.persons||{}).forEach(function(p){_allPNames.add(p);});});
                 _allPNames.forEach(function(pName){
                     var pRts=_vcData2.nights.map(function(n){return(n.persons&&n.persons[pName])?n.persons[pName].trigRatePerSlot:null;}).filter(function(v){return typeof v==="number";});
-                    var pMxs=_vcData2.nights.map(function(n){return(n.persons&&n.persons[pName])?n.persons[pName].vibStrMax:null;}).filter(function(v){return typeof v==="number"&&v>0;});
+                    var pMxs=_vcData2.nights.map(function(n){if(!(n.persons&&n.persons[pName]))return null;var _pp=n.persons[pName];return (typeof _pp.vibStrP90==="number"?_pp.vibStrP90:_pp.vibStrMax);}).filter(function(v){return typeof v==="number"&&v>0;});
                     var pAvgRt=pRts.length>0?pRts.reduce(function(a,b){return a+b;},0)/pRts.length:null;
                     var pThrR=pAvgRt!==null?Math.floor(pAvgRt*0.20):0;
                     var pP90=null; if(pMxs.length>=3){var pSrt=pMxs.slice().sort(function(a,b){return a-b;});pP90=pSrt[Math.floor(pSrt.length*0.9)];}

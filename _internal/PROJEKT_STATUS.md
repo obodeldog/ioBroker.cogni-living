@@ -1,5 +1,88 @@
 ﻿# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 27.06.2026 | **Version:** 0.33.323
+**Letzte Aktualisierung:** 28.06.2026 | **Version:** 0.33.327
+
+---
+
+## 🗓️ Sitzung 28.06.2026 — Version 0.33.327 — Dreieck-Race-Fix (OC-TOPO-WARM/HOP-GRACE) + P90 nachgezogen
+
+### Kontext
+Nach Deployment von v0.33.326 meldete der Nutzer 3 Regressionen (JSON `2026-06-28_2.json`):
+1. Toiletten-Dreieck wieder weg.
+2. Grau-Balken wieder ganz vorne ab 22:15.
+3. Wake-Schwelle unverändert >72 trotz angeblichem P90-Fix in v0.33.326.
+
+### Diagnose 1 — Dreieck weg (forensisch, mit Rohdaten verifiziert)
+- EG-Bad-Event 02:16:24 EXISTIERT im eventHistory (`isBathroomSensor:true, type:motion, value:true`).
+- Marc-VIB um 02:15:59 aktiv → OC-BAD-SM hält das Event (`_preActive=true`). NICHT die Ursache.
+- `personBathroomIds.size===0` (Nutzer hat personTag entfernt) → OC-BAD-PERSON übersprungen. NICHT die Ursache.
+- **Beweis durch Gegenprobe:** Top-Level `outsideBedEvents` (Haushalt, nutzt SYNCHRONE Topo-Ladung via `await getStateAsync`) ENTHIELT das Event als `bathroom`. Per-Person `personData.Marc.outsideBedEvents=[]`.
+- **Root Cause:** Per-Person-OBE-Hop-Filter ruft `_roomHopDistance()` → liest `this._cachedTopoMatrix`. Dieser wird NUR lazy in `_checkSpatialImpossibility` (erstes Live-Event) gesetzt. Nach Adapter-Neustart (v0.33.326-Update) + SOFORTIGEM „neu berechnen" ist er `null` → `_roomHopDistance` gibt `-1` → reduce-Fallback `_obeHop=999` → `999>2` → **jedes** Bad-/Aussen-Event gefiltert. Nicht-deterministisch (mal warm, mal kalt) → erklärt „mal geht's, mal nicht".
+
+### Fix 1 (Dreieck)
+- **A1 (OC-TOPO-WARM):** In `saveDailyHistory()` ganz am Anfang `this._cachedTopoMatrix` synchron via `getStateAsync('analysis.topology.structure')` vorladen, falls leer → Cache deterministisch warm vor Per-Person-Schleife.
+- **A2 (OC-OBE-HOP-GRACE):** Hop-Filter von `if (_obeHop > 2) return false;` → `if (_obeHop !== 999 && _obeHop > 2) return false;`. `999` = „keine Topo-Info" → NICHT filtern (graceful degradation; korrekt auch für Neukunden ohne aufgebaute Topologie). Filtert nur bei GÜLTIG ermittelter Distanz > 2 (z.B. OG-Bad bleibt für EG-Schläfer gefiltert).
+
+### Diagnose 2 + Fix 2 (Wake-Schwelle >72)
+- v0.33.326-P90-Patch war NIE in `src/main.js` gelandet: `grep` zeigte `nightVibrationStrengthP90/vibStrP90/_pVibStrArr = false`, nur `sensorHint=true`. Der frühere `_patch_vibcal_p90_326.js` hatte fehlgeschlagen (OLD-String nicht gematcht), nur der separate sensorHint-Patch lief.
+- **Neu sauber appliziert (`_patch_327_fixes.js`, alle 8 Patches verifiziert OK):**
+  - `_pVibStrArr` sammelt alle Stärkewerte im Schlaffenster.
+  - `_pVibStrP90` = 90. Perzentil (ab 3 Werten).
+  - `nightVibrationStrengthP90` in personData.
+  - `_vcNight.persons[pName].vibStrP90` (Fallback `vibStrMax`).
+  - Rolling `pMxs` nutzt `vibStrP90` (Fallback `vibStrMax`).
+- **Validierung mit echten Daten:** Marc-Nacht 28.06.: 22 Stärkewerte, MAX=41, P90=25, Median=13. Top-2 (40 um 02:24, 41 um 02:19) = exakt die Aufsteh-Stösse seines 02:16-Toilettengangs → P90 schließt sie aus.
+- **Wichtig (wissenschaftlich ehrlich):** Schwelle sinkt GRADUELL über ~14 Nächte. Der Rolling-Buffer enthält 14 Nächte; historische Nächte haben nur `vibStrMax` gespeichert (Rohwerte für nachträgliches P90 nicht rekonstruierbar). Fallback `vibStrP90||vibStrMax` mischt → reine P90-Schwelle erst wenn Buffer durchrotiert ist.
+
+### Diagnose 3 (Grau-Balken ab 22:15) — KEIN Fix
+- `preSleepAbsenceEvents.start=22:12 < bedEntryTs=22:15` = OC-PSA-CLAMP (bereits in BRAINSTORMING dokumentiert). War schon vor v0.33.326 so, keine Regression. Braucht Umbau der Berechnungsreihenfolge → bewusst verschoben.
+
+### Dateien
+- `src/main.js`: 8 Patches (A1, A2, B1–B6) via `scripts/_patch_327_fixes.js`.
+- Version 0.33.326 → 0.33.327 (`scripts/_bump_to_327.js`, beide io-package-Felder).
+- `build:backend:prod` (obfuskiert), `node --check main.js` OK. KEIN build:react (reines Backend).
+
+---
+
+## 🗓️ Sitzung 27.06.2026 — Version 0.33.325 — garminWakeMin 5 Fixes + OC-BAD-PERSON-ROBUST
+
+### Probleme
+1. **Garmin Wach-Phasen nie sichtbar** — `garminWakeMin = 23 Min` stand in JSON, wurde aber nie angezeigt.
+2. **OC-BAD-PERSON** — ID-Vergleich nicht robust genug für Fälle wo `config.devices[i].id` den Geräte-Pfad (ohne Suffix) speichert.
+
+### Ursache garminWakeMin (5 Stellen in HealthTab.tsx)
+- `setAuraSleepData()` (2x Aufrufe): `garminWakeMin: d.garminWakeMin ?? null` fehlte komplett → `auraSleepData.garminWakeMin === undefined`
+- `overrideData` (L3988): `(pd as any).garminWakeMin ?? null` statt `auraSleepData?.garminWakeMin ?? null` — personData hat kein `garminWakeMin` (globales Feld!)
+- `renderSleepScoreCard`: `const garminWakeMin` fehlte im Destructuring
+- Smartwatch-Referenz Block: `{garminWakeMin !== null && <span>■ Wach...</span>}` und Render-Condition fehlten
+
+### Fix garminWakeMin
+1. `setAuraSleepData` (beide Aufrufe): `garminWakeMin: d.garminWakeMin ?? null` ergänzt
+2. `overrideData`: `auraSleepData?.garminWakeMin ?? null` (statt pd)
+3. Destructuring: `const garminWakeMin: number | null = sd?.garminWakeMin ?? null`
+4. Rendering: `{garminWakeMin !== null && <span><span style={{color:'#ffd54f'}}>■</span> Wach: {fmtDuration(garminWakeMin)}</span>}` + Condition erweitert
+
+### Fix OC-BAD-PERSON-ROBUST
+ID-Prefix-Match ergänzt: Prüft jetzt `e.id === pid` ODER `e.id.startsWith(pid + '.')` — deckt beide Formate ab.
+
+### Kontext (Analyse dieser Session)
+Analyse ergab: Marc hatte "Zigbee EG Bad Bewegung" versehentlich mit `personTag=Marc` + `isBathroomSensor=true` konfiguriert (geteiltes Bad mit Anni). Das führte dazu dass `personBathroomIds.size=1` für Marc, OC-BAD-SM übersprungen wurde, und ein ID-Format-Problem ggf. die Events herausfilterte. Marc entfernte seinen Namen → OC-BAD-SM greift jetzt korrekt (VIB 02:33+02:35 bestätigen Aufstehen → Bad-Event bleibt). Dreiecke wieder sichtbar.
+
+---
+
+## 🗓️ Sitzung 27.06.2026 — Version 0.33.324 — Bug: overrideData in HealthTab fehlte 2 Felder
+
+### Problem
+Nach v0.33.323 (pickSd-Fix) war das grau-schraffierte Overlay immer noch nicht sichtbar. Weiteres Debugging ergab: der Admin-Tab baut für per-Person-Kacheln ein manuelles `overrideData`-Objekt (L3949–3989 `HealthTab.tsx`). Dieses Objekt hatte zwar `bedEntryTs`, aber nicht `preSleepAbsenceEvents` und nicht `garminWakeMin`.
+
+### Ursache
+`HealthTab.tsx` rendert Personen-Kacheln mit `renderSleepScoreCard(overrideData, pName)`. Das `overrideData` ist eine handgepflegte Feldliste — neue Felder im Backend kommen nicht automatisch an. Daher: `sd.preSleepAbsenceEvents === undefined` → `_preSleepAbsenceEvts = []` → kein Overlay. Gleiches für `garminWakeMin`.
+
+### Fix (v0.33.324)
+Im `overrideData`-Objekt zwei Zeilen ergänzt:
+```typescript
+preSleepAbsenceEvents:  (pd as any).preSleepAbsenceEvents ?? [],
+garminWakeMin:          (pd as any).garminWakeMin ?? null,
+```
 
 ---
 
