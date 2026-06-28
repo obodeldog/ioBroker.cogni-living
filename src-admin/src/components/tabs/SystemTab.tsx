@@ -792,6 +792,11 @@ export default function SystemTab(props: any) {
                                                                     <WarningAmberIcon sx={{ fontSize: 13, color: '#f57c00' }} />
                                                                 </Tooltip>
                                                             )}
+                                                            {(data as any).sensorHint === 'reposition' && (
+                                                                <Tooltip title="Sensor liefert dauerhaft schwaches Signal. Schiebe den Sensor etwas weiter Richtung Körpermitte für bessere Schlafphasenerkennung.">
+                                                                    <WarningAmberIcon sx={{ fontSize: 13, color: '#1976d2' }} />
+                                                                </Tooltip>
+                                                            )}
                                                         </Box>
                                                     </TableCell>
                                                     <TableCell align="center" sx={{ px: 0.5 }}>

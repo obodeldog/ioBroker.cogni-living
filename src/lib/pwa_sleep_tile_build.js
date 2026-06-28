@@ -469,7 +469,7 @@ function buildSleepTilePayload(raw) {
         // [OC-42b] Slots nach swEnd (Aufgewacht) bis bedExitTs -> Wachliegen-Tooltip (analog slotColor)
         if (absMs && swEnd && bedExitTs && bedExitTs > swEnd && absMs >= swEnd) {
             var _wachMin = Math.round((bedExitTs - swEnd) / 60000);
-            return 'Wachliegen: ' + fmtTime(swEnd) + '�' + fmtTime(bedExitTs) + ' (' + _wachMin + ' Min)';
+            return 'Aufwachphase: ' + fmtTime(swEnd) + '�' + fmtTime(bedExitTs) + ' (' + _wachMin + ' Min)';
         }
         return timeStr + (stageLabel[slot.s] || slot.s);
     }
@@ -558,7 +558,7 @@ function buildSleepTilePayload(raw) {
         wachliegenOverlay = {
             leftPct: _leftWL,
             widthPct: _widthWL,
-            title: 'Wachliegen: ' + fmtTime(swEnd) + '\u2013' + fmtTime(bedExitTs) + ' (' + Math.round((bedExitTs - swEnd) / 60000) + ' min)'
+            title: 'Aufwachphase: ' + fmtTime(swEnd) + '\u2013' + fmtTime(bedExitTs) + ' (' + Math.round((bedExitTs - swEnd) / 60000) + ' min)'
         };
     }
 
@@ -603,7 +603,7 @@ function buildSleepTilePayload(raw) {
                 wPct: (bedEntrySegMs / newBarTotalMs) * 100,
                 bg: '#ffd54f',
                 opacity: 0.75,
-                tip: 'Ins Bett / Wachliegen (' + fmtTime(bedEntryTsVal) + ' - ' + (swStart ? fmtTime(swStart) : '?') + ')'
+                tip: 'Einschlafphase: ' + fmtTime(bedEntryTsVal) + ' – ' + (swStart ? fmtTime(swStart) : '?')
             });
         }
         if (preStageMs > 0) {
@@ -630,7 +630,7 @@ function buildSleepTilePayload(raw) {
                 wPct: (postStageMs / newBarTotalMs) * 100,
                 bg: isConfirmedAwake ? stageColor.wake : 'postStage',
                 opacity: isConfirmedAwake ? 0.75 : 1,
-                tip: isConfirmedAwake ? 'Wachliegen' : 'Keine Sensordaten'
+                tip: isConfirmedAwake ? 'Aufwachphase' : 'Keine Sensordaten'
             });
         }
     }

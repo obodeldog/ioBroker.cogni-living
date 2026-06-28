@@ -4628,7 +4628,8 @@ class CogniLiving extends utils.Adapter {
                     var pRuR=pWkR?Math.max(6,Math.round(pWkR*0.82)):null;
                     var pRlR=pWkR?Math.max(3,Math.round(pWkR*0.38)):null;
                     var pSt=pRts.length>=7?"calibrated":pRts.length>=3?"calibrating":"uncalibrated";
-                    _vcRoll2.persons[pName]={trigThr:pThrR,avgTrigRate:pAvgRt,wakeThresh:pWkR,remUp:pRuR,remLow:pRlR,nightCount:pRts.length,status:pSt};
+                    var _pSensorHint=(pAvgRt!==null&&pAvgRt<0.5&&pP90!==null&&pP90<20&&pRts.length>=5)?"reposition":null;
+                    _vcRoll2.persons[pName]={trigThr:pThrR,avgTrigRate:pAvgRt,wakeThresh:pWkR,remUp:pRuR,remLow:pRlR,nightCount:pRts.length,status:pSt,sensorHint:_pSensorHint};
                 });
                 // OC-VIB-CAL: Drift-Erkennung — Sensor-Position geaendert?
                 // Wenn die letzten 2 Naechte beide stark vom historischen Mittel abweichen

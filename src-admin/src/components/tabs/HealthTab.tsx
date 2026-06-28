@@ -1437,7 +1437,7 @@ export default function HealthTab(props: any) {
             other_person: '#1e88e5',      // Blau — andere Person im Haus
         };
         const stageLabel: Record<string, string> = {
-            deep: 'Tief', light: 'Leicht', rem: 'REM (est.)', wake: 'Wachliegen',
+            deep: 'Tief', light: 'Leicht', rem: 'REM (est.)', wake: 'Schlafunterbr.',
             bathroom: 'Bad-Besuch', outside: 'Außerhalb', other_person: 'Andere Person'
         };
 
@@ -1599,7 +1599,7 @@ export default function HealthTab(props: any) {
             // [OC-42b] Slots nach swEnd (Aufgewacht) bis bedExitTs -> Wachliegen-Tooltip (analog slotColor)
             if (absMs && swEnd && bedExitTs && bedExitTs > swEnd && absMs >= swEnd) {
                 const _wachMin = Math.round((bedExitTs - swEnd) / 60000);
-                return 'Wachliegen: ' + fmtTime(swEnd) + '–' + fmtTime(bedExitTs) + ' (' + _wachMin + ' Min)';
+                return 'Aufwachphase: ' + fmtTime(swEnd) + '–' + fmtTime(bedExitTs) + ' (' + _wachMin + ' Min)';
             }
             return timeStr + (stageLabel[slot.s] || slot.s);
         };
@@ -2551,7 +2551,7 @@ export default function HealthTab(props: any) {
                                         backgroundColor: '#ffd54f',
                                         opacity: 0.75,
                                         minWidth: 0
-                                    }} title={'🛏 Ins Bett gegangen: ' + fmtTime(bedEntryTsVal) + ' · Wachliegen ' + Math.round(bedEntrySegMs/60000) + ' Min bis Einschlafen (' + (swStart ? fmtTime(swStart) : '?') + ')'} />
+                                    }} title={'🛏 Ins Bett gegangen: ' + fmtTime(bedEntryTsVal) + ' · Einschlafphase ' + Math.round(bedEntrySegMs/60000) + ' Min bis Einschlafen (' + (swStart ? fmtTime(swStart) : '?') + ')'} />
                                 )}
                                 {preStageMs > 0 && newBarTotalMs && (
                                     <div style={{
@@ -2588,7 +2588,7 @@ export default function HealthTab(props: any) {
                                                 opacity: 0.75,
                                                 borderLeft: '1px dashed ' + (isDark ? '#888' : '#e0c000'),
                                                 minWidth: 0
-                                            }} title={'Wachliegen (Garmin/Sensor bestätigt): ' + (lastSlotEndMs ? fmtTime(lastSlotEndMs) : '?') + '–' + (_barRightTs ? fmtTime(_barRightTs) : '?')} />
+                                            }} title={'Aufwachphase (Garmin/Sensor bestätigt): ' + (lastSlotEndMs ? fmtTime(lastSlotEndMs) : '?') + '–' + (_barRightTs ? fmtTime(_barRightTs) : '?')} />
                                         );
                                     }
                                     return (
@@ -2620,7 +2620,7 @@ export default function HealthTab(props: any) {
                                         borderLeft: '2px solid ' + (isDark ? '#b8a000' : '#c8a800'),
                                         pointerEvents: 'none',
                                         zIndex: 2,
-                                    }} title={'Wachliegen: ' + fmtTime(swEnd) + '–' + fmtTime(bedExitTs) + ' (' + Math.round((bedExitTs - swEnd) / 60000) + ' min)'} />
+                                    }} title={'Aufwachphase: ' + fmtTime(swEnd) + '–' + fmtTime(bedExitTs) + ' (' + Math.round((bedExitTs - swEnd) / 60000) + ' min)'} />
                                 );
                             })()}
                             {/* OC-36 Phase 4: bedAbsenceEvents = hellgrau schraffiertes Segment 'weg vom Bett' (Vorrang, OPAK — ersetzt Schlafphase) */}
@@ -2821,7 +2821,7 @@ export default function HealthTab(props: any) {
 
                         {/* Stage-Dauer Zeile */}
                         <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'4px', textAlign:'center', marginBottom:'10px'}}>
-                            {([['deep','Tief',deepCount,'#1565c0'],['light','Leicht',lightCount,'#42a5f5'],['rem','REM',remCount,'#ab47bc'],['wake','Wachliegen',wakeCount,'#ffd54f']] as [string,string,number,string][]).map(([k,l,n,c]) => (
+                            {([['deep','Tief',deepCount,'#1565c0'],['light','Leicht',lightCount,'#42a5f5'],['rem','REM',remCount,'#ab47bc'],['wake','Schlafunterbr.n',wakeCount,'#ffd54f']] as [string,string,number,string][]).map(([k,l,n,c]) => (
                                 <div key={k} style={{borderRadius:'4px', padding:'4px', background: isDark?'#1a1a1a':'#f5f5f5'}}>
                                     <div style={{color: c, fontWeight:'bold', fontSize:'0.8rem'}}>{toH(n)}</div>
                                     <div style={{color:'#888', fontSize:'0.65rem'}}>{l}</div>
