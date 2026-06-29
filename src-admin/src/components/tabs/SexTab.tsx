@@ -1062,6 +1062,27 @@ const LabelForm = ({ native, onChange, themeType, dayData, loadDay }: {
                     </div>
                 </div>
             )}
+        {/* sexPersonTags Einstellung */}
+        <div style={{ marginTop: 16, padding: '10px 12px', borderRadius: 4, background: isDark ? '#0d1117' : '#f0f4f8', borderLeft: '3px solid ' + (isDark ? '#546e7a' : '#90a4ae') }}>
+            <div style={{ fontSize: '0.7rem', color: isDark ? '#888' : '#666', marginBottom: 6, fontWeight: 700, letterSpacing: '0.05em' }}>PERSONEN-FILTER (Sex-Erkennung)</div>
+            <div style={{ fontSize: '0.78rem', color: isDark ? '#ccc' : '#555', marginBottom: 6 }}>
+                Kommagetrennte Person-Tags die für Sex-Erkennung berücksichtigt werden.<br/>
+                <span style={{ color: isDark ? '#888' : '#999' }}>Leer = alle Sensoren (Risiko: Kinderzimmer!). Empfehlung: z.B. <code>Marc,Silke</code></span>
+            </div>
+            <input
+                type="text"
+                value={native.sexPersonTags || ''}
+                onChange={e => onChange('sexPersonTags', e.target.value)}
+                placeholder="z.B. Marc,Silke (oder leer = alle)"
+                style={{
+                    width: '100%', boxSizing: 'border-box',
+                    background: isDark ? '#1a1a2e' : '#fff',
+                    border: '1px solid ' + (isDark ? '#333' : '#ddd'),
+                    borderRadius: 3, padding: '5px 8px',
+                    color: isDark ? '#ccc' : '#333', fontSize: '0.83rem'
+                }}
+            />
+        </div>
         </TerminalBox>
     );
 };
@@ -1159,9 +1180,9 @@ const VibTooltip: React.FC<any> = ({ active, payload, label, calibA, isDark }) =
         zoneColor = '#ab47bc';
         hint = `Pfad A braucht ≥ 2 aufeinanderfolgende Slots — kein Session-Kriterium für diesen Slot allein`;
     } else if (val >= calibA) {
-        zone = `Moderat-Zone (≥ B=${calibA})`;
+        zone = `Intensiv-Zone (≥ ${calibA})`;
         zoneColor = '#f48fb1';
-        hint = `Pfad B braucht ≥ 6 aufeinanderfolgende Slots — kein Session-Kriterium für diesen Slot allein`;
+        hint = 'Slot Teil einer Sex-Session (Pfad B)';
     } else if (val > 0) {
         zone = `Weit unter Schwelle (< ${calibA})`;
         zoneColor = isDark ? '#555' : '#999';
@@ -1213,8 +1234,7 @@ const VibGarmin: React.FC<VibPanelProps & { zoom: number }> = ({ vibRaw, session
                 {sessionAreas}
                 <ReferenceLine y={calibA} stroke="#ab47bc" strokeDasharray="5 3" strokeWidth={1.5}
                     label={{ value: `Schwelle A = ${calibA}`, position: 'insideTopLeft', fontSize: 10, fill: '#ab47bc', offset: 4 }} />
-                <ReferenceLine y={calibA} stroke="#42a5f5" strokeDasharray="5 3" strokeWidth={1.5}
-                    label={{ value: `Schwelle B = ${calibA}`, position: 'insideBottomLeft', fontSize: 10, fill: '#42a5f5', offset: 4 }} />
+
                 {/* Trigger-Markierungen (cyan, klein) */}
                 <Bar dataKey="triggerMark" name="triggerMark" radius={[1, 1, 0, 0]} maxBarSize={4} isAnimationActive={false} fill="#00bcd4" opacity={0.7} />
                 {/* Stärke-Balken (farbkodiert nach Intensitäts-Zone) */}
@@ -1784,7 +1804,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
 
     const viewDayStart = new Date(viewDate).setHours(0, 0, 0, 0);
     const activeCalibA = calibInfo?.calibA ?? 50;
-    const activeCalibB = calibInfo?.calibA ?? 30;
+    // activeCalibB entfernt (nur noch eine Schwelle)
 
     return (
         <div style={{
@@ -1889,7 +1909,6 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                             vibRaw={vibRaw[todayDs] ?? []}
                             sessions={todayEvents}
                             calibA={activeCalibA}
-                            calibA={activeCalibB}
                             isDark={isDark}
                             dayStart={viewDayStart}
                             isToday={isToday}
@@ -1991,9 +2010,9 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                             <strong style={{ color: isDark ? '#ab47bc' : '#7b1fa2' }}>{activeCalibA}</strong>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                                            <span style={{ width: 56, flexShrink: 0, color: isDark ? '#90caf9' : '#283593', fontWeight: 600, fontSize: '0.75rem' }}>Pfad B</span>
+                                            <span style={{ width: 56, flexShrink: 0, color: isDark ? '#ab47bc' : '#7b1fa2', fontWeight: 600, fontSize: '0.75rem' }}>Pfad B</span>
                                             <span style={{ fontSize: '0.74rem', color: isDark ? '#555' : '#999' }}>länger+moderat: ≥6 Blöcke, Peak ≥</span>
-                                            <strong style={{ color: isDark ? '#90caf9' : '#283593' }}>{activeCalibB}</strong>
+                                            <strong style={{ color: isDark ? '#90caf9' : '#283593' }}>{activeCalibA}</strong>
                                         </div>
 
                                         {/* ── KALIBRIERUNG ── */}
@@ -2012,10 +2031,10 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                 borderLeft: `3px solid ${isTypedCalib ? '#81c784' : calibInfo.src === 'baseline' ? '#90caf9' : calibInfo.src === 'manual' ? '#f48fb1' : '#666'}`,
                                                 fontSize: '0.76rem'
                                             }}>
-                                                {isTypedCalib && <span style={{ color: isDark ? '#81c784' : '#2e7d32' }}>✓ {calibInfo.src === 'labels_typed' ? 'Typ-spezifisch' : 'Aus'} {calibInfo.n} Sessions · Schwelle A={calibInfo.calibA} · B={calibInfo.calibA}</span>}
-                                                {calibInfo.src === 'baseline' && <span style={{ color: isDark ? '#90caf9' : '#3949ab' }}>~ Anomalie-Baseline · A={calibInfo.calibA} · B={calibInfo.calibA} <span style={{ opacity: 0.7 }}>(mehr Sessions = mehr Präzision)</span></span>}
-                                                {calibInfo.src === 'manual' && <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>⚙ Manuell konfiguriert · A={calibInfo.calibA} · B={calibInfo.calibA}</span>}
-                                                {calibInfo.src === 'default' && <span style={{ color: isDark ? '#555' : '#aaa' }}>Standard-Schwellen · A={calibInfo.calibA} · B={calibInfo.calibA} <span style={{ opacity: 0.7 }}>(Sessions eintragen!)</span></span>}
+                                                {isTypedCalib && <span style={{ color: isDark ? '#81c784' : '#2e7d32' }}>✓ {'Kalibriert'} {calibInfo.n} Sessions · Schwelle A={calibInfo.calibA}</span>}
+                                                {calibInfo.src === 'baseline' && <span style={{ color: isDark ? '#90caf9' : '#3949ab' }}>~ Anomalie-Baseline · A={calibInfo.calibA} <span style={{ opacity: 0.7 }}>(mehr Sessions = mehr Präzision)</span></span>}
+                                                {calibInfo.src === 'manual' && <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>⚙ Manuell konfiguriert · A={calibInfo.calibA}</span>}
+                                                {calibInfo.src === 'default' && <span style={{ color: isDark ? '#555' : '#aaa' }}>Standard-Schwellen · A={calibInfo.calibA} <span style={{ opacity: 0.7 }}>(Sessions eintragen!)</span></span>}
                                             </div>
                                         ) : (
                                             <div style={{ color: isDark ? '#444' : '#bbb', fontSize: '0.74rem', marginBottom: 4 }}>
@@ -2039,15 +2058,11 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                 {miniBar(activeCalibA, 100, isDark ? '#ad1457' : '#f48fb1')}
                                                 <span style={{ flexShrink: 0, minWidth: 48, textAlign: 'right', fontSize: '0.7rem', color: isDark ? '#555' : '#bbb' }}>Peak≥{activeCalibA}</span>
                                             </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
-                                                <span style={{ width: 80, flexShrink: 0, fontSize: '0.72rem', color: isDark ? '#90caf9' : '#283593' }}>💋 Oral/Hand</span>
-                                                {miniBar(activeCalibB, 100, isDark ? '#1565c0' : '#90caf9')}
-                                                <span style={{ flexShrink: 0, minWidth: 48, textAlign: 'right', fontSize: '0.7rem', color: isDark ? '#555' : '#bbb' }}>Peak≥{activeCalibA}</span>
-                                            </div>
+
                                         </div>
                                         <div style={{ fontSize: '0.7rem', color: isDark ? '#444' : '#bbb', lineHeight: 1.6 }}>
                                             <div>• Peak ≥ <strong style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>{activeCalibA}</strong> + ≥3 Slots → <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>Sex erkannt</span></div>
-                                            <div>• Peak ≥ <strong style={{ color: isDark ? '#90caf9' : '#283593' }}>{activeCalibA}</strong> oder Pfad B → <span style={{ color: isDark ? '#90caf9' : '#283593' }}>oral/hand</span></div>
+                                            
                                             <div>• Sonst → <span style={{ color: '#888' }}>❓ nicht klassifiziert</span></div>
                                         </div>
 
@@ -2150,8 +2165,8 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                                                     {rfInfo.loo_details.map((d: any, i: number) => (
                                                                                         <tr key={i} style={{ background: d.correct ? (isDark ? 'rgba(129,199,132,0.08)' : 'rgba(200,230,201,0.4)') : (isDark ? 'rgba(239,83,80,0.08)' : 'rgba(255,205,210,0.5)') }}>
                                                                                             <td style={{ padding: '1px 4px', fontFamily: 'monospace' }}>{d.date || '—'}</td>
-                                                                                            <td style={{ padding: '1px 4px' }}>{d.actual === 'sex' ? '🌹' : '🚫'} {d.actual}</td>
-                                                                                            <td style={{ padding: '1px 4px' }}>{d.predicted === 'sex' ? '🌹' : '🚫'} {d.predicted}</td>
+                                                                                            <td style={{ padding: '1px 4px' }}>{(d.actual === 'sex' || d.actual === 'vaginal' || d.actual === 'oral_hand') ? '🌹' : '🚫'} {d.actual === 'vaginal' || d.actual === 'oral_hand' ? 'sex' : d.actual}</td>
+                                                                                            <td style={{ padding: '1px 4px' }}>{(d.predicted === 'sex' || d.predicted === 'vaginal' || d.predicted === 'oral_hand') ? '🌹' : '🚫'} {d.predicted === 'vaginal' || d.predicted === 'oral_hand' ? 'sex' : d.predicted}</td>
                                                                                             <td style={{ textAlign: 'center', padding: '1px 4px', fontWeight: 700, color: d.cell === 'tp' || d.cell === 'tn' ? (isDark ? '#81c784' : '#2e7d32') : '#c62828' }}>{(d.cell||'').toUpperCase()}</td>
                                                                                         </tr>
                                                                                     ))}
