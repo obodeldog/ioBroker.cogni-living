@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Tooltip as MuiTooltip, IconButton } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
@@ -22,7 +22,7 @@ interface IntimacyEvent {
     end: number;
     duration: number;
     score: number;
-    type: 'vaginal' | 'oral_hand' | 'intim';
+    type: 'sex' | 'intim';
     peakStrength: number;
     avgStrength: number;
     avgTrigger: number;
@@ -46,7 +46,7 @@ interface ManualSexEntry {
     date: string;
     time?: string;
     durationMin?: number;
-    type: 'vaginal' | 'oral_hand' | 'sonstiges';
+    type: 'sex' | 'sonstiges';
     createdAt: number;
 }
 
@@ -173,39 +173,24 @@ const getFunComment = (evt: IntimacyEvent, native?: Record<string, any>): string
     const hr = evt.garminHRMax;
     const zyklus = native ? getZyklusPhaseForDate(new Date(evt.start), native) : null;
 
-    // Zyklus-spezifische Kommentare (haben Priorität bei interessanten Phasen)
     if (zyklus && native?.sexFunMode !== false) {
-        if (zyklus.phase === 'eisprung') {
-            if (evt.type === 'oral_hand') return `🥚 Zyklustag ${zyklus.tag} — Eisprung! Nur Oral/Hand heute? Ihr wisst was ihr tut. 😏 Clever.`;
-            if (evt.type === 'vaginal') return `🥚💕 Zyklustag ${zyklus.tag} — Eisprung + Vaginal. Der Sensor tippt auf Familienplanung (oder Glück). 👶❓`;
-        }
-        if (zyklus.phase === 'fruchtbar') {
-            if (evt.type === 'oral_hand') return `🌿 Fruchtbares Fenster, Tag ${zyklus.tag}. Nur Oral/Hand — bewusster Umgang mit der Biologie. Respekt! 👍`;
-            if (evt.type === 'vaginal') return `🌿 Fruchtbares Fenster! Vaginal-Session an Tag ${zyklus.tag}. Sensor schweigt diskret zu möglichen Konsequenzen. 🍼`;
-        }
-        if (zyklus.phase === 'menstruation') {
-            return `🩸 Zyklustag ${zyklus.tag} — Menstruationsphase. Trotzdem aktiv! Red ist offenbar nur eine Farbe. Respekt. ❤️`;
-        }
-        if (zyklus.phase === 'pms') {
-            return `😤 PMS-Phase (Tag ${zyklus.tag}) — trotzdem intime Aktivität! Hormone konnten euch nicht aufhalten. Stark. 💪`;
-        }
-        if (zyklus.phase === 'luteal') {
-            return `💜 Lutealphase, Tag ${zyklus.tag}. Progesteron dominiert — und ihr trotzdem. Der Sensor ist beeindruckt.${hr ? ` HR: ${hr} bpm.` : ''}`;
-        }
+        if (zyklus.phase === 'eisprung')
+            return `🥚💕 Zyklustag ${zyklus.tag} — Eisprung! Der Sensor schweigt respektvoll. 👶❓`;
+        if (zyklus.phase === 'fruchtbar')
+            return `🌿 Fruchtbares Fenster, Tag ${zyklus.tag}. Session erkannt. 👍`;
+        if (zyklus.phase === 'menstruation')
+            return `🩸 Zyklustag ${zyklus.tag} — Menstruationsphase. Trotzdem aktiv! ❤️`;
+        if (zyklus.phase === 'pms')
+            return `😤 PMS-Phase (Tag ${zyklus.tag}) — trotzdem aktiv! 💪`;
+        if (zyklus.phase === 'luteal')
+            return `💜 Lutealphase, Tag ${zyklus.tag}.${hr ? ' HR: ' + hr + ' bpm.' : ''}`;
     }
 
-    if (evt.type === 'vaginal') {
-        if (s >= 85) return `🔥 Rekord-Session! Peak-Stärke ${evt.peakStrength}${hr ? ` · HR bis ${hr} bpm` : ''}. Der Sensor ist beeindruckt und leicht überwältigt.`;
-        if (s >= 70) return `💕 Intensive vaginal-Session (${evt.duration} Min). ${hr ? `Garmin sagt: ${hr} bpm Max — ordentlich!` : 'Sensor nickt respektvoll.'}`;
-        return `💗 Schöne Session${hr ? ` · HR: ${hr} bpm` : ''}. Vaginal mit guter Matratzen-Übertragung.`;
-    }
-    if (evt.type === 'oral_hand') {
-        if (s >= 70) return `💜 Oral/Hand — gleichmäßig über ${evt.duration} Min. ${hr && hr > 100 ? `Herzrate ${hr} bpm — auch ohne Penetration kein Sport-Halfday. 😄` : 'Lateral und doch überzeugend.'}`;
-        if (evt.duration >= 60) return `💙 Ausdauer! ${evt.duration} Min Oral/Hand — der Sensor hat mitgezählt (leicht neidisch).`;
-        return `💙 Kurze aber feine Einheit (${evt.duration} Min, oral/hand). Qualität > Quantität!`;
-    }
-    if (s >= 70) return `💜 Intime Aktivität erkannt — ${evt.duration} Min, Score ${s}. ${hr ? `HR: ${hr} bpm.` : 'Typ-Klassifikation: zu diskret für den Sensor.'}`;
-    return `🤍 Intime Aktivität (${evt.duration} Min). Der Sensor hält diskret die Klappe.`;
+    if (s >= 85) return `🔥 Rekord-Session! Peak-Stärke ${evt.peakStrength}${hr ? ' · HR bis ' + hr + ' bpm' : ''}. Sensor beeindruckt.`;
+    if (s >= 70) return `💕 Intensive Session (${evt.duration} Min).${hr ? ' Garmin: ' + hr + ' bpm Max.' : ' Sensor nickt.'}`;
+    if (s >= 50) return `💗 Schöne Session · ${evt.duration} Min${hr ? ' · HR: ' + hr + ' bpm' : ''}.`;
+    if (evt.duration >= 60) return `💜 Ausdauer! ${evt.duration} Min — der Sensor hat mitgezählt.`;
+    return `🔇 Intime Aktivität erkannt (${evt.duration} Min, Score ${s}).`;
 };
 
 const getNoActivityComment = (daysSince: number | null): string => {
@@ -228,21 +213,18 @@ const slotColor = (max: number): string => {
 // Typ-Label
 // Typ-Label
 const typeLabel = (type: string): string => {
-    if (type === 'vaginal')    return '🌹 Vaginal';
-    if (type === 'oral_hand')  return '💋 Oral / Hand';
-    if (type === 'nullnummer') return '⛔ Nullnummer';
+    if (type === 'sex')        return '🌹 Sex erkannt';
+    if (type === 'nullnummer') return '⊘ Nullnummer';
     return '❓ Nicht klassifiziert';
 };
 const typeBg = (type: string, isDark: boolean): string => {
-    if (type === 'vaginal')    return isDark ? '#880e4f' : '#fce4ec';
-    if (type === 'oral_hand')  return isDark ? '#1a1a2e' : '#f3e5f5';
+    if (type === 'sex')        return isDark ? '#880e4f' : '#fce4ec';
     if (type === 'nullnummer') return isDark ? '#1a1a1a' : '#f5f5f5';
     if (type === 'sonstiges')  return isDark ? '#1a2a1a' : '#f1f8e9';
     return isDark ? '#212121' : '#f5f5f5';
 };
 const typeColor = (type: string, isDark: boolean): string => {
-    if (type === 'vaginal')    return isDark ? '#f48fb1' : '#c2185b';
-    if (type === 'oral_hand')  return isDark ? '#ce93d8' : '#7b1fa2';
+    if (type === 'sex')        return isDark ? '#f48fb1' : '#c2185b';
     if (type === 'nullnummer') return isDark ? '#555' : '#aaa';
     if (type === 'sonstiges')  return isDark ? '#a5d6a7' : '#2e7d32';
     return isDark ? '#888' : '#555';
@@ -437,8 +419,8 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
         if (labeledEvt) primaryEvt = labeledEvt;
     }
 
-    const effectiveType = (matchedLabel && (matchedLabel.type === 'vaginal' || matchedLabel.type === 'oral_hand'))
-        ? matchedLabel.type as 'vaginal' | 'oral_hand'
+    const effectiveType = (matchedLabel && matchedLabel.type === 'sex')
+        ? 'sex' as 'sex'
         : primaryEvt.type;
     const isManualOverride = matchedLabel != null && matchedLabel.type !== primaryEvt.type;
 
@@ -490,18 +472,18 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
                 border: `1px solid ${typeColor(effectiveType, isDark)}44`,
             }}>
                 <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>
-                    {effectiveType === 'vaginal' ? '🌹' : effectiveType === 'oral_hand' ? '💋' : '✨'}
+                    {effectiveType === 'sex' ? '🌹' : '✨'}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '1rem', fontWeight: 'bold', color: typeColor(effectiveType, isDark) }}>
-                        {effectiveType === 'vaginal' ? 'Vaginal' : effectiveType === 'oral_hand' ? 'Oral / Hand' : 'Nicht klassifiziert'}
+                        {effectiveType === 'sex' ? 'Sex erkannt' : 'Nicht klassifiziert'}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: isDark ? '#888' : '#999', marginTop: 1 }}>
                         {fmtTime(primaryEvt.start)} – {fmtTime(primaryEvt.end)} · ~{primaryEvt.duration} Min · Score {primaryEvt.score}
                     </div>
                     {isManualOverride && (
                         <div style={{ fontSize: '0.6rem', color: isDark ? '#555' : '#bbb', marginTop: 2 }}>
-                            Sensor erkannte: {primaryEvt.type === 'vaginal' ? 'Vaginal' : primaryEvt.type === 'oral_hand' ? 'Oral/Hand' : 'Nicht klass.'}
+                            Sensor erkannte: {primaryEvt.type === 'sex' ? 'Sex erkannt' : 'Nicht klassifiziert'}
                         </div>
                     )}
                 </div>
@@ -511,7 +493,7 @@ const SexDayCard = ({ events, dateLabel, themeType, funMode, native, labels, cur
                             fontSize: '0.65rem', padding: '2px 8px', borderRadius: 3,
                             background: isDark ? '#0d2b3e' : '#e3f2fd', color: isDark ? '#64b5f6' : '#1565c0',
                             fontWeight: 'bold', whiteSpace: 'nowrap'
-                        }}>✏ Typ-Label: {matchedLabel.type === 'vaginal' ? 'Vaginal' : 'Oral/Hand'}</span>
+                        }}>✏ Typ-Label: {matchedLabel.type === 'sex' ? 'Sex' : matchedLabel.type}</span>
                     ) : (
                         <span style={{
                             fontSize: '0.65rem', padding: '2px 8px', borderRadius: 3,
@@ -680,19 +662,19 @@ const MonthCalendar: React.FC<{
 
         // Dominanten Typ bestimmen (erster algorithmischer Event, sonst manuell)
         const domType  = events[0]?.type ?? null;
-        // Nullnummer-Tag: nur wenn KEINE echten Events mehr in JSON UND kein vaginal/oral-Label
+        // Nullnummer-Tag: nur wenn KEINE echten Events mehr in JSON UND kein sex-Label
         // (Backend entfernt Nullnummer-Sessions bereits aus intimacyEvents → events enthält nur echte)
-        const _hasValidLabel = labels.some((l: any) => l.date === dateStr && (l.type === 'vaginal' || l.type === 'oral_hand'));
+        const _hasValidLabel = labels.some((l: any) => l.date === dateStr && l.type === 'sex');
         const isNullnummerDay = events.length === 0 && !_hasValidLabel &&
             labels.some((l: any) => l.date === dateStr && l.type === 'nullnummer');
         const domManual = manualDay[0]?.type ?? null;
         // Algorithmisch erkannt: volle Emojis; nur manuell: hohle Variante
-        // Trainings-Label überschreibt Roh-Algorithmus-Typ (oral↔vaginal-Override)
-        const _labelOverride = labels.find((l: any) => l.date === dateStr && (l.type === 'vaginal' || l.type === 'oral_hand'));
+        // Trainings-Label überschreibt Roh-Algorithmus-Typ
+        const _labelOverride = labels.find((l: any) => l.date === dateStr && l.type === 'sex');
         // Nullnummer unterdrückt Icon nur wenn kein Label-Override vorhanden
         const effectiveDomType = (isNullnummerDay && !_labelOverride) ? null : (_labelOverride?.type ?? domType);
-        const emoji    = effectiveDomType === 'vaginal' ? '🌹' : effectiveDomType === 'oral_hand' ? '💋' : effectiveDomType ? '❓' : null;
-        const emojiManual = (isNullnummerDay || !emoji) && domManual ? (domManual === 'vaginal' ? '🌷' : domManual === 'oral_hand' ? '💋' : '❓') : null;
+        const emoji    = effectiveDomType === 'sex' ? '🌹' : effectiveDomType ? '❓' : null;
+        const emojiManual = (isNullnummerDay || !emoji) && domManual ? '🌹' : null;
 
         cells.push(
             <div key={dateStr} onClick={() => onDayClick(dateStr)} style={{
@@ -775,14 +757,14 @@ const MonthCalendar: React.FC<{
             {/* Legende */}
             <div style={{ marginTop: 8, fontSize: '0.6rem', color: isDark ? '#444' : '#bbb' }}>
                 <div style={{ display: 'flex', gap: 10, marginBottom: 2 }}>
-                    <span style={{ opacity: 1   }}>🌹 vaginal</span>
-                    <span style={{ opacity: 1   }}>💋 oral/hand</span>
+                    <span style={{ opacity: 1   }}>🌹 sex erkannt</span>
+                    
                     <span style={{ opacity: 1   }}>❓ n.klass.</span>
                     <span style={{ color: isDark ? '#666' : '#999' }}>← Sensor erkannt (volle Farbe)</span>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
-                    <span style={{ opacity: 0.6 }}>🌷 vaginal</span>
-                    <span style={{ opacity: 0.6 }}>💋 oral/hand</span>
+                    <span style={{ opacity: 0.6 }}>🌹 nur manuell</span>
+                    
                     <span style={{ opacity: 0.6 }}>❓ n.klass.</span>
                     <span style={{ color: isDark ? '#666' : '#999' }}>← nur manuell (blass)</span>
                 </div>
@@ -803,8 +785,8 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels, manualEntrie
     // Werden NICHT als Session gezählt. Tage mit manuellem Eintrag zählen dagegen.
     const isNullnummerFn = (dateStr: string, evts: IntimacyEvent[]) => {
         if (!labels || evts.length === 0) return false;
-        // Wenn ein positives Label (vaginal/oral) fuer denselben Tag existiert → kein Nullnummer-Tag
-        const hasPositiveLabel = labels.some((l: any) => l.date === dateStr && (l.type === 'vaginal' || l.type === 'oral_hand'));
+        // Wenn ein positives Label (sex) fuer denselben Tag existiert → kein Nullnummer-Tag
+        const hasPositiveLabel = labels.some((l: any) => l.date === dateStr && l.type === 'sex');
         if (hasPositiveLabel) return false;
         const lbl = labels.find((l: any) => l.date === dateStr && l.type === 'nullnummer');
         return !!lbl;
@@ -851,16 +833,16 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels, manualEntrie
                     // Manuelles Label hat Vorrang
                     const dayLbl = (labels && hasEvt) ? findMatchingLabel(day.dateStr, day.events, labels) : null;
                     const isNullnummer = dayLbl?.type === 'nullnummer';
-                    const effType: string = (dayLbl && (dayLbl.type === 'vaginal' || dayLbl.type === 'oral_hand'))
+                    const effType: string = (dayLbl && dayLbl.type === 'sex')
                         ? dayLbl.type
                         : (evt?.type ?? 'intim');
                     const dotColor = (!hasEvt || (isNullnummer && !hasManual)) ? (isDark ? '#1a1a1a' : '#f0f0f0') :
-                        (isNullnummer && hasManual) ? (manualType === 'vaginal' ? '#880e4f' : '#4a148c') :
-                        effType === 'vaginal' ? '#880e4f' : '#4a148c';
+                        (isNullnummer && hasManual) ? '#880e4f' :
+                        '#880e4f';
                     const dotBorder = (!hasEvt || (isNullnummer && !hasManual)) ? ('1px dashed ' + (isDark ? '#2a2a2a' : '#ddd')) :
-                        (isNullnummer && hasManual) ? (manualType === 'vaginal' ? '1px solid #c2185b' : '1px solid #7b1fa2') :
-                        effType === 'vaginal' ? '1px solid #c2185b' : '1px solid #7b1fa2';
-                        effType === 'vaginal' ? '1px solid #c2185b' : '1px solid #7b1fa2';
+                        (isNullnummer && hasManual) ? '1px solid #c2185b' :
+                        '1px solid #c2185b';
+                        '1px solid #c2185b';
                     return (
                         <div key={i}>
                             <div style={{ fontSize: '0.52rem', color: isDark ? (isToday ? '#888' : '#444') : (isToday ? '#666' : '#bbb'), marginBottom: 3 }}>
@@ -873,7 +855,7 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels, manualEntrie
                                 alignItems: 'center', justifyContent: 'center',
                                 fontSize: '0.7rem', opacity: (isNullnummer && !hasManual) ? 0.45 : 1
                             }}>
-                                {isNullnummer && hasManual ? (manualType === 'vaginal' ? '🌷' : manualType === 'oral_hand' ? '💋' : '❓') : isNullnummer ? '—' : hasEvt ? (effType === 'vaginal' ? '🌹' : effType === 'oral_hand' ? '💋' : '❓') : (isToday ? '⏳' : '-')}
+                                {isNullnummer && hasManual ? '🌹' : isNullnummer ? '—' : hasEvt ? '🌹' : (isToday ? '⏳' : '-')}
                                 {!isNullnummer && hasManual && <span style={{ fontSize: '0.45rem', opacity: 0.75, lineHeight: 1 }} title="Zusätzlich manueller Eintrag">+m</span>}
                             </div>
                             {hasEvt && !isNullnummer && (
@@ -881,7 +863,7 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels, manualEntrie
                                     <div style={{ fontSize: '0.88rem', color: isDark ? '#ce93d8' : '#7b1fa2', fontWeight: 'bold' }}>{evt!.score}</div>
                                     <div style={{ fontSize: '0.45rem', color: isDark ? '#555' : '#aaa' }}>{fmtTime(evt!.start).slice(0,5)}</div>
                                     <div style={{ fontSize: '0.45rem', color: typeColor(effType, isDark), fontWeight: 'bold' }}>
-                                        {effType === 'vaginal' ? 'Vaginal' : effType === 'oral_hand' ? 'Oral' : 'Intim ✨'}
+                                        {effType === 'sex' ? 'Sex' : 'Intim ✨'}
                                         {dayLbl && effType !== evt!.type && <span style={{ color: isDark ? '#555' : '#ccc' }}> ?</span>}
                                     </div>
                                 </>
@@ -891,7 +873,7 @@ const SevenDayHistory = ({ historyDays, themeType, funMode, labels, manualEntrie
                             )}
                             {hasManual && isNullnummer && (
                                 <div style={{ fontSize: '0.45rem', color: typeColor(manualType || 'intim', isDark), fontWeight: 'bold', marginTop: 2 }}>
-                                    {manualType === 'vaginal' ? 'Vaginal' : manualType === 'oral_hand' ? 'Oral' : '✨'}
+                                    {manualType === 'sex' ? 'Sex' : '✨'}
                                     <br/><span style={{color: isDark ? '#555' : '#bbb'}}>manuell</span>
                                 </div>
                             )}
@@ -951,7 +933,7 @@ const LabelForm = ({ native, onChange, themeType, dayData, loadDay }: {
     const [formDate, setFormDate] = useState(today);
     const [formTime, setFormTime] = useState('');
     const [formDuration, setFormDuration] = useState('');
-    const [formType, setFormType] = useState<'vaginal' | 'oral_hand' | 'none'>('oral_hand');
+    const [formType, setFormType] = useState<'sex' | 'nullnummer' | 'none'>('sex');
 
     const labels = parseSexTrainingLabels(native.sexTrainingLabels);
 
@@ -1014,8 +996,8 @@ const LabelForm = ({ native, onChange, themeType, dayData, loadDay }: {
                 <div>
                     <div style={{ fontSize: '0.8rem', color: isDark ? '#555' : '#aaa', marginBottom: 3 }}>TYP</div>
                     <select value={formType} onChange={e => setFormType(e.target.value as any)} style={{ ...selectStyle, width: 130 }}>
-                        <option value="vaginal">🌹 Vaginal</option>
-                        <option value="oral_hand">💋 Oral / Hand</option>
+                        <option value="sex">🌹 Sex erkannt</option>
+                        
                         <option value="none">✨ Sonstiges</option>
                     </select>
                 </div>
@@ -1066,7 +1048,7 @@ const LabelForm = ({ native, onChange, themeType, dayData, loadDay }: {
                                         marginLeft: 8, padding: '1px 6px', borderRadius: 3, fontSize: '0.88rem',
                                         background: typeBg(l.type, isDark),
                                         color: typeColor(l.type, isDark),
-                                    }}>{ l.type === 'vaginal' ? '🌹 vaginal' : l.type === 'oral_hand' ? '💋 oral/hand' : l.type === 'nullnummer' ? '⛔ nullnummer' : '✨ sonstiges'}</span>
+                                    }}>{ l.type === 'sex' ? '🌹 sex' : l.type === 'nullnummer' ? '⊗ nullnummer' : '✨ sonstiges'}</span>
                                 </span>
                                 <button onClick={() => handleDelete(i)} style={{
                                     background: 'transparent', border: 'none', color: isDark ? '#555' : '#bbb',
@@ -1154,7 +1136,6 @@ interface VibPanelProps {
     vibRaw: any[];
     sessions: IntimacyEvent[];
     calibA: number;
-    calibB: number;
     isDark: boolean;
     dayStart: number;
     isToday: boolean;
@@ -1163,7 +1144,7 @@ interface VibPanelProps {
 }
 
 // Benutzerdefinierter Tooltip für Vibrations-Chart
-const VibTooltip: React.FC<any> = ({ active, payload, label, calibA, calibB, isDark }) => {
+const VibTooltip: React.FC<any> = ({ active, payload, label, calibA, isDark }) => {
     if (!active || !payload || !payload.length) return null;
     const strEntry = payload.find((p: any) => p.dataKey === 'strength');
     const trigEntry = payload.find((p: any) => p.dataKey === 'triggerMark');
@@ -1177,12 +1158,12 @@ const VibTooltip: React.FC<any> = ({ active, payload, label, calibA, calibB, isD
         zone = `Intensiv-Zone (≥ A=${calibA})`;
         zoneColor = '#ab47bc';
         hint = `Pfad A braucht ≥ 2 aufeinanderfolgende Slots — kein Session-Kriterium für diesen Slot allein`;
-    } else if (val >= calibB) {
-        zone = `Moderat-Zone (≥ B=${calibB})`;
+    } else if (val >= calibA) {
+        zone = `Moderat-Zone (≥ B=${calibA})`;
         zoneColor = '#f48fb1';
         hint = `Pfad B braucht ≥ 6 aufeinanderfolgende Slots — kein Session-Kriterium für diesen Slot allein`;
     } else if (val > 0) {
-        zone = `Unter Schwelle B=${calibB}`;
+        zone = `Weit unter Schwelle (< ${calibA})`;
         zoneColor = isDark ? '#555' : '#999';
         hint = 'Zu schwache Vibration für Session-Erkennung';
     }
@@ -1204,7 +1185,7 @@ const VibTooltip: React.FC<any> = ({ active, payload, label, calibA, calibB, isD
     );
 };
 
-const VibGarmin: React.FC<VibPanelProps & { zoom: number }> = ({ vibRaw, sessions, calibA, calibB, isDark, dayStart, isToday, livePoints, zoom }) => {
+const VibGarmin: React.FC<VibPanelProps & { zoom: number }> = ({ vibRaw, sessions, calibA, isDark, dayStart, isToday, livePoints, zoom }) => {
     const rawPts = zoomSlice(buildVibSlots(vibRaw, dayStart, livePoints), zoom, dayStart, isToday);
     const gc = isDark ? '#1e1e1e' : '#eeeeee';
     const ax = isDark ? '#555' : '#aaa';
@@ -1228,12 +1209,12 @@ const VibGarmin: React.FC<VibPanelProps & { zoom: number }> = ({ vibRaw, session
                 <CartesianGrid strokeDasharray="3 6" stroke={gc} vertical={false} />
                 <XAxis dataKey="time" stroke={ax} tick={{ fontSize: 11, fill: isDark ? '#666' : '#999' }} interval={xInterval} />
                 <YAxis domain={[0, yMax]} stroke={ax} tick={{ fontSize: 11, fill: isDark ? '#666' : '#999' }} width={36} />
-                <ReTooltip content={<VibTooltip calibA={calibA} calibB={calibB} isDark={isDark} />} />
+                <ReTooltip content={<VibTooltip calibA={calibA} isDark={isDark} />} />
                 {sessionAreas}
                 <ReferenceLine y={calibA} stroke="#ab47bc" strokeDasharray="5 3" strokeWidth={1.5}
                     label={{ value: `Schwelle A = ${calibA}`, position: 'insideTopLeft', fontSize: 10, fill: '#ab47bc', offset: 4 }} />
-                <ReferenceLine y={calibB} stroke="#42a5f5" strokeDasharray="5 3" strokeWidth={1.5}
-                    label={{ value: `Schwelle B = ${calibB}`, position: 'insideBottomLeft', fontSize: 10, fill: '#42a5f5', offset: 4 }} />
+                <ReferenceLine y={calibA} stroke="#42a5f5" strokeDasharray="5 3" strokeWidth={1.5}
+                    label={{ value: `Schwelle B = ${calibA}`, position: 'insideBottomLeft', fontSize: 10, fill: '#42a5f5', offset: 4 }} />
                 {/* Trigger-Markierungen (cyan, klein) */}
                 <Bar dataKey="triggerMark" name="triggerMark" radius={[1, 1, 0, 0]} maxBarSize={4} isAnimationActive={false} fill="#00bcd4" opacity={0.7} />
                 {/* Stärke-Balken (farbkodiert nach Intensitäts-Zone) */}
@@ -1241,7 +1222,7 @@ const VibGarmin: React.FC<VibPanelProps & { zoom: number }> = ({ vibRaw, session
                     {pts.map((p, i) => (
                         <Cell key={i} fill={
                             (p.strength || 0) >= calibA ? '#ab47bc' :
-                            (p.strength || 0) >= calibB ? '#f48fb1' :
+                            (p.strength || 0) >= calibA ? '#f48fb1' :
                             (p.strength || 0) > 0 ? (isDark ? '#383838' : '#d0d0d0') :
                             'transparent'
                         } />
@@ -1258,14 +1239,13 @@ const VibrationChartPanel: React.FC<{
     vibRaw: any[];
     sessions: IntimacyEvent[];
     calibA: number;
-    calibB: number;
     isDark: boolean;
     dayStart: number;
     isToday: boolean;
     socket: any;
     strengthId: string | null;
     trigId: string | null;
-}> = ({ vibRaw, sessions, calibA, calibB, isDark, dayStart, isToday, socket, strengthId, trigId }) => {
+}> = ({ vibRaw, sessions, calibA, isDark, dayStart, isToday, socket, strengthId, trigId }) => {
     const [zoom, setZoom] = useState(12);
     const [livePoints, setLivePoints] = useState<{ ts: number; val: number }[]>([]);
     const liveRef = useRef<{ ts: number; val: number }[]>([]);
@@ -1332,13 +1312,13 @@ const VibrationChartPanel: React.FC<{
                     Keine Vibrationsdaten für diesen Tag
                 </div>
             ) : (
-                <VibGarmin vibRaw={vibRaw} sessions={sessions} calibA={calibA} calibB={calibB}
+                <VibGarmin vibRaw={vibRaw} sessions={sessions} calibA={calibA}
                     isDark={isDark} dayStart={dayStart} isToday={isToday} livePoints={livePoints} isLive zoom={zoom} />
             )}
             {/* Legende */}
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 8, fontSize: '0.7rem', color: isDark ? '#555' : '#aaa' }}>
                 <span><span style={{ color: '#ab47bc' }}>▌</span> Intensiv-Zone (≥ A={calibA})</span>
-                <span><span style={{ color: '#f48fb1' }}>▌</span> Moderat-Zone (≥ B={calibB})</span>
+                <span><span style={{ color: '#f48fb1' }}>▌</span> Moderat-Zone (≥ B={calibA})</span>
                 <span><span style={{ color: isDark ? '#444' : '#ccc' }}>▌</span> Schwache Bewegung</span>
                 <span><span style={{ color: '#00bcd4' }}>▌</span> Trigger erkannt</span>
                 <span><span style={{ color: 'rgba(244,143,177,0.7)' }}>░</span> Session erkannt</span>
@@ -1372,7 +1352,7 @@ const ManualSessionForm: React.FC<{
     const [formDate, setFormDate] = useState(today);
     const [formTime, setFormTime] = useState('');
     const [formDuration, setFormDuration] = useState('');
-    const [formType, setFormType] = useState<'vaginal' | 'oral_hand' | 'sonstiges'>('oral_hand');
+    const [formType, setFormType] = useState<'sex' | 'sonstiges'>('sex');
 
     const inputStyle = {
         background: isDark ? '#1a1a1a' : '#fff',
@@ -1422,8 +1402,8 @@ const ManualSessionForm: React.FC<{
                     <div style={{ fontSize: '0.6rem', color: isDark ? '#555' : '#aaa', marginBottom: 3, letterSpacing: 1 }}>TYP</div>
                     <select value={formType} onChange={e => setFormType(e.target.value as any)}
                         style={{ ...inputStyle, cursor: 'pointer' }}>
-                        <option value="oral_hand">💋 Oral / Hand</option>
-                        <option value="vaginal">🌹 Vaginal</option>
+                        
+                        <option value="sex">🌹 Sex erkannt</option>
                         <option value="sonstiges">✨ Sonstiges</option>
                     </select>
                 </div>
@@ -1458,7 +1438,7 @@ const ManualSessionForm: React.FC<{
                                     marginLeft: 8, padding: '1px 6px', borderRadius: 3, fontSize: '0.88rem',
                                     background: typeBg(e.type, isDark),
                                     color: typeColor(e.type, isDark),
-                                }}>{ e.type === 'vaginal' ? '🌹 vaginal' : e.type === 'oral_hand' ? '💋 oral/hand' : '✨ sonstiges'}</span>
+                                }}>{ e.type === 'sex' ? '🌹 sex erkannt' : '✨ sonstiges'}</span>
                                 <span style={{ marginLeft: 6, fontSize: '0.65rem', color: isDark ? '#555' : '#bbb' }}>◇ manuell</span>
                             </span>
                             <button onClick={() => onDelete(e.id)} style={{
@@ -1503,7 +1483,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
 
     // Kalibrierungs-Info vom letzten gespeicherten Tag
     const [calibInfo, setCalibInfo] = useState<{
-        src: string; n: number; calibA: number; calibB: number;
+        src: string; n: number; calibA: number; calibA: number;
         pyClassifier?: {
             trained: boolean; n: number; counts: Record<string,number>; msg: string;
             feature_importances?: Array<{ name: string; importance: number }>;
@@ -1804,7 +1784,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
 
     const viewDayStart = new Date(viewDate).setHours(0, 0, 0, 0);
     const activeCalibA = calibInfo?.calibA ?? 50;
-    const activeCalibB = calibInfo?.calibB ?? 30;
+    const activeCalibB = calibInfo?.calibA ?? 30;
 
     return (
         <div style={{
@@ -1909,7 +1889,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                             vibRaw={vibRaw[todayDs] ?? []}
                             sessions={todayEvents}
                             calibA={activeCalibA}
-                            calibB={activeCalibB}
+                            calibA={activeCalibB}
                             isDark={isDark}
                             dayStart={viewDayStart}
                             isToday={isToday}
@@ -1975,7 +1955,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                 const isTypedCalib = calibInfo && (calibInfo.src === 'labels' || calibInfo.src === 'labels_typed');
                                 const rfActive = !!(calibInfo?.pyClassifier?.trained);
                                 const rfInfo = calibInfo?.pyClassifier;
-                                const vaginalThresh = Math.round(activeCalibA * 1.5);
+                                
                                 const sepStyle: React.CSSProperties = { borderTop: `1px dashed ${isDark ? '#222' : '#eee'}`, marginTop: 8, paddingTop: 6 };
                                 const hdrStyle = (active: boolean): React.CSSProperties => ({
                                     color: active ? (isDark ? '#81c784' : '#388e3c') : (isDark ? '#555' : '#aaa'),
@@ -2032,10 +2012,10 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                 borderLeft: `3px solid ${isTypedCalib ? '#81c784' : calibInfo.src === 'baseline' ? '#90caf9' : calibInfo.src === 'manual' ? '#f48fb1' : '#666'}`,
                                                 fontSize: '0.76rem'
                                             }}>
-                                                {isTypedCalib && <span style={{ color: isDark ? '#81c784' : '#2e7d32' }}>✓ {calibInfo.src === 'labels_typed' ? 'Typ-spezifisch' : 'Aus'} {calibInfo.n} Sessions · Schwelle A={calibInfo.calibA} · B={calibInfo.calibB}</span>}
-                                                {calibInfo.src === 'baseline' && <span style={{ color: isDark ? '#90caf9' : '#3949ab' }}>~ Anomalie-Baseline · A={calibInfo.calibA} · B={calibInfo.calibB} <span style={{ opacity: 0.7 }}>(mehr Sessions = mehr Präzision)</span></span>}
-                                                {calibInfo.src === 'manual' && <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>⚙ Manuell konfiguriert · A={calibInfo.calibA} · B={calibInfo.calibB}</span>}
-                                                {calibInfo.src === 'default' && <span style={{ color: isDark ? '#555' : '#aaa' }}>Standard-Schwellen · A={calibInfo.calibA} · B={calibInfo.calibB} <span style={{ opacity: 0.7 }}>(Sessions eintragen!)</span></span>}
+                                                {isTypedCalib && <span style={{ color: isDark ? '#81c784' : '#2e7d32' }}>✓ {calibInfo.src === 'labels_typed' ? 'Typ-spezifisch' : 'Aus'} {calibInfo.n} Sessions · Schwelle A={calibInfo.calibA} · B={calibInfo.calibA}</span>}
+                                                {calibInfo.src === 'baseline' && <span style={{ color: isDark ? '#90caf9' : '#3949ab' }}>~ Anomalie-Baseline · A={calibInfo.calibA} · B={calibInfo.calibA} <span style={{ opacity: 0.7 }}>(mehr Sessions = mehr Präzision)</span></span>}
+                                                {calibInfo.src === 'manual' && <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>⚙ Manuell konfiguriert · A={calibInfo.calibA} · B={calibInfo.calibA}</span>}
+                                                {calibInfo.src === 'default' && <span style={{ color: isDark ? '#555' : '#aaa' }}>Standard-Schwellen · A={calibInfo.calibA} · B={calibInfo.calibA} <span style={{ opacity: 0.7 }}>(Sessions eintragen!)</span></span>}
                                             </div>
                                         ) : (
                                             <div style={{ color: isDark ? '#444' : '#bbb', fontSize: '0.74rem', marginBottom: 4 }}>
@@ -2055,9 +2035,9 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                         {/* calibA Balken */}
                                         <div style={{ marginBottom: 4 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, overflow: 'hidden' }}>
-                                                <span style={{ width: 80, flexShrink: 0, fontSize: '0.72rem', color: isDark ? '#f48fb1' : '#c2185b' }}>🌹 Vaginal</span>
+                                                <span style={{ width: 80, flexShrink: 0, fontSize: '0.72rem', color: isDark ? '#f48fb1' : '#c2185b' }}>🌹 Sex (Mindest-Schwelle)</span>
                                                 {miniBar(activeCalibA, 100, isDark ? '#ad1457' : '#f48fb1')}
-                                                <span style={{ flexShrink: 0, minWidth: 48, textAlign: 'right', fontSize: '0.7rem', color: isDark ? '#555' : '#bbb' }}>Peak≥{vaginalThresh}</span>
+                                                <span style={{ flexShrink: 0, minWidth: 48, textAlign: 'right', fontSize: '0.7rem', color: isDark ? '#555' : '#bbb' }}>Peak≥{activeCalibA}</span>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
                                                 <span style={{ width: 80, flexShrink: 0, fontSize: '0.72rem', color: isDark ? '#90caf9' : '#283593' }}>💋 Oral/Hand</span>
@@ -2066,7 +2046,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                             </div>
                                         </div>
                                         <div style={{ fontSize: '0.7rem', color: isDark ? '#444' : '#bbb', lineHeight: 1.6 }}>
-                                            <div>• Peak ≥ <strong style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>{vaginalThresh}</strong> + ≥3 Slots → <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>vaginal</span></div>
+                                            <div>• Peak ≥ <strong style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>{activeCalibA}</strong> + ≥3 Slots → <span style={{ color: isDark ? '#f48fb1' : '#c2185b' }}>Sex erkannt</span></div>
                                             <div>• Peak ≥ <strong style={{ color: isDark ? '#90caf9' : '#283593' }}>{activeCalibA}</strong> oder Pfad B → <span style={{ color: isDark ? '#90caf9' : '#283593' }}>oral/hand</span></div>
                                             <div>• Sonst → <span style={{ color: '#888' }}>❓ nicht klassifiziert</span></div>
                                         </div>
@@ -2086,7 +2066,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                     <div style={{ color: isDark ? '#81c784' : '#2e7d32', fontWeight: 600, fontSize: '0.76rem', marginBottom: 6 }}>
                                                         🤖 {rfInfo.n} Sessions im Modell
                                                         {rfInfo.counts && (
-                                                            <span style={{ fontWeight: 'normal', opacity: 0.8 }}> · {Object.entries(rfInfo.counts).filter(([k]) => k !== 'nullnummer').map(([k, v]) => `${k === 'vaginal' ? '🌹' : '💋'} ${v}×`).join(' ')}</span>
+                                                            <span style={{ fontWeight: 'normal', opacity: 0.8 }}> · {rfInfo.counts['sex'] ? `🌹 sex: ${rfInfo.counts['sex']}` : 'noch keine'}</span>
                                                         )}
                                                     </div>
                                                     {rfInfo.loo_accuracy != null && (
@@ -2118,7 +2098,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                         return (
                                                             <div style={{ marginBottom: 6 }}>
                                                                 <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#999', marginBottom: 4 }}
-                                                                    title="Leave-One-Out Confusion Matrix: Das Modell testet sich selbst an jeder Session. Sex = vaginal + oral/hand, No-Sex = Nullnummer.">
+                                                                    title="Leave-One-Out Confusion Matrix: Das Modell testet sich selbst an jeder Session. Sex vs. Nullnummer.">
                                                                     2×2 Konfusionsmatrix (Sex vs. No-Sex, LOO, {total} Fälle):
                                                                 </div>
                                                                 <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: 3, fontSize: '0.62rem', alignItems: 'center' }}>
@@ -2170,8 +2150,8 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                                                                                     {rfInfo.loo_details.map((d: any, i: number) => (
                                                                                         <tr key={i} style={{ background: d.correct ? (isDark ? 'rgba(129,199,132,0.08)' : 'rgba(200,230,201,0.4)') : (isDark ? 'rgba(239,83,80,0.08)' : 'rgba(255,205,210,0.5)') }}>
                                                                                             <td style={{ padding: '1px 4px', fontFamily: 'monospace' }}>{d.date || '—'}</td>
-                                                                                            <td style={{ padding: '1px 4px' }}>{d.actual === 'vaginal' ? '🌹' : d.actual === 'oral_hand' ? '💋' : '🚫'} {d.actual}</td>
-                                                                                            <td style={{ padding: '1px 4px' }}>{d.predicted === 'vaginal' ? '🌹' : d.predicted === 'oral_hand' ? '💋' : '🚫'} {d.predicted}</td>
+                                                                                            <td style={{ padding: '1px 4px' }}>{d.actual === 'sex' ? '🌹' : '🚫'} {d.actual}</td>
+                                                                                            <td style={{ padding: '1px 4px' }}>{d.predicted === 'sex' ? '🌹' : '🚫'} {d.predicted}</td>
                                                                                             <td style={{ textAlign: 'center', padding: '1px 4px', fontWeight: 700, color: d.cell === 'tp' || d.cell === 'tn' ? (isDark ? '#81c784' : '#2e7d32') : '#c62828' }}>{(d.cell||'').toUpperCase()}</td>
                                                                                         </tr>
                                                                                     ))}
@@ -2235,14 +2215,14 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                 <div style={{ color: isDark ? '#888' : '#555' }}>{rfInfo.msg || 'Mehr bestätigte Sessions nötig'}</div>
                                                     {rfInfo.counts && (
                                                         <div style={{ fontSize: '0.7rem', color: isDark ? '#555' : '#aaa', marginTop: 3 }}>
-                                                            Vorhanden: {Object.entries(rfInfo.counts).filter(([k]) => k !== 'nullnummer').map(([k, v]) => `${k === 'vaginal' ? '🌹' : '💋'} ${v}×`).join(', ') || '—'}
+                                                            Vorhanden: {rfInfo.counts['sex'] ? `🌹 sex: ${rfInfo.counts['sex']}` : 'noch keine'}
                                                         </div>
                                                     )}
                                                 </div>
                                             )
                                         ) : (
                                             <div style={{ padding: '5px 8px', borderRadius: 3, background: isDark ? '#1a1a1a' : '#f5f5f5', borderLeft: '3px solid #444', fontSize: '0.74rem', color: isDark ? '#555' : '#aaa' }}>
-                                                ⏳ Noch zu wenig Lern-Daten · Bitte mindestens 2× Session als 🌹 vaginal und 2× als 💋 oral/hand bestätigen, damit das KI-Lernmodell starten kann.
+                                                ⏳ Noch zu wenig Lern-Daten · Bitte mindestens 2× Session als 🌹 sex und 1× als ⊗ nullnummer bestätigen, damit das KI-Lernmodell starten kann.
                                             </div>
                                         )}
 

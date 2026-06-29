@@ -4703,7 +4703,9 @@ class CogniLiving extends utils.Adapter {
                     // Kalibrierte oder Standard-Schwellen (aus native config oder Defaults)
                     // --- ADAPTIVE KALIBRIERUNG (OC-SEX) ---
                     // Prioritaet: 1. Auto aus Training-Labels, 2. Manuell (sexCalibThreshold), 3. Anomalie-Baseline, 4. Defaults
-                    var _calibA = 50, _calibB = 30, _calibSrc = 'default', _calibN = 0;
+                    var _calibA = 50, _calibSrc = 'default', _calibN = 0;
+                    // [OC-SEX-PERSON] Nur konfigurierte Personen-Tags: verhindert Falsch-Erkennung durch Kinderzimmer-Sensoren
+                    var _sexPersonTagsSet = new Set((this.config.sexPersonTags || '').split(',').map(function(s){return s.trim();}).filter(Boolean));
                     // 1. Auto-Kalibrierung aus Training-Labels (ab 2 Labels)
                     try {
                         var _sexLabelsRaw = this.config.sexTrainingLabels || '';
@@ -4711,7 +4713,7 @@ class CogniLiving extends utils.Adapter {
                         try { var _slP = JSON.parse(_sexLabelsRaw); if (Array.isArray(_slP)) _sexLabels = _slP.filter(function(l){return l&&l.date;}); } catch(_slPE){}
                         if (_sexLabels.length >= 2) {
                             var _calHistDir = require('path').join(utils.getAbsoluteDefaultDataDir(), 'cogni-living', 'history');
-                            var _sessionPeaks = [], _vaginalPeaks = [], _oralPeaks = [];
+                            var _sessionPeaks = [];
                             var _sexTrainData = []; // Stufe 3: Features fuer Python
                             var SLOT_CAL_MS = 5*60*1000;
                             var _labelsUpdated = false;
@@ -4719,17 +4721,16 @@ class CogniLiving extends utils.Adapter {
                                 // Fast-Path: gespeicherte Features direkt verwenden
                                 if (_lbl._features) {
                                     var _lFP = _lbl._features, _lTypFP = (_lbl.type||'').toLowerCase();
-                                    if (_lTypFP !== 'nullnummer') _sessionPeaks.push(_lFP.medianPeak);
-                                    if (_lTypFP === 'vaginal') _vaginalPeaks.push(_lFP.medianPeak);
-                                    else if (_lTypFP === 'oral_hand') _oralPeaks.push(_lFP.medianPeak);
-                                    _sexTrainData.push({peak:_lFP.peakMax,durSlots:_lFP.durSlots,avgPeak:_lFP.avgPeak,variance:_lFP.variance,tierB:0,label:_lTypFP,date:_lbl.date||'',hourSin:_lFP.hourSin||0,hourCos:_lFP.hourCos||1,lightOn:_lFP.lightOn!==undefined?_lFP.lightOn:null,presenceOn:_lFP.presenceOn!==undefined?_lFP.presenceOn:null,roomTemp:_lFP.roomTemp||null,bathBefore:_lFP.bathBefore||0,bathAfter:_lFP.bathAfter||0});
+                                    var _lTypFPNorm = (_lTypFP === 'vaginal' || _lTypFP === 'oral_hand') ? 'sex' : _lTypFP;
+                                    if (_lTypFPNorm !== 'nullnummer') _sessionPeaks.push(_lFP.medianPeak);
+                                    _sexTrainData.push({peak:_lFP.peakMax,durSlots:_lFP.durSlots,avgPeak:_lFP.avgPeak,variance:_lFP.variance,tierB:0,label:_lTypFPNorm,date:_lbl.date||'',hourSin:_lFP.hourSin||0,hourCos:_lFP.hourCos||1,lightOn:_lFP.lightOn!==undefined?_lFP.lightOn:null,presenceOn:_lFP.presenceOn!==undefined?_lFP.presenceOn:null,roomTemp:_lFP.roomTemp||null,bathBefore:_lFP.bathBefore||0,bathAfter:_lFP.bathAfter||0});
                                     continue;
                                 }
                                 try {
                                     var _lPath = require('path').join(_calHistDir, _lbl.date + '.json');
                                     if (!fs.existsSync(_lPath)) continue;
                                     var _lSnap = JSON.parse(fs.readFileSync(_lPath, 'utf8'));
-                                    var _lAllEvts = (_lSnap.eventHistory || []).filter(function(e){ return e.type==='vibration_strength' && (e.isVibrationBed||e.isFP2Bed); });
+                                    var _lAllEvts = (_lSnap.eventHistory || []).filter(function(e){ if (e.type !== 'vibration_strength' || (!e.isVibrationBed && !e.isFP2Bed)) return false; if (_sexPersonTagsSet && _sexPersonTagsSet.size > 0 && e.personTag && !_sexPersonTagsSet.has(e.personTag)) return false; return true; });
                                     if (_lAllEvts.length === 0) continue;
                                     // Zeitfenster: +-45 Min um Label-Zeit, sonst alle Events des Tages
                                     var _lT0 = null, _lT1 = null;
@@ -4753,11 +4754,9 @@ class CogniLiving extends utils.Adapter {
                                     if (_lSlotPeaks.length > 0) {
                                         _lSlotPeaks.sort(function(a,b){return a-b;});
                                         var _lMedian = _lSlotPeaks[Math.floor(_lSlotPeaks.length/2)];
-                                        // Bug-Fix: Nullnummer-Peaks nicht in _sessionPeaks (wuerden calibA faelschlich senken)
                                         var _lTypNorm = (_lbl.type||'').toLowerCase();
-                                        if (_lTypNorm !== 'nullnummer') _sessionPeaks.push(_lMedian);
-                                        if (_lTypNorm === 'vaginal') _vaginalPeaks.push(_lMedian);
-                                        else if (_lTypNorm === 'oral_hand') _oralPeaks.push(_lMedian);
+                                        var _lTypSex = (_lTypNorm === 'vaginal' || _lTypNorm === 'oral_hand') ? 'sex' : _lTypNorm;
+                                        if (_lTypSex !== 'nullnummer') _sessionPeaks.push(_lMedian);
                                         // Stufe 3: Features fuer Python-Klassifikator
                                         var _lPkMax = _lSlotPeaks[_lSlotPeaks.length-1];
                                         var _lAvgP = Math.round(_lSlotPeaks.reduce(function(a,b){return a+b;},0)/_lSlotPeaks.length);
@@ -4778,33 +4777,26 @@ class CogniLiving extends utils.Adapter {
                                         var _lBathA=_lCtxEvts.some(function(e){var t=e.timestamp||0;return (e.isBathroomSensor||(typeof _ctxBathIds!=='undefined'&&_ctxBathIds.has(e.id)))&&e.type==='motion'&&t>_lSessProxy.end&&t<=_lSessProxy.end+60*60000;})?1:0;
                                         // Features einmalig im Label speichern (Migration)
                                          if (!_lbl._features) { _lbl._features = {peakMax:_lPkMax,medianPeak:_lMedian,durSlots:_lSlotPeaks.length,avgPeak:_lAvgP,variance:_lVarP,hourSin:_lHSin,hourCos:_lHCos,lightOn:_lLightOn,presenceOn:_lPresOn,roomTemp:_lRoomT,bathBefore:_lBathB,bathAfter:_lBathA}; _labelsUpdated = true; }
-                                         _sexTrainData.push({ peak: _lPkMax, durSlots: _lSlotPeaks.length, avgPeak: _lAvgP, variance: _lVarP, tierB: 0, label: _lTypNorm, date: _lbl.date||'', hourSin: _lHSin, hourCos: _lHCos, lightOn: _lLightOn, presenceOn: _lPresOn, roomTemp: _lRoomT, bathBefore: _lBathB, bathAfter: _lBathA });
+                                         _sexTrainData.push({ peak: _lPkMax, durSlots: _lSlotPeaks.length, avgPeak: _lAvgP, variance: _lVarP, tierB: 0, label: _lTypSex, date: _lbl.date||'', hourSin: _lHSin, hourCos: _lHCos, lightOn: _lLightOn, presenceOn: _lPresOn, roomTemp: _lRoomT, bathBefore: _lBathB, bathAfter: _lBathA });
                                     }
                                 } catch(_lE) { this.log.debug('[OC-SEX] Calib-Label: '+_lE.message); }
                             }
+                            // Label-Migration: vaginal/oral_hand → sex (einmalig, abwärtskompatibel)
+                            _sexLabels.forEach(function(l){ if(l.type==="vaginal"||l.type==="oral_hand"){l.type="sex"; _labelsUpdated=true;} });
                             // Angereicherte Labels persistieren (Fire-and-Forget)
                             if (_labelsUpdated) { try { var _lblUpd=JSON.stringify(_sexLabels); this.config.sexTrainingLabels=_lblUpd; this.extendForeignObject('system.adapter.'+this.namespace,{native:{sexTrainingLabels:_lblUpd}},function(){}); this.log.debug('[OC-SEX] Labels angereichert ('+_sexLabels.filter(function(l){return l._features;}).length+' mit Features)'); } catch(_lSE){} }
-                            // Stufe 2: Typ-spezifische Kalibrierung
-                            if (_vaginalPeaks.length >= 2 && _oralPeaks.length >= 2) {
-                                _vaginalPeaks.sort(function(a,b){return a-b;}); _oralPeaks.sort(function(a,b){return a-b;});
-                                _calibA = Math.max(5, Math.round(_vaginalPeaks[0] * 1.0));
-                                _calibB = Math.max(3, Math.round(_oralPeaks[0] * 0.7));
-                                _calibSrc = 'labels_typed'; _calibN = _sessionPeaks.length;
-                                this.log.info('[OC-SEX] Stufe-2-Kalib: calibA='+_calibA+' (vaginal/'+_vaginalPeaks.length+'x) calibB='+_calibB+' (oral/'+_oralPeaks.length+'x)');
-                            } else if (_sessionPeaks.length >= 2) {
+                            // Kalibrierung: niedrigster Sex-Peak als Schwelle
+                            if (_sessionPeaks.length >= 2) {
                                 _sessionPeaks.sort(function(a,b){return a-b;});
-                                var _minPeak = _sessionPeaks[0];
-                                _calibB = Math.max(3, Math.round(_minPeak * 0.7));
-                                _calibA = Math.max(5, Math.round(_minPeak * 1.1));
+                                _calibA = Math.max(5, Math.round(_sessionPeaks[0] * 1.0));
                                 _calibSrc = 'labels'; _calibN = _sessionPeaks.length;
-                                this.log.info('[OC-SEX] Kalibrierung aus '+_calibN+' Labels: calibA='+_calibA+' calibB='+_calibB+' (Peaks: '+_sessionPeaks.join(',')+')');
+                                this.log.info('[OC-SEX] Kalibrierung aus '+_calibN+' Labels: calibA='+_calibA+' (Peaks: '+_sessionPeaks.join(',')+')');
                             }
                         }
                     } catch(_calE) { this.log.debug('[OC-SEX] Kalibrierung Fehler: '+_calE.message); }
                     // 2. Manuell (sexCalibThreshold) - nur wenn keine Labels
                     if (_calibSrc === 'default' && this.config.sexCalibThreshold && Number(this.config.sexCalibThreshold) > 0) {
-                        _calibB = Number(this.config.sexCalibThreshold);
-                        _calibA = Math.round(_calibB * 1.3);
+                        _calibA = Number(this.config.sexCalibThreshold);
                         _calibSrc = 'manual';
                     }
                     // 3. Anomalie-Baseline (relativ zur Nacht-Vibration) - wenn noch kein Wert
@@ -4814,20 +4806,20 @@ class CogniLiving extends utils.Adapter {
                             _bsVals.sort(function(a,b){return a-b;});
                             var _bsP75 = _bsVals[Math.floor(_bsVals.length*0.75)];
                             _calibA = Math.max(5, Math.round(_bsP75 * 2.5));
-                            _calibB = Math.max(3, Math.round(_bsP75 * 1.5));
                             _calibSrc = 'baseline';
-                            this.log.debug('[OC-SEX] Anomalie-Baseline: P75='+_bsP75+' calibA='+_calibA+' calibB='+_calibB);
+                            this.log.debug('[OC-SEX] Anomalie-Baseline: P75='+_bsP75+' calibA='+_calibA);
                         }
                     }
                     // calibInfo fuer Snapshot
-                    var _calibInfo = { src: _calibSrc, n: _calibN, calibA: _calibA, calibB: _calibB };
+                    var _calibInfo = { src: _calibSrc, n: _calibN, calibA: _calibA };
                     // --- ENDE KALIBRIERUNG ---
                     // Alle Vibrations-Events ab Mitternacht des aktuellen Tages (Kalender-Tag-Logik)
                     var _sexDayStart = new Date(dateStr + 'T00:00:00').getTime();
                     var _intimEvts = sleepSearchEvents.filter(function(e) {
-                        return (e.type==='vibration_strength'||e.type==='vibration_trigger')
-                            && (e.isVibrationBed||e.isFP2Bed||(!e.isFP2Bed&&!e.isBedroomMotion))
-                            && (e.timestamp||0) >= _sexDayStart;
+                        if (e.type !== 'vibration_strength' && e.type !== 'vibration_trigger') return false;
+                        if (!e.isVibrationBed && !e.isFP2Bed) return false;
+                        if (_sexPersonTagsSet.size > 0 && e.personTag && !_sexPersonTagsSet.has(e.personTag)) return false;
+                        return (e.timestamp||0) >= _sexDayStart;
                     }).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
                     var _intimVibStr  = _intimEvts.filter(function(e){return e.type==='vibration_strength';});
                     var _intimVibTrig = _intimEvts.filter(function(e){return e.type==='vibration_trigger';});
@@ -4892,10 +4884,7 @@ class CogniLiving extends utils.Adapter {
                         var _sDens=Math.min(100,Math.round((_avgTrig/10)*100));
                         var _sDur=Math.min(100,Math.round((_durMin/60)*100)); // normiert auf 60 Min
                         var _score=Math.round(_sStr*0.5+_sDens*0.3+_sDur*0.2);
-                        // Stufe 1: Schwellen relativ zu calibA (statt fest 80/55)
-                        var _vagThresh=Math.round(_calibA*1.5);
-                        var _highSlots=_runSlots.filter(function(s){return s.strMax>=_vagThresh&&s.strCnt>=2;});
-                        var _type=cObj.tier==='B'?'oral_hand':(_highSlots.length>=1?'vaginal':(_peakMax>=_calibA?'oral_hand':'intim'));
+                        var _type = 'sex';
                         var _hrMax=null, _hrAvg=null;
                         if(_garminHRVals.length>0){
                             var _hrInWin=_garminHRVals.filter(function(h){
@@ -4924,7 +4913,7 @@ class CogniLiving extends utils.Adapter {
                             _gMerged.push(Object.assign({}, _gCur, {slots: (_gCur.slots||[]).slice()}));
                         } else {
                             var _gPrev = _gMerged[_gMerged.length-1];
-                            var _gRank = {'vaginal':3,'oral_hand':2,'intim':1};
+                            var _gRank = {'sex':2,'intim':1};
                             if ((_gRank[_gCur.type]||0) > (_gRank[_gPrev.type]||0)) _gPrev.type = _gCur.type;
                             _gPrev.end = Math.max(_gPrev.end, _gCur.end);
                             _gPrev.duration = Math.round((_gPrev.end - _gPrev.start) / 60000);
@@ -5022,9 +5011,9 @@ class CogniLiving extends utils.Adapter {
                     // Fallback: bestehende pyClassifier-Info erhalten wenn Python nicht verfuegbar war (Adapter-Neustart-Schutz)
                     if (!_calibInfo.pyClassifier) { try { var _pyFbPath=path.join(utils.getAbsoluteDefaultDataDir(),'cogni-living','history',dateStr+'.json'); if(fs.existsSync(_pyFbPath)){var _pyFbJ=JSON.parse(fs.readFileSync(_pyFbPath,'utf8'));if(_pyFbJ.sexCalibInfo&&_pyFbJ.sexCalibInfo.pyClassifier&&_pyFbJ.sexCalibInfo.pyClassifier.trained){_calibInfo.pyClassifier=_pyFbJ.sexCalibInfo.pyClassifier;this.log.debug('[OC-SEX] pyClassifier aus JSON erhalten (Neustart-Schutz, trained='+_calibInfo.pyClassifier.trained+')');}} } catch(_pyFbE){this.log.debug('[OC-SEX] pyClassifier-Fallback: '+_pyFbE.message);} }
                     if(intimacyEvents.length>0){
-                        this.log.info('[OC-SEX] '+intimacyEvents.length+' Event(s) erkannt. calibA='+_calibA+' calibB='+_calibB+' Scores: '+intimacyEvents.map(function(e){return e.score+'('+e.type+')';}).join(', '));
+                        this.log.info('[OC-SEX] '+intimacyEvents.length+' Event(s) erkannt. calibA='+_calibA+' Scores: '+intimacyEvents.map(function(e){return e.score+'('+e.type+')';}).join(', '));
                     } else {
-                        this.log.debug('[OC-SEX] daily: 0 Events (calibA='+_calibA+', calibB='+_calibB+', '+_intimEvts.length+' Vib-Events gesamt)');
+                        this.log.debug('[OC-SEX] daily: 0 Events (calibA='+_calibA+', '+_intimEvts.length+' Vib-Events gesamt)');
                     }
                 } catch(_intimErr) {
                     this.log.warn('[OC-SEX] Fehler bei Intimacy-Detection: '+_intimErr.message);
@@ -5965,7 +5954,9 @@ class CogniLiving extends utils.Adapter {
                                 }
                             } catch(_raLE){ this.log.debug('[OC-SEX-RA] Calib: '+_raLE.message); }
                         }
-                        // Angereicherte Labels persistieren (Fire-and-Forget)
+                        // Label-Migration: vaginal/oral_hand → sex (einmalig, abwärtskompatibel)
+                            _sexLabels.forEach(function(l){ if(l.type==="vaginal"||l.type==="oral_hand"){l.type="sex"; _labelsUpdated=true;} });
+                            // Angereicherte Labels persistieren (Fire-and-Forget)
                         if (_raLabelsUpdated) { try { var _raLblUpd=JSON.stringify(_raSexLabels); this.config.sexTrainingLabels=_raLblUpd; this.extendForeignObjectAsync('system.adapter.'+this.namespace,{native:{sexTrainingLabels:_raLblUpd}}).catch(function(){}); this.log.debug('[OC-SEX-RA] Labels angereichert ('+_raSexLabels.filter(function(l){return l._features;}).length+' mit Features)'); } catch(_rlSE){} }
                         if (_raVaginalPeaks.length>=2&&_raOralPeaks.length>=2){
                             _raVaginalPeaks.sort(function(a,b){return a-b;}); _raOralPeaks.sort(function(a,b){return a-b;});
