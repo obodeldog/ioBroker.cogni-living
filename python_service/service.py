@@ -41,10 +41,12 @@ if LIBS_AVAILABLE:
     comfort_brain = ComfortBrain()
     pinn_brain = LightweightPINN()
     tracker_brain = ParticleFilter()
-    sex_brain = SexBrain()
+    sex_brain = SexBrain()  # Legacy-Instanz (group_id=None → sex_model.pkl)
+    sex_brains = {}         # Per-Gruppe: {groupId: SexBrain(group_id=groupId)}
 else:
     security_brain = None
     sex_brain = None
+    sex_brains = {}
 
 def process_message(msg):
     try:
@@ -380,7 +382,16 @@ def process_message(msg):
             else:
                 train_samples    = data.get("train", [])
                 predict_sessions = data.get("predict", [])
-                result = sex_brain.classify_sessions(train_samples, predict_sessions)
+                group_id         = data.get("groupId", None)
+                # Per-Gruppe: eigene Brain-Instanz mit eigenem Modell-File
+                if group_id and group_id != 'default':
+                    if group_id not in sex_brains:
+                        sex_brains[group_id] = SexBrain(group_id=group_id)
+                        sex_brains[group_id].load_brain()
+                    brain = sex_brains[group_id]
+                else:
+                    brain = sex_brain  # Legacy / default
+                result = brain.classify_sessions(train_samples, predict_sessions)
                 send_result("CLASSIFY_SEX_SESSIONS_RESULT", result)
 
     except Exception as e: log(f"Err processing: {e}")

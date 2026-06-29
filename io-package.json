@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "cogni-living",
-    "version": "0.33.330",
+    "version": "0.33.331",
     "news": {
       "0": {
         "version": "0.33.212",
@@ -266,9 +266,10 @@
     },
     "sexTrainingLabels": "",
     "sexPersonTags": "",
+    "sexGroups": "",
     "adaptiveVibThresholds": true
   },
   "objects": [],
   "instanceObjects": [],
-  "version": "0.33.330"
+  "version": "0.33.331"
 }

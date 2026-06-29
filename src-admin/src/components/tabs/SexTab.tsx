@@ -100,6 +100,35 @@ function saveSexLabels(labels: SexTrainingLabel[], onChange: (attr: string, val:
     onChange('sexTrainingLabels', JSON.stringify(labels, null, 2));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Sex-Gruppen
+// ─────────────────────────────────────────────────────────────────────────────
+interface SexGroup {
+    id: string;
+    name: string;
+    personTags: string[];
+    confirmed18: boolean;
+}
+
+function parseSexGroups(rawGroups: unknown, legacyPersonTags: unknown): SexGroup[] {
+    try {
+        const s = typeof rawGroups === 'string' ? rawGroups.trim() : '';
+        if (s) {
+            const arr = JSON.parse(s);
+            if (Array.isArray(arr) && arr.length > 0) return arr;
+        }
+    } catch {}
+    // Fallback: legacy sexPersonTags als einzige Gruppe
+    const tags = typeof legacyPersonTags === 'string'
+        ? legacyPersonTags.split(',').map((t: string) => t.trim()).filter(Boolean)
+        : [];
+    return [{ id: 'default', name: 'Hauptgruppe', personTags: tags, confirmed18: true }];
+}
+
+function saveSexGroups(groups: SexGroup[], onChange: (attr: string, val: any) => void) {
+    onChange('sexGroups', JSON.stringify(groups));
+}
+
 /** Findet ein Label das zu einem spezifischen Event passt (+-1h Zeitfenster). */
 function findLabelForEvent(dStr: string, evt: IntimacyEvent, labels: SexTrainingLabel[]): SexTrainingLabel | null {
     const dayLabels = labels.filter(l => l.date === dStr);
@@ -1062,27 +1091,71 @@ const LabelForm = ({ native, onChange, themeType, dayData, loadDay }: {
                     </div>
                 </div>
             )}
-        {/* sexPersonTags Einstellung */}
-        <div style={{ marginTop: 16, padding: '10px 12px', borderRadius: 4, background: isDark ? '#0d1117' : '#f0f4f8', borderLeft: '3px solid ' + (isDark ? '#546e7a' : '#90a4ae') }}>
-            <div style={{ fontSize: '0.7rem', color: isDark ? '#888' : '#666', marginBottom: 6, fontWeight: 700, letterSpacing: '0.05em' }}>PERSONEN-FILTER (Sex-Erkennung)</div>
-            <div style={{ fontSize: '0.78rem', color: isDark ? '#ccc' : '#555', marginBottom: 6 }}>
-                Kommagetrennte Person-Tags die für Sex-Erkennung berücksichtigt werden.<br/>
-                <span style={{ color: isDark ? '#888' : '#999' }}>Leer = alle Sensoren (Risiko: Kinderzimmer!). Empfehlung: z.B. <code>Marc,Silke</code></span>
-            </div>
-            <input
-                type="text"
-                value={native.sexPersonTags || ''}
-                onChange={e => onChange('sexPersonTags', e.target.value)}
-                placeholder="z.B. Marc,Silke (oder leer = alle)"
-                style={{
-                    width: '100%', boxSizing: 'border-box',
-                    background: isDark ? '#1a1a2e' : '#fff',
-                    border: '1px solid ' + (isDark ? '#333' : '#ddd'),
-                    borderRadius: 3, padding: '5px 8px',
-                    color: isDark ? '#ccc' : '#333', fontSize: '0.83rem'
-                }}
-            />
-        </div>
+        {/* sexPersonTags Einstellung — Checkbox-Auswahl aus native.devices */}
+        {(() => {
+            const _allTags = Array.from(new Set(
+                ((native.devices || []) as any[])
+                    .map((d: any) => (d.personTag || '').trim())
+                    .filter((t: string) => t.length > 0)
+            )).sort() as string[];
+            const _selected = new Set(
+                (native.sexPersonTags || '').split(',').map((s: string) => s.trim()).filter(Boolean)
+            );
+            const _toggle = (tag: string) => {
+                const s = new Set(_selected);
+                s.has(tag) ? s.delete(tag) : s.add(tag);
+                onChange('sexPersonTags', Array.from(s).sort().join(','));
+            };
+            return (
+                <div style={{ marginTop: 16, padding: '10px 12px', borderRadius: 4, background: isDark ? '#0d1117' : '#f0f4f8', borderLeft: '3px solid ' + (isDark ? '#546e7a' : '#90a4ae') }}>
+                    <div style={{ fontSize: '0.7rem', color: isDark ? '#888' : '#666', marginBottom: 8, fontWeight: 700, letterSpacing: '0.05em' }}>
+                        PERSONEN-FILTER (Sex-Erkennung)
+                    </div>
+                    {_allTags.length === 0 ? (
+                        <div style={{ fontSize: '0.78rem', color: isDark ? '#555' : '#aaa' }}>
+                            Keine Person-Tags in den Sensor-Einstellungen konfiguriert.
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ fontSize: '0.75rem', color: isDark ? '#888' : '#777', marginBottom: 8 }}>
+                                Wähle aus welche Personen-Tags für Sex-Erkennung berücksichtigt werden.
+                                <br/><span style={{ color: isDark ? '#555' : '#bbb' }}>Leer = alle Sensoren inkl. Kinderzimmer!</span>
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                {_allTags.map((tag: string) => {
+                                    const checked = _selected.has(tag);
+                                    return (
+                                        <label key={tag} style={{
+                                            display: 'flex', alignItems: 'center', gap: 6,
+                                            padding: '5px 10px', borderRadius: 20, cursor: 'pointer',
+                                            background: checked ? (isDark ? '#880e4f' : '#fce4ec') : (isDark ? '#1a1a2e' : '#e8eaf6'),
+                                            border: '1px solid ' + (checked ? (isDark ? '#c2185b' : '#e91e63') : (isDark ? '#333' : '#c5cae9')),
+                                            color: checked ? (isDark ? '#f48fb1' : '#c2185b') : (isDark ? '#888' : '#555'),
+                                            fontSize: '0.82rem', fontWeight: checked ? 700 : 400,
+                                            transition: 'all 0.15s',
+                                            userSelect: 'none',
+                                        }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={checked}
+                                                onChange={() => _toggle(tag)}
+                                                style={{ display: 'none' }}
+                                            />
+                                            {checked ? '🌹' : '○'} {tag}
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                            {_selected.size === 0 && _allTags.length > 0 && (
+                                <div style={{ marginTop: 6, fontSize: '0.72rem', color: isDark ? '#e57373' : '#c62828' }}>
+                                    ⚠️ Kein Filter aktiv — alle Sensoren inkl. Kinderzimmer werden verwendet!
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            );
+        })()}
         </TerminalBox>
     );
 };
@@ -1486,6 +1559,16 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
     // Labels aus native-Konfiguration (für MonthCalendar + LabelForm)
     const labels = parseSexTrainingLabels(native.sexTrainingLabels);
 
+    // Sex-Gruppen (Option A): mehrere Gruppen mit eigener Personenfilterung
+    const sexGroups = parseSexGroups(native.sexGroups, native.sexPersonTags);
+    const [activeGroupId, setActiveGroupId] = useState<string>(() => sexGroups[0]?.id ?? 'default');
+    // Per-Gruppe Events-Cache: { dateStr → { groupId → events[] } }
+    const [byGroupData, setByGroupData] = useState<Record<string, Record<string, IntimacyEvent[]>>>({});
+    // Group Manager anzeigen
+    const [showGroupManager, setShowGroupManager] = useState(false);
+    // Group Manager: editierbarer State
+    const [editGroups, setEditGroups] = useState<SexGroup[]>(sexGroups);
+
     const [cacheGen] = useState(0);
 
     // Datums-Navigation
@@ -1493,7 +1576,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
         const d = new Date(); d.setHours(0, 0, 0, 0); return d;
     });
 
-    // Geladene Daten: { [dateStr]: IntimacyEvent[] }
+    // Geladene Daten: { [dateStr]: IntimacyEvent[] } (aktive Gruppe)
     const [dayData, setDayData] = useState<Record<string, IntimacyEvent[]>>({});
     const [loading, setLoading]  = useState(true);
 
@@ -1503,7 +1586,7 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
 
     // Kalibrierungs-Info vom letzten gespeicherten Tag
     const [calibInfo, setCalibInfo] = useState<{
-        src: string; n: number; calibA: number; calibA: number;
+        src: string; n: number; calibA: number;
         pyClassifier?: {
             trained: boolean; n: number; counts: Record<string,number>; msg: string;
             feature_importances?: Array<{ name: string; importance: number }>;
@@ -1598,7 +1681,8 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                 `${adapterName}.${instance}`, 'reanalyzeSexDay', { date: ds }
             );
             if (result?.success && result?.data) {
-                const evts: IntimacyEvent[] = result.data.intimacyEvents ?? [];
+                if (result.data.intimacyEventsByGroup) setByGroupData(prev => ({ ...prev, [ds]: result.data.intimacyEventsByGroup }));
+                const evts: IntimacyEvent[] = pickGroupEvents(result.data, activeGroupId);
                 setDayData(prev => ({ ...prev, [ds]: evts }));
                 if (result.data.sexCalibInfo) setCalibInfo((prev: any) => {
                 const nc = result.data.sexCalibInfo;
@@ -1679,7 +1763,8 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
                 try {
                     const _rrr: any = await socket.sendTo(`${adapterName}.${instance}`, 'getHistoryData', { date: _rdd, _t: Date.now() });
                     if (_rrr?.data) {
-                        setDayData((prev: any) => ({ ...prev, [_rdd]: _rrr.data.intimacyEvents ?? [] }));
+                        if (_rrr.data.intimacyEventsByGroup) setByGroupData((prev: any) => ({ ...prev, [_rdd]: _rrr.data.intimacyEventsByGroup }));
+                        setDayData((prev: any) => ({ ...prev, [_rdd]: pickGroupEvents(_rrr.data, activeGroupId) }));
                         if (_rrr.data.sexCalibInfo) setCalibInfo(_rrr.data.sexCalibInfo);
                     }
                 } catch { /* ignorieren */ }
@@ -1702,6 +1787,21 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
         } catch { /* ignorieren */ }
     };
 
+    /** Wählt Events aus dem geladenen Snapshot für die aktive Gruppe aus. */
+    const pickGroupEvents = (data: any, gid: string): IntimacyEvent[] => {
+        if (data?.intimacyEventsByGroup) {
+            const byGrp = data.intimacyEventsByGroup;
+            // Exakter Treffer
+            if (byGrp[gid]) return byGrp[gid];
+            // Fallback: 'default' oder erster verfügbarer Eintrag
+            if (byGrp['default']) return byGrp['default'];
+            const firstKey = Object.keys(byGrp)[0];
+            if (firstKey) return byGrp[firstKey];
+        }
+        // Backward-Compat: alter Key ohne Gruppen
+        return data?.intimacyEvents ?? [];
+    };
+
     const loadDay = async (d: Date) => {
         const ds = dateStr(d);
         if (dayData[ds] !== undefined) return;
@@ -1709,7 +1809,11 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
             const result: any = await socket.sendTo(
                 `${adapterName}.${instance}`, 'getHistoryData', { date: ds, _t: Date.now() }
             );
-            const evts: IntimacyEvent[] = result?.data?.intimacyEvents ?? [];
+            // Alle Gruppen in byGroupData cachen
+            if (result?.data?.intimacyEventsByGroup) {
+                setByGroupData(prev => ({ ...prev, [ds]: result.data.intimacyEventsByGroup }));
+            }
+            const evts: IntimacyEvent[] = pickGroupEvents(result?.data, activeGroupId);
             setDayData(prev => ({ ...prev, [ds]: evts }));
             // Kalibrierungs-Info vom aktuellen (heute/gestern) Tag merken
             if (result?.data?.sexCalibInfo) setCalibInfo((prev: any) => {
@@ -1731,16 +1835,32 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
         }
     };
 
+    // Wenn der User die aktive Gruppe wechselt: dayData aus Cache neu befüllen
+    useEffect(() => {
+        setDayData(prev => {
+            const updated: Record<string, IntimacyEvent[]> = {};
+            Object.keys(prev).forEach(ds => {
+                const grpEvts = byGroupData[ds]?.[activeGroupId];
+                updated[ds] = grpEvts !== undefined ? grpEvts : (byGroupData[ds] ? [] : prev[ds]);
+            });
+            return updated;
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeGroupId]);
+
     // Lade aktuellen Tag + 6 zurückliegende Tage (auch nach Recalc via cacheGen)
     useEffect(() => {
         setLoading(true);
+        // Beim Neuladen: dayData leeren damit loadDay neu lädt
+        setDayData({});
+        setByGroupData({});
         const days: Date[] = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date(viewDate); d.setDate(d.getDate() - i); days.push(d);
         }
         Promise.all(days.map(loadDay)).finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [viewDate, cacheGen]);
+    }, [viewDate, cacheGen, activeGroupId]);
 
     // Monatsdaten laden wenn calMonth sich ändert
     useEffect(() => { loadMonth(calMonth); }, [calMonth]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1813,6 +1933,156 @@ const SexTab: React.FC<SexTabProps> = ({ socket, adapterName, instance, themeTyp
             background: isDark ? '#121212' : '#f5f5f5',
             minHeight: '100vh'
         }}>
+            {/* ── Gruppen-Tab-Leiste (Option A) ── */}
+            {sexGroups.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+                    {sexGroups.map(grp => (
+                        <button key={grp.id}
+                            onClick={() => setActiveGroupId(grp.id)}
+                            title={grp.confirmed18 ? `Gruppe: ${grp.personTags.join(', ') || 'alle Sensoren'}` : '⚠️ 18+ Bestätigung fehlt'}
+                            style={{
+                                padding: '5px 14px',
+                                borderRadius: 20,
+                                background: activeGroupId === grp.id
+                                    ? (isDark ? '#7b1fa2' : '#9c27b0')
+                                    : (isDark ? '#1e1e1e' : '#eeeeee'),
+                                color: activeGroupId === grp.id ? '#fff' : (isDark ? '#aaa' : '#555'),
+                                border: activeGroupId === grp.id ? 'none' : `1px solid ${isDark ? '#333' : '#ccc'}`,
+                                cursor: 'pointer',
+                                fontFamily: 'inherit',
+                                fontSize: '0.78rem',
+                                fontWeight: activeGroupId === grp.id ? 'bold' : 'normal',
+                                opacity: grp.confirmed18 ? 1 : 0.45,
+                            }}>
+                            {grp.confirmed18 ? '🌹' : '🔒'} {grp.name}
+                        </button>
+                    ))}
+                    <button
+                        onClick={() => { setEditGroups([...sexGroups]); setShowGroupManager(true); }}
+                        style={{
+                            padding: '5px 10px', borderRadius: 20,
+                            background: 'transparent',
+                            border: `1px dashed ${isDark ? '#444' : '#bbb'}`,
+                            color: isDark ? '#666' : '#aaa',
+                            cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.72rem',
+                        }}>
+                        ⚙ Gruppen verwalten
+                    </button>
+                </div>
+            )}
+
+            {/* ── Group Manager Panel ── */}
+            {showGroupManager && (
+                <div style={{
+                    marginBottom: 20, padding: 16,
+                    background: isDark ? '#1a0d1a' : '#fce4ec',
+                    border: `1px solid ${isDark ? '#4a235a' : '#f48fb1'}`,
+                    borderRadius: 6,
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '0.85rem', color: isDark ? '#ce93d8' : '#880e4f' }}>
+                            ⚙ Sex-Gruppen verwalten
+                        </span>
+                        <button onClick={() => setShowGroupManager(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#888' : '#aaa', fontSize: '1rem' }}>✕</button>
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: isDark ? '#7b1fa2' : '#ad1457', marginBottom: 12 }}>
+                        Jede Gruppe wertet nur die Sensoren der gewählten Personen aus. Eigene Erkennungs-History pro Gruppe.
+                    </div>
+
+                    {editGroups.map((grp, gi) => {
+                        const allTags: string[] = Array.from(new Set(
+                            (native.devices || []).map((d: any) => d.personTag).filter(Boolean)
+                        ));
+                        return (
+                            <div key={grp.id} style={{
+                                marginBottom: 10, padding: '10px 12px',
+                                background: isDark ? '#0d0d1a' : '#fff',
+                                border: `1px solid ${isDark ? '#333' : '#eee'}`,
+                                borderRadius: 4,
+                            }}>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                                    <input value={grp.name} onChange={e => {
+                                        const ng = [...editGroups]; ng[gi] = { ...ng[gi], name: e.target.value }; setEditGroups(ng);
+                                    }} placeholder="Gruppenname" style={{
+                                        flex: 1, padding: '3px 8px', borderRadius: 3, fontFamily: 'inherit',
+                                        background: isDark ? '#111' : '#f9f9f9',
+                                        border: `1px solid ${isDark ? '#333' : '#ddd'}`,
+                                        color: isDark ? '#eee' : '#222', fontSize: '0.82rem',
+                                    }} />
+                                    <button onClick={() => {
+                                        const ng = editGroups.filter((_, i) => i !== gi); setEditGroups(ng);
+                                    }} style={{ background: 'none', border: 'none', color: '#e57373', cursor: 'pointer', fontSize: '0.85rem' }} title="Gruppe löschen">🗑</button>
+                                </div>
+                                {/* Person-Tags Auswahl */}
+                                {allTags.length > 0 ? (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                                        {allTags.map(tag => (
+                                            <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem',
+                                                color: isDark ? '#bbb' : '#555', cursor: 'pointer' }}>
+                                                <input type="checkbox"
+                                                    checked={grp.personTags.includes(tag)}
+                                                    onChange={e => {
+                                                        const ng = [...editGroups];
+                                                        ng[gi] = { ...ng[gi], personTags: e.target.checked
+                                                            ? [...ng[gi].personTags, tag]
+                                                            : ng[gi].personTags.filter(t => t !== tag) };
+                                                        setEditGroups(ng);
+                                                    }} />
+                                                {tag}
+                                            </label>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div style={{ fontSize: '0.72rem', color: isDark ? '#555' : '#bbb', marginBottom: 8 }}>
+                                        Keine Personen-Tags konfiguriert (Geräte → personTag)
+                                    </div>
+                                )}
+                                {/* 18+ Bestätigung */}
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem',
+                                    color: grp.confirmed18 ? (isDark ? '#81c784' : '#2e7d32') : (isDark ? '#ef5350' : '#c62828') }}>
+                                    <input type="checkbox" checked={grp.confirmed18} onChange={e => {
+                                        const ng = [...editGroups]; ng[gi] = { ...ng[gi], confirmed18: e.target.checked }; setEditGroups(ng);
+                                    }} />
+                                    Ich bestätige: alle Personen in dieser Gruppe sind volljährig und haben der Datenerfassung zugestimmt
+                                </label>
+                                {!grp.confirmed18 && (
+                                    <div style={{ marginTop: 4, fontSize: '0.7rem', color: isDark ? '#ef5350' : '#c62828' }}>
+                                        ⚠️ Erkennung für diese Gruppe deaktiviert bis Bestätigung gesetzt
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    {/* Neue Gruppe hinzufügen */}
+                    <button onClick={() => {
+                        const newId = 'group_' + Date.now();
+                        setEditGroups(prev => [...prev, { id: newId, name: 'Neue Gruppe', personTags: [], confirmed18: false }]);
+                    }} style={{
+                        marginTop: 4, padding: '4px 12px', borderRadius: 4,
+                        background: isDark ? '#1a1a2e' : '#f3e5f5',
+                        border: `1px dashed ${isDark ? '#7b1fa2' : '#ce93d8'}`,
+                        color: isDark ? '#ce93d8' : '#7b1fa2', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem',
+                    }}>+ Gruppe hinzufügen</button>
+
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                        <button onClick={() => {
+                            saveSexGroups(editGroups, onChange);
+                            setShowGroupManager(false);
+                        }} style={{
+                            padding: '5px 16px', borderRadius: 4,
+                            background: isDark ? '#7b1fa2' : '#9c27b0',
+                            color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8rem',
+                        }}>✓ Speichern</button>
+                        <button onClick={() => { setEditGroups([...sexGroups]); setShowGroupManager(false); }} style={{
+                            padding: '5px 16px', borderRadius: 4,
+                            background: 'transparent', border: `1px solid ${isDark ? '#444' : '#ccc'}`,
+                            color: isDark ? '#888' : '#777', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8rem',
+                        }}>Abbrechen</button>
+                    </div>
+                </div>
+            )}
+
             {/* Header + Navigation */}
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',

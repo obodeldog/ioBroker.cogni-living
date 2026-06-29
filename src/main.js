@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 
 
 
@@ -4697,15 +4697,37 @@ class CogniLiving extends utils.Adapter {
             // Nur gespeichert wenn moduleSex === true (Datenschutz-Default: off)
             // =====================================================================
             var intimacyEvents = [];
-            var _calibInfo = { src: 'default', n: 0, calibA: 50, calibB: 30 };
+            var intimacyEventsByGroup = {};
+            var sexCalibInfoByGroup = {};
+            var _calibInfo = { src: 'default', n: 0, calibA: 50 };
             if (this.config.moduleSex === true) {
+                // [OC-SEX-GROUPS] Sex-Gruppen aus Config parsen
+                var _sexGroupsList = [];
                 try {
+                    var _sgRaw = (this.config.sexGroups || '').trim();
+                    if (_sgRaw) _sexGroupsList = JSON.parse(_sgRaw);
+                } catch(_sgParseE) { this.log.debug('[OC-SEX] sexGroups parse: ' + _sgParseE.message); }
+                if (!_sexGroupsList.length) {
+                    // Fallback: Legacy sexPersonTags als einzige Gruppe
+                    _sexGroupsList = [{
+                        id: 'default',
+                        name: 'Hauptgruppe',
+                        personTags: (this.config.sexPersonTags || '').split(',').map(function(s){return s.trim();}).filter(Boolean),
+                        confirmed18: true
+                    }];
+                }
+                for (var _grpLoopIdx = 0; _grpLoopIdx < _sexGroupsList.length; _grpLoopIdx++) {
+                    var _curSexGroup = _sexGroupsList[_grpLoopIdx];
+                    if (!_curSexGroup.confirmed18) continue; // DSGVO-Gate: unbestätigte Gruppen überspringen
+                    var _grpIE = [];  // per-Gruppe _grpIE
+                    var _grpCI = { src: 'default', n: 0, calibA: 50 }; // per-Gruppe calibInfo
+                    try {
                     // Kalibrierte oder Standard-Schwellen (aus native config oder Defaults)
                     // --- ADAPTIVE KALIBRIERUNG (OC-SEX) ---
                     // Prioritaet: 1. Auto aus Training-Labels, 2. Manuell (sexCalibThreshold), 3. Anomalie-Baseline, 4. Defaults
                     var _calibA = 50, _calibSrc = 'default', _calibN = 0;
                     // [OC-SEX-PERSON] Nur konfigurierte Personen-Tags: verhindert Falsch-Erkennung durch Kinderzimmer-Sensoren
-                    var _sexPersonTagsSet = new Set((this.config.sexPersonTags || '').split(',').map(function(s){return s.trim();}).filter(Boolean));
+                    var _sexPersonTagsSet = new Set((_curSexGroup.personTags || []).filter(Boolean));
                     // 1. Auto-Kalibrierung aus Training-Labels (ab 2 Labels)
                     try {
                         var _sexLabelsRaw = this.config.sexTrainingLabels || '';
@@ -4811,7 +4833,7 @@ class CogniLiving extends utils.Adapter {
                         }
                     }
                     // calibInfo fuer Snapshot
-                    var _calibInfo = { src: _calibSrc, n: _calibN, calibA: _calibA };
+                    _grpCI = { src: _calibSrc, n: _calibN, calibA: _calibA };
                     // --- ENDE KALIBRIERUNG ---
                     // Alle Vibrations-Events ab Mitternacht des aktuellen Tages (Kalender-Tag-Logik)
                     var _sexDayStart = new Date(dateStr + 'T00:00:00').getTime();
@@ -4901,14 +4923,14 @@ class CogniLiving extends utils.Adapter {
                             }
                         }
                         var _partnerDet = _sharedBedPeriods.some(function(sbp){return sbp.start <= _evtEnd && sbp.end >= _evtStart;});
-                        intimacyEvents.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:_hrMax,garminHRAvg:_hrAvg,partnerDetected:_partnerDet,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
+                        _grpIE.push({start:_evtStart,end:_evtEnd,duration:_durMin,score:_score,type:_type,peakStrength:_peakMax,avgStrength:_avgAvg,avgTrigger:_avgTrig,garminHRMax:_hrMax,garminHRAvg:_hrAvg,partnerDetected:_partnerDet,slots:_runSlots.map(function(s){return{start:s.start,strMax:s.strMax,strAvg:s.strAvg,trigCnt:s.trigCnt};})});
                     });
                     // Gap-Toleranz-Merge: Sessions mit Abstand <30 Min zu einer zusammenfassen
                     var _gapMs = 30 * 60 * 1000;
-                    intimacyEvents.sort(function(a,b){return a.start-b.start;});
+                    _grpIE.sort(function(a,b){return a.start-b.start;});
                     var _gMerged = [];
-                    for (var _gmi = 0; _gmi < intimacyEvents.length; _gmi++) {
-                        var _gCur = intimacyEvents[_gmi];
+                    for (var _gmi = 0; _gmi < _grpIE.length; _gmi++) {
+                        var _gCur = _grpIE[_gmi];
                         if (_gMerged.length === 0 || _gCur.start - _gMerged[_gMerged.length-1].end > _gapMs) {
                             _gMerged.push(Object.assign({}, _gCur, {slots: (_gCur.slots||[]).slice()}));
                         } else {
@@ -4926,7 +4948,7 @@ class CogniLiving extends utils.Adapter {
                             if (_gCur.garminHRAvg != null) _gPrev.garminHRAvg = (_gPrev.garminHRAvg != null) ? Math.round((_gPrev.garminHRAvg + _gCur.garminHRAvg)/2) : _gCur.garminHRAvg;
                         }
                     }
-                    if (_gMerged.length < intimacyEvents.length) { this.log.info('[OC-SEX] Gap-Merge(daily): ' + intimacyEvents.length + ' ? ' + _gMerged.length + ' Session(s)'); intimacyEvents = _gMerged; }
+                    if (_gMerged.length < _grpIE.length) { this.log.info('[OC-SEX] Gap-Merge(daily): ' + _grpIE.length + ' ? ' + _gMerged.length + ' Session(s)'); _grpIE = _gMerged; }
                     // Kontext-Sensor-IDs (sensorFunction-basiert)
                     var _ctxBedIds  = new Set((this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.id;}));
                 var _ctxBedRoom = (this.config.devices||[]).filter(function(d){return d.sensorFunction==='bed';}).map(function(d){return d.location;}).filter(Boolean)[0] || null;
@@ -4974,7 +4996,7 @@ class CogniLiving extends utils.Adapter {
                     var _sexTD = (typeof _sexTrainData !== 'undefined') ? _sexTrainData : [];
                     if (_sexTD.length >= 3) { // Python auch bei 0 Events (Stufe-3-Status aktuell halten, Modell trainieren)
                         try {
-                            var _pyPredSess = intimacyEvents.map(function(e) {
+                            var _pyPredSess = _grpIE.map(function(e) {
                                 var _sl = e.slots || [];
                                 var _strs = _sl.map(function(s){return s.strMax||0;});
                                 var _avg2 = _strs.length>0 ? _strs.reduce(function(a,b){return a+b;},0)/_strs.length : 0;
@@ -4985,38 +5007,49 @@ class CogniLiving extends utils.Adapter {
                             var _pyRes = await new Promise(function(resolve, reject) {
                                 var _pyTout = setTimeout(function(){ reject(new Error('timeout')); }, 15000);
                                 pythonBridge.send(this, 'CLASSIFY_SEX_SESSIONS',
-                                    { train: _sexTD, predict: _pyPredSess },
+                                    { train: _sexTD, predict: _pyPredSess, groupId: (_curSexGroup ? (_curSexGroup.id || "default") : "default") },
                                     function(r){ clearTimeout(_pyTout); resolve(r); });
                             }.bind(this));
                             if (_pyRes && _pyRes.payload) {
                                 _pyClassInfo = _pyRes.payload;
                                 if (_pyClassInfo.trained && Array.isArray(_pyClassInfo.results)) {
                                     _pyClassInfo.results.forEach(function(r, i) {
-                                        if (!intimacyEvents[i]) return;
+                                        if (!_grpIE[i]) return;
                                         if (r.type === 'nullnummer' && r.confidence >= 0.60) {
                                             this.log.info('[OC-SEX-PY] Session '+i+' als Nullnummer klassifiziert � wird entfernt');
-                                            intimacyEvents[i] = null;
+                                            _grpIE[i] = null;
                                         } else if (r.type && r.type !== 'nullnummer' && r.confidence >= 0.55) {
-                                            intimacyEvents[i].type = r.type;
-                                            intimacyEvents[i].pyConf = Math.round(r.confidence * 100);
+                                            _grpIE[i].type = r.type;
+                                            _grpIE[i].pyConf = Math.round(r.confidence * 100);
                                         }
                                     }.bind(this));
-                                    intimacyEvents = intimacyEvents.filter(function(e){ return e !== null; });
+                                    _grpIE = _grpIE.filter(function(e){ return e !== null; });
                                 }
                             }
                         } catch(_pyE) { this.log.debug('[OC-SEX-PY] '+_pyE.message); }
                     }
-                    _calibInfo.pyClassifier = _pyClassInfo ? { trained: _pyClassInfo.trained||false, n: _pyClassInfo.n_samples||0, counts: _pyClassInfo.class_counts||{}, msg: _pyClassInfo.status_msg||'', feature_importances: _pyClassInfo.feature_importances||[], loo_accuracy: (_pyClassInfo.loo_accuracy!=null?_pyClassInfo.loo_accuracy:null), confusion_matrix: (_pyClassInfo.confusion_matrix||null), loo_details: (_pyClassInfo.loo_details||[]), nearbyRoomSensorIds: _nearbyRoomSensorIds } : null;
+                    _grpCI.pyClassifier = _pyClassInfo ? { trained: _pyClassInfo.trained||false, n: _pyClassInfo.n_samples||0, counts: _pyClassInfo.class_counts||{}, msg: _pyClassInfo.status_msg||'', feature_importances: _pyClassInfo.feature_importances||[], loo_accuracy: (_pyClassInfo.loo_accuracy!=null?_pyClassInfo.loo_accuracy:null), confusion_matrix: (_pyClassInfo.confusion_matrix||null), loo_details: (_pyClassInfo.loo_details||[]), nearbyRoomSensorIds: _nearbyRoomSensorIds } : null;
 
                     // Fallback: bestehende pyClassifier-Info erhalten wenn Python nicht verfuegbar war (Adapter-Neustart-Schutz)
-                    if (!_calibInfo.pyClassifier) { try { var _pyFbPath=path.join(utils.getAbsoluteDefaultDataDir(),'cogni-living','history',dateStr+'.json'); if(fs.existsSync(_pyFbPath)){var _pyFbJ=JSON.parse(fs.readFileSync(_pyFbPath,'utf8'));if(_pyFbJ.sexCalibInfo&&_pyFbJ.sexCalibInfo.pyClassifier&&_pyFbJ.sexCalibInfo.pyClassifier.trained){_calibInfo.pyClassifier=_pyFbJ.sexCalibInfo.pyClassifier;this.log.debug('[OC-SEX] pyClassifier aus JSON erhalten (Neustart-Schutz, trained='+_calibInfo.pyClassifier.trained+')');}} } catch(_pyFbE){this.log.debug('[OC-SEX] pyClassifier-Fallback: '+_pyFbE.message);} }
-                    if(intimacyEvents.length>0){
-                        this.log.info('[OC-SEX] '+intimacyEvents.length+' Event(s) erkannt. calibA='+_calibA+' Scores: '+intimacyEvents.map(function(e){return e.score+'('+e.type+')';}).join(', '));
+                    if (!_grpCI.pyClassifier) { try { var _pyFbPath=path.join(utils.getAbsoluteDefaultDataDir(),'cogni-living','history',dateStr+'.json'); if(fs.existsSync(_pyFbPath)){var _pyFbJ=JSON.parse(fs.readFileSync(_pyFbPath,'utf8'));if(_pyFbJ.sexCalibInfo&&_pyFbJ.sexCalibInfo.pyClassifier&&_pyFbJ.sexCalibInfo.pyClassifier.trained){_grpCI.pyClassifier=_pyFbJ.sexCalibInfo.pyClassifier;this.log.debug('[OC-SEX] pyClassifier aus JSON erhalten (Neustart-Schutz, trained='+_grpCI.pyClassifier.trained+')');}} } catch(_pyFbE){this.log.debug('[OC-SEX] pyClassifier-Fallback: '+_pyFbE.message);} }
+                    if(_grpIE.length>0){
+                        this.log.info('[OC-SEX] '+_grpIE.length+' Event(s) erkannt. calibA='+_calibA+' Scores: '+_grpIE.map(function(e){return e.score+'('+e.type+')';}).join(', '));
                     } else {
                         this.log.debug('[OC-SEX] daily: 0 Events (calibA='+_calibA+', '+_intimEvts.length+' Vib-Events gesamt)');
                     }
                 } catch(_intimErr) {
-                    this.log.warn('[OC-SEX] Fehler bei Intimacy-Detection: '+_intimErr.message);
+                        this.log.warn('[OC-SEX-GROUP] ' + (_curSexGroup.id||'?') + ': ' + _intimErr.message);
+                    }
+                    // Gruppen-Ergebnis sichern
+                    var _grpId = _curSexGroup.id || ('group' + _grpLoopIdx);
+                    intimacyEventsByGroup[_grpId] = _grpIE;
+                    sexCalibInfoByGroup[_grpId] = _grpCI;
+                } // end for-group-loop
+                // Backward-Compat: erste Gruppe = intimacyEvents + _calibInfo
+                var _fbGrpKeys = Object.keys(intimacyEventsByGroup);
+                if (_fbGrpKeys.length > 0) {
+                    intimacyEvents = intimacyEventsByGroup[_fbGrpKeys[0]] || [];
+                    _calibInfo = sexCalibInfoByGroup[_fbGrpKeys[0]] || _calibInfo;
                 }
             }
             // OC-SEX Dedup: Verhindert dass Events vom Vorabend (sleepSearch ab 18:00 gestern)
@@ -5033,6 +5066,9 @@ class CogniLiving extends utils.Adapter {
                     intimacyEvents = intimacyEvents.filter(function(e) { return !_ddPrevStarts.has(e.start); });
                     if (intimacyEvents.length < _ddBefore) {
                         this.log.info('[OC-SEX] Dedup: ' + (_ddBefore - intimacyEvents.length) + ' doppeltes Event(s) aus ' + _ddPrevStr + '.json gefiltert (Event gehoert zum Vortag)');
+                    // Sync: erste Gruppe in intimacyEventsByGroup nach Dedup aktualisieren
+                    var _fbGrpKeys2 = Object.keys(intimacyEventsByGroup);
+                    if (_fbGrpKeys2.length > 0) intimacyEventsByGroup[_fbGrpKeys2[0]] = intimacyEvents;
                     }
                 }
             } catch(_ddE) { this.log.debug('[OC-SEX] Dedup-Fehler: ' + _ddE.message); }
@@ -5158,7 +5194,9 @@ class CogniLiving extends utils.Adapter {
                 outsideBedEvents: outsideBedEvents,
                 sharedBedPeriods: _sharedBedPeriods,
                 intimacyEvents: intimacyEvents,
+                intimacyEventsByGroup: intimacyEventsByGroup,
                 sexCalibInfo: _calibInfo,
+                sexCalibInfoByGroup: sexCalibInfoByGroup,
                 wakeSource: wakeSource,
                 wakeConf: wakeConf,
                 allWakeSources: allWakeSources,

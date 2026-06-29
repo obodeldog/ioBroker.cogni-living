@@ -9,7 +9,18 @@ if not os.path.exists(_DATA_DIR):
         os.makedirs(_DATA_DIR, exist_ok=True)
     except Exception:
         _DATA_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SEX_MODEL_PATH = os.path.join(_DATA_DIR, 'sex_model.pkl')
+SEX_MODEL_PATH = os.path.join(_DATA_DIR, 'sex_model.pkl')  # Legacy / default
+
+def _sex_model_path(group_id=None):
+    """Gibt den Modell-Pfad für eine Gruppe zurück.
+    Gruppen-ID 'default' oder None → legacy sex_model.pkl (backward compat).
+    Alle anderen IDs → sex_model_<group_id>.pkl
+    """
+    if not group_id or group_id == 'default':
+        return SEX_MODEL_PATH
+    # Sicherheitsbereinigung: nur alphanumerisch + Unterstrich erlaubt
+    safe_id = ''.join(c if c.isalnum() or c == '_' else '_' for c in str(group_id))
+    return os.path.join(_DATA_DIR, f'sex_model_{safe_id}.pkl')
 
 """
 SexBrain — KI-Klassifikation von Intimacy-Sessions (Stufe 3)
@@ -57,7 +68,9 @@ class SexBrain:
         'nearby_room_motion',# 1=Bewegung in Hop<=2-Raum waehrend Session, 0=nein, -1=keine Topologie
     ]
 
-    def __init__(self):
+    def __init__(self, group_id=None):
+        self.group_id           = group_id  # None / 'default' → legacy sex_model.pkl
+        self.model_path         = _sex_model_path(group_id)
         self.clf                = None
         self.is_trained         = False
         self.class_counts       = {}
@@ -73,10 +86,10 @@ class SexBrain:
     # Persistenz (identisches Muster wie EnergyBrain, HealthBrain, etc.)
     # ------------------------------------------------------------------
     def load_brain(self):
-        """Laedt trainiertes Modell von Disk (sex_model.pkl). Gibt True zurueck wenn erfolgreich."""
+        """Laedt trainiertes Modell von Disk. Gibt True zurueck wenn erfolgreich."""
         try:
-            if os.path.exists(SEX_MODEL_PATH):
-                with open(SEX_MODEL_PATH, 'rb') as f:
+            if os.path.exists(self.model_path):
+                with open(self.model_path, 'rb') as f:
                     data = pickle.load(f)
                 self.clf               = data.get('clf')
                 self.is_trained        = data.get('is_trained', False)
@@ -96,11 +109,11 @@ class SexBrain:
             return False
 
     def save_brain(self):
-        """Speichert trainiertes Modell auf Disk (sex_model.pkl)."""
+        """Speichert trainiertes Modell auf Disk."""
         try:
             from datetime import datetime
             self.model_date = datetime.now().strftime('%Y-%m-%d %H:%M')
-            with open(SEX_MODEL_PATH, 'wb') as f:
+            with open(self.model_path, 'wb') as f:
                 pickle.dump({
                     'clf':                self.clf,
                     'is_trained':         self.is_trained,
