@@ -1,5 +1,5 @@
 ﻿# PROJEKT KURZSTATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 28.06.2026 | **Version:** 0.33.327
+**Letzte Aktualisierung:** 04.07.2026 | **Version:** 0.33.332
 
 ---
 
@@ -10,11 +10,31 @@
 ---
 
 ## 1) Aktuelle Version
-- **`0.33.327`** (ioBroker liest `io-package.json` → **`common.version`** — immer mitbumpen!)
+- **`0.33.332`** (ioBroker liest `io-package.json` → **`common.version`** — immer mitbumpen!)
 
 ---
 
-## 2) Stand heute (28.06.2026)
+## 2) Stand heute (04.07.2026)
+- **v0.33.332 — OC-SENSOR-FALLBACK + unkalibriert-Bugfix + AURA-only-Zeiten (04.07.)**:
+  - **OC-SENSOR-FALLBACK (Kern):** Wenn der VIB-Sensor einer Person eine Nacht KEINE Daten liefert (Ausfall/leere Batterie/Zigbee-Stoerung), aber FP2 die Person im Schlaffenster bestaetigt → per-Person `bedWasEmpty=false`, Zeiten anzeigen OHNE Schlafphasen-Balken. Neues Flag `vibSensorUnavailable` + oranger Hinweis in der Kachel. Bisher: OC-44 prueft NUR VIB → bei VIB-Ausfall faelschlich „Bett war leer" trotz FP2-Anwesenheit (Beweis Nacht 3./4.7.: Zigbee-Adapter war ausgefallen, FP2 zeigte Marc 6 Events im Fenster, trotzdem alle 4 Personen „Bett war leer"). Der GLOBALE Pfad war korrekt (prueft `_fp2InWindow`), nur der Per-Person-Pfad hatte die Luecke.
+  - **Bugfix „unkalibriert":** Per-Person-Kacheln zeigten IMMER „unkalibriert", weil `pd.sleepScoreCalStatus` im Backend fest 'uncalibrated' ist (Score-Kalibrierung laeuft GLOBAL). Frontend liest jetzt `auraSleepData.sleepScoreCalStatus/Nights` (global, korrekt) fuer die Per-Person-Kacheln.
+  - **AURA-only-Zeiten (Dev):** Unter Eingeschlafen/Aufgewacht steht — nur wenn aktive Quelle 'garmin' ist — klein „⚙ ohne Garmin: HH:MM" (beste lokale Nicht-Garmin-Quelle aus dem prioritaets-sortierten Array). Zeigt was der Algorithmus OHNE Smartwatch waehlen wuerde (fuer Kunden ohne Garmin).
+  - **BRAINSTORMING:** OC-VIB-CAL-NOCTURIA dokumentiert (Toilettengaenge werden von P90 im Normalfall abgefangen; expliziter Ausschluss nur bei starker Nykturie noetig — noch nicht umgesetzt).
+- **v0.33.331 — OC-SEX-GROUPS: Option A Sex-Gruppen pro Bett/Person (29.06.)**:
+  - **Backend:** Sex-Detection läuft jetzt in einer Gruppen-Schleife. Jede Gruppe (`sexGroups` Config-Feld, JSON-Array) hat eigene `personTags`-Filterung, eigene Kalibrierung (`_grpCI`), eigene Events (`_grpIE`). History-Snapshot speichert jetzt `intimacyEventsByGroup + sexCalibInfoByGroup`. Backward-Compat: `intimacyEvents` = erste Gruppe.
+  - **DSGVO-Gate:** `confirmed18: false` → Gruppe wird still übersprungen (keine Erkennung, kein Tab-Inhalt).
+  - **Python:** `SexBrain` unterstützt `group_id`-Parameter → eigenes Modell-File pro Gruppe (`sex_model_<groupId>.pkl`). `service.py` verwaltet `sex_brains`-Dict für per-Gruppe-Instanzen.
+  - **Frontend:** Gruppen-Tab-Leiste oben (Pill-Buttons). Aktive Gruppe steuert angezeigte Events. `byGroupData`-Cache: Tab-Wechsel ohne Netzwerk-Requests. Group Manager Panel: Gruppen hinzufügen/bearbeiten/löschen, personTags als Checkboxen (aus `native.devices`), 18+-Bestätigung pro Gruppe.
+  - **Konfiguration:** In der Adapter-Config unter Sex-Tab → "Gruppen verwalten" klicken. Default: eine Gruppe "Hauptgruppe" mit bestehenden `sexPersonTags`.
+- **v0.33.330 — SexPersonTags Checkbox-UI (29.06.)**:
+  - `sexPersonTags` als Checkbox-Gruppe (aus `native.devices` personTags) statt Freitext.
+- **v0.33.328 — OC-SEX-SIMPLE: Sex-Tab vereinfacht + Kinder-Bett-Bug behoben (29.06.)**:
+  - **Bug-Fix OC-SEX-PERSON:** `_intimEvts`-Filter enthielt die Bedingung `(!e.isFP2Bed&&!e.isBedroomMotion)` die praktisch ALLE Vibrations-Sensoren durchließ, inklusive Kinderzimmer (Jana OG Kind 3, Julia OG Kind 1). Dadurch wurde Janas Bett-Aktivität um 18:17–18:27 mit `peakStrength=102` fälschlicherweise als Sex erkannt. Fix: Bogus-Bedingung entfernt → Filter nun: `isVibrationBed||isFP2Bed`. Neues Config-Feld **`sexPersonTags`** (kommagetrennt, z.B. "Marc,Silke") schließt explizit nur diese Sensor-Tags ein — alle anderen werden ignoriert.
+  - **OC-SEX-SIMPLE:** Typ-System von vaginal/oral_hand auf binär **sex/nullnummer** vereinfacht:
+    - Backend `src/main.js`: `_type` immer `'sex'`; `calibB` entfernt (nur noch `calibA`); Python-Training-Labels vaginal/oral_hand → sex normalisiert; Label-Migration beim nächsten Speichern automatisch.
+    - Python `sex.py`: Binärer Classifier (sex/nullnummer), Legacy-Labels normalisiert; altes `sex_model.pkl` wird beim nächsten Training-Zyklus überschrieben.
+    - Frontend `SexTab.tsx`: Alle Typ-Anzeigen, Emojis, Formulare, Legenden auf sex/nullnummer vereinfacht.
+  - **Hinweis nach Update:** `sexPersonTags` in Adapter-Config auf z.B. `Marc,Silke` setzen — solange leer, werden alle Bett-Sensoren verwendet (Bug bleibt für Mehrzimmer-Setups offen bis Feld gesetzt ist).
 - **v0.33.327 — Dreieck-Race-Fix + P90-Patch nachgezogen (28.06.)**:
   - **Dreieck weg nach Neustart (Hauptbug):** Per-Person-OBE nutzt `_roomHopDistance()` → liest `this._cachedTopoMatrix`. Dieser wurde NUR lazy beim ersten Live-Event gesetzt → nach Adapter-Neustart + sofortigem „neu berechnen" leer → `_roomHopDistance` gibt `-1` → `_obeHop=999` → **alle Bad-/Aussen-Events gefiltert**. Beweis: Top-Level `outsideBedEvents` (synchrone Topo) enthielt das EG-Bad-Event 02:16, Per-Person `personData.Marc.outsideBedEvents=[]`.
     - **Fix A1 (OC-TOPO-WARM):** Topologie in `saveDailyHistory()` vorab synchron laden → Cache warm vor Per-Person-Schleife.

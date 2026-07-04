@@ -247,7 +247,7 @@ export default function HealthTab(props: any) {
                     if (d.roomHistory && d.roomHistory.history) setRoomHistory(d.roomHistory.history);
                     else if (d.roomHistory) setRoomHistory(d.roomHistory);
 
-                   setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, garminWakeMin: d.garminWakeMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, bedExitTs: d.bedExitTs ?? null, smWakePhases: d.smWakePhases ?? [], bedAbsenceEvents: d.bedAbsenceEvents ?? [], excluded: d.excluded ?? false });
+                   setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, garminWakeMin: d.garminWakeMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, vibSensorUnavailable: d.vibSensorUnavailable ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, bedExitTs: d.bedExitTs ?? null, smWakePhases: d.smWakePhases ?? [], bedAbsenceEvents: d.bedAbsenceEvents ?? [], excluded: d.excluded ?? false });
                    setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                    setGeminiNight(d.geminiNight || "Keine Daten");
                     setGeminiNightTs(d.geminiNightTs || null);
@@ -737,7 +737,7 @@ export default function HealthTab(props: any) {
             .then((histRes: any) => {
                 if (histRes && histRes.success && histRes.data) {
                     const d = histRes.data;
-                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, garminWakeMin: d.garminWakeMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, bedExitTs: d.bedExitTs ?? null, smWakePhases: d.smWakePhases ?? [], bedAbsenceEvents: d.bedAbsenceEvents ?? [], excluded: d.excluded ?? false });
+                    setAuraSleepData({ sleepScore: d.sleepScore ?? null, sleepScoreRaw: d.sleepScoreRaw ?? null, sleepScoreCal: d.sleepScoreCal ?? null, sleepScoreCalNights: d.sleepScoreCalNights ?? 0, sleepScoreCalStatus: d.sleepScoreCalStatus ?? 'uncalibrated', sleepStages: d.sleepStages ?? [], garminScore: d.garminScore ?? null, garminDeepMin: d.garminDeepMin ?? null, garminLightMin: d.garminLightMin ?? null, garminRemMin: d.garminRemMin ?? null, garminWakeMin: d.garminWakeMin ?? null, sleepWindowStart: d.sleepWindowStart ?? null, sleepWindowEnd: d.sleepWindowEnd ?? null, sleepWindowSource: d.sleepWindowSource ?? 'fixed', wakeSource: d.wakeSource ?? null, wakeConf: d.wakeConf ?? null, isNap: d.isNap ?? false, unusuallyLongSleep: d.unusuallyLongSleep ?? false, garminDataFresh: d.garminDataFresh ?? null, garminLastSyncAgeH: d.garminLastSyncAgeH ?? null, outsideBedEvents: d.outsideBedEvents ?? [], wakeConfirmed: d.wakeConfirmed ?? false, allWakeSources: d.allWakeSources ?? [], sleepStartSource: d.sleepStartSource ?? null, allSleepStartSources: d.allSleepStartSources ?? [], sleepDate: d.sleepDate ?? null, sleepStartOverridden: d.sleepStartOverridden ?? false, sleepStartOverrideSource: d.sleepStartOverrideSource ?? null, bedWasEmpty: d.bedWasEmpty ?? false, vibSensorUnavailable: d.vibSensorUnavailable ?? false, nachtAufstehenEvents: d.nachtAufstehenEvents ?? [], bedEntryTs: d.bedEntryTs ?? null, bedExitTs: d.bedExitTs ?? null, smWakePhases: d.smWakePhases ?? [], bedAbsenceEvents: d.bedAbsenceEvents ?? [], excluded: d.excluded ?? false });
                     setPersonHistoryData(d.personData && typeof d.personData === 'object' ? d.personData : {});
                 }
             });
@@ -1250,6 +1250,9 @@ export default function HealthTab(props: any) {
         })() : null);
         const sleepStartOverridden: boolean = sd?.sleepStartOverridden ?? false;
         const bedWasEmpty: boolean = sd?.bedWasEmpty ?? false;
+        // [OC-SENSOR-FALLBACK] VIB-Sensor lieferte diese Nacht keine Daten (Ausfall/Zigbee-Stoerung),
+        // aber FP2 hat Anwesenheit bestaetigt -> Zeiten OHNE Schlafphasen-Balken + Hinweis.
+        const vibSensorUnavailable: boolean = (sd as any)?.vibSensorUnavailable ?? false;
         const nightExcluded: boolean = (sd as any)?.excluded ?? false;
 
         const handleSetOverride = async (source: string, ts: number) => {
@@ -1521,6 +1524,14 @@ export default function HealthTab(props: any) {
                 if (swStart && ss.ts < swStart - 5 * 3600000) return false; // >5h vor Einschlafzeit
                 return true;
             });
+        // [OC-AURA-ONLY] Entwicklungs-Anzeige: Welche Zeit haette der Algorithmus OHNE Garmin gewaehlt?
+        // Beide Arrays (allSleepStartSourcesArr/allWakeSourcesArr) sind prioritaets-sortiert
+        // (garmin = hoechste Prio). Die erste Nicht-Garmin-Quelle mit gueltigem Timestamp ist genau
+        // das, was ein Kunde OHNE Smartwatch als Einschlaf-/Aufwachzeit sehen wuerde. Nur relevant
+        // (und nur angezeigt) wenn die aktive Quelle 'garmin' ist — sonst ist die Primaerzeit bereits
+        // die lokale AURA-Zeit. Sensor-neutral: greift auf beliebige lokale Quelle zurueck.
+        const auraOnlySleepStart = allSleepStartSourcesArr.find(ss => ss.source !== 'garmin' && !!ss.ts) ?? null;
+        const auraOnlyWake = allWakeSourcesArr.find(ws => ws.source !== 'garmin' && !!ws.ts) ?? null;
         const devSleepStartTooltip = allSleepStartSourcesArr.length > 0
             ? 'Einschlafzeit — alle Quellen (Priorität absteigend):\n' +
               allSleepStartSourcesArr.map(ss => {
@@ -1796,6 +1807,15 @@ export default function HealthTab(props: any) {
                     </div>
                 ) : !hasVibSensor ? (
                     <div style={{fontSize:'0.8rem'}}>
+                        {/* [OC-SENSOR-FALLBACK] Hinweis wenn VIB-Sensor ausgefallen war (FP2 rettete Zeiten) */}
+                        {vibSensorUnavailable && (
+                            <div style={{fontSize:'0.68rem', color: isDark?'#ffb74d':'#e65100',
+                                         background: isDark?'rgba(255,152,0,0.12)':'rgba(255,152,0,0.08)',
+                                         border:'1px solid rgba(255,152,0,0.4)', borderRadius:'6px',
+                                         padding:'6px 8px', marginBottom:'8px', textAlign:'center'}}>
+                                ⚠️ Vibrationssensor lieferte diese Nacht keine Daten — Anwesenheit über Radar bestätigt, Schlafphasen konnten nicht berechnet werden.
+                            </div>
+                        )}
                         {hasSleepWindow && swStart ? (
                             <>
                                 {/* Degradierter View: Zeiten bekannt, aber keine Vibrationsdaten */}
@@ -2249,6 +2269,13 @@ export default function HealthTab(props: any) {
                                 <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}} title={'Erkennungsmethode: ' + srcDisplay.label}>
                                     {srcDisplay.icon} {srcDisplay.label}
                                 </div>
+                                {/* [OC-AURA-ONLY] Dev-Info: AURA-Einschlafzeit ohne Garmin */}
+                                {sleepStartSource === 'garmin' && auraOnlySleepStart && (
+                                    <div style={{fontSize:'0.5rem', color: isDark?'#5a8fc5':'#4a7fb5', marginTop:'1px', fontStyle:'italic'}}
+                                         title={'Entwicklungs-Info: Diese Zeit haette AURA OHNE Garmin gewaehlt (beste lokale Quelle: ' + (srcInfo[auraOnlySleepStart.source]?.label ?? auraOnlySleepStart.source) + ')'}>
+                                        ⚙ ohne Garmin: {fmtTime(auraOnlySleepStart.ts)}
+                                    </div>
+                                )}
                                 {/* OC-23: Einschlafzeit-Quelle Override */}
                                 {sleepStartOverridden && (
                                     <div style={{fontSize:'0.5rem', color:'#ffb300', marginTop:'1px', fontWeight:'bold'}}>✏️ manuell</div>
@@ -2371,6 +2398,13 @@ export default function HealthTab(props: any) {
                                         <div style={{fontSize:'0.6rem', color: isDark?'#555':'#bbb', marginTop:'1px'}}>
                                             {wakeDisplay.icon} {wakeDisplay.label}
                                         </div>
+                                        {/* [OC-AURA-ONLY] Dev-Info: AURA-Aufwachzeit ohne Garmin */}
+                                        {wakeSource === 'garmin' && auraOnlyWake && (
+                                            <div style={{fontSize:'0.5rem', color: isDark?'#5a8fc5':'#4a7fb5', marginTop:'1px', fontStyle:'italic'}}
+                                                 title={'Entwicklungs-Info: Diese Zeit haette AURA OHNE Garmin gewaehlt (beste lokale Quelle: ' + (srcInfo[auraOnlyWake.source]?.label ?? auraOnlyWake.source) + ')'}>
+                                                ⚙ ohne Garmin: {fmtTime(auraOnlyWake.ts)}
+                                            </div>
+                                        )}
                                         {/* [OC-42] vorläufig prominenter wenn noch nicht bestätigt */}
                                         {!wakeConfirmed ? (
                                             <div style={{
@@ -3952,8 +3986,12 @@ export default function HealthTab(props: any) {
                                         sleepScore:          pd.sleepScore        ?? null,
                                         sleepScoreRaw:       pd.sleepScoreRaw     ?? null,
                                         sleepScoreCal:       pd.sleepScoreCal     ?? null,
-                                        sleepScoreCalNights: pd.sleepScoreCalNights ?? 0,
-                                        sleepScoreCalStatus: pd.sleepScoreCalStatus || 'uncalibrated',
+                                        // [OC-CAL-STATUS-FIX] Score-Kalibrierung laeuft GLOBAL (eine Garmin-vs-AURA-Offset-
+                                        // Berechnung fuer den gesamten Haushalt, siehe main.js sleepScoreCal). Der per-Person-
+                                        // Wert pd.sleepScoreCalStatus ist im Backend fest 'uncalibrated' (nie befuellt).
+                                        // Darum in den Per-Person-Kacheln den GLOBALEN Status/Naechte-Zaehler anzeigen.
+                                        sleepScoreCalNights: auraSleepData?.sleepScoreCalNights ?? pd.sleepScoreCalNights ?? 0,
+                                        sleepScoreCalStatus: auraSleepData?.sleepScoreCalStatus ?? pd.sleepScoreCalStatus ?? 'uncalibrated',
                                         sleepStages: pd.sleepStages ?? [],
                                         garminScore: auraSleepData?.garminScore ?? null,
                                         garminDeepMin: auraSleepData?.garminDeepMin ?? null,
@@ -3978,6 +4016,7 @@ export default function HealthTab(props: any) {
                                         sleepStartOverrideSource: pd.sleepStartOverridden ? pd.sleepStartSource : null,
                                         wakeOverridden:         pd.wakeOverridden         ?? false,
                                         bedWasEmpty:            pd.bedWasEmpty            ?? false,
+                                        vibSensorUnavailable:   (pd as any).vibSensorUnavailable ?? false,
                                         bedEntryTs:             (pd as any).bedEntryTs    ?? null,
                                         bedEntrySource:         (pd as any).bedEntrySource ?? null,
                                         allBedEntrySources:     (pd as any).allBedEntrySources ?? [],

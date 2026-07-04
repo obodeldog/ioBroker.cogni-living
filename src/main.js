@@ -4260,7 +4260,34 @@ class CogniLiving extends utils.Adapter {
                         });
                         // [OC-44 Guard] Kein Vib-Nachweis → Person war nicht im Bett → bedWasEmpty bleibt true
                         if (_pFbVibDet.length === 0) {
-                            _self.log.info('[OC-44] ' + person + ': kein Vib-Nachweis im globalen Fenster → bedWasEmpty bleibt true (Bett war leer)');
+                            // [OC-SENSOR-FALLBACK] VIB-Sensor lieferte keine Daten (Ausfall/leere Batterie/
+                            // Zigbee-Stoerung). Rettungsanker: Wenn FP2 die Person im globalen Schlaffenster
+                            // nachweislich bestaetigt, war sie im Bett → bedWasEmpty=false + Zeiten anzeigen,
+                            // aber KEINE Schlafphasen (Stages brauchen VIB-Daten). Flag vibSensorUnavailable
+                            // steuert den Frontend-Hinweis. Sensor-neutral: getaggter oder ungetaggter FP2.
+                            var _pFbFp2 = sleepSearchEvents.filter(function(e) {
+                                return (!e.personTag || e.personTag === person)
+                                    && e.isFP2Bed && isActiveValue(e.value)
+                                    && (e.timestamp||0) >= _fbStart && (e.timestamp||0) <= _fbEnd;
+                            });
+                            if (_pFbFp2.length > 0) {
+                                _pResult.bedWasEmpty         = false;
+                                _pResult.vibSensorUnavailable = true;
+                                _pResult.sleepStages         = [];
+                                _pResult.stagesWindowStart   = null;
+                                _pResult.stagesWindowEnd     = null;
+                                _pResult.sleepWindowStart    = _fbStart;
+                                _pResult.sleepWindowEnd      = _fbEnd;
+                                _pResult.sleepScore          = null;
+                                _pResult.sleepScoreRaw       = null;
+                                _pResult.wakeSource          = _pResult.wakeSource || 'fp2_fallback';
+                                _self.log.warn('[OC-SENSOR-FALLBACK] ' + person + ': VIB-Sensor ohne Daten, aber FP2 bestaetigt Anwesenheit ('
+                                    + _pFbFp2.length + ' Events) im Fenster '
+                                    + new Date(_fbStart).toLocaleTimeString() + '-' + new Date(_fbEnd).toLocaleTimeString()
+                                    + ' → Zeiten OHNE Schlafphasen (VIB nicht verfuegbar)');
+                            } else {
+                                _self.log.info('[OC-44] ' + person + ': kein Vib-Nachweis im globalen Fenster → bedWasEmpty bleibt true (Bett war leer)');
+                            }
                         } else {
                         var _pFbVibStr = sleepSearchEvents.filter(function(e) {
                             return (!e.personTag || e.personTag === person)
@@ -4527,6 +4554,7 @@ class CogniLiving extends utils.Adapter {
                         wakeConfirmed:             _pResult.wakeConfirmed,
                         wakeOverridden:            _pResult.wakeOverridden,
                         bedWasEmpty:               _pResult.bedWasEmpty,
+                        vibSensorUnavailable:      _pResult.vibSensorUnavailable || false,
                         outsideBedEvents:          _pResult.outsideBedEvents,
                 bedAbsenceEvents:          _pResult.bedAbsenceEvents || [],
                         sleepStages:               _pResult.sleepStages,

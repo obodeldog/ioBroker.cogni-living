@@ -8,6 +8,35 @@ Neue offene Konzepte immer OBEN in den Abschnitt "🚧 OFFENE KONZEPTE" einfüge
 ---
 
 
+## 🚧 OC-VIB-CAL-NOCTURIA: Toilettengaenge aus VIB-Kalibrierung ausschliessen (04.07.2026)
+
+**Kontext:** Seit v0.33.326/327 nutzt die Rolling-Kalibrierung `nightVibrationStrengthP90`
+(90. Perzentil der Nacht-Staerken) statt MAX. Das schneidet die staerksten ~10 % der
+Events ab — typischerweise die Aufsteh-/Hinleg-Stoesse.
+
+**Frage des Nutzers (04.07.):** Werden auch die starken Ausschlaege beim naechtlichen
+Toilettengang aus der Kalibrierung herausgerechnet?
+
+**Analyse (Code + Daten):**
+- `_pVibStrArr` sammelt alle Staerkewerte INNERHALB des Schlaffensters
+  (`sleepWindowStart`..`sleepWindowEnd`). Einschlaf- und Aufwachbewegung liegen
+  ausserhalb → bereits ausgeschlossen.
+- Toilettengaenge liegen INNERHALB des Fensters → NICHT explizit ausgeschlossen.
+- ABER: P90 faengt den Normalfall (1–2 Toilettengaenge = 2–4 starke Events) automatisch
+  ab, da diese die hoechsten Werte der Nacht sind. Beispiel Marc-Nacht: Toiletten-Stoesse
+  40/41 waren die Nacht-Maxima → von P90 verworfen.
+
+**Known Limitation:** Bei starker Nykturie (3× oder mehr pro Nacht) koennen die
+Toiletten-Events >10 % der Samples ausmachen und P90 belasten → Wake-Schwelle wieder
+zu hoch. Seltener Randfall.
+
+**Moeglicher Ausbau (noch NICHT umgesetzt):** Explizit alle Staerkewerte in einem
++/- Fenster um erkannte `outsideBedEvents`/`nachtAufstehenEvents`/Bad-Besuche aus
+`_pVibStrArr` entfernen, bevor P90 berechnet wird. Erst angehen wenn ein Kunde mit
+starker Nykturie ein reales Kalibrierungsproblem zeigt.
+
+---
+
 ## 🚧 OC-PSA-CLAMP: preSleepAbsence.start darf nie vor bedEntryTs liegen (28.06.2026)
 
 **Problem (Code-Analyse):**

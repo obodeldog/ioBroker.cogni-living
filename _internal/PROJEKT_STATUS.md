@@ -1,5 +1,91 @@
 ﻿# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 28.06.2026 | **Version:** 0.33.327
+**Letzte Aktualisierung:** 04.07.2026 | **Version:** 0.33.332
+
+---
+
+## 🗓️ Sitzung 04.07.2026 — Version 0.33.332 — OC-SENSOR-FALLBACK + unkalibriert-Fix + AURA-only-Zeiten
+
+### 🔍 Auslöser / Diagnose
+Nutzer meldete: In der Schlafanalyse (Nacht 3./4.7.) wurde bei ALLEN Personen — vor allem bei Marc — „Bett war leer" angezeigt, obwohl alle zuhause geschlafen haben.
+
+**Forensik (JSON `2026-07-04.json` + FP2-Rohdaten CSV):**
+- `nightVibrationCount: 0` global — kein einziger VIB-Event im ganzen Haus die ganze Nacht.
+- Event-Typen der Nacht: temperature 454, motion 123, door 42, presence_radar 24, **vib 0**.
+- **Ursache = Zigbee-Adapter-Ausfall** (Nutzer bestaetigt; Pushover-Warnung war gekommen, aber ungelesen). Alle Zigbee-VIB-Matratzensensoren offline.
+- FP2 (HomeKit, kein Zigbee) lief weiter: 6 `eg-schlafen`-Events IM Schlaffenster (03:11–09:13), darunter durchgehende Praesenz 02:21–06:28. AURA hatte diese Events vollstaendig im Buffer (61 Praesenz-Events in `eventHistory`).
+- Trotzdem per-Person Marc `bedWasEmpty=true`. Grund: **OC-44-Fallback prueft ausschliesslich VIB** (`_pFbVibDet`), FP2 wird ignoriert. Der GLOBALE Pfad war korrekt (top-level `bedWasEmpty:false`, weil er `_fp2InWindow` prueft) — nur der Per-Person-Pfad hatte die Luecke.
+
+### ✅ Abgeschlossen
+
+**1) OC-SENSOR-FALLBACK (Kern-Fix) — `src/main.js` (OC-44-Block):**
+- Wenn im per-Person OC-44-Fallback `_pFbVibDet.length === 0` (kein VIB): NEU prüfen ob FP2 (`_pFbFp2`, sensor-neutral: getaggter oder ungetaggter FP2 der Person) im Fenster Anwesenheit bestaetigt.
+- Wenn ja → `bedWasEmpty=false`, `sleepStages=[]` (keine Phasen ohne VIB), `sleepScore=null`, Fenster aus global, `wakeSource='fp2_fallback'`, neues Flag `_pResult.vibSensorUnavailable=true`.
+- Neues Feld `vibSensorUnavailable` in personData-Output.
+- Frontend `HealthTab.tsx`: Flag in `overrideData` + beide `setAuraSleepData`-Aufrufe durchgereicht; oranger Warnhinweis im degradierten View („Vibrationssensor lieferte keine Daten — Anwesenheit über Radar bestätigt, Schlafphasen konnten nicht berechnet werden"). Der degradierte View (`!hasVibSensor`, stages leer) zeigt automatisch Zeiten ohne Balken.
+
+**2) Bugfix „unkalibriert" (immer angezeigt) — `HealthTab.tsx`:**
+- Root Cause: Per-Person-Kacheln lasen `pd.sleepScoreCalStatus`, das im Backend (L4537) FEST `'uncalibrated'` ist — die Score-Kalibrierung (Garmin-vs-AURA-Offset) laeuft GLOBAL, nicht per Person.
+- Fix: `overrideData.sleepScoreCalStatus/Nights` liest jetzt `auraSleepData.sleepScoreCalStatus/Nights` (global, korrekt berechnet: ≥7 Naechte = 'calibrating', ≥14 = 'calibrated').
+- „Früher ging es mal" erklaert: vor der Mehrkachel-Darstellung (`personsWithSleep.length<2`) wurde der globale Wert genutzt.
+
+**3) AURA-only-Zeiten (Entwicklungs-Anzeige) — `HealthTab.tsx`:**
+- Neue Konstanten `auraOnlySleepStart`/`auraOnlyWake` = erste Nicht-Garmin-Quelle mit gueltigem TS aus den prioritaets-sortierten Arrays `allSleepStartSourcesArr`/`allWakeSourcesArr`.
+- Anzeige klein/kursiv unter Eingeschlafen und Aufgewacht (Hauptansicht) — NUR wenn aktive Quelle 'garmin' ist: „⚙ ohne Garmin: HH:MM". Zeigt was der Algorithmus ohne Smartwatch waehlen wuerde (relevant fuer Kunden ohne Garmin). Rein Frontend, kein Backend-Umbau.
+
+**4) BRAINSTORMING — OC-VIB-CAL-NOCTURIA dokumentiert:**
+- Toilettengaenge liegen INNERHALB des Schlaffensters und werden nicht explizit aus `_pVibStrArr` (P90-Kalibrierung) ausgeschlossen. P90 faengt den Normalfall (1–2 Gaenge) automatisch ab. Known Limitation nur bei starker Nykturie (3×+). Expliziter Ausschluss noch nicht umgesetzt.
+
+### 🎯 Nächster logischer Schritt
+- Neue Nacht mit repar-tem Zigbee beobachten: bestaetigen dass VIB wieder Daten liefert und normale Kacheln erscheinen.
+- OC-SENSOR-FALLBACK testen sobald wieder ein VIB-Ausfall auftritt (oder simulieren).
+- Optional: `weakVibrationSensor`/Sensor-Ausfall aktiv als Warnung in der Kachel/Notification (OC-33-Ausbau).
+
+---
+
+## 🗓️ Sitzung 29.06.2026 — Version 0.33.328 — OC-SEX-SIMPLE: Sex-Tab vereinfacht + Kinder-Bett-Bug
+
+### ✅ Abgeschlossen
+
+**Bug-Fix OC-SEX-PERSON (Kinder-Bett fälschlicherweise als Sex erkannt):**
+- Root Cause: `_intimEvts`-Filter hatte Bedingung `(!e.isFP2Bed&&!e.isBedroomMotion)` die fast alle Vibrations-Events durchließ, inklusive Kinderzimmer-Sensoren (Jana/Julia).
+- Beweis: `2026-06-29.json` enthält Sex-Event 18:17–18:27 mit `peakStrength=102` von Aqara Jana-Sensor, während Marcs Sensor laut CSV nach 06:51 stumm war.
+- Fix: Bogus-Bedingung entfernt → Filter: `e.isVibrationBed || e.isFP2Bed`
+- Neues Config-Feld `sexPersonTags` (kommagetrennt): nur Sensoren dieser Persons-Tags werden berücksichtigt. Leer = alle (für Rückwärtskompatibilität).
+- Gleiche Filterung auch in Kalibrierungs-Label-Loop (`_lAllEvts`) ergänzt.
+
+**OC-SEX-SIMPLE (Typ vaginal/oral_hand → binär sex/nullnummer):**
+- Backend `src/main.js`:
+  - `_type` immer `'sex'` (nie `vaginal`/`oral_hand`)
+  - `calibB` komplett entfernt; nur `calibA` (Sex-Mindest-Schwelle)
+  - `_vaginalPeaks`/`_oralPeaks` Arrays entfernt
+  - Label-Migration: bei nächstem Speichern werden vaginal/oral_hand → sex konvertiert
+  - Python-Training-Labels in `_sexTrainData`: Normalisierung `_lTypSex` statt `_lTypNorm`
+  - `_sexPersonTagsSet` am Beginn des Sex-Blocks definiert (vor Kalibrierung)
+- Python `python_service/brains/sex.py`:
+  - Binärer Classifier: `train()` filtert auf `sex`/`nullnummer`, normalisiert Legacy-Labels
+  - `MIN_SEX_SAMPLES=2`, `MIN_TOTAL=4` (kein 2-Klassen-Zwang mehr)
+  - `predict()` normalisiert Ausgabe: vaginal/oral_hand → sex
+  - LOO-Matrix: sex vs. nullnummer (statt multi-klasse)
+- Frontend `SexTab.tsx`:
+  - `IntimacyEvent.type`: `'sex' | 'intim'`
+  - `ManualSexEntry.type`: `'sex' | 'sonstiges'`
+  - `getFunComment()`: vereinfacht, kein Typ-Bezug mehr
+  - `typeLabel/typeBg/typeColor`: sex statt vaginal/oral_hand
+  - Legenden, Kalender-Emojis, Formulare alle vereinfacht
+  - Kalibrierungs-Panel: nur eine Schwelle (calibA), Schwelle B entfernt
+  - `VibTooltip`/`VibGarmin`/`VibPanel`: doppeltes calibA (war calibB) bereinigt
+- `io-package.json`: `sexPersonTags` Feld ergänzt (string, default "")
+
+### 🔧 Offene Baustellen
+- `sexPersonTags` in Adapter-Config noch NICHT im Admin-UI konfigurierbar (nur via JSON-Editor).
+  Nutzer muss `Marc,Silke` oder entsprechende PersonTags manuell eintragen.
+- Altes `sex_model.pkl` auf Server existiert noch (altes 3-Klassen-Modell) — wird beim nächsten Training-Lauf automatisch durch binäres Modell ersetzt (kein manuelles Löschen nötig, da `train()` immer neu trainiert).
+- `calibA`/`calibB`-Reste in Kalibrierungs-Anzeige (SexTab zeigt `calibA` aber Panels hatten doppeltes `calibA` — bereinigt).
+
+### 🎯 Nächster logischer Schritt
+- `sexPersonTags` als Eingabefeld im Settings/Admin-UI sichtbar machen
+- Adapter auf Server deployen und testen (sexPersonTags auf "Marc,Silke" setzen)
+- Neues Training: 2× sex + 1× nullnummer labeln → KI-Modell starten
 
 ---
 
