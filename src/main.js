@@ -282,10 +282,24 @@ function computePersonSleep(p) {
     var sleepStart = null; var sleepStartSrc = 'winstart'; var overrideApplied = false;
     var ovWinMin = searchBase.getTime(); var ovWinMax = ovWinMin + 10 * 3600000;
 
+    // [OC-OVDEBUG] Diagnose: warum greift ein manueller Einschlaf-Override (nicht) ?
+    if (log && startOverride) {
+        log.info(logPfx + '[OC-OVDEBUG] startOverride vorhanden: ' + JSON.stringify(startOverride)
+            + ' | sleepDate=' + sleepDate
+            + ' | dateMatch=' + (startOverride.date === sleepDate)
+            + ' | ts=' + (startOverride.ts ? new Date(startOverride.ts).toISOString() : 'null')
+            + ' | ovWinMin=' + new Date(ovWinMin).toISOString()
+            + ' | ovWinMax=' + new Date(ovWinMax).toISOString()
+            + ' | tsInWindow=' + (!!startOverride.ts && startOverride.ts >= ovWinMin && startOverride.ts <= ovWinMax));
+    } else if (log) {
+        log.debug(logPfx + '[OC-OVDEBUG] kein startOverride uebergeben');
+    }
     if (startOverride && startOverride.date === sleepDate && startOverride.ts
             && startOverride.ts >= ovWinMin && startOverride.ts <= ovWinMax) {
         sleepStart = startOverride.ts; sleepStartSrc = startOverride.source || 'override'; overrideApplied = true;
-        if (log) log.info(logPfx + 'Override: ' + sleepStartSrc + ' = ' + new Date(sleepStart).toISOString());
+        if (log) log.info(logPfx + 'Override ANGEWENDET: ' + sleepStartSrc + ' = ' + new Date(sleepStart).toISOString());
+    } else if (log && startOverride) {
+        log.warn(logPfx + '[OC-OVDEBUG] Override VERWORFEN (Bedingung nicht erfuellt - siehe Werte oben)');
     }
         if (!overrideApplied) {
         // Cluster-basierte Einschlafzeit-Auswahl

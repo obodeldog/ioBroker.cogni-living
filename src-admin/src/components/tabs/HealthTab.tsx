@@ -1531,7 +1531,16 @@ export default function HealthTab(props: any) {
         // (und nur angezeigt) wenn die aktive Quelle 'garmin' ist — sonst ist die Primaerzeit bereits
         // die lokale AURA-Zeit. Sensor-neutral: greift auf beliebige lokale Quelle zurueck.
         const auraOnlySleepStart = allSleepStartSourcesArr.find(ss => ss.source !== 'garmin' && !!ss.ts) ?? null;
-        const auraOnlyWake = allWakeSourcesArr.find(ws => ws.source !== 'garmin' && !!ws.ts) ?? null;
+        // [OC-AURA-ONLY-WAKEGUARD] Logische Regel: Man kann nicht aufstehen und DANN aufwachen.
+        // Die aura-only-Aufwachzeit darf nie NACH dem physischen Aufstehen (bedExitTs) liegen.
+        // Grund: vibration_alone (letzte Matratzen-Bewegung) ist oft der Aufsteh-Moment, nicht das
+        // Aufwachen (siehe main.js L4352). Wir loeschen die Quelle NICHT, sondern verwerfen nur
+        // Kandidaten die spaeter als das Aufstehen liegen -> naechstbester gueltiger Kandidat oder keiner.
+        const _auraWakeBedExit: number | null = (sd as any)?.bedExitTs ?? null;
+        const auraOnlyWake = allWakeSourcesArr.find(ws =>
+            ws.source !== 'garmin' && !!ws.ts &&
+            (!_auraWakeBedExit || (ws.ts as number) <= _auraWakeBedExit)
+        ) ?? null;
         const devSleepStartTooltip = allSleepStartSourcesArr.length > 0
             ? 'Einschlafzeit — alle Quellen (Priorität absteigend):\n' +
               allSleepStartSourcesArr.map(ss => {

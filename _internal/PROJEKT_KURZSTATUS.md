@@ -1,5 +1,5 @@
 ﻿# PROJEKT KURZSTATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 04.07.2026 | **Version:** 0.33.332
+**Letzte Aktualisierung:** 09.07.2026 | **Version:** 0.33.333
 
 ---
 
@@ -10,11 +10,14 @@
 ---
 
 ## 1) Aktuelle Version
-- **`0.33.332`** (ioBroker liest `io-package.json` → **`common.version`** — immer mitbumpen!)
+- **`0.33.333`** (ioBroker liest `io-package.json` → **`common.version`** — immer mitbumpen!)
 
 ---
 
-## 2) Stand heute (04.07.2026)
+## 2) Stand heute (09.07.2026)
+- **v0.33.333 — aura-only Wake-Guard + Override-Debug (09.07.)**:
+  - **Frage 1 (OC-AURA-ONLY-WAKEGUARD):** Die „⚙ ohne Garmin: HH:MM"-Aufwachzeit lag unlogisch NACH dem Aufstehen (Beweis 09.07.: ohne-Garmin 06:55 = `vibration_alone`, aber Aufstehen 06:51 = `oc45_bath`). Ursache: die Anzeige nahm stumpf die erste Nicht-Garmin-Quelle und umging die echte Konfidenz-Kaskade. `vibration_alone` ist laut Code (L4352) oft der letzte Matratzen-Kontakt = Aufsteh-Moment, nicht Aufwachen. Fix: aura-only-Aufwachzeit wird auf `<= bedExitTs` begrenzt (Regel „man kann nicht aufstehen und dann aufwachen"). Quelle bleibt erhalten, es wird nur der ungültige Kandidat verworfen → nächstbester oder keine Anzeige. **Wichtig:** Die ECHTE Aufwach-Logik (`computePersonSleep` L640–660) hat schon immer ein Schema (Konfidenz-Kaskade garmin→fp2→…→vib_wake_cluster→vibration_alone + `_smWakePhases` State Machine) — nur meine Zusatzanzeige hatte den Guard nicht.
+  - **Frage 2 (OC-OVDEBUG):** Per-Person Einschlaf-Override „Radar+Vibration 23:46" wurde bei Marc nicht übernommen. Kompletter Code-Pfad wurde verifiziert und sieht KORREKT aus (Override gespeichert→gelesen→in computePersonSleep L285 zuerst angewendet→zurückgegeben). Da statisch kein Bug findbar: gezielter Debug-Log an der Override-Prüfung (L285) eingebaut. Log zeigt beim nächsten Klick: startOverride-Inhalt, dateMatch, ts, ovWinMin/Max, tsInWindow, und ob ANGEWENDET/VERWORFEN. → Nutzer klickt einmal, Log lesen, dann gezielter Fix.
 - **v0.33.332 — OC-SENSOR-FALLBACK + unkalibriert-Bugfix + AURA-only-Zeiten (04.07.)**:
   - **OC-SENSOR-FALLBACK (Kern):** Wenn der VIB-Sensor einer Person eine Nacht KEINE Daten liefert (Ausfall/leere Batterie/Zigbee-Stoerung), aber FP2 die Person im Schlaffenster bestaetigt → per-Person `bedWasEmpty=false`, Zeiten anzeigen OHNE Schlafphasen-Balken. Neues Flag `vibSensorUnavailable` + oranger Hinweis in der Kachel. Bisher: OC-44 prueft NUR VIB → bei VIB-Ausfall faelschlich „Bett war leer" trotz FP2-Anwesenheit (Beweis Nacht 3./4.7.: Zigbee-Adapter war ausgefallen, FP2 zeigte Marc 6 Events im Fenster, trotzdem alle 4 Personen „Bett war leer"). Der GLOBALE Pfad war korrekt (prueft `_fp2InWindow`), nur der Per-Person-Pfad hatte die Luecke.
   - **Bugfix „unkalibriert":** Per-Person-Kacheln zeigten IMMER „unkalibriert", weil `pd.sleepScoreCalStatus` im Backend fest 'uncalibrated' ist (Score-Kalibrierung laeuft GLOBAL). Frontend liest jetzt `auraSleepData.sleepScoreCalStatus/Nights` (global, korrekt) fuer die Per-Person-Kacheln.

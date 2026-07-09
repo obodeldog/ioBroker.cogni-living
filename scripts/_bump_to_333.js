@@ -1,0 +1,10 @@
+const fs = require('fs');
+const OLD = '0.33.332', NEW = '0.33.333';
+const root = 'C:/ioBroker/ioBroker.cogni-living/';
+let pkg = fs.readFileSync(root + 'package.json', 'utf8');
+pkg = pkg.replace('"version": "' + OLD + '"', '"version": "' + NEW + '"');
+fs.writeFileSync(root + 'package.json', pkg, 'utf8');
+let iop = fs.readFileSync(root + 'io-package.json', 'utf8');
+iop = iop.split('"' + OLD + '"').join('"' + NEW + '"');
+fs.writeFileSync(root + 'io-package.json', iop, 'utf8');
+console.log('OK bump ' + OLD + ' -> ' + NEW);

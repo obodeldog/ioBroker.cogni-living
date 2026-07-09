@@ -1,5 +1,29 @@
 ﻿# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 04.07.2026 | **Version:** 0.33.332
+**Letzte Aktualisierung:** 09.07.2026 | **Version:** 0.33.333
+
+---
+
+## 🗓️ Sitzung 09.07.2026 — Version 0.33.333 — aura-only Wake-Guard (OC-AURA-ONLY-WAKEGUARD) + Override-Debug (OC-OVDEBUG)
+
+### 🔍 Auslöser
+Nutzer meldete anhand JSON `2026-07-09.json` zwei Punkte:
+1. **„Aufgewacht ohne Garmin" 06:55 liegt NACH „Aufstehen" 06:51** — unlogisch (man kann nicht aufstehen und dann aufwachen). Frage: greift hier keine State Machine?
+2. **Per-Person Einschlaf-Override wird nicht übernommen** — beim Klick auf „Radar und Vibration" (23:46) blieb die Anzeige auf Garmins 00:42. Nutzer sah keine „Wird neu berechnet"/„manuell"-Hinweise.
+
+### 🔬 Analyse (Code-belegt, kein Raten)
+**Frage 1:** Die ECHTE Aufwach-Erkennung in `computePersonSleep` (`src/main.js` L640–660) HAT ein Schema — eine Konfidenz-Kaskade: garmin → fp2 → motion → … → `vib_wake_cluster` → `vibration_alone`, plus die `_smWakePhases`-State-Machine. `vibration_alone` steht bewusst ganz unten, weil es laut Code-Kommentar (L4352) oft nur den *letzten Matratzen-Kontakt* = Aufsteh-Moment beschreibt, NICHT das Aufwachen.
+- **Der Bug lag NICHT in der Kernlogik**, sondern in der in v0.33.332 neu eingebauten Anzeige „⚙ ohne Garmin: HH:MM" (`HealthTab.tsx`): sie nahm einfach `allWakeSources.find(!== garmin)` — also den ERSTEN Nicht-Garmin-Eintrag — ohne die Kaskade/Plausibilität. So rutschte `vibration_alone` (06:55) durch, obwohl das Aufstehen (`oc45_bath`) schon um 06:51 war.
+
+**Frage 2:** Kompletter Override-Pfad statisch verifiziert:
+- Frontend `handleSetOverride` (per-Person) → `setPersonSleepStartOverride` (`src/main.js` L5795) → speichert `{date, ts, source}` → `saveDailyHistory` → `computePersonSleep` wendet Override bei L285 ZUERST an (vor Garmin).
+- Pfad ist **korrekt**. Zwei mögliche Fragilitäten identifiziert: (a) 10h-Gültigkeitsfenster `ovWinMin..ovWinMax`, (b) `sleepDate`-Verschiebung nach 18:00. Beide konnten statisch NICHT als Ursache reproduziert werden (23:46 liegt im Fenster, Datum passt).
+
+### ✅ Umgesetzt
+1. **OC-AURA-ONLY-WAKEGUARD** (`HealthTab.tsx`): aura-only-Aufwachzeit wird auf `<= bedExitTs` begrenzt. Regel „man kann nicht aufstehen und dann aufwachen". Kandidaten die nach dem Aufstehen liegen werden verworfen → nächstbester gültiger Kandidat oder keine Anzeige. Quelle wird NICHT gelöscht.
+2. **OC-OVDEBUG** (`src/main.js` L285): gezielter Debug-Log an der Override-Prüfung. Loggt beim nächsten Override-Klick: `startOverride`-Inhalt, `sleepDate`, `dateMatch`, `ts`, `ovWinMin/Max`, `tsInWindow`, und ob Override **ANGEWENDET** oder **VERWORFEN** wurde (mit warn-Log bei Verwerfen). → Nutzer klickt einmal → Log liefert die exakte Ursache → gezielter Fix in Folge-Session.
+
+### 🎯 Nächster logischer Schritt
+- Nutzer testet Override erneut, liest `[OC-OVDEBUG]`-Zeilen im ioBroker-Log → daraus präzisen Fix für Frage 2 ableiten.
 
 ---
 
