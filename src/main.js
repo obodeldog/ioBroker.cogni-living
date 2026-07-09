@@ -4009,7 +4009,7 @@ class CogniLiving extends utils.Adapter {
                         // Per-Person Nacht-Analyse Per-Person Nacht-Analyse
             // ============================================================
             const _self = this;
-            const personData = (function() {
+            let personData = {}; try { personData = (function() {
                 var result = {};
                 var devices = (_self.config && _self.config.devices) ? _self.config.devices : [];
                 var personSensorIds = {};
@@ -4593,7 +4593,7 @@ class CogniLiving extends utils.Adapter {
                     };
                 });
                 return result;
-            })();
+            }); } catch(_pdErr) { this.log.error('[personData] CRASH: ' + _pdErr.message + ' | ' + (_pdErr.stack||'').split('\n').slice(0,5).join(' => ')); }
 
             try { await this.setStateAsync('system.personData', { val: JSON.stringify(personData), ack: true }); } catch(e) {}
 
@@ -5312,8 +5312,7 @@ class CogniLiving extends utils.Adapter {
             if (!fs.existsSync(historyDir)) fs.mkdirSync(historyDir, { recursive: true });
 
             const filePath = path.join(historyDir, `${dateStr}.json`);
-            fs.writeFileSync(filePath, JSON.stringify(snapshot));
-            this.log.info(`? History saved: ${filePath}`);
+            try { fs.writeFileSync(filePath, JSON.stringify(snapshot)); this.log.info('[HistorySave] OK: ' + filePath); } catch(_fsE) { this.log.error('[HistorySave] WRITE FAILED: ' + _fsE.message); }
             // OC-11: Gelernte Raum-Uebergangszeiten persistieren (nach jedem History-Save)
             if (this._roomTransitionTimes && Object.keys(this._roomTransitionTimes).length > 0) {
                 try { await this.setObjectNotExistsAsync('LTM.roomTransitionTimes', { type: 'state', common: { name: 'OC-11 Gelernte Raum-Uebergangszeiten (JSON)', type: 'string', role: 'json', read: true, write: false, def: '{}' }, native: {} }); } catch(_) {}
@@ -5397,7 +5396,7 @@ class CogniLiving extends utils.Adapter {
             // N?chtliche Drift-Pr?fung (nach dem Speichern)
             this._checkDriftAlarm(historyDir).catch(e => this.log.warn(`[Drift] Alarm-Check Fehler: ${e.message}`));
 
-        } catch(e) { this.log.error(`History Save Error: ${e.message}`); }
+        } catch(e) { this.log.error('[HistorySave] CRASH: ' + e.message + ' | ' + (e.stack||'').split('\n').slice(0,5).join(' => ')); }
     }
 
     async _checkDriftAlarm(historyDir) {

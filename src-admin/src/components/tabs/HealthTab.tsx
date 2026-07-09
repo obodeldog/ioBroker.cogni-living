@@ -2414,6 +2414,13 @@ export default function HealthTab(props: any) {
                                                 ⚙ ohne Garmin: {fmtTime(auraOnlyWake.ts)}
                                             </div>
                                         )}
+                                        {/* [OC-AURA-ONLY-NOALT] Kein gueltiger lokaler Aufwach-Kandidat */}
+                                        {wakeSource === 'garmin' && !auraOnlyWake && (
+                                            <div style={{fontSize:'0.5rem', color: isDark?'#444':'#ccc', marginTop:'1px', fontStyle:'italic'}}
+                                                 title={'Keine andere lokale Aufwach-Quelle verfuegbar (alle Kandidaten nach Aufstehen oder keine Daten)'}>
+                                                ⚙ ohne Garmin: —
+                                            </div>
+                                        )}
                                         {/* [OC-42] vorläufig prominenter wenn noch nicht bestätigt */}
                                         {!wakeConfirmed ? (
                                             <div style={{
