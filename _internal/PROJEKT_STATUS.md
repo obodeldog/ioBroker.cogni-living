@@ -1,5 +1,34 @@
 ﻿# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 09.07.2026 | **Version:** 0.33.333
+**Letzte Aktualisierung:** 09.07.2026 | **Version:** 0.33.334
+
+---
+
+## 🗓️ Sitzung 09.07.2026 — Version 0.33.334 — History Save Error Crashfix (OC-HIST-CRASH) + „ohne Garmin: —"
+
+### 🔍 Auslöser
+Nutzer installierte v0.33.333, testete Override, lieferte Log. Zwei Beobachtungen:
+1. **„⚙ ohne Garmin"** fehlte komplett bei Aufwachzeit → Frage nach Fallback-Label
+2. **„vorläufig"** Badge zeigte immer noch, obwohl Daten frozen sein sollten
+3. **Log zeigte `History Save Error: Cannot read properties of undefined (reading 'length')`** → der eigentliche Root-Cause für beide obigen Symptome
+
+### 🔬 Analyse (Code-belegt)
+**History Save Error:** Die `personData`-IIFE (`src/main.js` L4012-4596) ist NICHT in einem try/catch. Ein Crash darin propagiert direkt zum outer catch (L5400). Der `fs.writeFileSync` (L5315) wird nie erreicht. Die JSON-Datei (Basis für `getHistoryData`) behält den letzten Stand. Frontend zeigt: alte Daten (Garmin 00:42 statt Override 23:46), `wakeConfirmed=false` (noch nicht bestätigt im alten Stand) → „vorläufig".
+
+**Root-Cause des Crashs:** Der Override von Marc setzt `sleepWindowStart` auf 23:46 (früher als Garmin 00:42). Das triggert einen Code-Pfad in der per-Person IIFE der `.length` auf etwas `undefined` aufruft. Stack-Trace wurde noch nicht geliefert (brauchen nächsten Crash-Log).
+
+**„ohne Garmin" fehlte:** Korrekt — OC-AURA-ONLY-WAKEGUARD filterte `vibration_alone` (06:55 > bedExit 06:51). Da keine andere Quelle übrig blieb, zeigte der Bereich gar nichts. Fehlendes Fallback-Label.
+
+**„vorläufig":** `!wakeConfirmed` = true weil die JSON-Datei nie mit dem aktuellen Stand (Bett leer) überschrieben wurde (durch den Crash).
+
+### ✅ Umgesetzt
+1. **OC-HIST-CRASH Fix (Schutzschicht):** `personData`-IIFE in try/catch gewickelt. Bei Crash: `personData = {}`, Fehlermeldung mit Stack-Trace in Log (`[personData] CRASH: ...`). `saveDailyHistory` läuft weiter, Datei wird geschrieben. Override und andere Daten werden dadurch korrekt persistiert.
+2. **Stack-Trace im outer catch:** `History Save Error`-Log zeigt jetzt auch Stack-Trace → exakte Zeile des nächsten Fehlers.
+3. **„ohne Garmin: —":** Wenn keine gültige lokale Aufwach-Quelle (alle nach bedExitTs oder keine Daten), zeigt Frontend „⚙ ohne Garmin: —" mit Tooltip-Erklärung.
+4. **Version 0.33.334**, gebaut, gepusht.
+
+### 🎯 Nächster logischer Schritt
+- Nutzer installiert v0.33.334, testet Override → wenn Crash weiterhin auftritt, liefert `[personData] CRASH:` Stack-Trace → exakter Bugfix.
+- Wenn Override danach korrekt angezeigt wird: Root-Cause identifizieren und dauerhaft fixen.
 
 ---
 

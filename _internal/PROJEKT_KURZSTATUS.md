@@ -1,5 +1,5 @@
 ﻿# PROJEKT KURZSTATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 09.07.2026 | **Version:** 0.33.333
+**Letzte Aktualisierung:** 09.07.2026 | **Version:** 0.33.334
 
 ---
 
@@ -15,6 +15,10 @@
 ---
 
 ## 2) Stand heute (09.07.2026)
+- **v0.33.334 — History Save Error Crashfix + „ohne Garmin: —" Label (09.07.)**:
+  - **CRASHFIX (OC-HIST-CRASH):** `personData`-IIFE (L4012-4596) war nicht in try/catch → ein Crash darin crashte die gesamte `saveDailyHistory`-Funktion → Datei wurde nie geschrieben → Frontend zeigte alte Daten. Fix: IIFE in try/catch gewickelt, `personData = {}` als Fallback. Zusätzlich Stack-Trace in outer catch ergänzt (nächste Fehlermeldung zeigt exakte Zeile). Root-Cause der Crash-Ursache noch offen — Stack-Trace wird beim nächsten Auftreten diagnostizieren.
+  - **„ohne Garmin: —":** Wenn keine gültige lokale Aufwach-Quelle existiert (alle Kandidaten liegen nach `bedExitTs` oder keine Daten), wird jetzt „⚙ ohne Garmin: —" angezeigt statt gar nichts.
+  - **„vorläufig"-Badge:** Bleibt korrekt (`!wakeConfirmed`). War durch den Crash bedingt (Datei nicht aktualisiert → alter Stand ohne Bestätigung). Löst sich nach dem Crashfix automatisch beim nächsten erfolgreichen Save.
 - **v0.33.333 — aura-only Wake-Guard + Override-Debug (09.07.)**:
   - **Frage 1 (OC-AURA-ONLY-WAKEGUARD):** Die „⚙ ohne Garmin: HH:MM"-Aufwachzeit lag unlogisch NACH dem Aufstehen (Beweis 09.07.: ohne-Garmin 06:55 = `vibration_alone`, aber Aufstehen 06:51 = `oc45_bath`). Ursache: die Anzeige nahm stumpf die erste Nicht-Garmin-Quelle und umging die echte Konfidenz-Kaskade. `vibration_alone` ist laut Code (L4352) oft der letzte Matratzen-Kontakt = Aufsteh-Moment, nicht Aufwachen. Fix: aura-only-Aufwachzeit wird auf `<= bedExitTs` begrenzt (Regel „man kann nicht aufstehen und dann aufwachen"). Quelle bleibt erhalten, es wird nur der ungültige Kandidat verworfen → nächstbester oder keine Anzeige. **Wichtig:** Die ECHTE Aufwach-Logik (`computePersonSleep` L640–660) hat schon immer ein Schema (Konfidenz-Kaskade garmin→fp2→…→vib_wake_cluster→vibration_alone + `_smWakePhases` State Machine) — nur meine Zusatzanzeige hatte den Guard nicht.
   - **Frage 2 (OC-OVDEBUG):** Per-Person Einschlaf-Override „Radar+Vibration 23:46" wurde bei Marc nicht übernommen. Kompletter Code-Pfad wurde verifiziert und sieht KORREKT aus (Override gespeichert→gelesen→in computePersonSleep L285 zuerst angewendet→zurückgegeben). Da statisch kein Bug findbar: gezielter Debug-Log an der Override-Prüfung (L285) eingebaut. Log zeigt beim nächsten Klick: startOverride-Inhalt, dateMatch, ts, ovWinMin/Max, tsInWindow, und ob ANGEWENDET/VERWORFEN. → Nutzer klickt einmal, Log lesen, dann gezielter Fix.
