@@ -4593,7 +4593,7 @@ class CogniLiving extends utils.Adapter {
                     };
                 });
                 return result;
-            }); } catch(_pdErr) { this.log.error('[personData] CRASH: ' + _pdErr.message + ' | ' + (_pdErr.stack||'').split('\n').slice(0,5).join(' => ')); }
+            })(); } catch(_pdErr) { this.log.error('[personData] CRASH: ' + _pdErr.message + ' | ' + (_pdErr.stack||'').split('\n').slice(0,5).join(' => ')); }
 
             try { await this.setStateAsync('system.personData', { val: JSON.stringify(personData), ack: true }); } catch(e) {}
 
