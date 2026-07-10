@@ -593,7 +593,13 @@ function computePersonSleep(p) {
     // Mindestens 3 Vib-Events in einem 15-Min-Fenster = Person beginnt sich zu bewegen
     var _vibWakeClusterTs = null;
     (function() {
-        var _vwcStart = wakeHardCap - 90 * 60 * 1000;
+        // [OC-VWC-ANCHOR] Fenster an die tatsaechliche Aufwach-Referenz binden statt an die
+        // 12:00-Uhr-Obergrenze (wakeHardCap). Vorher suchte der Detektor nur 10:30-12:00 Uhr und
+        // verfehlte die morgendliche Unruhe (z.B. 05:42-06:18) komplett -> vib_wake_cluster war
+        // faktisch totes Feld. Fallback-Kaskade: garmin -> fp2 -> letztes Vib-Event (Kunden ohne
+        // Garmin/FP2 bekommen so trotzdem ein vibrationsbasiertes Aufwach-Muster).
+        var _vwcAnchor = garminWakeTs || fp2WakeTs || (_vibEvtsWk.length ? (_vibEvtsWk[_vibEvtsWk.length-1].timestamp||0) : 0) || wakeHardCap;
+        var _vwcStart = _vwcAnchor - 90 * 60 * 1000;
         var _vwcEvts = _vibEvtsWk.filter(function(e) { return (e.timestamp||0) >= _vwcStart; });
         if (_vwcEvts.length < 3) return;
         var VWC_WIN_MS = 15 * 60 * 1000;
