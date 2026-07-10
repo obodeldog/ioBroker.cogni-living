@@ -1,5 +1,29 @@
 ﻿# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 10.07.2026 | **Version:** 0.33.335
+**Letzte Aktualisierung:** 10.07.2026 | **Version:** 0.33.336
+
+---
+
+## 🗓️ Sitzung 10.07.2026 — Version 0.33.336 — vib_wake_cluster Anker-Fix (OC-VWC-ANCHOR)
+
+### 🔍 Auslöser
+Nach v0.33.335 (Kacheln zurück): Nutzer sah bei „Aufgewacht" weiterhin „⚙ ohne Garmin: —". Frage: gab es wirklich keine vibrationsbasierte Aufwachzeit?
+
+### 🔬 Analyse (JSON `2026-07-10_2.json`, neu berechnet mit 0.33.335)
+- personData wieder vollständig (Marc/Julia/Jana/Anni) → Hotfix bestätigt.
+- Marc `allWakeSources`: `vibration_alone = 06:46:31` (jetzt berechnet!), aber `vib_wake_cluster = null`.
+- 06:46 liegt NACH bedExit 06:42 → Wake-Guard (OC-AURA-ONLY-WAKEGUARD, wake ≤ bedExit) filtert es → „—".
+- Marcs Morgen-Vibration real vorhanden: 05:42, 05:45, 05:47, 06:02, 06:05, 06:10, 06:18 (dichte Unruhe).
+- **Root-Cause:** `vib_wake_cluster`-Detektor (L592-610) verankert sein 90-Min-Suchfenster an `wakeHardCap` (=12:00 Uhr): `_vwcStart = wakeHardCap - 90min` = 10:30. Sucht also nur 10:30–12:00 Uhr → verfehlt jede normale Morgen-Aufwachbewegung → Feld faktisch tot seit Einführung.
+
+### ✅ Umgesetzt
+- **OC-VWC-ANCHOR:** Fenster an echte Wake-Referenz binden: `_vwcAnchor = garminWakeTs || fp2WakeTs || letztesVibEvent || wakeHardCap`; `_vwcStart = _vwcAnchor - 90min`. Fallback-Kaskade → funktioniert auch für Kunden ganz ohne Garmin/FP2.
+- Marc: Anker 06:32 → Fenster ab 05:02 → erster dichter Cluster (≥3 in 15 Min) = 05:42 → `vib_wake_cluster=05:42`.
+- Selbst-konsistent mit Wake-Kaskade (L678 `vib_wake_cluster` vor L679 `vibration_alone`): ohne Garmin würde real 05:42 gewählt → „ohne Garmin" zeigt jetzt 05:42.
+- Version 0.33.336, Backend-Build, gepusht. Kein Frontend-Change (Anzeige liest bereits `allWakeSources`).
+
+### 🎯 Nächster logischer Schritt
+- Nutzer installiert 0.33.336 + neu berechnen → „ohne Garmin" sollte ~05:42 zeigen.
+- Diskussion offen: 05:42 = erste Morgen-Unruhe (früher als Garmins finales Aufwachen 06:32). Ggf. später verfeinern (z.B. letzter statt erster Cluster, oder Cluster näher an bedExit), falls gewünscht.
 
 ---
 

@@ -1,5 +1,5 @@
 ﻿# PROJEKT KURZSTATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 10.07.2026 | **Version:** 0.33.335
+**Letzte Aktualisierung:** 10.07.2026 | **Version:** 0.33.336
 
 ---
 
@@ -15,6 +15,11 @@
 ---
 
 ## 2) Stand heute (09.07.2026)
+- **v0.33.336 — vib_wake_cluster Anker-Fix (OC-VWC-ANCHOR) (10.07.)**:
+  - **Bug:** `vib_wake_cluster` (Aufwach-Muster aus dichter Morgen-Vibration) war an `wakeHardCap` (12:00 Uhr) verankert → suchte nur 10:30–12:00 Uhr → verfehlte reale Morgen-Unruhe (Marc 05:42–06:18) IMMER → Feld faktisch tot. Deshalb blieb „ohne Garmin: —" leer (einziger Kandidat war `vibration_alone=06:46`, das aber NACH bedExit 06:42 liegt → vom Wake-Guard gefiltert).
+  - **Fix:** Fenster an Wake-Referenz-Kaskade binden: `garminWakeTs || fp2WakeTs || letztes Vib-Event || wakeHardCap`, minus 90 Min. Marc: Anker 06:32 → Fenster ab 05:02 → erster dichter Cluster 05:42 → `vib_wake_cluster=05:42`.
+  - **Selbst-konsistent:** Wake-Kaskade (L678) wählt `vib_wake_cluster` VOR `vibration_alone`. Ohne Garmin würde der Algorithmus real 05:42 nehmen → genau das zeigt „ohne Garmin" jetzt. Gilt auch für Kunden ganz ohne Garmin/FP2 (Fallback: letztes Vib-Event).
+  - **Hinweis:** 05:42 = erste Morgen-Bewegung (früher als Garmins 06:32 = finales Aufwachen). Ehrliche vibrationsbasierte Schätzung, kein Bug.
 - **v0.33.335 — HOTFIX Personen-Kacheln weg (10.07.)**:
   - **REGRESSION aus v0.33.334:** Beim Einwickeln der `personData`-IIFE in try/catch habe ich das `()` am Ende gelöscht. Aus `(function(){...})()` (Aufruf → Ergebnis-Objekt) wurde `(function(){...})` (Funktion selbst). `JSON.stringify` verwirft Funktionen → `personData` fehlte komplett in der JSON → **alle 4 Personen-Kacheln (Marc/Anni/Jana/Julia) weg**, nur globale OC-7-Kachel blieb. Fix: `})();` wiederhergestellt (L4596). Bestätigt via JSON `2026-07-10.json` (top-level `personData` fehlte).
   - **Warum es „vorher" ok aussah:** Der ältere History-Save-Crash brach die ganze Speicherung ab → alte Datei blieb → 4 (veraltete) Kacheln sichtbar. Mein v0.33.334-Write-Fix machte das Problem erst sichtbar.
