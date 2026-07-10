@@ -1,5 +1,5 @@
 ﻿# PROJEKT KURZSTATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 09.07.2026 | **Version:** 0.33.334
+**Letzte Aktualisierung:** 10.07.2026 | **Version:** 0.33.335
 
 ---
 
@@ -15,6 +15,10 @@
 ---
 
 ## 2) Stand heute (09.07.2026)
+- **v0.33.335 — HOTFIX Personen-Kacheln weg (10.07.)**:
+  - **REGRESSION aus v0.33.334:** Beim Einwickeln der `personData`-IIFE in try/catch habe ich das `()` am Ende gelöscht. Aus `(function(){...})()` (Aufruf → Ergebnis-Objekt) wurde `(function(){...})` (Funktion selbst). `JSON.stringify` verwirft Funktionen → `personData` fehlte komplett in der JSON → **alle 4 Personen-Kacheln (Marc/Anni/Jana/Julia) weg**, nur globale OC-7-Kachel blieb. Fix: `})();` wiederhergestellt (L4596). Bestätigt via JSON `2026-07-10.json` (top-level `personData` fehlte).
+  - **Warum es „vorher" ok aussah:** Der ältere History-Save-Crash brach die ganze Speicherung ab → alte Datei blieb → 4 (veraltete) Kacheln sichtbar. Mein v0.33.334-Write-Fix machte das Problem erst sichtbar.
+  - **Layout „22:33/22:34/Eingeschlafen" + „ohne Garmin: —":** Beides war nur die globale Kachel (nicht Personen-Kacheln) + korrektes Fallback-Label (alle lokalen Wake-Quellen null). Löst sich mit Rückkehr der Personen-Kacheln.
 - **v0.33.334 — History Save Error Crashfix + „ohne Garmin: —" Label (09.07.)**:
   - **CRASHFIX (OC-HIST-CRASH):** `personData`-IIFE (L4012-4596) war nicht in try/catch → ein Crash darin crashte die gesamte `saveDailyHistory`-Funktion → Datei wurde nie geschrieben → Frontend zeigte alte Daten. Fix: IIFE in try/catch gewickelt, `personData = {}` als Fallback. Zusätzlich Stack-Trace in outer catch ergänzt (nächste Fehlermeldung zeigt exakte Zeile). Root-Cause der Crash-Ursache noch offen — Stack-Trace wird beim nächsten Auftreten diagnostizieren.
   - **„ohne Garmin: —":** Wenn keine gültige lokale Aufwach-Quelle existiert (alle Kandidaten liegen nach `bedExitTs` oder keine Daten), wird jetzt „⚙ ohne Garmin: —" angezeigt statt gar nichts.

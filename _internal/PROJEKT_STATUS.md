@@ -1,5 +1,30 @@
 ﻿# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 09.07.2026 | **Version:** 0.33.334
+**Letzte Aktualisierung:** 10.07.2026 | **Version:** 0.33.335
+
+---
+
+## 🗓️ Sitzung 10.07.2026 — Version 0.33.335 — HOTFIX: Personen-Kacheln verschwunden (Regression aus v0.33.334)
+
+### 🔍 Auslöser
+Nutzer meldete: Statt 4 Personen-Kacheln (Marc/Anni/Jana/Julia) nur noch **eine** globale „[SCHLAFANALYSE (OC-7)]"-Kachel. Layout wirkte „durcheinander" (Ins Bett 22:33 / groß 22:34 / Eingeschlafen), „ohne Garmin" leer.
+
+### 🔬 Analyse (JSON `2026-07-10.json`)
+- Top-level `personData` **komplett abwesend** (nicht leer — fehlt ganz).
+- Globale Daten (bedWasEmpty=false, sleepWindowStart 22:34, Score 81) korrekt.
+- Ursache: In v0.33.334 habe ich beim Einwickeln der `personData`-IIFE in try/catch das `()` am Ende **versehentlich entfernt**:
+  - Vorher: `const personData = (function(){ ... })();` → Funktion wird aufgerufen, `personData` = Ergebnis-Objekt.
+  - v0.33.334-Bug: `personData = (function(){ ... });` → `personData` = die **Funktion selbst**.
+  - `JSON.stringify` verwirft Funktionswerte still → `personData` fehlt in der Datei → Frontend hat keine Personen-Daten → nur globale Kachel.
+- „Vorher sah es ok aus": der ältere History-Save-Crash brach die komplette Speicherung ab → alte JSON blieb erhalten → 4 (veraltete) Kacheln. Mein v0.33.334-Write-Guard ließ die Speicherung durchlaufen und machte den kaputten personData-Zustand erst sichtbar.
+- „ohne Garmin: —": in dieser globalen Kachel sind alle lokalen Wake-Quellen null (nur garmin 06:32) → korrektes Fallback-Label.
+
+### ✅ Umgesetzt
+1. **HOTFIX:** `})();` an L4596 wiederhergestellt (IIFE wird wieder aufgerufen). Personen-Kacheln kehren zurück.
+2. Version 0.33.335, Backend-Build, gepusht. (Kein Frontend-Change → kein React-Build.)
+
+### 🎯 Nächster logischer Schritt
+- Nutzer installiert 0.33.335 + „System prüfen und neu berechnen" → 4 Kacheln sollten zurück sein.
+- Falls der ursprüngliche History-Save-Crash (Nr. 2, `reading 'length'`) wieder auftritt: `[personData] CRASH:` Stack-Trace im Log liefert nun die exakte Stelle für den echten Root-Cause-Fix.
 
 ---
 
