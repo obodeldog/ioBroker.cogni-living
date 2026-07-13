@@ -635,8 +635,13 @@ function computePersonSleep(p) {
         if (_pvBefore.length > 0) _vibWakeTs = _pvBefore[_pvBefore.length-1].timestamp||null;
     }
 
-    // vib_wake_cluster: erste dichte Vib-Häufung in den letzten 90 Min (Aufwach-Muster-Erkennung)
-    // Mindestens 3 Vib-Events in einem 15-Min-Fenster = Person beginnt sich zu bewegen
+    // vib_wake_cluster: LETZTE dichte Vib-Häufung vor dem Aufstehen (Aufwach-Muster-Erkennung).
+    // [OC-VWC-LAST] Vorher: ERSTES Cluster (>=3 Events in 15 Min) -> nahm oft das "erste Zappeln"
+    // (kurze REM-/Arousal-Bewegung mitten in der Nacht) als Aufwachzeit -> systematisch zu frueh
+    // (Beweis 13.7.: erstes Cluster 05:15 vs Garmin 06:20). Aktigraphie-Literatur (Cole-Kripke,
+    // Sadeh) definiert das Schlafende ueber den Beginn ANHALTENDER Aktivitaet, nicht ueber den
+    // ersten Ausschlag. Daher jetzt: das LETZTE dichte Cluster vor dem Aufstehen (naeher am
+    // finalen Aufwachen; 13.7. -> 06:28, 8 Min nach Garmin). Deckelung auf bedExit separat (Frontend).
     var _vibWakeClusterTs = null;
     (function() {
         // [OC-VWC-ANCHOR] Fenster an die tatsaechliche Aufwach-Referenz binden statt an die
@@ -657,7 +662,7 @@ function computePersonSleep(p) {
                 if ((_vwcEvts[_vcj].timestamp||0) - _vct <= VWC_WIN_MS) _vcCnt++;
                 else break;
             }
-            if (_vcCnt >= VWC_MIN) { _vibWakeClusterTs = _vct; break; }
+            if (_vcCnt >= VWC_MIN) { _vibWakeClusterTs = _vct; } // [OC-VWC-LAST] kein break -> letztes qualifizierendes Cluster behalten
         }
     })();
 
@@ -2696,6 +2701,15 @@ class CogniLiving extends utils.Adapter {
                 }
                 return { start: sleepStartTs, end: wakeTs, firstEmpty: _firstEmpty };
             })();
+
+            // [OC-FP2-DIAG] Temporaere Diagnose: warum bleibt firstEmpty (fp2WakeTs-Quelle) null?
+            var _fp2DiagAll = sleepSearchEvents.filter(function(e){ return e.isFP2Bed; }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+            this.log.info('[OC-FP2-DIAG] FP2-Events=' + _fp2DiagAll.length
+                + ' erstes=' + (_fp2DiagAll.length ? new Date(_fp2DiagAll[0].timestamp).toLocaleString() : '-')
+                + ' letztes=' + (_fp2DiagAll.length ? new Date(_fp2DiagAll[_fp2DiagAll.length-1].timestamp).toLocaleTimeString() : '-')
+                + ' | sleepStart=' + (sleepWindowCalc.start ? new Date(sleepWindowCalc.start).toLocaleTimeString() : 'NULL')
+                + ' firstEmpty=' + (sleepWindowCalc.firstEmpty ? new Date(sleepWindowCalc.firstEmpty).toLocaleTimeString() : 'NULL')
+                + ' bedPresMin=' + bedPresenceMinutes);
 
             // OC-4 Guard: Schlaffenster nur speichern wenn genuegend FP2-Bettzeit-Daten vorhanden.
             // (Brainstorming OC-4: verhindert falsche Einschlafzeit nach Adapter-Neustart)

@@ -1,5 +1,5 @@
 ﻿# PROJEKT KURZSTATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 13.07.2026 | **Version:** 0.33.337
+**Letzte Aktualisierung:** 13.07.2026 | **Version:** 0.33.338
 
 ---
 
@@ -10,11 +10,15 @@
 ---
 
 ## 1) Aktuelle Version
-- **`0.33.337`** (ioBroker liest `io-package.json` → **`common.version`** — immer mitbumpen!)
+- **`0.33.338`** (ioBroker liest `io-package.json` → **`common.version`** — immer mitbumpen!)
 
 ---
 
 ## 2) Stand heute (13.07.2026)
+- **v0.33.338 — Vib-Aufwachcluster erstes→letztes + FP2-firstEmpty Diagnose (13.07.)**:
+  - **Part A (OC-VWC-LAST):** `vib_wake_cluster` nahm das **erste** dichte Vib-Cluster (≥3 Events/15 Min) → oft „erstes Zappeln" (kurze REM-/Arousal-Bewegung) → systematisch zu früh (Beweis 13.7.: erstes Cluster 05:15 vs Garmin 06:20). Aktigraphie-Literatur (Cole-Kripke, Sadeh) definiert Schlafende über Beginn *anhaltender* Aktivität, nicht ersten Ausschlag. NEU: **letztes** dichtes Cluster vor dem Aufstehen (`break` im Loop entfernt). Sim 13.7.: 06:28 (8 Min nach Garmin, ~4 Min vor Aufstehen) statt 05:15. Tradeoff: bei Leuten die lange wach liegen unterschätzt es die Wachliege-Zeit — aber deutlich besser als 65-Min-Frühzündung. Deckelung auf bedExit via OC-AURA-ONLY-WAKEGUARD (Frontend).
+  - **Part B (OC-FP2-DIAG, temporär):** Fix 2 aus v0.33.337 (robuste FP2-Aufwachflanke) griff NICHT — `fp2` blieb null (JSON `2026-07-13_1.json`). Ursache statisch nicht reproduzierbar (gespeicherte eventHistory ≠ Rechenzeit-Daten; bedPresenceMinutes=575 legt gültigen sleepStart nahe, trotzdem firstEmpty=null). Diagnose-Log nach `sleepWindowCalc` eingebaut: loggt FP2-Event-Zahl, erstes/letztes, sleepStart, firstEmpty, bedPresMin. → Nutzer klickt „neu berechnen", Log lesen, dann gezielter Fix. **Wieder entfernen nach Diagnose.**
+  - **Konzeptioneller Kern (Nutzer-Einsicht, bestätigt):** FP2 misst **Anwesenheit, nicht Wachheit** → `firstEmpty` = Bett-Verlassen, nicht Aufwachen. „Wach im Bett" kann NUR Vibration/Garmin liefern. FP2-Wake ist ein pragmatischer Bett-Verlassen-Proxy in der Konfidenz-Kaskade (rangiert über vib_wake_cluster).
 - **v0.33.337 — Bett-leer als Primärsignal + robuste FP2-Aufwachflanke (13.07.)**:
   - **Fix 1 (OC-48c v3 — „Bett leer" als Primärsignal):** Die Vor-Schlaf-Abwesenheit (graue Schraffur) wurde bisher NUR durch ≥30 Min *zusammenhängende* ferne Bewegung ausgelöst. Wer still auf der Couch sitzt (BM feuern kaum → Blöcke zerfallen), wurde nicht erkannt, obwohl das Bett nachweislich leer war. Beweis Nacht 10.7.: Bett 173 Min Fenster, FP2 nur ~6 Min belegt (97% leer), aber längster Fern-Block nur 20 Min → keine Schraffur. NEU: Wenn oben kein 30-Min-Block gefunden wird, das FP2-Bett aber lange leer war (kurze Präsenz-Blips < 10 Min fusioniert) UND es überhaupt Fern-Aktivität gab → Leer-Phase wird als `preSleepAbsence` markiert (`source: fp2_empty`). Simulation Nacht 10.7. → Abwesenheit 21:09–23:50 = **161 Min** korrekt markiert. Sensor-neutral: ohne FP2 greift weiter der Fern-Block-Pfad.
   - **Fix 2 (OC-FP2-WAKE-ROBUST — Aufwachflanke tolerant gegen Flackern):** Die FP2-Aufwacherkennung (`firstEmpty`) verlangte eine Leer-Phase ≥15 Min *am Stück*. Bei flackerndem Radar (Leer-Phasen knapp unter 15 Min) fiel die GESAMTE Radar-Familie (fp2, fp2_vib, fp2_other, other) auf `—`. Beweis Nacht 13.7.: nur 23 FP2-Events/Tag, morgens Leer-Phasen 1/14/4/0,5 Min → alle Radar-Quellen null, nur Vibration lieferte Werte. NEU: Fallback (nur wenn 15-Min-Regel nichts fand): erste Belegt→Leer-Flanke (Std 4–14), nach der das Bett in den folgenden 30 Min überwiegend leer bleibt (Belegt-Anteil < 20%). Simulation 13.7. → `fp2WakeTs = 06:36` (Garmin 06:20, Aufstehen 06:32) statt null.

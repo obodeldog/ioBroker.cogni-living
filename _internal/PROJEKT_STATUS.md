@@ -1,5 +1,39 @@
 ﻿# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 13.07.2026 | **Version:** 0.33.337
+**Letzte Aktualisierung:** 13.07.2026 | **Version:** 0.33.338
+
+---
+
+## 🗓️ Sitzung 13.07.2026 (spät) — Version 0.33.338 — Vib-Aufwachcluster erstes→letztes (OC-VWC-LAST) + FP2-firstEmpty Diagnose (OC-FP2-DIAG)
+
+### 🔍 Auslöser
+Nach v0.33.337 (JSON `2026-07-13_1.json`, neu berechnet): „ohne Garmin" zeigt weiterhin **05:15**. Fix 2 (robuste FP2-Aufwachflanke) hat NICHT gegriffen — `fp2` ist weiterhin null. Zwei Erkenntnisse aus der Diskussion:
+1. **Nutzer-Einsicht (bestätigt):** FP2-Radar misst **Anwesenheit, nicht Wachheit**. `firstEmpty` = Bett-Verlassen, nicht Aufwachen. „Wach im Bett" kann physikalisch nur Vibration (Bewegung) oder Garmin (Puls) liefern. Der FP2-Wake im Code ist ein pragmatischer Bett-Verlassen-Proxy in der Konfidenz-Kaskade (rangiert über vib_wake_cluster).
+2. **05:15 zu früh:** `vib_wake_cluster` nimmt das *erste* dichte Zappeln — bei diesem unruhigen Schläfer ist das eine frühe Arousal-/REM-Bewegung, nicht das finale Aufwachen.
+
+### 🔬 Analyse (echte Vib-Daten, `scripts/_sim_vibcluster.js`, temporär)
+Vib-Events (aktiv) 04:00–bedExit(06:32), 36 Stück:
+- **Erstes Cluster** (aktuell): 05:15 → 65 Min VOR Garmin (06:20).
+- **Letztes Cluster** (≥3 Events/15 Min, spätester Fensterstart): **06:28** → 8 Min NACH Garmin, ~4 Min vor Aufstehen.
+- Sustained-Onset (letzte Ruhe ≥15 Min): 05:15 (Aktivität ab 05:15 durchgehend, keine ≥20-Min-Ruhelücke) → hilft nicht.
+- Größte Vib-Lücken: 04:25→04:45 (19 Min), 04:59→05:15 (16 Min), danach alles < 8 Min.
+Aktigraphie-Literatur (Cole-Kripke 1992, Sadeh 1994): Bewegungsbasierte Schlaf-/Wacherkennung überschätzt Schlaf / schlechte Wach-Spezifität; Schlafende = Beginn ANHALTENDER Aktivität, nicht erster Ausschlag.
+
+**Warum Fix 2 (v0.33.337) nicht griff:** `sleepWindowCalc.firstEmpty` = null (global + per-Person). Statisch nicht reproduzierbar: die gespeicherte `eventHistory` (FP2-Flanken 06:33…06:59, dann 11:53; bedPresenceMinutes=575) legt nahe, dass firstEmpty eigentlich ~06:36/06:59 sein müsste — trotzdem steht null drin. Mismatch → gespeicherte History ≠ Rechenzeit-`sleepSearchEvents` (Buffer/Snapshot/Freeze). Mein Fix-2-Fallback sitzt zudem HINTER dem Early-Return `if(!sleepStartTs) return` → läuft nicht, wenn das FP2-Fenster gar nicht erst gebildet wird.
+
+### 🔧 Umgesetzt
+**Part A — OC-VWC-LAST (`src/main.js` ~L638–667):** `vib_wake_cluster` nimmt jetzt das **letzte** qualifizierende Cluster statt des ersten (`break` im Outer-Loop entfernt). Sim 13.7. → 06:28 statt 05:15. Betrifft die echte Wake-Kaskade (Kunden ohne Garmin/FP2) UND die „ohne Garmin"-Anzeige. Deckelung auf bedExit via OC-AURA-ONLY-WAKEGUARD (Frontend). Tradeoff dokumentiert: unterschätzt Wachliege-Zeit bei Langwachliegern, aber deutlich besser als die 65-Min-Frühzündung.
+
+**Part B — OC-FP2-DIAG (`src/main.js` ~L2705, TEMPORÄR):** Diagnose-Log nach `sleepWindowCalc`: loggt FP2-Event-Zahl, erstes/letztes Event, `sleepStart`, `firstEmpty`, `bedPresenceMinutes`. Nutzer klickt „System prüfen und neu berechnen" → Log verrät, ob `sleepStart` null ist (Fenster bildet sich nicht) oder `firstEmpty` trotz gültigem Fenster null bleibt. **Nach Diagnose wieder entfernen.**
+
+### 📁 Dateien
+- `src/main.js`: OC-VWC-LAST (~L638–667), OC-FP2-DIAG (~L2705–2712) → `main.js` (obfuskiert).
+- Patch-Skripte: `scripts/_patch_338_vwc_last.js`, `scripts/_patch_338_fp2diag.js`, `scripts/_bump_338.js`.
+- Version 0.33.337 → **0.33.338** (package.json + io-package.json root + common.version).
+
+### 🎯 Nächster logischer Schritt
+- Nutzer installiert v0.33.338, klickt „neu berechnen", schickt den `[OC-FP2-DIAG]`-Log → dann gezielter FP2-firstEmpty-Fix (Fix 2 an die richtige Stelle vor den Early-Return verschieben, oder Fenster-Bildung robuster machen).
+- Prüfen ob „ohne Garmin" jetzt 06:28 (statt 05:15) zeigt.
+- Offen: Sensor-Health-Hinweis bei dauerhaft flakigem FP2 (nur ~23 Transitionen/Tag).
 
 ---
 

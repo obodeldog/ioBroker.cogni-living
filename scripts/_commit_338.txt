@@ -1,0 +1,12 @@
+v0.33.338: vib_wake_cluster erstes->letztes Cluster (OC-VWC-LAST) + FP2-firstEmpty Diagnose-Log (OC-FP2-DIAG)
+
+Part A (OC-VWC-LAST): vib_wake_cluster nimmt jetzt das LETZTE dichte Cluster vor dem
+Aufstehen statt des ersten. Das erste Cluster war oft "erstes Zappeln" (REM-/Arousal-
+Bewegung) -> systematisch zu frueh (13.7.: 05:15 vs Garmin 06:20). Literatur-konform
+(Cole-Kripke, Sadeh: Schlafende = Beginn anhaltender Aktivitaet). Sim 13.7.: 06:28.
+
+Part B (OC-FP2-DIAG, temporaer): Fix 2 aus v0.33.337 griff nicht (fp2 weiter null).
+Ursache statisch nicht reproduzierbar -> Diagnose-Log nach sleepWindowCalc (FP2-Events,
+sleepStart, firstEmpty, bedPresMin). Nach Diagnose wieder entfernen.
+
+Konzept bestaetigt: FP2 misst Anwesenheit, nicht Wachheit -> firstEmpty = Bett-Verlassen.
