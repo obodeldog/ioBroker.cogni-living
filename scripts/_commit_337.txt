@@ -1,0 +1,13 @@
+v0.33.337: Bett-leer als Primaersignal (OC-48c v3) + robuste FP2-Aufwachflanke (OC-FP2-WAKE-ROBUST)
+
+Fix 1 (OC-48c v3): Vor-Schlaf-Abwesenheit wird jetzt auch ueber "Bett leer" (FP2)
+erkannt, nicht nur ueber >=30 Min zusammenhaengende ferne Bewegung. Wer still auf
+der Couch sitzt (BM feuern kaum), wird trotzdem als abwesend markiert, wenn das Bett
+nachweislich leer war + Fern-Aktivitaet existiert. Sim Nacht 10.7.: 161 Min korrekt.
+
+Fix 2 (OC-FP2-WAKE-ROBUST): FP2-Aufwacherkennung tolerant gegen Radar-Flackern.
+Fallback (nur wenn 15-Min-Regel nichts fand): erste Belegt->Leer-Flanke, nach der
+das Bett 30 Min ueberwiegend leer bleibt (<20% belegt). Sim Nacht 13.7.: 06:36
+statt null -> Radar-Aufwachquellen nicht mehr komplett leer bei flakigem FP2.
+
+Beide additiv/risikoarm (greifen nur wenn bisherige Logik nichts fand). Backend-only.

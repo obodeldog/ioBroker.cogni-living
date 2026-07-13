@@ -512,6 +512,52 @@ function computePersonSleep(p) {
                 if (log) log.info(logPfx + '[OC-48c v2] Vor-Schlaf-Abwesenheit ' + new Date(_oc48cMaxBs).toLocaleTimeString() + '-' + new Date(_oc48cMaxBe).toLocaleTimeString() + ' markiert; bedEntryTs ' + new Date(bedEntryTs).toLocaleTimeString() + ' behalten');
             }
         }
+
+        // [OC-48c v3] "Bett leer" als Primaersignal (ergaenzt den 30-Min-Fern-Block oben).
+        // Wenn oben KEIN 30-Min-Fern-Block gefunden wurde, das Bett aber zwischen bedEntry und
+        // sleepStart ueber eine lange Phase leer war (FP2 nicht belegt; kurze Praesenz-Blips
+        // < 10 Min werden fusioniert) UND es ueberhaupt Fern-Aktivitaet gab, wird diese Leer-
+        // Phase als Vor-Schlaf-Abwesenheit markiert. Deckt den Fall ab, dass die Person still
+        // auf der Couch sitzt (Bewegungsmelder feuern kaum -> kein 30-Min-Block), das Bett aber
+        // nachweislich leer ist. Sensor-neutral: ohne FP2 greift weiter der Block oben.
+        if (_preSleepAbsence.length === 0 && _oc48cFar.length > 0) {
+            var _psaFp2 = allEvents.filter(function(e) { return isMine(e) && e.isFP2Bed; })
+                .sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+            if (_psaFp2.length > 0) {
+                var _psaState = true; // Default: gerade ins Bett -> belegt
+                for (var _pfi = 0; _pfi < _psaFp2.length; _pfi++) {
+                    if ((_psaFp2[_pfi].timestamp || 0) <= bedEntryTs) _psaState = isActiveValue(_psaFp2[_pfi].value);
+                    else break;
+                }
+                var _psaSegs = [], _psaCurS = bedEntryTs, _psaCurOcc = _psaState;
+                for (var _pfj = 0; _pfj < _psaFp2.length; _pfj++) {
+                    var _pfts = _psaFp2[_pfj].timestamp || 0;
+                    if (_pfts <= bedEntryTs || _pfts >= sleepStart) continue;
+                    var _pfOcc = isActiveValue(_psaFp2[_pfj].value);
+                    if (_pfOcc !== _psaCurOcc) { _psaSegs.push({ s: _psaCurS, e: _pfts, occ: _psaCurOcc }); _psaCurS = _pfts; _psaCurOcc = _pfOcc; }
+                }
+                _psaSegs.push({ s: _psaCurS, e: sleepStart, occ: _psaCurOcc });
+                var _psaBlipTol = 10 * 60000, _psaEmptyMin = 30 * 60000;
+                var _psaBestS = null, _psaBestE = null, _psaBestDur = 0, _psaRunS = null, _psaRunE = null;
+                for (var _psi = 0; _psi < _psaSegs.length; _psi++) {
+                    var _sg = _psaSegs[_psi];
+                    if (!_sg.occ) {
+                        if (_psaRunS === null) { _psaRunS = _sg.s; _psaRunE = _sg.e; } else { _psaRunE = _sg.e; }
+                    } else if (_psaRunS !== null && (_sg.e - _sg.s) > _psaBlipTol) {
+                        if (_psaRunE - _psaRunS > _psaBestDur) { _psaBestDur = _psaRunE - _psaRunS; _psaBestS = _psaRunS; _psaBestE = _psaRunE; }
+                        _psaRunS = null; _psaRunE = null;
+                    }
+                }
+                if (_psaRunS !== null && (_psaRunE - _psaRunS) > _psaBestDur) { _psaBestDur = _psaRunE - _psaRunS; _psaBestS = _psaRunS; _psaBestE = _psaRunE; }
+                if (_psaBestDur >= _psaEmptyMin && _psaBestS != null && _psaBestE != null) {
+                    var _psaS = Math.max(_psaBestS, bedEntryTs), _psaE = Math.min(_psaBestE, sleepStart);
+                    if (_psaE > _psaS) {
+                        _preSleepAbsence.push({ start: _psaS, end: _psaE, durationMin: Math.max(1, Math.round((_psaE - _psaS) / 60000)), source: 'fp2_empty' });
+                        if (log) log.info(logPfx + '[OC-48c v3] Bett-leer-Abwesenheit ' + new Date(_psaS).toLocaleTimeString() + '-' + new Date(_psaE).toLocaleTimeString() + ' markiert (Bett leer, Fern-Aktivitaet vorhanden, kein 30-Min-Block noetig)');
+                    }
+                }
+            }
+        }
     }
 
     var p4amTs = (function() { var d = new Date(searchBase); d.setDate(d.getDate() + 1); d.setHours(4, 0, 0, 0); return d.getTime(); })();
@@ -2623,6 +2669,31 @@ class CogniLiving extends utils.Adapter {
                     }
                 }
                 if (emptyStart) { var _wdur2 = (Date.now() - emptyStart) / 60000; if (_wdur2 >= 15) { _firstEmpty = emptyStart; wakeTs = Date.now(); } }
+                // [OC-FP2-WAKE-ROBUST] Fallback wenn die starre >=15-Min-Regel nichts fand
+                // (flackernder Radar: Leer-Phasen knapp unter 15 Min, dazwischen kurze Belegt-Blips).
+                // Regel: erste Belegt->Leer-Flanke (Std 4-14), nach der das Bett in den folgenden
+                // 30 Min UEBERWIEGEND leer bleibt (Belegt-Anteil < 20% = < 6 Min). Schuetzt weiter
+                // vor kurzem WC-/Kueche-Gang (dort ist das Bett danach wieder belegt).
+                if (_firstEmpty === null) {
+                    for (var _ri = 0; _ri < bedEvts.length; _ri++) {
+                        var _rts = bedEvts[_ri].timestamp || 0;
+                        if (_rts < sleepStartTs) continue;
+                        var _rhr = new Date(_rts).getHours();
+                        if (_rhr < 4 || _rhr > 14) continue;
+                        if (isActiveValue(bedEvts[_ri].value) || toPersonCount(bedEvts[_ri].value) > 0) continue;
+                        var _rWinEnd = _rts + 30 * 60000;
+                        var _rOccMs = 0, _rSegS = null;
+                        for (var _rj = 0; _rj < bedEvts.length; _rj++) {
+                            var _rjt = bedEvts[_rj].timestamp || 0;
+                            if (_rjt < _rts || _rjt > _rWinEnd) continue;
+                            var _rjOcc = isActiveValue(bedEvts[_rj].value) || toPersonCount(bedEvts[_rj].value) > 0;
+                            if (_rjOcc && _rSegS === null) _rSegS = _rjt;
+                            else if (!_rjOcc && _rSegS !== null) { _rOccMs += _rjt - _rSegS; _rSegS = null; }
+                        }
+                        if (_rSegS !== null) _rOccMs += _rWinEnd - _rSegS;
+                        if (_rOccMs < 0.20 * 30 * 60000) { _firstEmpty = _rts; wakeTs = _rts; break; }
+                    }
+                }
                 return { start: sleepStartTs, end: wakeTs, firstEmpty: _firstEmpty };
             })();
 

@@ -1,5 +1,48 @@
 ﻿# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 10.07.2026 | **Version:** 0.33.336
+**Letzte Aktualisierung:** 13.07.2026 | **Version:** 0.33.337
+
+---
+
+## 🗓️ Sitzung 13.07.2026 — Version 0.33.337 — Bett-leer als Primärsignal (OC-48c v3) + robuste FP2-Aufwachflanke (OC-FP2-WAKE-ROBUST)
+
+### 🔍 Auslöser
+Zwei Beobachtungen des Nutzers:
+1. **Nacht 10.7. (JSON `2026-07-10.json`):** `bedEntryTs=21:09`, `sleepStart=00:02`, aber KEINE graue Schraffur, obwohl der Nutzer ~2,5 h abwesend war (Wohnzimmer/Küche = 2 Hops entfernt). Frage: „Wird nur ferne Bewegung erkannt und gar nicht ob das Bett leer ist?"
+2. **Nacht 13.7. (JSON `2026-07-13.json`):** Bei „Aufgewacht" hatte AUSSER Garmin (06:20), `vib_wake_cluster` (05:15) und `vibration_alone` (07:02, durchgestrichen) KEINE einzige Quelle einen Wert. Frage: „Kann das wirklich sein, dass keine andere Quelle einen Wert bietet?"
+
+### 🔬 Analyse (code-belegt, ohne Vermutung)
+**Frage 1 — Abwesenheit nicht erkannt:**
+- Korrektur früherer Vermutung: NICHT der Adapter-Neustart war schuld — alle Abend-Events (1432) waren vollständig in `2026-07-10.json`.
+- OC-48c löste Abwesenheit bisher NUR über ≥30 Min *zusammenhängende* ferne Bewegung (hop≥2) aus. Berechnung der fernen Blöcke: 20 / 14 / 6 / 9 Min → längster nur **20 Min** < 30 → keine Markierung. Grund: still auf der Couch → BM feuern kaum, >12-Min-Lücken zerschneiden die Blöcke.
+- FP2-Bett quantifiziert: Fenster 173 Min, Bett nur **347 Sek (~6 Min) belegt** (kurze Flackerer), längste Belegung 180 Sek → Bett war ~**97% leer**.
+- **Kern-Erkenntnis:** „Bett leer" (FP2) war bisher nur Neben-Prüfung (keep-vs-mark), NICHT eigener Auslöser. → genau die Design-Schwäche, die der Nutzer intuitiv erkannte.
+
+**Frage 2 — nur Vibration lieferte Werte:**
+- Die 11 Aufwach-Quellen hängen an 3 Wurzeln: **Radar-Familie** (fp2/fp2_vib/fp2_other/other → alle brauchen `fp2WakeTs`=`sleepWindowCalc.firstEmpty`), **BM-Familie** (motion_vib/motion), **Vibration** (vib_wake_cluster/vibration_alone/vibration).
+- FP2 quantifiziert: nur **23 Transitionen im GANZEN 18-h-Tag**. Ganze Nacht „belegt" (keine Flanke), morgens wildes Toggeln. Längste Leer-Phase im echten Aufwach-Fenster (06:33–06:59) nur **14 Min** < 15-Min-Schwelle → `firstEmpty=null` → gesamte Radar-Familie kollabiert auf `—`.
+- BM-Familie: `motion_vib` verlangt „keine Bett-Vibration 45 Min danach" — Vibration lief dicht bis 07:02 → nie erfüllt. `motion` ist nur Notnagel, nie erreicht.
+- → Es ist LEGITIM, dass nur Vibration Werte hatte. Wurzel = flakiges/spärliches FP2-Radar (kein Anzeige-Bug).
+
+### 🔧 Umgesetzt
+**Fix 1 — OC-48c v3 „Bett leer" als Primärsignal (`src/main.js`, nach dem 30-Min-Fern-Block-Pfad):**
+- Wenn oben KEIN 30-Min-Block gefunden wurde UND Fern-Aktivität existiert (`_oc48cFar.length>0`): FP2-Bett-Belegungssegmente im Fenster `[bedEntryTs, sleepStart]` bilden, kurze Belegt-Blips (< 10 Min) fusionieren, längste zusammenhängende Leer-Phase bestimmen. Ist sie ≥30 Min → als `preSleepAbsence` markieren (`source: fp2_empty`).
+- Sensor-neutral: ohne FP2 greift weiter der Fern-Block-Pfad.
+- **Simulation Nacht 10.7.:** Abwesenheit **21:09:58–23:50:41 = 161 Min** korrekt markiert.
+
+**Fix 2 — OC-FP2-WAKE-ROBUST robuste FP2-Aufwachflanke (`src/main.js`, in `sleepWindowCalc`-IIFE nach der 15-Min-Regel):**
+- Fallback NUR wenn `_firstEmpty===null`: erste Belegt→Leer-Flanke (Std 4–14), nach der das Bett in den folgenden 30 Min überwiegend leer bleibt (Belegt-Anteil < 20% = < 6 Min). Schützt weiter vor kurzem WC-/Küchen-Gang (Bett danach wieder belegt).
+- **Simulation Nacht 13.7.:** Flanke 06:33:49 (6 Min belegt → verworfen), 06:36:02 (5 Min → qualifiziert) → `firstEmpty = 06:36` (Garmin 06:20, Aufstehen 06:32). Plausibel.
+
+**Beide additiv/risikoarm:** greifen nur, wenn die bisherige Logik nichts fand → keine Regression für funktionierende Nächte. Backend-only. Verifiziert per Standalone-Simulation gegen echte JSON-Daten (`scripts/_sim_337.js`, temporär).
+
+### 📁 Dateien
+- `src/main.js`: OC-48c v3 (~L516–560), OC-FP2-WAKE-ROBUST (~L2672–2696) → `main.js` (obfuskiert).
+- Patch-Skripte: `scripts/_patch_337_fix1_bedempty.js`, `scripts/_patch_337_fix2_fp2wake.js`, `scripts/_bump_337.js`.
+- Version 0.33.336 → **0.33.337** (package.json + io-package.json root + common.version).
+
+### 🎯 Nächster logischer Schritt
+- Nach echter Nacht mit v0.33.337 prüfen: erscheint die graue Schraffur bei Abwesenheit-Nächten zuverlässig, und zeigt „ohne Garmin" bei flakigem FP2 eine plausible Aufwachzeit?
+- Offen (Idee, noch nicht umgesetzt): Sensor-Health-Hinweis wenn FP2 dauerhaft < X Transitionen/Nacht liefert (FP2-Radar in Marcs Bett ist unzuverlässig).
 
 ---
 
