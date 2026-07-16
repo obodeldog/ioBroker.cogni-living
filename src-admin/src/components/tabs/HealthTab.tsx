@@ -2724,8 +2724,16 @@ export default function HealthTab(props: any) {
                             })}
                             {/* [OC-48c v2 / Fix B] Vor-Schlaf-Abwesenheit: Ausflug zwischen Ins-Bett-Zeit und Einschlafen (grau schraffiert ueber gelbem Segment) */}
                             {bedEntryTsVal && newBarTotalMs && _preSleepAbsenceEvts.map((ev, i) => {
-                                const _left = Math.max(0, Math.min(100, ((ev.start - bedEntryTsVal) / newBarTotalMs!) * 100));
-                                const _width = Math.max(0.5, Math.min(100 - _left, ((ev.end - ev.start) / newBarTotalMs!) * 100));
+                                // [OC-PSA-CLAMP] Sichtbaren Bereich auf [bedEntryTsVal, Balkenende] klemmen.
+                                // Eine Abwesenheit komplett VOR dem Ins-Bett-Gehen (ev.end <= bedEntryTsVal) gehoert
+                                // NICHT auf den Schlafbalken -> ueberspringen. Vorher wurde nur _left geklemmt, _width
+                                // blieb voll -> Schraffur ragte weit in echten Schlaf (Bug 16.7.: 23:22-01:30).
+                                const _barEndMs = bedEntryTsVal + newBarTotalMs!;
+                                const _visStart = Math.max(ev.start, bedEntryTsVal);
+                                const _visEnd = Math.min(ev.end, _barEndMs);
+                                if (_visEnd <= _visStart) return null;
+                                const _left = Math.max(0, Math.min(100, ((_visStart - bedEntryTsVal) / newBarTotalMs!) * 100));
+                                const _width = Math.max(0.5, Math.min(100 - _left, ((_visEnd - _visStart) / newBarTotalMs!) * 100));
                                 const _dur = ev.durationMin != null ? ev.durationMin : Math.max(1, Math.round((ev.end - ev.start) / 60000));
                                 const _bgColor = isDark ? '#4a4a4a' : '#d4d4d4';
                                 const _stripeColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.22)';

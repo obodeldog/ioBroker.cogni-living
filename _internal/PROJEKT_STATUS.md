@@ -1,5 +1,46 @@
 ﻿# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 13.07.2026 | **Version:** 0.33.338
+**Letzte Aktualisierung:** 16.07.2026 | **Version:** 0.33.339
+
+---
+
+## 🗓️ Sitzung 16.07.2026 — Version 0.33.339 — PSA-Schraffur-Clamp (OC-PSA-CLAMP) + Plausibilitäts-Guards verschärft (OC-PLAUS-NZ v2 / OC-PLAUS klinisch)
+
+### 🔍 Auslöser (JSON `2026-07-16.json`, CSVs `strength_Anni.csv` / vibration_Anni)
+Zwei unabhängige Beobachtungen:
+1. **Marcs graue Schraffur:** Tooltip „Vor dem Einschlafen außer Bett 21:11–23:19 (128 Min)", die Schraffur reicht optisch aber bis ~01:30 → deckt echten Schlaf zu. „Das kann dann überhaupt nicht passen."
+2. **Anni: volle Schlafnacht trotz leerem Bett:** Anni war gegen 21:30 nach Hause gegangen (vorher kurzes Kuscheln auf ihrer Matratze ~17:35–19:30, dann ~21:30 nochmal kurz drauf). Trotzdem zeigt ihre Kachel eine ganze Schlafnacht inkl. ~6h Tiefschlaf. Nutzer verlangt „Beweis" aus Algorithmus/Doku, keine Vermutung. Zusatz: „70% Tiefschlaf ist viel zu viel — richte dich an klinischen Studien + kleiner Sicherheitspuffer."
+
+### 🔬 Analyse Frage 1 (Schraffur)
+Frontend `HealthTab.tsx` (L2726ff) und `pwa_sleep_tile_build.js` (L586ff) rendern `preSleepAbsenceEvents`:
+- `_left`/`leftPct` = `((ev.start - bedEntryTsVal)/total)*100`, per `Math.max(0, …)` auf 0 geklemmt.
+- `_width`/`widthPct` = `((ev.end - ev.start)/total)*100` — **volle Dauer, NICHT geklemmt.**
+Marc: `preSleepAbsence` = 21:11–23:19 (128 Min), aber finales `bedEntryTs` = 23:22. Da `ev.start` (21:11) < `bedEntryTs` (23:22) → `_left` auf 0, aber `_width` = 128 Min → Schraffur startet bei bedEntry (23:22) und läuft 128 Min bis **01:30** → mitten in den Schlaf.
+**Root Cause (Daten):** `preSleepAbsence` wird FRÜH in `computePersonSleep` (L462ff) mit vorläufigem `bedEntryTs` berechnet; danach wandert `bedEntryTs` via OC-BED-SYNC (L1274 / per-Person L4344) nach hinten. Die Abwesenheit „strandet" komplett vor dem finalen bedEntry. Eine Abwesenheit die VOR dem Ins-Bett-Gehen endet gehört gar nicht auf den Schlafbalken.
+
+### 🔬 Analyse Frage 2 (Anni — echte Rohdaten)
+`strength_Anni.csv` / vibration_Anni ausgewertet: Schlaffenster ~9.5h, aber nur **2 Vib-Trigger** (Fremd-/Hausübertragung), 114 Stages generiert davon **63% Tief, 0% REM**. Zwei bestehende Guards griffen NICHT:
+- **OC-PLAUS-NZ** (L4609): `_pVibCount < 2 && winH > 3` → Anni hatte exakt 2 (nicht <2) → knapp verfehlt.
+- **OC-PLAUS** (L4633): Dichte `winH>=2 && vibCount<5` = TRUE, aber Verteilung `deep% > 70%` = FALSE (Anni 63%) → AND scheitert.
+Die Plausibilitäts-Logik EXISTIERT und arbeitet wie designt — Annis Nacht fiel nur knapp durch beide Raster.
+
+### ✅ Umgesetzt (v0.33.339)
+**Frage 1 — OC-PSA-CLAMP (3 Stellen):**
+1. `src-admin/.../HealthTab.tsx`: sichtbaren Bereich auf `[bedEntryTs, Balkenende]` klemmen (`_visStart`/`_visEnd`), Events mit `_visEnd <= _visStart` (enden vor bedEntry) werden übersprungen; `_width` aus geklemmter Dauer.
+2. `src/lib/pwa_sleep_tile_build.js`: identischer Clamp (Web-Kachel hatte denselben Bug) — via `scripts/_patch_339_psa_clamp_pwa.js`.
+3. `src/main.js` (vor `result[person] = {`): `preSleepAbsenceEvents` gegen FINALES `_pResult.bedEntryTs` clampen — filtert Events mit `end <= bedEntry`, clampt `start→bedEntry`, `end→sleepWindowStart`. Datenkorrektur statt nur Anzeige-Kaschierung.
+
+**Frage 2 — Guards verschärft (`src/main.js`):**
+- **OC-PLAUS-NZ v2:** dichte-relativ statt absolut — `winH > 3 && (vibCount < 3 || vibCount/winH < 0.5)`. Anni: 2/9.5 = 0.21/h → feuert. Echter Schläfer (dutzende Trigger, >0.5/h) bleibt unberührt.
+- **OC-PLAUS Tiefschlaf-Schwelle:** `> 70%` → `> 40%`. **Klinische Basis:** N3/Slow-Wave-Sleep macht bei gesunden Erwachsenen nur **~13–23%** der Gesamtschlafzeit aus (Ohayon et al. 2004; AASM Scoring Manual). 40% = klinisches Maximum ~23% + Sicherheitspuffer. Die Dichte-Bedingung (`< 5` Trigger, AND-verknüpft) verhindert false-positives bei echten ruhigen Schläfern (die erzeugen viele Trigger → Dichte-Teil FALSE).
+
+### 🧪 Verifikation
+- `node --check src/main.js` + `node --check src/lib/pwa_sleep_tile_build.js` OK.
+- `npm run build:backend:prod` (obfuskiert) + `npm run build:react` OK; `node --check main.js` OK.
+- Sensor-neutral: Alle Fixes betreffen nur Anzeige-Clamp + Plausibilität; ohne Vib/FP2 keine Änderung. Gilt Per-Person und Einpersonen-Haushalt.
+
+### 🎯 Offen / nächster Schritt
+- OC-FP2-DIAG (v0.33.338) Diagnose-Log noch drin → nach Auswertung entfernen.
+- „ohne Garmin"-Aufwachzeit-Guard gegen `bedEntryTs` (Einschlafzeit vor Ins-Bett, JSON `2026-07-14.json`) + „unkalibriert" in Web-Kachel (`pwa_sleep_tile_build.js` liest weiter hart `personData.X.sleepScoreCalStatus`) — beide noch offen.
 
 ---
 

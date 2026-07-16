@@ -1,5 +1,5 @@
 ﻿# PROJEKT KURZSTATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 13.07.2026 | **Version:** 0.33.338
+**Letzte Aktualisierung:** 16.07.2026 | **Version:** 0.33.339
 
 ---
 
@@ -10,11 +10,14 @@
 ---
 
 ## 1) Aktuelle Version
-- **`0.33.338`** (ioBroker liest `io-package.json` → **`common.version`** — immer mitbumpen!)
+- **`0.33.339`** (ioBroker liest `io-package.json` → **`common.version`** — immer mitbumpen!)
 
 ---
 
-## 2) Stand heute (13.07.2026)
+## 2) Stand heute (16.07.2026)
+- **v0.33.339 — PSA-Schraffur-Clamp + Plausibilitäts-Guards verschärft (16.07.)**:
+  - **Frage 1 (OC-PSA-CLAMP — graue Schraffur ragte in echten Schlaf):** Marcs Tooltip sagte „außer Bett 21:11–23:19 (128 Min)", die Schraffur reichte optisch aber bis ~01:30. Ursache: `preSleepAbsence` wird FRÜH mit vorläufigem `bedEntryTs` berechnet; danach wandert `bedEntryTs` via OC-BED-SYNC nach hinten (hier 23:22). Die Abwesenheit lag damit KOMPLETT vor dem finalen bedEntry. Frontend klemmte nur `_left` auf bedEntry, ließ `_width` aber auf voller 128-Min-Dauer → Schraffur startete bei 23:22 und lief 128 Min bis 01:30 mitten in den Schlaf. **3 Fixes:** (a) `HealthTab.tsx` klemmt jetzt sichtbaren Bereich auf `[bedEntryTs, Balkenende]` + überspringt Events die vor bedEntry enden; (b) identischer Fix in `pwa_sleep_tile_build.js` (Web-Kachel hatte denselben Bug); (c) Backend `src/main.js` clampt `preSleepAbsenceEvents` gegen das FINALE `bedEntryTs` (filtert Events die davor enden, clampt start→bedEntry, end→sleepStart) → saubere Daten statt nur kaschierter Anzeige.
+  - **Frage 2 (Anni: volle Schlafnacht trotz leerem Bett):** Anni war ~21:30 nach Hause, trotzdem 6h „Tiefschlaf". Rohdaten: nur **2 Vib-Trigger in 9.5h** (Haus-/Fremdvibration), 114 Stages davon 63% Tief, 0% REM. Beide Plausi-Guards verfehlten sie knapp: OC-PLAUS-NZ verlangte `< 2` Trigger (Anni hatte exakt 2), OC-PLAUS verlangte `> 70%` Tief (Anni 63%). **Fixes:** (a) **OC-PLAUS-NZ v2** jetzt dichte-relativ: `< 3` Trigger ODER `< 0.5` Trigger/h in >3h-Fenster → fängt Anni (0.21/h). (b) **OC-PLAUS** Tiefschlaf-Schwelle `> 70%` → `> 40%` — klinisch fundiert: N3/SWS macht bei gesunden Erwachsenen nur ~13–23% der Gesamtschlafzeit aus (Ohayon 2004 / AASM), 40% = klin. Maximum + Sicherheitspuffer. Die Dichte-Bedingung (`< 5` Trigger, AND) schützt echte Schläfer (die erzeugen dutzende Trigger) vor false-positives.
 - **v0.33.338 — Vib-Aufwachcluster erstes→letztes + FP2-firstEmpty Diagnose (13.07.)**:
   - **Part A (OC-VWC-LAST):** `vib_wake_cluster` nahm das **erste** dichte Vib-Cluster (≥3 Events/15 Min) → oft „erstes Zappeln" (kurze REM-/Arousal-Bewegung) → systematisch zu früh (Beweis 13.7.: erstes Cluster 05:15 vs Garmin 06:20). Aktigraphie-Literatur (Cole-Kripke, Sadeh) definiert Schlafende über Beginn *anhaltender* Aktivität, nicht ersten Ausschlag. NEU: **letztes** dichtes Cluster vor dem Aufstehen (`break` im Loop entfernt). Sim 13.7.: 06:28 (8 Min nach Garmin, ~4 Min vor Aufstehen) statt 05:15. Tradeoff: bei Leuten die lange wach liegen unterschätzt es die Wachliege-Zeit — aber deutlich besser als 65-Min-Frühzündung. Deckelung auf bedExit via OC-AURA-ONLY-WAKEGUARD (Frontend).
   - **Part B (OC-FP2-DIAG, temporär):** Fix 2 aus v0.33.337 (robuste FP2-Aufwachflanke) griff NICHT — `fp2` blieb null (JSON `2026-07-13_1.json`). Ursache statisch nicht reproduzierbar (gespeicherte eventHistory ≠ Rechenzeit-Daten; bedPresenceMinutes=575 legt gültigen sleepStart nahe, trotzdem firstEmpty=null). Diagnose-Log nach `sleepWindowCalc` eingebaut: loggt FP2-Event-Zahl, erstes/letztes, sleepStart, firstEmpty, bedPresMin. → Nutzer klickt „neu berechnen", Log lesen, dann gezielter Fix. **Wieder entfernen nach Diagnose.**

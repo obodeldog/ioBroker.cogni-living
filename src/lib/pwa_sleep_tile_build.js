@@ -585,8 +585,15 @@ function buildSleepTilePayload(raw) {
     if (bedEntryTsVal != null && newBarTotalMs && _psaArr.length > 0) {
         _psaArr.forEach(function (ev) {
             if (!ev || ev.start == null || ev.end == null || ev.end <= ev.start) return;
-            var leftPct = Math.max(0, Math.min(100, ((ev.start - bedEntryTsVal) / newBarTotalMs) * 100));
-            var widthPct = Math.max(0.5, Math.min(100 - leftPct, ((ev.end - ev.start) / newBarTotalMs) * 100));
+            // [OC-PSA-CLAMP] Sichtbaren Bereich auf [bedEntryTsVal, Balkenende] klemmen. Abwesenheit
+            // komplett VOR dem Ins-Bett-Gehen gehoert nicht auf den Schlafbalken -> ueberspringen.
+            // Vorher: nur leftPct geklemmt, widthPct voll -> Schraffur ragte in echten Schlaf.
+            var _barEndMs = bedEntryTsVal + newBarTotalMs;
+            var _visStart = Math.max(ev.start, bedEntryTsVal);
+            var _visEnd = Math.min(ev.end, _barEndMs);
+            if (_visEnd <= _visStart) return;
+            var leftPct = Math.max(0, Math.min(100, ((_visStart - bedEntryTsVal) / newBarTotalMs) * 100));
+            var widthPct = Math.max(0.5, Math.min(100 - leftPct, ((_visEnd - _visStart) / newBarTotalMs) * 100));
             var durMin = ev.durationMin != null ? ev.durationMin : Math.max(1, Math.round((ev.end - ev.start) / 60000));
             preSleepAbsenceOverlays.push({
                 leftPct: leftPct,

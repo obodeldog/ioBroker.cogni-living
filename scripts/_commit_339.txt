@@ -1,0 +1,13 @@
+v0.33.339 - PSA-Schraffur-Clamp (OC-PSA-CLAMP) + Plausibilitaets-Guards verschaerft
+
+Frage 1 (OC-PSA-CLAMP): graue Vor-Schlaf-Abwesenheit ragte optisch in echten Schlaf.
+- HealthTab.tsx + pwa_sleep_tile_build.js: sichtbaren Bereich auf [bedEntryTs, Balkenende]
+  klemmen, Events die vor bedEntry enden ueberspringen (_width war ungeklemmt -> 128 Min
+  Schraffur ab bedEntry statt an realer Position).
+- src/main.js: preSleepAbsenceEvents gegen FINALES bedEntryTs clampen (Datenkorrektur;
+  bedEntryTs wandert nach OC-BED-SYNC nach hinten, Abwesenheit strandet davor).
+
+Frage 2 (Anni: volle Schlafnacht trotz leerem Bett, 2 Trigger/9.5h, 63% Tief):
+- OC-PLAUS-NZ v2: dichte-relativ (vibCount<3 ODER <0.5 Trigger/h in >3h) statt absolut <2.
+- OC-PLAUS: Tiefschlaf-Schwelle 70%->40% (klinisch: N3/SWS ~13-23% TST, Ohayon 2004/AASM,
+  + Sicherheitspuffer; Dichte-AND schuetzt echte Schlaefer).

@@ -4606,7 +4606,11 @@ class CogniLiving extends utils.Adapter {
                     if (!_pResult.bedWasEmpty) {
                         var _pNzWinH = (_pResult.sleepWindowEnd && _pResult.sleepWindowStart)
                             ? (_pResult.sleepWindowEnd - _pResult.sleepWindowStart) / 3600000 : 0;
-                        if (_pVibCount < 2 && _pNzWinH > 3) {
+                        // [OC-PLAUS-NZ v2 16.7.] Dichte-relativ: < 3 Trigger gesamt ODER < 0.5 Trigger/h
+                        // in einem > 3h-Fenster. Echter Schlaefer erzeugt auf der Matratze deutlich mehr
+                        // (Umdrehen + Mikrovibration). Forensik Anni 16.7.: 2 Trigger in 9.5h (0.21/h).
+                        var _pNzRate = _pNzWinH > 0 ? (_pVibCount / _pNzWinH) : 0;
+                        if (_pNzWinH > 3 && (_pVibCount < 3 || _pNzRate < 0.5)) {
                             _self.log.info('[OC-PLAUS-NZ] ' + person + ': nur ' + _pVibCount + ' Trigger in ' + Math.round(_pNzWinH * 10) / 10 + 'h → Bett war leer (Near-Zero-Guard)');
                             _pResult.bedWasEmpty    = true;
                             _pResult.sleepStages    = [];
@@ -4630,7 +4634,10 @@ class CogniLiving extends utils.Adapter {
                         var _pPlausDeep = _pPlausStages.filter(function(s) { return (s.s||s) === 'deep'; }).length;
                         var _pPlausRem  = _pPlausStages.filter(function(s) { return (s.s||s) === 'rem';  }).length;
                         var _pPlausRemPct = _pPlausStages.length > 0 ? _pPlausRem / _pPlausStages.length : 0;
-                        var _pPlausDistFail = (_pPlausDeep / _pPlausStages.length > 0.70) && (_pPlausRemPct < 0.02);
+                        // [16.7.] Klinik: Tiefschlaf (N3/SWS) macht bei gesunden Erwachsenen nur ~13-23% der
+                        // Gesamtschlafzeit aus (Ohayon 2004 / AASM). > 40% (= klin. Max ~23% + Sicherheitspuffer)
+                        // ist physiologisch unplausibel; die Dichte-Bedingung (AND) schuetzt echte Schlaefer.
+                        var _pPlausDistFail = (_pPlausDeep / _pPlausStages.length > 0.40) && (_pPlausRemPct < 0.02);
                         if (_pPlausDensityFail && _pPlausDistFail) {
                             _self.log.info('[OC-PLAUS] ' + person + ': Stages widerrufen – zu wenige Events (' + _pVibCount + ' in ' + Math.round(_pPlausWinH*10)/10 + 'h) + ' + Math.round(_pPlausDeep/_pPlausStages.length*100) + '% Tief ' + Math.round(_pPlausRemPct*100) + '% REM → bedWasEmpty=true');
                             _pResult.bedWasEmpty    = true;
@@ -4640,6 +4647,23 @@ class CogniLiving extends utils.Adapter {
                             _pResult.sleepScore     = null;
                             _pResult.sleepScoreRaw  = null;
                         }
+                    }
+
+                    // [OC-PSA-CLAMP] Vor-Schlaf-Abwesenheit gegen FINALES bedEntryTs klemmen.
+                    // Wird frueh (mit vorlaeufigem bedEntryTs) berechnet; danach kann bedEntryTs via
+                    // OC-BED-SYNC nach hinten wandern. Events die komplett VOR dem finalen bedEntryTs
+                    // enden gehoeren nicht auf den Schlafbalken (Bug 16.7.: 21:11-23:19 vor bedEntry 23:22).
+                    if (_pResult.bedEntryTs && Array.isArray(_pResult.preSleepAbsenceEvents) && _pResult.preSleepAbsenceEvents.length) {
+                        var _psaBe = _pResult.bedEntryTs;
+                        var _psaSs = _pResult.sleepWindowStart || null;
+                        _pResult.preSleepAbsenceEvents = _pResult.preSleepAbsenceEvents
+                            .filter(function(ev){ return ev && ev.end > _psaBe; })
+                            .map(function(ev){
+                                var _s = Math.max(ev.start, _psaBe);
+                                var _e = _psaSs ? Math.min(ev.end, _psaSs) : ev.end;
+                                return { start: _s, end: _e, durationMin: Math.max(1, Math.round((_e - _s)/60000)), source: ev.source };
+                            })
+                            .filter(function(ev){ return ev.end > ev.start; });
                     }
 
                     result[person] = {
