@@ -1,0 +1,15 @@
+v0.33.340 - OC-BED-FINAL: fuehrende Vor-Schlaf-Abwesenheit abschneiden (Fehlstart)
+
+Problem: graue Schraffur begann direkt am Balkenanfang ("ausser Bett" ab Ins-Bett-
+Zeitpunkt). Ursache 15.7.: bedEntry per vib_refined 22:21 = Sekunden-Kontakt, sofort
+gefolgt von 57 Min pir_far -> keine echte Im-Bett-Zeit davor = Fehlstart.
+
+Fix (Regel mit Nutzer abgestimmt, 5-Min-Schwelle):
+- Fuehrende Abwesenheit (< 5 Min echte Im-Bett-Zeit davor) -> bedEntryTs rueckt auf
+  naechste echte Bett-Quelle nach der Abwesenheit (Fallback: Abwesenheits-Ende),
+  Abwesenheit verworfen. Mittige Abwesenheiten (echtes Segment davor) bleiben.
+- src/main.js A) Per-Person (Schleife, allBedEntrySources) B) globaler/OC-7-Pfad
+  (OC-48c-v2-Zweig: naechstes FP2/Vib-Bett-Signal). Nur vorwaerts.
+- Reines Backend; Admin- + PWA-Kachel rendern automatisch korrekt.
+
+Sim 15.7.: bedEntry 22:21 -> 23:20 (fp2), preSleepAbsence 1 -> 0.

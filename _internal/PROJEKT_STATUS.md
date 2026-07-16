@@ -1,5 +1,41 @@
 ﻿# PROJEKT STATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 16.07.2026 | **Version:** 0.33.339
+**Letzte Aktualisierung:** 16.07.2026 (spät) | **Version:** 0.33.340
+
+---
+
+## 🗓️ Sitzung 16.07.2026 (spät) — Version 0.33.340 — OC-BED-FINAL: führende Vor-Schlaf-Abwesenheit abschneiden (Philosophie B für Fehlstarts)
+
+### 🔍 Auslöser (Screenshots Nacht 15.7., Diskussion)
+Nach v0.33.339 fiel bei Marc auf: der graue Schraffur-Balken beginnt **direkt am Balkenanfang** — der Balken sagt faktisch „du bist ins Bett gegangen und warst im selben Moment schon weg". Nutzer-Prinzip (logisch korrekt): *Eine Abwesenheits-Schraffur ergibt nur Sinn als Unterbrechung zwischen zwei Im-Bett-Phasen — niemals als führendes Element.*
+
+### 🔬 Analyse (JSON `2026-07-15.json`, Marc)
+| Signal | Zeit |
+|---|---|
+| `vib_refined` (Sekunden-Matratzenkontakt = Kuscheln) | 22:21:54 → wird „Ins Bett gegangen" |
+| `pir_far` (57 Min fern, Wohnzimmer/Küche) | 22:21:31 → 23:18:44 |
+| `fp2` (zurück im Bett) | 23:20:37 |
+| Garmin eingeschlafen | 00:15:10 |
+
+Die Abwesenheit beginnt praktisch **gleichzeitig** mit bedEntry (< 1 Min danach) → es gab **keine echte Im-Bett-Zeit** davor → 22:21 ist ein **Fehlstart**. `allBedEntrySources` hatte die spätere echte Quelle `fp2 23:20` bereits.
+
+### ✅ Umgesetzt (v0.33.340) — Regel mit Nutzer abgestimmt
+**OC-BED-FINAL:** Eine Vor-Schlaf-Abwesenheit mit **< 5 Min** echter Im-Bett-Zeit davor (Schwelle bestätigt) = Fehlstart:
+- „Ins Bett gegangen" (`bedEntryTs`) rückt auf die **nächste echte Bett-Quelle NACH der Abwesenheit** (Fallback: Abwesenheits-Ende). `bedEntrySource` wird mitgezogen.
+- Die führende Abwesenheit wird **verworfen** (keine Schraffur am Anfang).
+- **Mittige** Abwesenheiten (echte Im-Bett-Phase davor, z.B. 1h Kuscheln → raus → zurück) **bleiben** als Schraffur — deckt Marcs früheren 27.6.-Wunsch weiter ab. Ein und dieselbe Regel für beide Fälle.
+
+**Zwei Code-Stellen (Per-Person + Einpersonen konsistent):**
+- (A) `src/main.js` Per-Person, direkt vor OC-PSA-CLAMP: Schleife (max 10) über nach `start` sortierte `preSleepAbsenceEvents`; solange erste Abwesenheit führend (`start <= bedEntryTs + 5min`) → nächste `allBedEntrySources.ts >= absence.end - 1min` als neues bedEntryTs (min), auf `sleepWindowStart` gedeckelt, nur vorwärts, Event verworfen.
+- (B) `src/main.js` globaler/OC-7-Pfad im OC-48c-v2-Zweig: führend → nächstes `isFP2Bed||isVibrationBed`-True-Event nach der Abwesenheit als bedEntryTs (Fallback Block-Ende), nur vorwärts, NICHT markieren; sonst wie bisher markieren + bedEntryTs behalten.
+
+### 🧪 Verifikation
+- Simulation gegen echte 15.7.-Daten (`scripts/`-Inline): `bedEntry 22:21:54 → 23:20:37 (fp2)`, `preSleepAbsence` 1 → 0. ✓
+- `node --check src/main.js` + `npm run build:backend:prod` + `node --check main.js` OK.
+- Reines Backend → Admin- und PWA-Kachel rendern automatisch korrekt (Balken startet an neuer bedEntry-Zeit, kein führender Schraffur).
+
+### 🎯 Offen / nächster Schritt
+- OC-FP2-DIAG (v0.33.338) Diagnose-Log noch drin → nach Auswertung entfernen.
+- „ohne Garmin"-Einschlafzeit-Guard gegen `bedEntryTs` (JSON `2026-07-14.json`) + „unkalibriert" in Web-Kachel (`pwa_sleep_tile_build.js` liest weiter hart `personData.X.sleepScoreCalStatus`) — beide noch offen.
 
 ---
 

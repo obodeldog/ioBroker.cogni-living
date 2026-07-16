@@ -128,7 +128,16 @@ Der Sensor-Hinweis (OC-VIB-CAL-P90, v0.33.326) würde dann korrekt ausgelöst.
 
 ## 🚧 OC-BED-FINAL: Letzter finaler Betteintritt als bedEntryTs (27.06.2026)
 
-> **Status:** Offen — Konzept diskutiert. Kein Code geändert.
+> **Status:** TEILWEISE UMGESETZT in v0.33.340 (16.07.2026) — nur die **führende** Abwesenheit
+> (Fehlstart, < 5 Min echte Im-Bett-Zeit davor) wird abgeschnitten und bedEntryTs auf die nächste
+> echte Bett-Quelle danach gerückt; die führende Abwesenheit wird verworfen (NICHT als Pre-Segment
+> gerendert). Details siehe PROJEKT_STATUS.md v0.33.340.
+>
+> **Noch OFFEN (bewusst nicht umgesetzt):** der MID-Absence-Fall unten (26./27.06.: 41 Min echtes
+> Kuscheln 22:31–23:12, dann 91 Min weg, zurück 00:47). Hier lässt v0.33.340 bedEntryTs bei 22:31
+> und zeigt die Abwesenheit als mittige Schraffur — gemäß Nutzer-Entscheid 16.07. („Schraffur OK,
+> wenn davor ein echtes Segment liegt"). Das ursprüngliche Konzept (bedEntry → 00:47 + Pre-Segment
+> für das frühe Kuscheln) ist damit optional/verworfen, es sei denn der Nutzer wünscht es später doch.
 
 ### Problem (real beobachtet, Nacht 26./27.06.2026)
 

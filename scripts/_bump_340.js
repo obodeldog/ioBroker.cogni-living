@@ -1,0 +1,10 @@
+const fs = require('fs');
+const OLD = '0.33.339', NEW = '0.33.340';
+let pkg = fs.readFileSync('package.json', 'utf8');
+pkg = pkg.replace(new RegExp('("version"\\s*:\\s*")' + OLD.replace(/\./g, '\\.') + '(")'), '$1' + NEW + '$2');
+fs.writeFileSync('package.json', pkg, 'utf8');
+let iop = fs.readFileSync('io-package.json', 'utf8');
+let cnt = 0;
+iop = iop.replace(new RegExp('"version"\\s*:\\s*"' + OLD.replace(/\./g, '\\.') + '"', 'g'), function () { cnt++; return '"version": "' + NEW + '"'; });
+fs.writeFileSync('io-package.json', iop, 'utf8');
+console.log('package.json -> ' + NEW + ' | io-package version-Felder ersetzt: ' + cnt);

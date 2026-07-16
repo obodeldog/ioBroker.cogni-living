@@ -1,5 +1,5 @@
 ﻿# PROJEKT KURZSTATUS — ioBroker Cogni-Living (AURA)
-**Letzte Aktualisierung:** 16.07.2026 | **Version:** 0.33.339
+**Letzte Aktualisierung:** 16.07.2026 (spät) | **Version:** 0.33.340
 
 ---
 
@@ -10,11 +10,15 @@
 ---
 
 ## 1) Aktuelle Version
-- **`0.33.339`** (ioBroker liest `io-package.json` → **`common.version`** — immer mitbumpen!)
+- **`0.33.340`** (ioBroker liest `io-package.json` → **`common.version`** — immer mitbumpen!)
 
 ---
 
 ## 2) Stand heute (16.07.2026)
+- **v0.33.340 — OC-BED-FINAL: führende Vor-Schlaf-Abwesenheit abschneiden (16.07. spät)**:
+  - **Problem:** Bei Marc begann der graue Schraffur-Balken direkt am Balkenanfang („außer Bett" ab dem Ins-Bett-Zeitpunkt). Nutzer-Logik (korrekt): eine Abwesenheits-Schraffur ergibt nur Sinn als **Unterbrechung zwischen zwei Im-Bett-Phasen**, nie als *führendes* Element. Ursache (15.7.): „Ins Bett gegangen" gewann per `vib_refined` 22:21 = nur Sekunden-Matratzenkontakt (Kuscheln), unmittelbar gefolgt von 57 Min `pir_far` (Wohnzimmer). Es gab also KEINE echte Im-Bett-Zeit vor der Abwesenheit → 22:21 war ein **Fehlstart**.
+  - **Fix (OC-BED-FINAL, = „Philosophie B" für Fehlstarts):** Wenn eine Vor-Schlaf-Abwesenheit **< 5 Min** echte Im-Bett-Zeit davor hat (Schwelle mit Nutzer abgestimmt), wird sie als Fehlstart gewertet: „Ins Bett gegangen" rückt auf die **nächste echte Bett-Quelle NACH der Abwesenheit** (Fallback: Abwesenheits-Ende), die führende Abwesenheit wird verworfen. **Mittige** Abwesenheiten (echte Im-Bett-Phase davor, z.B. 1h Kuscheln → raus → zurück) bleiben als Schraffur erhalten. Sim 15.7.: bedEntry 22:21 → **23:20 (fp2)**, führender Schraffur weg, Einschlafphase ehrlich ~55 statt „1h53min".
+  - **Konsistent Per-Person + Einpersonen-Haushalt:** Backend an ZWEI Stellen — (A) Per-Person (`src/main.js`, vor OC-PSA-CLAMP, Schleife für ggf. mehrere führende Abwesenheiten, nutzt `allBedEntrySources`), (B) globaler/OC-7-Pfad (OC-48c-v2-Zweig: führend → bedEntryTs auf nächstes FP2/Vib-Bett-Signal, nicht markieren; nur vorwärts). Reines Backend — beide Frontends (Admin + PWA) rendern automatisch korrekt aus den Daten.
 - **v0.33.339 — PSA-Schraffur-Clamp + Plausibilitäts-Guards verschärft (16.07.)**:
   - **Frage 1 (OC-PSA-CLAMP — graue Schraffur ragte in echten Schlaf):** Marcs Tooltip sagte „außer Bett 21:11–23:19 (128 Min)", die Schraffur reichte optisch aber bis ~01:30. Ursache: `preSleepAbsence` wird FRÜH mit vorläufigem `bedEntryTs` berechnet; danach wandert `bedEntryTs` via OC-BED-SYNC nach hinten (hier 23:22). Die Abwesenheit lag damit KOMPLETT vor dem finalen bedEntry. Frontend klemmte nur `_left` auf bedEntry, ließ `_width` aber auf voller 128-Min-Dauer → Schraffur startete bei 23:22 und lief 128 Min bis 01:30 mitten in den Schlaf. **3 Fixes:** (a) `HealthTab.tsx` klemmt jetzt sichtbaren Bereich auf `[bedEntryTs, Balkenende]` + überspringt Events die vor bedEntry enden; (b) identischer Fix in `pwa_sleep_tile_build.js` (Web-Kachel hatte denselben Bug); (c) Backend `src/main.js` clampt `preSleepAbsenceEvents` gegen das FINALE `bedEntryTs` (filtert Events die davor enden, clampt start→bedEntry, end→sleepStart) → saubere Daten statt nur kaschierter Anzeige.
   - **Frage 2 (Anni: volle Schlafnacht trotz leerem Bett):** Anni war ~21:30 nach Hause, trotzdem 6h „Tiefschlaf". Rohdaten: nur **2 Vib-Trigger in 9.5h** (Haus-/Fremdvibration), 114 Stages davon 63% Tief, 0% REM. Beide Plausi-Guards verfehlten sie knapp: OC-PLAUS-NZ verlangte `< 2` Trigger (Anni hatte exakt 2), OC-PLAUS verlangte `> 70%` Tief (Anni 63%). **Fixes:** (a) **OC-PLAUS-NZ v2** jetzt dichte-relativ: `< 3` Trigger ODER `< 0.5` Trigger/h in >3h-Fenster → fängt Anni (0.21/h). (b) **OC-PLAUS** Tiefschlaf-Schwelle `> 70%` → `> 40%` — klinisch fundiert: N3/SWS macht bei gesunden Erwachsenen nur ~13–23% der Gesamtschlafzeit aus (Ohayon 2004 / AASM), 40% = klin. Maximum + Sicherheitspuffer. Die Dichte-Bedingung (`< 5` Trigger, AND) schützt echte Schläfer (die erzeugen dutzende Trigger) vor false-positives.
