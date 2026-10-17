@@ -1,0 +1,414 @@
+import sys
+import json
+import time
+import os
+import pandas as pd
+import pickle
+
+# LOGGING
+VERSION = "0.29.18 (Debug Probe)"
+def log(msg):
+    print(f"[LOG] {msg}")
+    sys.stdout.flush()
+
+def send_result(type, payload):
+    msg = {"type": type, "payload": payload}
+    print(f"[RESULT] {json.dumps(msg)}")
+    sys.stdout.flush()
+
+sys.path.append(os.path.dirname(__file__))
+
+LIBS_AVAILABLE = False
+try:
+    from brains.security import SecurityBrain
+    from brains.health import HealthBrain
+    from brains.energy import EnergyBrain
+    from brains.comfort import ComfortBrain
+    from brains.pinn import LightweightPINN
+    from brains.tracker import ParticleFilter
+    from brains.sex import SexBrain
+    import numpy as np
+    LIBS_AVAILABLE = True
+except ImportError as e:
+    log(f"⚠️ Import Error: {e}")
+except Exception as e:
+    log(f"⚠️ Critical Startup Error: {e}")
+
+if LIBS_AVAILABLE:
+    security_brain = SecurityBrain()
+    health_brain = HealthBrain()
+    energy_brain = EnergyBrain()
+    comfort_brain = ComfortBrain()
+    pinn_brain = LightweightPINN()
+    tracker_brain = ParticleFilter()
+    sex_brain = SexBrain()  # Legacy-Instanz (group_id=None → sex_model.pkl)
+    sex_brains = {}         # Per-Gruppe: {groupId: SexBrain(group_id=groupId)}
+else:
+    security_brain = None
+    sex_brain = None
+    sex_brains = {}
+
+def process_message(msg):
+    try:
+        data = json.loads(msg)
+        cmd = data.get("command")
+
+        if cmd == "PING":
+            send_result("PONG", {"timestamp": time.time()})
+            return
+
+        if not LIBS_AVAILABLE:
+            return
+
+        # 1. SECURITY
+        if cmd == "TRAIN_SECURITY":
+            # Primär: dailyDigests für IsolationForest (wenn vorhanden)
+            digests = data.get("digests", [])
+            sequences = data.get("sequences", [])
+            train_data = digests if digests else sequences
+            success, details, thresh = security_brain.train(train_data)
+            send_result("TRAINING_COMPLETE", {"success": success, "details": details, "threshold": thresh})
+
+        # --- GRAPH BRAIN TRAINING (DEBUG EDITION) ---
+        elif cmd == "TRAIN_TOPOLOGY":
+            sequences = data.get("sequences", [])
+            rooms = security_brain.graph.rooms
+
+            # DIAGNOSE
+            log(f"🔍 DEBUG: Graph Training started.")
+            log(f"🔍 DEBUG: Python knows {len(rooms)} rooms: {rooms[:5]}...")
+            if len(sequences) > 0:
+                log(f"🔍 DEBUG: First sequence from Bridge: {sequences[0]}")
+
+            if not rooms:
+                log("⚠️ Cannot train topology: No rooms defined (Manual Map missing).")
+                send_result("TRAINING_COMPLETE", {"success": False, "details": "No rooms defined"})
+            else:
+                room_map = {r: i for i, r in enumerate(rooms)}
+                n = len(rooms)
+                mat = np.zeros((n, n), dtype=float)
+                count = 0
+
+                for seq in sequences:
+                    # Filtere Räume, die wir kennen
+                    valid_seq = [r for r in seq if r in room_map]
+
+                    # DEBUGGING FIRST MATCH FAILURE
+                    if count == 0 and len(seq) > 1 and len(valid_seq) < 2:
+                         log(f"⚠️ DEBUG: Sequence dropped! '{seq[0]}' not found in room map?")
+
+                    for i in range(len(valid_seq) - 1):
+                        u, v = valid_seq[i], valid_seq[i+1]
+                        if u == v: continue
+                        mat[room_map[u], room_map[v]] += 1
+                        count += 1
+
+                row_sums = mat.sum(axis=1, keepdims=True)
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    mat_norm = mat / row_sums
+                mat_norm = np.nan_to_num(mat_norm)
+
+                security_brain.graph.behavior_matrix = mat_norm
+                try:
+                    p_path = os.path.join(os.path.dirname(__file__), "graph_behavior.pkl")
+                    with open(p_path, 'wb') as f:
+                        pickle.dump(mat_norm, f)
+                    log(f"✅ Graph Behavior trained on {count} transitions and saved to {p_path}")
+
+                    send_result("GRAPH_TRAINED", {"matrix": mat_norm.tolist(), "rooms": rooms})
+                    send_result("TRAINING_COMPLETE", {"success": True, "details": f"Graph trained ({count} steps)"})
+                except Exception as e:
+                    log(f"❌ Error saving graph behavior: {e}")
+                    send_result("TRAINING_COMPLETE", {"success": False, "details": str(e)})
+        # ---------------------------------------------------
+
+        elif cmd == "ANALYZE_SEQUENCE":
+            score, is_anomaly, explanation = security_brain.predict(data.get("sequence", {}))
+            send_result("SECURITY_RESULT", {"anomaly_score": score, "is_anomaly": is_anomaly, "explanation": explanation})
+
+        elif cmd == "SET_TOPOLOGY":
+            # DIAGNOSE
+            log(f"🔍 DEBUG: Setting Topology with {len(data.get('rooms', []))} rooms.")
+            security_brain.graph.update_topology(data)
+            rooms = data.get('rooms', [])
+            matrix = data.get('matrix', [])
+            monitored = data.get('monitored', [])
+            tracker_brain.set_topology(rooms, matrix, monitored)
+            send_result("TOPOLOGY_ACK", {"success": True})
+
+        elif cmd == "SIMULATE_SIGNAL":
+            room = data.get("room")
+            neighbors = security_brain.graph.propagate_signal(room)
+            send_result("SIGNAL_RESULT", {"room": room, "propagation": neighbors})
+
+        elif cmd == "SET_LEARNING_MODE":
+            active = data.get("active", False)
+            duration = data.get("duration", 0)
+            label = data.get("label", "manual")
+            security_brain.set_learning_mode(active, duration, label)
+            log(f"Security Learning Mode set to {active} ({label})")
+
+        elif cmd == "TRACK_EVENT":
+            room = data.get("room")
+            dt = data.get("dt", 0.0)
+            probs = tracker_brain.update(room, dt)
+            send_result("TRACKER_RESULT", {"probabilities": probs})
+
+        # 2. HEALTH
+        elif cmd == "TRAIN_HEALTH":
+            digests = data.get("digests", [])
+            success, details = health_brain.train(digests)
+            # Security-IsolationForest parallel mittrainieren (gleiche Daten)
+            if success and digests:
+                security_brain.train(digests)
+            send_result("HEALTH_TRAIN_RESULT", {"success": success, "details": details})
+
+        elif cmd == "ANALYZE_HEALTH":
+            res, score, details = health_brain.predict(data.get("digest", {}))
+            send_result("HEALTH_RESULT", {"is_anomaly": (res == -1), "anomaly_score": score, "details": details})
+
+        # --- UPDATE: GAIT PROOF ---
+        elif cmd == "ANALYZE_GAIT":
+            hallway_locs = data.get("hallwayLocations", [])
+            avg_dur, sensors, proof = health_brain.analyze_gait_speed(data.get("sequences", []), hallway_locs)
+            if avg_dur is not None:
+                send_result("GAIT_RESULT", {
+                    "avg_duration": avg_dur,
+                    "sensors": sensors,
+                    "proof": proof
+                })
+        # ---------------------------
+
+        elif cmd == "ANALYZE_TREND":
+            values = data.get("values", [])
+            tag = data.get("tag", "Activity")
+            trend_percent, debug_msg = health_brain.analyze_activity_trend(values)
+            log(f"Trend Analysis ({tag}): {debug_msg}")
+            send_result("HEALTH_TREND_RESULT", {
+                "trend_percent": trend_percent,
+                "details": debug_msg,
+                "is_anomaly": False
+            })
+
+        elif cmd == "ANALYZE_HEATMAP":
+            week_data = data.get("weekData", {})
+            log(f"Heatmap Analysis: Processing {len(week_data)} days")
+            result = health_brain.analyze_weekly_heatmap(week_data)
+            send_result("HEATMAP_RESULT", result)
+        
+        elif cmd == "ANALYZE_ROOM_SILENCE":
+            room_data = data.get("roomData", {})
+            log(f"Room Silence Analysis: Checking {len(room_data)} rooms")
+            alerts = health_brain.analyze_room_silence(room_data)
+            send_result("ROOM_SILENCE_RESULT", alerts)
+        
+        elif cmd == "ANALYZE_LONGTERM_TRENDS":
+            daily_data = data.get("dailyData", [])
+            weeks = data.get("weeks", 4)
+            log(f"Longterm Trends Analysis: Processing {len(daily_data)} days for {weeks} weeks")
+            
+            # Berechne alle 6 Metriken
+            activity_trend = health_brain.analyze_longterm_activity(daily_data, weeks)
+            gait_trend = health_brain.analyze_gait_speed_longterm(daily_data, weeks)
+            night_trend = health_brain.analyze_night_restlessness(daily_data, weeks)
+            mobility_trend = health_brain.analyze_room_mobility(daily_data, weeks)
+            hygiene_trend = health_brain.analyze_hygiene_frequency(daily_data, weeks)
+            ventilation_trend = health_brain.analyze_ventilation_behavior(daily_data, weeks)
+
+            # Drift wird NICHT mehr hier berechnet - separater ANALYZE_DRIFT Befehl
+            # stellt sicher dass Drift immer alle verfuegbaren Daten nutzt (zeitfenster-unabhaengig)
+            send_result("LONGTERM_TRENDS_RESULT", {
+                'activity': activity_trend,
+                'gait': gait_trend,
+                'night': night_trend,
+                'mobility': mobility_trend,
+                'hygiene': hygiene_trend,
+                'ventilation': ventilation_trend
+            })
+
+        elif cmd == "ANALYZE_DISEASE_SCORES":
+            # Phase 2: Krankheits-Risiko-Score Aggregation
+            digests = data.get("digests", [])
+            enabled_profiles = data.get("enabledProfiles", [])
+            log(f"Disease Score Analysis: {len(digests)} digests, profiles: {enabled_profiles}")
+            scores = health_brain.compute_disease_scores(digests, enabled_profiles)
+            send_result("DISEASE_SCORES_RESULT", scores)
+
+        elif cmd == "ANALYZE_SCREENING":
+            # Phase 3: Proaktives Screening (Reverse-Diagnose mit Disclaimer)
+            digests = data.get("digests", [])
+            log(f"Screening Analysis: {len(digests)} digests")
+            result = health_brain.compute_screening_hints(digests)
+            log(f"Screening: {len(result.get('hints', []))} Hinweise generiert")
+            send_result("SCREENING_RESULT", result)
+
+        elif cmd == "ANALYZE_DRIFT":
+            # Multi-Metrik Drift: Aktivitaet (Abnahme), Ganggeschwindigkeit (Zunahme), Nacht-Unruhe (Zunahme)
+            all_data = sorted(data.get("dailyData", []), key=lambda x: x.get('date', ''))
+            log(f"Drift Analysis: Processing {len(all_data)} days (3 metrics)")
+
+            act_vals   = [d.get('activityPercent', 0) for d in all_data]
+            gait_vals  = [d.get('gaitSpeed', 0)       for d in all_data if d.get('gaitSpeed', 0) > 0 and d.get('gaitSpeed', 0) < 60]
+            night_vals = [d.get('nightEvents', 0)     for d in all_data]
+            rooms_vals = [d.get('uniqueRooms', 0)     for d in all_data]
+
+            # Normalize night + rooms to % of personal calibration mean
+            # This prevents extremely high PH thresholds from raw counts
+            def normalize_to_baseline(vals, min_val=0.1):
+                """Normalize values to % of calibration mean (first 14 or half of data)."""
+                import numpy as np
+                cal_n = max(7, min(14, len(vals) // 2))
+                cal_vals = [v for v in vals[:cal_n] if v > min_val]
+                cal_mean = float(np.mean(cal_vals)) if cal_vals else 1.0
+                return [min(300.0, round((v / cal_mean) * 100, 1)) for v in vals]
+
+            night_norm = normalize_to_baseline(night_vals)   # 100% = personal baseline, increase = bad
+            rooms_norm = normalize_to_baseline(rooms_vals, 0.5)  # 100% = personal baseline, decrease = bad
+
+            MIN_DAYS = 10
+            # Abnahme-Metriken: Werte negieren (Aktivität sinkt = schlecht, Raum-Nutzung sinkt = schlecht)
+            act_r   = health_brain.detect_drift_page_hinkley([-v for v in act_vals])     if len(act_vals)   >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(act_vals)} Tage nötig'}
+            gait_r  = health_brain.detect_drift_page_hinkley(gait_vals)                  if len(gait_vals)  >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(gait_vals)} Tage nötig'}
+            night_r = health_brain.detect_drift_page_hinkley(night_norm)                 if len(night_norm) >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len(night_norm)} Tage nötig'}
+            rooms_r = health_brain.detect_drift_page_hinkley([-v for v in rooms_norm])   if len([v for v in rooms_norm if v > 10]) >= MIN_DAYS else {'error': f'Noch {MIN_DAYS - len([v for v in rooms_norm if v > 10])} Tage nötig'}
+
+            overall = any([
+                isinstance(act_r,   dict) and act_r.get('drift_detected',   False),
+                isinstance(gait_r,  dict) and gait_r.get('drift_detected',  False),
+                isinstance(night_r, dict) and night_r.get('drift_detected', False),
+                isinstance(rooms_r, dict) and rooms_r.get('drift_detected', False),
+            ])
+            send_result("DRIFT_RESULT", {
+                'overall_drift': overall,
+                'activity':      act_r,
+                'gait':          gait_r,
+                'night':         night_r,
+                'rooms':         rooms_r,
+                'n_days':        len(all_data),
+                'dates':         [d.get('date', '') for d in all_data],
+                'gait_dates':    [d.get('date', '') for d in all_data if d.get('gaitSpeed', 0) > 0 and d.get('gaitSpeed', 0) < 60],
+            })
+
+        # 3. ENERGY
+        elif cmd == "TRAIN_ENERGY":
+            points = data.get("points", [])
+            success, details = energy_brain.train(points)
+            log(f"Classic Energy Train: {success}")
+
+            if points and len(points) > 20:
+                try:
+                    df = pd.DataFrame(points)
+                    df['ts'] = pd.to_datetime(df['ts'], unit='ms')
+                    pinn_data = []
+                    for room, group in df.groupby('room'):
+                        group = group.sort_values('ts')
+                        group['dt_h'] = group['ts'].diff().dt.total_seconds() / 3600.0
+                        group['d_temp'] = group['t_in'].diff()
+                        valid = group[(group['dt_h'] > 0.1) & (group['dt_h'] < 2.0)].copy()
+                        for idx, row in valid.iterrows():
+                            t_in = row['t_in']
+                            t_out = 10.0
+                            valve = row.get('valve', 0)
+                            solar = False
+                            rate = row['d_temp'] / row['dt_h']
+                            pinn_data.append({ 't_in': t_in, 't_out': t_out, 'valve': valve, 'solar': solar, 'delta_t': rate })
+                    p_success, p_msg = pinn_brain.train(pinn_data)
+                    log(f"PINN Training: {p_msg}")
+                except Exception as e: log(f"PINN Train Error: {e}")
+            send_result("ENERGY_TRAIN_RESULT", {"success": success, "details": details})
+
+        elif cmd == "TRAIN_RL_PENALTY":
+            room = data.get("room")
+            success, msg = energy_brain.train_penalty(room)
+            log(f"RL Penalty: {msg}")
+            send_result("RL_PENALTY_UPDATE", {"penalties": energy_brain.get_penalties()})
+
+        elif cmd == "PREDICT_ENERGY":
+            current_temps = data.get("current_temps", {})
+            t_out = data.get("t_out", 0)
+            is_sunny = data.get("is_sunny", False)
+            solar_flags = data.get("solar_flags", {})
+            warmup_targets = data.get("warmup_targets", {})
+
+            forecast = energy_brain.predict_cooling(current_temps, t_out, data.get("t_forecast", None), is_sunny, solar_flags)
+            send_result("ENERGY_PREDICT_RESULT", {"forecast": forecast})
+
+            vent_alerts = energy_brain.check_ventilation(current_temps)
+            send_result("VENTILATION_ALERT", {"alerts": vent_alerts})
+
+            times, sources, details = energy_brain.calculate_warmup_times(
+                current_temps,
+                warmup_targets,
+                pinn_brain,
+                t_out,
+                is_sunny,
+                solar_flags
+            )
+            send_result("WARMUP_RESULT", {"times": times, "sources": sources, "details": details})
+
+            pinn_results = {}
+            for room, t_in in current_temps.items():
+                solar_active = is_sunny and solar_flags.get(room, False)
+                rate = pinn_brain.predict(t_in, t_out, 0.0, solar_active)
+                pinn_results[room] = { "rate_per_hour": round(rate, 2), "predicted_1h": round(t_in + rate, 1) }
+            if pinn_results: send_result("PINN_PREDICT_RESULT", {"forecast": pinn_results})
+
+            send_result("RL_PENALTY_UPDATE", {"penalties": energy_brain.get_penalties()})
+
+        elif cmd == "OPTIMIZE_ENERGY":
+            proposals = energy_brain.get_optimization_advice(
+                data.get("current_temps", {}),
+                data.get("t_out", 0),
+                data.get("targets", {}),
+                data.get("t_forecast", None)
+            )
+            send_result("ENERGY_OPTIMIZE_RESULT", {"proposals": proposals})
+
+        # 4. COMFORT
+        elif cmd == "TRAIN_COMFORT":
+            # UPDATE: ACCEPT DEVICE MAP
+            events = data.get("events", [])
+            device_map = data.get("deviceMap", {}) # Neue Map
+            success, top_rules = comfort_brain.train(events, device_map)
+            send_result("COMFORT_RESULT", {"patterns": top_rules if success else []})
+
+        # ── STUFE 3: Sex-Klassifikator ──────────────────────────────────────────
+        elif cmd == "CLASSIFY_SEX_SESSIONS":
+            if sex_brain is None:
+                send_result("CLASSIFY_SEX_SESSIONS_RESULT", {
+                    "trained": False, "class_counts": {}, "n_samples": 0,
+                    "status_msg": "SexBrain nicht geladen", "results": []
+                })
+            else:
+                train_samples    = data.get("train", [])
+                predict_sessions = data.get("predict", [])
+                group_id         = data.get("groupId", None)
+                # Per-Gruppe: eigene Brain-Instanz mit eigenem Modell-File
+                if group_id and group_id != 'default':
+                    if group_id not in sex_brains:
+                        sex_brains[group_id] = SexBrain(group_id=group_id)
+                        sex_brains[group_id].load_brain()
+                    brain = sex_brains[group_id]
+                else:
+                    brain = sex_brain  # Legacy / default
+                result = brain.classify_sessions(train_samples, predict_sessions)
+                send_result("CLASSIFY_SEX_SESSIONS_RESULT", result)
+
+    except Exception as e: log(f"Err processing: {e}")
+
+if __name__ == "__main__":
+    log(f"Cogni-Living Engine started. {VERSION}")
+    if LIBS_AVAILABLE:
+        security_brain.load_brain()
+        health_brain.load_brain()
+        energy_brain.load_brain()
+        pinn_brain.load_brain()
+        tracker_brain.load_brain()
+        sex_brain.load_brain()  # RF-Modell von Disk laden (sex_model.pkl)
+
+    while True:
+        try:
+            line = sys.stdin.readline()
+            if not line: break
+            process_message(line.strip())
+        except: break

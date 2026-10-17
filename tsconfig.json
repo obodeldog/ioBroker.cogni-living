@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022", "dom"],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "build/",
+    "rootDir": ".",
+    "strict": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true, // Erlaubt main.js
+    "checkJs": false,
+    // Wichtig für React 17+ / MUI v5
+    "jsx": "react-jsx",
+
+    // DER FIX FÜR TS(2307) und adapter-react-v5@8.0.13
+    "baseUrl": ".",
+    "paths": {
+      "@iobroker/adapter-react-v5/*": ["./node_modules/@iobroker/adapter-react-v5/build/*"]
+    }
+  },
+  "include": [
+    "src-admin/src/**/*.ts",
+    "src-admin/src/**/*.tsx",
+      "src/main.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "build"
+  ]
+}
